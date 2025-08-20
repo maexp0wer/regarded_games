@@ -61,3 +61,34 @@
   html {
     background-color: var(--color-bg) !important;  /*Or any bright color */
   }
+
+  /* Custom Scrollbar Styling */
+.custom-scrollbar {
+  /* For Firefox */
+  scrollbar-width: thin;
+  /* Use your existing theme variables! */
+  scrollbar-color: var(--color-primary) var(--color-card2);
+
+  /* For Chrome, Safari, and other WebKit-based browsers */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    /* Use your existing theme variables! */
+    background-color: var(--color-card2);
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    /* Use your existing theme variables! */
+    background-color: var(--color-primary);
+    border-radius: 10px;
+    border: 2px solid var(--color-card2); /* Creates a nice padding effect */
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    /* Use your existing theme variables! */
+    background-color: var(--color-primary2);
+  }
+}

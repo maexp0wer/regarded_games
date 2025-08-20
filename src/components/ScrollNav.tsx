@@ -134,7 +134,7 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
             aria-modal="true"
           >
             <div
-              className="bg-card rounded-lg shadow-xl p-6 w-11/12 max-w-xs relative mx-auto"
+              className="bg-card rounded-lg shadow-xl p-6 w-11/12 max-w-xs relative mx-auto flex flex-col max-h-[85vh]"
               onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
             >
               {/* Close Button (Inside Modal) */}
@@ -149,8 +149,9 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
               </button>
 
               {/* Navigation Links */}
-              <nav className="mt-4 mb-4">
-                <ul className="space-y-3">
+              <nav className="mt-4 mb-4 flex-grow overflow-y-auto custom-scrollbar">
+                {/* ^^^ MODIFIED: Added the "custom-scrollbar" class here */}
+                <ul className="space-y-3 pr-2"> {/* Added pr-2 to prevent text from overlapping the scrollbar */}
                   {navLinks.map((link) => (
                     <li key={link.id}>
                       <button
