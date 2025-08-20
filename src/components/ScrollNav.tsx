@@ -20,38 +20,69 @@ interface ScrollNavProps {
 
 const SCROLL_THRESHOLD = 100;
 const HIDE_DELAY = 3000;
+const CLICK_SCROLL_DELAY = 1000;
 
 export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrollToSection }: ScrollNavProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isButtonVisible, setIsButtonVisible] = useState(false);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const desktopNavRef = useRef<HTMLElement>(null);
   const mobileNavRef = useRef<HTMLElement>(null);
+  
+  const prevActiveSectionRef = useRef<string | null>(null);
+  const isClickScrollingRef = useRef(false);
+  const clickScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const { darkMode, toggleTheme } = useTheme();
 
-  // This effect handles the flawless mobile auto-centering.
+  // Effect for MOBILE auto-centering (unchanged).
   useEffect(() => {
-    if (!isModalOpen || !activeSection) {
-      return;
-    }
-
-    const mobileScrollOptions: ScrollIntoViewOptions = {
-      behavior: 'smooth',
-      block: 'center',
-    };
-
+    if (!isModalOpen || !activeSection) return;
+    const mobileScrollOptions: ScrollIntoViewOptions = { behavior: 'smooth', block: 'center' };
     setTimeout(() => {
       const activeMobileLink = mobileNavRef.current?.querySelector(`[data-nav-id="${activeSection}"]`);
-      if (activeMobileLink) {
-        activeMobileLink.scrollIntoView(mobileScrollOptions);
-      }
+      if (activeMobileLink) activeMobileLink.scrollIntoView(mobileScrollOptions);
     }, 50);
-
   }, [activeSection, isModalOpen]);
 
+  // Effect for DESKTOP incremental scrolling (for manual page scrolls).
+  useEffect(() => {
+    if (isClickScrollingRef.current) {
+      prevActiveSectionRef.current = activeSection;
+      return;
+    }
+    
+    const navContainer = desktopNavRef.current;
+    const prevSectionId = prevActiveSectionRef.current;
+    const currentSectionId = activeSection;
 
-  // This effect manages the floating mobile button visibility.
+    if (navContainer && prevSectionId && currentSectionId && prevSectionId !== currentSectionId) {
+      const prevIndex = navLinks.findIndex(link => link.id === prevSectionId);
+      const currentIndex = navLinks.findIndex(link => link.id === currentSectionId);
+
+      if (prevIndex !== -1 && currentIndex !== -1) {
+        const firstItem = navContainer.querySelector('button');
+        if (firstItem) {
+          const style = window.getComputedStyle(firstItem);
+          const margin = parseFloat(style.marginTop) + parseFloat(style.marginBottom);
+          const scrollAmount = firstItem.offsetHeight + margin;
+          
+          if (currentIndex > prevIndex) {
+            navContainer.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+          } else {
+            navContainer.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
+          }
+        }
+      }
+    }
+    
+    prevActiveSectionRef.current = activeSection;
+
+  }, [activeSection, navLinks]);
+
+
+  // Effect for managing the floating mobile button visibility (unchanged).
   useEffect(() => {
     const handleScroll = () => {
       if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
@@ -69,6 +100,34 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
     };
   }, []);
 
+  // MODIFIED: This handler now correctly schedules the delayed nav scroll.
+  const handleDesktopLinkClick = (id: string) => {
+    // 1. Scroll the main page immediately.
+    scrollToSection(id);
+    
+    // 2. Activate the lock to prevent the incremental scroll effect from firing.
+    isClickScrollingRef.current = true;
+
+    // 3. Clear any previous pending click-scrolls.
+    if (clickScrollTimeoutRef.current) {
+      clearTimeout(clickScrollTimeoutRef.current);
+    }
+
+    // 4. Set a 3-second timeout.
+    clickScrollTimeoutRef.current = setTimeout(() => {
+      // After 3 seconds, find the button corresponding to the clicked ID.
+      const targetElement = desktopNavRef.current?.querySelector(`[data-nav-id="${id}"]`);
+      if (targetElement) {
+        // Perform a smooth "snap-to-center" scroll.
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      
+      // Finally, release the lock so incremental scrolling can resume.
+      isClickScrollingRef.current = false;
+
+    }, CLICK_SCROLL_DELAY);
+  };
+
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
@@ -84,29 +143,21 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
       {/* ============================================= */}
       <div className={`hidden md:inline-block sticky top-0 h-screen transition-opacity duration-300 ${isNavVisible ? 'opacity-100' : 'opacity-0'}`}>
         <nav
-          /* 
-            MODIFIED:
-            - Replaced `justify-center` with `justify-start` to align items to the top.
-            - Added `py-8` for vertical padding, giving space at the top and bottom.
-            - This permanently fixes the clipping issue on shorter screens.
-          */
+          ref={desktopNavRef}
           className="bg-bg w-fit h-full flex flex-col justify-start py-8 p-3 overflow-y-auto custom-scrollbar"
         >
           {navLinks.map(link => (
             <button
               key={link.id}
-              onClick={() => scrollToSection(link.id)}
-              className={`
-                w-full mx-auto pl-4 pr-4 pt-2 pb-2 m-1 rounded-lg text-right transition-colors duration-300
-                ${
-                  activeSection === link.id ? 'bg-card text-text hover:bg-primary hover:text-bg' : 'hover:bg-primary text-text hover:text-bg'
-                }
-              `}
+              onClick={() => handleDesktopLinkClick(link.id)}
+              data-nav-id={link.id} // Add data-nav-id back to desktop for this to work
+              className={`w-full mx-auto pl-4 pr-4 pt-2 pb-2 m-1 rounded-lg text-right transition-colors duration-300 ${
+                activeSection === link.id ? 'bg-card text-text hover:bg-primary hover:text-bg' : 'hover:bg-primary text-text hover:text-bg'
+              }`}
             >
               {link.label}
             </button>
           ))}
-          {/* Use a spacer to push the theme toggle to the bottom */}
           <div className="flex-grow" />
           <div className='w-full mx-auto pr-2 text-right transition-colors duration-300 border-t border-card mt-3 pt-3'>
             <button
