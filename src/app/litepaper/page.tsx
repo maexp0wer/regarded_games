@@ -5,7 +5,7 @@ import Head from 'next/head';
 import { useScrollNavigation } from '@/hooks/useScrollNavigation';
 import '../globals.css';
 import { Logo, ArrowRight} from '@/components/icons';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
 
 
 import ScrollNav from '@/components/ScrollNav'; // Import the new component
@@ -306,7 +306,7 @@ export default function Home() {
                     </section>
           
                     {/* 5. The Game: Rules & Mechanics */}
-                    <section id="sectionTheGame" className="py-16">
+                    <section id="sectionTheGame" className="pt-16">
                       <h2 className="text-2xl font-bold text-center mb-8">5. The Game: Rules & Mechanics</h2>
                       <p className='mb-4'>Ritardo Games is a quarterly contest between two opposing economic philosophies. Its mechanics are designed to be transparent, strategically deep, and resistant to manipulation.</p>
                       <h3 className="text-xl font-semibold mt-6 mb-4">The Game Token: $FIM (Fake Internet Money)</h3>
@@ -322,15 +322,13 @@ export default function Home() {
                         <li><strong>Price Discovery:</strong> At the end of the auction, a single clearing price for $FIM is determined based on the total USDC committed and the total $FIM being minted for the season.</li>
                         <li><strong>Distribution:</strong> Every participant receives their $FIM at this same final price.</li>
                       </ol>
-
-                      <h3 className="text-xl font-semibold mt-6 mb-4">Phase 2: The Game & The Buy-Side Only Exchange</h3>
+                      <h3 className="text-xl font-semibold mt-6 mb-4" id='sectionPhase2'>Phase 2: The Game & The Buy-Side Only Exchange</h3>
                       <p className='mb-4'>The game's trading occurs on a transparent, buy-side only order book. This is a fundamental pillar of the game's fairness and strategic depth.</p>
                       <ul className="list-disc ml-8 space-y-2">
                         <li><strong>Mechanism:</strong> Players who want to buy $FIM must post a public buy order with their USDC. Players who want to sell $FIM must choose an existing buy order to fill.</li>
                         <li><strong>Strategic Impact:</strong> This prevents risk-free manipulation by forcing any player wishing to acquire tokens into an open, competitive market. It also enables deep "Gini-aware" gameplay, where sellers can choose which buyer to sell to based not just on price, but on the strategic impact the trade will have on the Gini Coefficient.</li>
                       </ul>
-
-                      <h3 className="text-xl font-semibold mt-6 mb-4">Winning the Game: The Proportional Race</h3>
+                      <h3 className="text-xl font-semibold mt-6 mb-4" id='sectionWinningTheGame'>Winning the Game: The Proportional Race</h3>
                       <p className='mb-4'>Victory is not about reaching an absolute Gini score. It's a proportional race to see which faction can first achieve 25% of the total possible progress from the starting point toward their ideological goal. This ensures the game is fair regardless of the initial Gini coefficient.</p>
                       <ul className="list-disc ml-8 space-y-2 mb-6">
                         <li><strong>Initial State (G_initial):</strong> The Gini Coefficient calculated at the moment the Auction ends. This is the starting line for the race.</li>
@@ -338,7 +336,7 @@ export default function Home() {
                       </ul>
 
                       <h4 className="text-lg font-semibold mt-6 mb-2">The Capitalist Faction Wins If:</h4>
-                      <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg my-4 font-mono text-sm">
+                      <div className="bg-card2  p-4 rounded-lg my-4 font-mono text-sm">
                         (G_current - G_initial) / (1 - G_initial) ≥ 0.25
                       </div>
                       <ul className="list-disc ml-8 space-y-2">
@@ -347,7 +345,7 @@ export default function Home() {
                       </ul>
 
                       <h4 className="text-lg font-semibold mt-6 mb-2">The Socialist Faction Wins If:</h4>
-                      <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg my-4 font-mono text-sm">
+                      <div className="bg-card2 p-4 rounded-lg my-4 font-mono text-sm">
                         ((G_initial - G_current) / G_initial) * M ≥ 0.25
                       </div>
                       <ul className="list-disc ml-8 space-y-2">
@@ -358,7 +356,7 @@ export default function Home() {
                       <h4 className="text-lg font-semibold mt-6 mb-2">The Compensation Multiplier (M)</h4>
                       <p className='mb-4'>We recognize that the game's core mechanic of free-market trading creates a natural gravity towards wealth concentration. To ensure a fair contest, the Socialist faction receives a scoring bonus. This bonus is essential because the Capitalist strategy leverages individual profit-seeking, the most natural behavior in a trading game. The multiplier fairly compensates the Socialist faction for the greater strategic challenge of organizing collective action against individual financial incentive.</p>
                       <p className='mb-4'>The multiplier is calculated once at the start of the game to reflect the initial conditions:</p>
-                      <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg my-4 font-mono text-sm">
+                      <div className="bg-card2 p-4 rounded-lg my-4 font-mono text-sm">
                         M = 1.4 + (1 - G_initial)^2
                       </div>
                       <p className='mb-4'>Crucially, the parameters of this formula will be the primary lever the Ritardo DAO can adjust through governance. By voting on changes to the base value and scaling factor, the $RTD holders will be responsible for fine-tuning game balance in future seasons, ensuring the contest remains compelling and competitive in perpetuity.</p>
@@ -453,7 +451,6 @@ export default function Home() {
                         breakpoint="md"
                       />
                       <h3 className="text-xl font-semibold mt-10 mb-4">A Note on Our Distribution Strategy: Prioritizing Long-Term Health</h3>
-                      <h3 className="text-xl font-semibold mt-6 mb-4">A Note on Public Allocation and Long-Term Alignment</h3>
 <p className='mb-4'>Some may note that the initial public allocation is 5% of the total supply. This is a deliberate and strategic decision designed to ensure the long-term health, stability, and genuine decentralization of the Ritardo Games ecosystem.</p>
 
 <ol className="list-decimal ml-8 space-y-4">

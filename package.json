@@ -6,8 +6,6 @@
 
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "node ./copy-worker.cjs",
-     "generate-content": "node scripts/generate-litepaper.mjs",
     "dev": "next dev --turbopack",
     "build": "next build"
   },

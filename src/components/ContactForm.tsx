@@ -2,14 +2,14 @@
 'use client';
 
 import React, { useState, useEffect, FormEvent } from 'react';
-import { useTheme } from '../app/context/ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 // Assuming validation functions are correctly defined in this path
 import { isValidEmail, isValidErc20Address, isValidNumber } from '@/lib/validation';
 // Assuming options are correctly defined and exported from this path
 import {
   roleOptions,
   investorTypeOptions,
-  propertyOwnerTypeOptions,
+  futurePlayerTypeOptions,
   contributorTypeOptions
 } from '@/lib/formOptions'; // Adjust path as needed
 
@@ -18,12 +18,12 @@ interface FormErrors {
   email?: string;
   walletAddress?: string;
   investmentAmount?: string;
-  propertyAmount?: string;
+  playAmount?: string;
   referenceCode?: string; // Error for received reference code
   ownReferenceCode?: string; // Error for desired reference code
   selectedRoles?: string; // Error for the main role buttons
   investorType?: string; // Optional error for investor sub-type
-  propertyOwnerType?: string; // Optional error for property owner sub-type
+  futurePlayerType?: string; // Optional error for property owner sub-type
   contributorTypes?: string; // Optional error for contributor sub-types
   otherContributorType?: string; // Error for other contributor text
   partnerSpecification?: string; // Error for partner specification text
@@ -38,7 +38,7 @@ const ContactForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [walletAddress, setWalletAddress] = useState('');
   const [investmentAmount, setInvestmentAmount] = useState('');
-  const [propertyAmount, setPropertyAmount] = useState('');
+  const [playAmount, setPlayMoney] = useState('');
   const [newsletter, setNewsletter] = useState(false);
   const [bountyAirdrop, setBountyAirdrop] = useState(false);
   const [referenceCode, setReferenceCode] = useState('');
@@ -46,7 +46,7 @@ const ContactForm: React.FC = () => {
   const [ownReferenceCode, setOwnReferenceCode] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [investorType, setInvestorType] = useState<'individual' | 'institutional' | ''>('');
-  const [propertyOwnerType, setPropertyOwnerType] = useState<'individual' | 'company' | ''>('');
+  const [futurePlayerType, setfuturePlayerType] = useState<'carlo' | 'ritardo' | ''>('');
   const [contributorTypes, setContributorTypes] = useState<string[]>([]);
   const [otherContributorType, setOtherContributorType] = useState('');
   const [partnerSpecification, setPartnerSpecification] = useState('');
@@ -69,7 +69,7 @@ const ContactForm: React.FC = () => {
               // Reset conditional fields on deselection
               if (roleValue === 'other') setOtherIdentity('');
               if (roleValue === 'investor') { setInvestmentAmount(''); setInvestorType(''); }
-              if (roleValue === 'real_estate_owner') { setPropertyAmount(''); setPropertyOwnerType(''); }
+              if (roleValue === 'future_player') { setPlayMoney(''); setfuturePlayerType(''); }
               if (roleValue === 'contributor') { setContributorTypes([]); setOtherContributorType(''); }
               if (roleValue === 'potential_partner') setPartnerSpecification('');
           } else {
@@ -78,7 +78,7 @@ const ContactForm: React.FC = () => {
           return newRoles;
       });
       // Clear related errors
-      setErrors(prev => ({ ...prev, selectedRoles: undefined, otherIdentity: undefined, investorType: undefined, propertyOwnerType: undefined, contributorTypes: undefined, otherContributorType: undefined, partnerSpecification: undefined }));
+      setErrors(prev => ({ ...prev, selectedRoles: undefined, otherIdentity: undefined, investorType: undefined, futurePlayerType: undefined, contributorTypes: undefined, otherContributorType: undefined, partnerSpecification: undefined }));
   };
 
   const handleInvestorTypeClick = (type: 'individual' | 'institutional') => {
@@ -86,9 +86,9 @@ const ContactForm: React.FC = () => {
       setErrors(prev => ({...prev, investorType: undefined}));
   };
 
-  const handlePropertyOwnerTypeClick = (type: 'individual' | 'company') => {
-      setPropertyOwnerType(type);
-      setErrors(prev => ({...prev, propertyOwnerType: undefined}));
+  const handlefuturePlayerTypeClick = (type: 'ritardo' | 'carlo') => {
+      setfuturePlayerType(type);
+      setErrors(prev => ({...prev, futurePlayerType: undefined}));
   };
 
   const handleContributorTypeClick = (contributorValue: string) => {
@@ -160,7 +160,7 @@ const ContactForm: React.FC = () => {
 
     // Email Validation
     const emailToCheck = email?.trim() || null;
-    const emailIsRequired = newsletter || selectedRoles.includes('real_estate_owner') || selectedRoles.includes('contributor') || selectedRoles.includes('potential_partner');
+    const emailIsRequired = newsletter || selectedRoles.includes('contributor') || selectedRoles.includes('potential_partner');
     if (emailIsRequired) {
         if (!emailToCheck) { newErrors.email = 'Email Address is required.'; isValid = false; }
         else if (!isValidEmail(emailToCheck)) { newErrors.email = 'A valid Email Address is required.'; isValid = false; }
@@ -178,9 +178,9 @@ const ContactForm: React.FC = () => {
         if (!isValidNumber(investmentAmount.trim())) { newErrors.investmentAmount = "Investment Amount must be a valid number."; isValid = false; }
         else { const parsed = parseFloat(investmentAmount.trim()); if(parsed < 0) { newErrors.investmentAmount = "Investment Amount cannot be negative."; isValid = false; } }
     }
-    if (propertyAmount && propertyAmount.trim() !== '') {
-         if (!isValidNumber(propertyAmount.trim())) { newErrors.propertyAmount = "Property Amount must be a valid number."; isValid = false; }
-         else { const parsed = parseFloat(propertyAmount.trim()); if(parsed < 0) { newErrors.propertyAmount = "Property Amount cannot be negative."; isValid = false; } }
+    if (playAmount && playAmount.trim() !== '') {
+         if (!isValidNumber(playAmount.trim())) { newErrors.playAmount = "Property Amount must be a valid number."; isValid = false; }
+         else { const parsed = parseFloat(playAmount.trim()); if(parsed < 0) { newErrors.playAmount = "Property Amount cannot be negative."; isValid = false; } }
     }
 
     // Optional: Add format validation for reference codes if needed
@@ -201,14 +201,14 @@ const ContactForm: React.FC = () => {
       email: email.trim() || null,
       walletAddress: walletAddress.trim() || null,
       investmentAmount: selectedRoles.includes('investor') ? (investmentAmount.trim() || null) : null,
-      propertyAmount: selectedRoles.includes('real_estate_owner') ? (propertyAmount.trim() || null) : null,
+      playAmount: selectedRoles.includes('future_player') ? (playAmount.trim() || null) : null,
       newsletter,
       bountyAirdrop,
       referenceCode: referenceCode.trim() || null,
       ownReferenceCode: getOwnCode ? (ownReferenceCode.trim() || null) : null,
       selectedRoles,
       investorType: selectedRoles.includes('investor') ? (investorType || null) : null,
-      propertyOwnerType: selectedRoles.includes('real_estate_owner') ? (propertyOwnerType || null) : null,
+      futurePlayerType: selectedRoles.includes('future_player') ? (futurePlayerType || null) : null,
       contributorTypes: selectedRoles.includes('contributor') ? contributorTypes : [],
       otherContributorType: selectedRoles.includes('contributor') && contributorTypes.includes('other_contributor') ? otherContributorType.trim() : undefined,
       partnerSpecification: selectedRoles.includes('potential_partner') ? partnerSpecification.trim() : undefined,
@@ -223,9 +223,9 @@ const ContactForm: React.FC = () => {
             setSubmitStatus('success'); setSubmitMessage(result.message || 'Form submitted successfully!');
             // Reset form fields
             setName(''); setEmail(''); setWalletAddress(''); setInvestmentAmount('');
-            setPropertyAmount(''); setNewsletter(false); setBountyAirdrop(false);
+            setPlayMoney(''); setNewsletter(false); setBountyAirdrop(false);
             setReferenceCode(''); setGetOwnCode(false); setOwnReferenceCode('');
-            setSelectedRoles([]); setInvestorType(''); setPropertyOwnerType('');
+            setSelectedRoles([]); setInvestorType(''); setfuturePlayerType('');
             setContributorTypes([]); setOtherContributorType('');
             setPartnerSpecification(''); setOtherIdentity(''); setMessage(''); setErrors({});
         } else {
@@ -299,22 +299,22 @@ const ContactForm: React.FC = () => {
                 </div>
            )}
 
-           {/* Conditional Property Owner Type Sub-Buttons */}
-           {selectedRoles.includes('real_estate_owner') && (
+           {/* Conditional Future Palyer Type Sub-Buttons */}
+           {selectedRoles.includes('future_player') && (
                 <div className="lg:col-span-2 -mt-2 mb-2">
                      <fieldset>
-                      <legend className={`${labelClasses} text-sm mb-1`}>What kind of Owner?</legend>
+                      <legend className={`${labelClasses} text-sm mb-1`}>Who is your Hero?</legend>
                       <div className="flex flex-wrap gap-2">
-                         {propertyOwnerTypeOptions.map(option => (
+                         {futurePlayerTypeOptions.map(option => (
                               <button key={option.value} type="button"
-                                onClick={() => handlePropertyOwnerTypeClick(option.value as 'individual' | 'company')}
-                                className={`${subButtonBaseClasses} ${propertyOwnerType === option.value ? subButtonActiveClasses : subButtonInactiveClasses}`}
-                                aria-pressed={propertyOwnerType === option.value} >
+                                onClick={() => handlefuturePlayerTypeClick(option.value as 'ritardo' | 'carlo')}
+                                className={`${subButtonBaseClasses} ${futurePlayerType === option.value ? subButtonActiveClasses : subButtonInactiveClasses}`}
+                                aria-pressed={futurePlayerType === option.value} >
                                 {option.label}
                               </button>
                          ))}
                       </div>
-                      {errors.propertyOwnerType && <p className={errorClasses}>{errors.propertyOwnerType}</p>}
+                      {errors.futurePlayerType && <p className={errorClasses}>{errors.futurePlayerType}</p>}
                   </fieldset>
                 </div>
            )}
@@ -357,7 +357,7 @@ const ContactForm: React.FC = () => {
           {/* Conditional 'Other' Input for main Role */}
           {selectedRoles.includes('other') && (
             <div className="lg:col-span-2">
-                <label htmlFor="otherIdentity" className={labelClasses}>If Other Role, please specify: {requiredStar}</label>
+                <label htmlFor="otherIdentity" className={labelClasses}>Please specify who you are: {requiredStar}</label>
                 <input type="text" id="otherIdentity" value={otherIdentity} onChange={handleOtherTextChange}
                     className={`${inputClasses} ${errors.otherIdentity ? 'border-danger' : ''}`} required />
                 {errors.otherIdentity && <p id="otheridentity-error" className={errorClasses}>{errors.otherIdentity}</p>}
@@ -390,11 +390,11 @@ const ContactForm: React.FC = () => {
           <div><label htmlFor="name" className={labelClasses}>Name</label><input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} className={`${inputClasses}`} /></div>
           {/* Email */}
           <div>
-            <label htmlFor="email" className={labelClasses}>Email Address {(newsletter || selectedRoles.includes('real_estate_owner') || selectedRoles.includes('contributor') || selectedRoles.includes('potential_partner')) && requiredStar}</label>
+            <label htmlFor="email" className={labelClasses}>Email Address {(newsletter || selectedRoles.includes('contributor') || selectedRoles.includes('potential_partner')) && requiredStar}</label>
             <input
               type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)}
               className={`${inputClasses} ${errors.email ? 'border-danger' : ''}`}
-              required={newsletter || selectedRoles.includes('real_estate_owner') || selectedRoles.includes('contributor') || selectedRoles.includes('potential_partner')}
+              required={newsletter || selectedRoles.includes('future_player') || selectedRoles.includes('contributor') || selectedRoles.includes('potential_partner')}
               aria-describedby={errors.email ? 'email-error' : undefined}
               aria-invalid={!!errors.email}
             />
@@ -403,7 +403,7 @@ const ContactForm: React.FC = () => {
 
           {/* Conditional Amount Fields */}
           {selectedRoles.includes('investor') && ( <div><label htmlFor="investmentAmount" className={labelClasses}>Investment Amount (Optional, e.g., USD)</label><input type="text" id="investmentAmount" value={investmentAmount} onChange={(e) => setInvestmentAmount(e.target.value)} inputMode="decimal" className={`${inputClasses} ${errors.investmentAmount ? 'border-danger' : ''}`} />{errors.investmentAmount && <p id="investment-error" className={errorClasses}>{errors.investmentAmount}</p>}</div> )}
-          {selectedRoles.includes('real_estate_owner') && ( <div><label htmlFor="propertyAmount" className={labelClasses}>Worth of property to potentially tokenize (Optional)</label><input type="text" id="propertyAmount" value={propertyAmount} onChange={(e) => setPropertyAmount(e.target.value)} inputMode="decimal" className={`${inputClasses} ${errors.propertyAmount ? 'border-danger' : ''}`} />{errors.propertyAmount && <p id="property-error" className={errorClasses}>{errors.propertyAmount}</p>}</div> )}
+          {selectedRoles.includes('future_player') && ( <div><label htmlFor="playAmount" className={labelClasses}>How much USDC will you play with? (Optional)</label><input type="text" id="playAmount" value={playAmount} onChange={(e) => setPlayMoney(e.target.value)} inputMode="decimal" className={`${inputClasses} ${errors.playAmount ? 'border-danger' : ''}`} />{errors.playAmount && <p id="property-error" className={errorClasses}>{errors.playAmount}</p>}</div> )}
 
           {/* Tickboxes Section */}
           <div className="lg:col-span-2">

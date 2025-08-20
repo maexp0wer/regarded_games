@@ -2,10 +2,9 @@
 
 // Define role options
 export const roleOptions = [
-    { value: 'contributor', label: 'Contributor' },
+    { value: 'future_player', label: 'Future Player' },
     { value: 'investor', label: 'Investor' },
-    { value: 'renter', label: 'Renter' },
-    { value: 'real_estate_owner', label: 'Real Estate Owner' },
+    { value: 'contributor', label: 'Contributor' },
     { value: 'potential_partner', label: 'Potential Partner' },
     { value: 'other', label: 'Other' },
 ];
@@ -17,9 +16,9 @@ export const investorTypeOptions = [
 ];
 
 // Define property owner type options
-export const propertyOwnerTypeOptions = [
-    { value: 'individual', label: 'Individual' },
-    { value: 'company', label: 'Company' },
+export const futurePlayerTypeOptions = [
+    { value: 'ritardo', label: 'Ritardo the Capitalist' },
+    { value: 'carlo', label: 'Carlo the Socialist' },
 ];
 
 // Define Contributor type options
@@ -31,5 +30,5 @@ export const contributorTypeOptions = [
     { value: 'devops', label: 'DevOps' },
     { value: 'legal', label: 'Legal' },
     { value: 'sales', label: 'Sales' },
-    { value: 'other_contributor', label: 'Other' }, // Use distinct value for 'other' subtype
+    { value: 'other_contributor', label: 'Other' },
 ];

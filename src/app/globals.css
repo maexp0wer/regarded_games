@@ -15,8 +15,8 @@
     --color-warning: #ebc35a;
     --color-danger: #d41c81;
     --color-bg: #fafafa;
-    --color-card: #edeceeff;
-    --color-card2: #e4e4e7ff;
+    --color-card: #e4e4e7ff;
+    --color-card2: #edeceeff;
     --color-card3: #beb7d2ff;
     --color-text: #19141fff;
     --color-text2: #281e2eff;
@@ -60,6 +60,7 @@
 
   html {
     background-color: var(--color-bg) !important;  /*Or any bright color */
+    scroll-behavior: smooth;
   }
 
   /* Custom Scrollbar Styling */

@@ -5,7 +5,7 @@ import Head from 'next/head';
 import { useScrollNavigation } from '@/hooks/useScrollNavigation';
 import './globals.css';
 import { Logo, Zuhausi, Ritardo, Carlo } from '@/components/icons';
-import { useTheme } from './context/ThemeContext';
+import { useTheme } from '@/context/ThemeContext';
 import Card from '@/components/Card';
 import ContactForm from '@/components/ContactForm';
 import GenericModal from '@/components/GenericModal';
@@ -61,6 +61,14 @@ export default function Home() {
     // The third argument to window.open handles the 'noopener' and 'noreferrer'
     window.open('/litepaper', '_blank', 'noopener,noreferrer');
   };
+
+  const openLitepaperToId = (elementId: string) => {
+  // Construct the full URL with the hash
+  const url = `/litepaper#${elementId}`;
+
+  // This part remains exactly the same
+  window.open(url, '_blank', 'noopener,noreferrer');
+};
 
 
   return (
@@ -205,19 +213,20 @@ export default function Home() {
                 icon={<Zuhausi />}
                 title="ENTER THE ARENA"
                 description="Each season begins with an auction. Buy your in-game Fake Internet Money ($FIM) with $USDC to form the season's Prize Pool."
-                
+                onButtonClick={() => openLitepaperToId('sectionTheGame')}
                 //buttonText="Learn more" // You could override the default if needed
               />
               <Card
                 icon={<Zuhausi />}
                 title="PLAY THE MARKET"
                 description="For 3 Months, trade $FIM on our transparent, buy-side only order book. Every trade impacts the live Gini Coefficient. Choose your trades wisely—who you trade with is as important as the price."
-                  // Make sure this ID is correct
+                onButtonClick={() => openLitepaperToId('sectionPhase2')}
               />
               <Card
                 icon={<Zuhausi />}
                 title="CLAIM YOUR VICTORY"
                 description="The first faction to reach their goal wins. The prize pool is distributed according to the winning ideology's rules."
+                onButtonClick={() => openLitepaperToId('sectionWinningTheGame')}
               />
             </div>
           </section>
@@ -234,9 +243,10 @@ export default function Home() {
             </div>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
             <button 
-              
+              onClick={() => openLitepaperToId('sectionTokenomics')}
               className="bg-primary hover:bg-primary2 text-bg px-6 py-3 rounded-lg text-lg font-medium transition-all duration-200">
               Discover our Tokenomics
+              
             </button>
           </div>
           </section>
@@ -246,12 +256,14 @@ export default function Home() {
             <h2 className="text-3xl font-bold mb-8 text-center">Get Involved</h2>
             <div className="mx-auto">
               <p className="mb-5">
-              Community is central to Aigenheim DAO. Without you, this Project will not succeed. Therefore, 10% of the total Token supply will be given away before the initial 
-              Token launch. You can take part in the giveaway by telling us why you are interested in Aigenheim DAO. The coins will be evenly distributed to everyone that joins. 
+              Community is central to the Ritardo Games DAO. Without you, this Project will not succeed. Therefore, 10% of the total Token supply will be given away before the initial 
+              Token launch. You can take part in the giveaway by telling us why you are interested in Ritardo Games. The token will be evenly distributed to everyone that signs up for the Airdrop. 
               You will also be able to spread the word and get a reference code. If people join the giveaway by providing your code, your initial cut of the giveaway supply will 
               grow by 10%.</p>
             </div>
-            <ContactForm/>
+                      {/* <ContactForm/> */}
+                      <ContactForm/>
+            
           </section>
         </div>
       </main>
