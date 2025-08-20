@@ -7,6 +7,7 @@ interface CardProps {
   icon: React.ReactNode; // Expecting a JSX element for the icon
   title: string;
   description: string;
+  onButtonClick: () => void; // Function to call when button is clicked
   buttonText?: string; // Optional text for the button, defaults to "Learn More"
 }
 
@@ -14,6 +15,7 @@ const Card: React.FC<CardProps> = ({
   icon,
   title,
   description,
+  onButtonClick,
   buttonText = "Learn More" // Default button text
 }) => {
   return (
@@ -33,8 +35,12 @@ const Card: React.FC<CardProps> = ({
         <p>{description}</p> {/* Use the description prop */}
       </div>
       {/* Button Area */}
-
+      <div className='mt-auto text-right p-5 pr-12'> {/* mt-auto pushes this to the bottom */}
+        <button onClick={onButtonClick} className="text-primary hover:underline">
+          {buttonText} {/* Use the buttonText prop */}
+        </button>
       </div>
+    </div>
   );
 };
 
