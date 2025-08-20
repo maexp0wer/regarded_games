@@ -34,9 +34,37 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
   const isClickScrollingRef = useRef(false);
   const clickScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
+  const [isOverflowing, setIsOverflowing] = useState(false);
+  // NEW: Internal state to control the visual highlight, preventing flickering.
+  const [highlightedSection, setHighlightedSection] = useState<string | null>(activeSection);
+  
   const { darkMode, toggleTheme } = useTheme();
 
-  // Effect for MOBILE auto-centering (unchanged).
+  // NEW: Effect to synchronize the internal highlight state with the external prop.
+  useEffect(() => {
+    // If a click-scroll is NOT in progress, the highlight should follow the active section.
+    if (!isClickScrollingRef.current) {
+      setHighlightedSection(activeSection);
+    }
+  }, [activeSection]);
+
+
+  // Effect to check if the desktop nav content overflows its container.
+  useEffect(() => {
+    const checkOverflow = () => {
+      const container = desktopNavRef.current;
+      if (container) {
+        const hasOverflow = container.scrollHeight > container.clientHeight;
+        setIsOverflowing(hasOverflow);
+      }
+    };
+    checkOverflow();
+    window.addEventListener('resize', checkOverflow);
+    return () => window.removeEventListener('resize', checkOverflow);
+  }, [navLinks]);
+
+
+  // Effect for MOBILE auto-centering.
   useEffect(() => {
     if (!isModalOpen || !activeSection) return;
     const mobileScrollOptions: ScrollIntoViewOptions = { behavior: 'smooth', block: 'center' };
@@ -46,7 +74,7 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
     }, 50);
   }, [activeSection, isModalOpen]);
 
-  // Effect for DESKTOP incremental scrolling (for manual page scrolls).
+  // Effect for DESKTOP incremental scrolling.
   useEffect(() => {
     if (isClickScrollingRef.current) {
       prevActiveSectionRef.current = activeSection;
@@ -78,11 +106,9 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
     }
     
     prevActiveSectionRef.current = activeSection;
-
   }, [activeSection, navLinks]);
 
-
-  // Effect for managing the floating mobile button visibility (unchanged).
+  // Effect for managing the floating mobile button visibility.
   useEffect(() => {
     const handleScroll = () => {
       if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
@@ -100,29 +126,33 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
     };
   }, []);
 
-  // MODIFIED: This handler now correctly schedules the delayed nav scroll.
+  // MODIFIED: This handler now also controls the highlight state.
   const handleDesktopLinkClick = (id: string) => {
-    // 1. Scroll the main page immediately.
     scrollToSection(id);
-    
-    // 2. Activate the lock to prevent the incremental scroll effect from firing.
     isClickScrollingRef.current = true;
+    
+    // Immediately remove the highlight.
+    setHighlightedSection(null);
 
-    // 3. Clear any previous pending click-scrolls.
     if (clickScrollTimeoutRef.current) {
       clearTimeout(clickScrollTimeoutRef.current);
     }
 
-    // 4. Set a 3-second timeout.
     clickScrollTimeoutRef.current = setTimeout(() => {
-      // After 3 seconds, find the button corresponding to the clicked ID.
-      const targetElement = desktopNavRef.current?.querySelector(`[data-nav-id="${id}"]`);
-      if (targetElement) {
-        // Perform a smooth "snap-to-center" scroll.
-        targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const navContainer = desktopNavRef.current;
+      const targetElement = navContainer?.querySelector<HTMLElement>(`[data-nav-id="${id}"]`);
+
+      if (navContainer && targetElement) {
+        const containerHeight = navContainer.clientHeight;
+        const targetOffsetTop = targetElement.offsetTop;
+        const targetHeight = targetElement.clientHeight;
+        const scrollTop = targetOffsetTop - (containerHeight / 2) + (targetHeight / 2);
+        navContainer.scrollTo({ top: scrollTop, behavior: 'smooth' });
       }
       
-      // Finally, release the lock so incremental scrolling can resume.
+      // After the delay and scroll, restore the highlight to the destination.
+      setHighlightedSection(id);
+      // Release the lock so the sync effect can take over.
       isClickScrollingRef.current = false;
 
     }, CLICK_SCROLL_DELAY);
@@ -144,21 +174,24 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
       <div className={`hidden md:inline-block sticky top-0 h-screen transition-opacity duration-300 ${isNavVisible ? 'opacity-100' : 'opacity-0'}`}>
         <nav
           ref={desktopNavRef}
-          className="bg-bg w-fit h-full flex flex-col justify-start py-8 p-3 overflow-y-auto custom-scrollbar"
+          className={`bg-bg w-fit h-full flex flex-col p-3 overflow-y-auto custom-scrollbar ${
+            isOverflowing ? 'justify-start py-8' : 'justify-center'
+          }`}
         >
           {navLinks.map(link => (
             <button
               key={link.id}
               onClick={() => handleDesktopLinkClick(link.id)}
-              data-nav-id={link.id} // Add data-nav-id back to desktop for this to work
+              data-nav-id={link.id}
               className={`w-full mx-auto pl-4 pr-4 pt-2 pb-2 m-1 rounded-lg text-right transition-colors duration-300 ${
-                activeSection === link.id ? 'bg-card text-text hover:bg-primary hover:text-bg' : 'hover:bg-primary text-text hover:text-bg'
+                // MODIFIED: Use the internal `highlightedSection` state for styling.
+                highlightedSection === link.id ? 'bg-card text-text hover:bg-primary hover:text-bg' : 'hover:bg-primary text-text hover:text-bg'
               }`}
             >
               {link.label}
             </button>
           ))}
-          <div className="flex-grow" />
+          {isOverflowing && <div className="flex-grow" />}
           <div className='w-full mx-auto pr-2 text-right transition-colors duration-300 border-t border-card mt-3 pt-3'>
             <button
               onClick={toggleTheme}
@@ -204,7 +237,10 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
                       <button
                         onClick={() => handleMobileLinkClick(link.id)}
                         data-nav-id={link.id}
-                        className={`w-full block text-center py-2 px-4 rounded transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary ${link.id === activeSection ? 'font-semibold bg-card2 text-text' : 'text-text hover:bg-primary hover:text-bg'}`}
+                        className={`w-full block text-center py-2 px-4 rounded transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary ${
+                          // MODIFIED: Use the internal `highlightedSection` state for styling on mobile too.
+                          highlightedSection === link.id ? 'font-semibold bg-card2 text-text' : 'text-text hover:bg-primary hover:text-bg'
+                        }`}
                       >
                         {link.label}
                       </button>
