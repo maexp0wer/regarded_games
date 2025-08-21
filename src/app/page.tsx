@@ -4,12 +4,15 @@ import { useState, useEffect, ReactNode } from 'react';
 import Head from 'next/head';
 import { useScrollNavigation } from '@/hooks/useScrollNavigation';
 import './globals.css';
-import { Logo, Zuhausi, Ritardo, Carlo } from '@/components/icons';
+import { Logo } from '@/components/svg';
 import { useTheme } from '@/context/ThemeContext';
 import Card from '@/components/Card';
 import CardPlain from '@/components/CardPlain';
 import ContactForm from '@/components/ContactForm';
 import GenericModal from '@/components/GenericModal';
+import Ritardo from '@/components/icons/Ritardo.svg';
+import Carlo from '@/components/icons/Carlo.svg';
+import FIM1 from '@/components/icons/FIM1.svg';
 
 import ScrollNav from '@/components/ScrollNav'; // Import the new component
 import { ArrowDownCircleIcon, ArrowDownIcon } from '@heroicons/react/16/solid';
@@ -108,7 +111,7 @@ export default function Home() {
 
         <div className="w-full max-w-6xl p-8 text-text">        
           <div className='text-primary flex justify-center items-center '>
-            <Logo className='w-40'/>
+            <Logo className='w-40 text-white'/>
           </div>
 
         
@@ -158,7 +161,7 @@ export default function Home() {
               <div className="grid md:grid-cols-2 gap-8">
                 
                 <div className="flex flex-col items-center text-center bg-card p-8 rounded-xl shadow-md">
-                  <Ritardo className="h-70 transition-transform duration-200 ease-in-out hover:scale-110" viewBox="0 0 800 800" onClick={openRitardoModal}/>
+                  <Ritardo className="h-70 transition-transform duration-200 ease-in-out hover:scale-110" viewBox="0 0 500 800" onClick={openRitardoModal}/>
                   <h3 className="text-xl font-bold m-8">Ritardo, the Capitalist</h3>
                   <p className='mr-4'>Play the game of accumulation. Use your capital to concentrate power, outmaneuver rivals, and push the economy towards a state of perfect inequality. Victory means the spoils go to the elite. The "Oligarchy" splits 100% of the prize pool in a brutal, winner-take-all fight for the top.</p>
                 </div>
@@ -172,14 +175,14 @@ export default function Home() {
 
                       <Ritardo
                         className="h-auto w-auto max-w-full max-h-full md:max-h-70"
-                        viewBox="0 0 800 800"
+                        viewBox="0 0 500 800"
                       />
                     </div>
                     <div className="flex-shrink-0">
                       <h3 className="mt-4 mb-2 text-2xl font-bold">
                         Ritardo, the Capitalist
                       </h3>
-                      <p className="px-4 pb-2 text-text/90">
+                      <p className="px-4 p-2 text-text/90">
                         Operating from his mom's basement, Ritardo wields what he calls "weaponized autism" and his grandma's 401k. He sees the market as a live-action video game, where fundamentals are "boomer magic" and the only true indicator is meme-velocity. For Ritardo, the goal is to win big, or go home in a blaze of loss-porn glory.
                       </p>
                     </div>
@@ -187,7 +190,7 @@ export default function Home() {
                 </GenericModal>
 
                 <div className="flex flex-col items-center text-center bg-card p-8 rounded-xl shadow-md">
-                    <Carlo className="h-70 transition-transform duration-200 ease-in-out hover:scale-110" viewBox="0 0 1200 1200" onClick={openCarloModal}/>
+                    <Carlo className="h-70 transition-transform duration-200 ease-in-out hover:scale-110 pt-8" viewBox="0 0 500 800" onClick={openCarloModal}/>
                     <h3 className="text-xl font-bold m-8">Carlo, the Socialist</h3>
                     <p className='ml-4'>Play the game of coordination. Organize with other players, resist the pull of capital, and drive the economy towards a state of perfect distribution. Victory means the spoils are shared. The "Solidarity Fund" caps the winnings of the rich and redistributes the surplus to reward those who sacrificed the most for the collective cause.</p>
                   </div>
@@ -201,14 +204,14 @@ export default function Home() {
                     <div className="flex w-full flex-1 items-center justify-center min-h-0 p-2">
                       <Carlo
                         className="h-auto w-auto max-w-full max-h-full md:max-h-70"
-                        viewBox="0 0 1200 1200"
+                        viewBox="0 0 500 800"
                       />
                     </div>
                     <div className="flex-shrink-0">
                       <h3 className="mt-4 mb-2 text-2xl font-bold">
                         Carlo, the Socialist
                       </h3>
-                      <p className="px-4 pb-2 text-text/90">
+                      <p className="px-4 p-2 text-text/90">
                         Carlo is a barista who trades from his sticky breakroom table, fueled by burnt coffee and pure resentment. He analyzes the market through the "Lens of Historical Materialism," shorting companies he deems the most exploitative. For Karl, every trade is a moral crusade to prove the whole game is rigged.
                       </p>
                     </div>
@@ -222,20 +225,20 @@ export default function Home() {
             <h2 className="text-3xl font-semibold mb-12 text-center">How it Works</h2>
             <div className="grid md:grid-cols-3 gap-8"> 
               <Card
-                icon={<Zuhausi />}
+                icon={<FIM1 viewBox="0 0 850 850" />}
                 title="ENTER THE ARENA"
                 description="Each season begins with an auction. Buy your in-game Fake Internet Money ($FIM) with $USDC to form the season's Prize Pool."
                 onButtonClick={() => openLitepaperToId('sectionTheGame')}
                 //buttonText="Learn more" // You could override the default if needed
               />
               <Card
-                icon={<Zuhausi />}
+                icon={<FIM1 viewBox="0 0 850 850" />}
                 title="OUTPLAY THE MARKET"
                 description="For 3 Months, trade $FIM to impact the live Gini Coefficient, which measures wealth inequality. Choose your trades wisely and coordinate with your peers—who you trade with is as important as the price."
                 onButtonClick={() => openLitepaperToId('sectionPhase2')}
               />
               <Card
-                icon={<Zuhausi />}
+                icon={<FIM1 viewBox="0 0 850 850" />}
                 title="CLAIM YOUR VICTORY"
                 description="The first side to reach their goal wins. The prize pool is distributed according to the winning ideology's rules."
                 onButtonClick={() => openLitepaperToId('sectionWinningTheGame')}
@@ -254,19 +257,19 @@ export default function Home() {
               </div>
               <div className="grid md:grid-cols-3 gap-8"> 
               <Card
-                icon={<Zuhausi />}
+                icon={<FIM1 viewBox="0 0 850 850" />}
                 title="A New Framework for Collaboration"
                 description="The crypto space has the potential to be more than a casino; it can be a framework for global economic collaboration. Ritardo Games is a contribution to steering the narrative away from speculative excess and back towards that foundational purpose. By playing, you are not just competing; you are participating in a grand experiment about the future of coordination."
                 onButtonClick={() => openLitepaperToId('sectionMarketOpportunity')}
               />
               <Card
-                icon={<Zuhausi />}
+                icon={<FIM1 viewBox="0 0 850 850" />}
                 title="True Player Ownership through a DAO"
                 description="Ritardo Games is a Decentralized Autonomous Organization (DAO). There is no central company that can change the rules or rig the outcome. All decisions—from game balance to treasury management—are made by the community of Ritardo ($RTD) token holders. The players hold the power, permanently."
                 onButtonClick={() => openLitepaperToId('sectionDAOOverview')}
               />
               <Card
-                icon={<Zuhausi />}
+                icon={<FIM1 viewBox="0 0 850 850" />}
                 title="A Productive Treasury & Real Yield"
                 description="The game's Prize Pool is put to work in blue-chip DeFi protocols, generating a stable yield. This revenue is the DAO's lifeblood, and is distributed among the staked $RTD holders. As the game grows, so do the rewards for its governors. Ownership is designed to be productive."
                 onButtonClick={() => openLitepaperToId('sectionTokenomics')}
@@ -286,7 +289,7 @@ export default function Home() {
           {/* Genesis Programm */}
           <section id="sectionGenesisProgram" className="py-16 mx-auto">
 
-            <h2 className="text-3xl font-bold mb-8 text-center">The Genesis Program - Your Path to Ownership</h2>
+            <h2 className="text-3xl font-bold mb-8 text-center">Join the Genesis Program</h2>
             <h2 className="text-xl font-bold mb-8 text-center">Ritardo Games is a community-owned DAO. We're reserving a significant portion of the initial $RTD supply for our founding players. Your Contribution Score determines your share. Here's your quest board:</h2>
             
             <div className="grid md:grid-cols-2 gap-8 mb-8">
@@ -303,7 +306,7 @@ export default function Home() {
               <h5 className="font-bold mt-4 mb-1 text-card-foreground">Points Breakdown:</h5>
               <ul className="list-disc list-inside text-sm space-y-1">
                 <li>Join the Program: 100 Points</li>
-                <li>Valued Contributor Bonus: Up to +400 Points (5x Multiplier)</li>
+                <li>Valued Contributor Bonus: Up to 400 extra Points (5x Multiplier)</li>
               </ul>
               <p className="my-4 font-semibold">Max Possible Score: 500 Points</p>
               </>
@@ -383,7 +386,7 @@ export default function Home() {
                 Help us secure the protocol. Find and responsibly report bugs to
                 earn a massive bonus.
               </p>
-              <h5 className="font-bold m-4 mb-1">Points Breakdown:</h5>
+              <h5 className="font-bold mt-4 mb-1 text-card-foreground">Points Breakdown:</h5>
               <ul className="list-disc list-inside text-sm space-y-1">
                 <li>Critical Bug: 25,000 Points</li>
                 <li>High Severity Bug: 10,000 Points</li>

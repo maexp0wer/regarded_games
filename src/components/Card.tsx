@@ -1,14 +1,11 @@
-// components/Card.jsx (or .tsx)
 import React from 'react';
 
-// Define the props the Card component will accept
-// (Using TypeScript syntax here for clarity, adjust if using plain JS)
 interface CardProps {
-  icon: React.ReactNode; // Expecting a JSX element for the icon
+  icon: React.ReactNode;
   title: string;
   description: string;
-  onButtonClick: () => void; // Function to call when button is clicked
-  buttonText?: string; // Optional text for the button, defaults to "Learn More"
+  onButtonClick: () => void;
+  buttonText?: string;
 }
 
 const Card: React.FC<CardProps> = ({
@@ -16,28 +13,43 @@ const Card: React.FC<CardProps> = ({
   title,
   description,
   onButtonClick,
-  buttonText = "Learn More" // Default button text
+  buttonText = "Learn More"
 }) => {
+  
+  let sizedIcon = icon;
+
+  if (React.isValidElement(icon)) {
+    const originalProps = icon.props as { className?: string };
+    const newClassName = `max-w-full max-h-full object-contain ${originalProps.className || ''}`.trim();
+
+    // --- THE FINAL FIX ---
+    // We assert the type of `icon` here to tell TypeScript that it is an element
+    // whose props can include a `className`. This satisfies the strict requirements
+    // of `React.cloneElement` and resolves the overload error.
+    sizedIcon = React.cloneElement(
+      icon as React.ReactElement<{ className?: string }>,
+      {
+        className: newClassName,
+      }
+    );
+  }
+
   return (
-    <div className="flex flex-col bg-card rounded-xl shadow-md overflow-hidden h-full"> {/* Added h-full to ensure consistent height if needed in a grid */}
-      {/* Image/Icon Area */}
-      <div className="h-48 bg-card2 flex justify-center items-center shrink-0">
-        {/* Use a standard width for the icon container */}
-        <div className="w-28">
-          {icon} {/* Render the passed icon component/element */}
-        </div>
+    <div className="flex flex-col bg-card rounded-xl shadow-md overflow-hidden h-full">
+      <div className="h-48 bg-card2 flex justify-center items-center shrink-0 p-8">
+        {sizedIcon}
       </div>
-      {/* Content Area */}
-      <div className="p-6 pb-0 flex-grow"> {/* flex-grow allows this area to expand */}
+
+      <div className="p-6 pb-0 flex-grow">
         <h3 className="text-xl font-bold mb-3">
-          {title} {/* Use the title prop */}
+          {title}
         </h3>
-        <p className='text-sm'>{description}</p> {/* Use the description prop */}
+        <p className='text-sm'>{description}</p>
       </div>
-      {/* Button Area */}
-      <div className='mt-auto text-right p-5 pr-12'> {/* mt-auto pushes this to the bottom */}
+
+      <div className='mt-auto text-right p-5 pr-12'>
         <button onClick={onButtonClick} className="text-primary hover:underline">
-          {buttonText} {/* Use the buttonText prop */}
+          {buttonText}
         </button>
       </div>
     </div>
@@ -45,4 +57,3 @@ const Card: React.FC<CardProps> = ({
 };
 
 export default Card;
-

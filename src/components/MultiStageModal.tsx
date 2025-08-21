@@ -11,7 +11,7 @@ import React, {
 } from 'react';
 import { createPortal } from 'react-dom';
 
-import { ArrowLeft, ArrowRight} from './icons';
+import { ArrowLeft, ArrowRight} from './svg';
 
 // --- Props Interface for the Combined Modal ---
 interface MultiStageModalProps { 

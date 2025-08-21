@@ -29,6 +29,6 @@ export const contributorTypeOptions = [
     { value: 'uiux', label: 'UI/UX' },
     { value: 'devops', label: 'DevOps' },
     { value: 'legal', label: 'Legal' },
-    { value: 'sales', label: 'Sales' },
+    { value: 'Marketing', label: 'Marketing' },
     { value: 'other_contributor', label: 'Other' },
 ];

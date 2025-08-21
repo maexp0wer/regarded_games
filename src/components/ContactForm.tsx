@@ -283,7 +283,7 @@ const ContactForm: React.FC = () => {
            {selectedRoles.includes('investor') && (
                 <div className="lg:col-span-2 -mt-2 mb-2">
                     <fieldset>
-                      <legend className={`${labelClasses} text-sm mb-1`}>What kind of Investor?</legend>
+                      <legend className={`${labelClasses} text-sm mb-2`}>What kind of Investor?</legend>
                       <div className="flex flex-wrap gap-2">
                          {investorTypeOptions.map(option => (
                               <button key={option.value} type="button"
@@ -303,7 +303,7 @@ const ContactForm: React.FC = () => {
            {selectedRoles.includes('future_player') && (
                 <div className="lg:col-span-2 -mt-2 mb-2">
                      <fieldset>
-                      <legend className={`${labelClasses} text-sm mb-1`}>Who is your Hero?</legend>
+                      <legend className={`${labelClasses} text-sm mb-2`}>Who is your Hero?</legend>
                       <div className="flex flex-wrap gap-2">
                          {futurePlayerTypeOptions.map(option => (
                               <button key={option.value} type="button"
@@ -323,7 +323,7 @@ const ContactForm: React.FC = () => {
             {selectedRoles.includes('contributor') && (
                 <div className="lg:col-span-2 -mt-2 mb-2 space-y-3">
                   <fieldset>
-                      <legend className={`${labelClasses} text-xs mb-1 ml-1`}>Contribution Area(s):</legend>
+                      <legend className={`${labelClasses} mb-2 ml-1`}>Contribution Area(s):</legend>
                       <div className="flex flex-wrap gap-2">
                          {contributorTypeOptions.map(option => (
                               <button
@@ -402,8 +402,8 @@ const ContactForm: React.FC = () => {
           </div>
 
           {/* Conditional Amount Fields */}
-          {selectedRoles.includes('investor') && ( <div><label htmlFor="investmentAmount" className={labelClasses}>Investment Amount (Optional, e.g., USD)</label><input type="text" id="investmentAmount" value={investmentAmount} onChange={(e) => setInvestmentAmount(e.target.value)} inputMode="decimal" className={`${inputClasses} ${errors.investmentAmount ? 'border-danger' : ''}`} />{errors.investmentAmount && <p id="investment-error" className={errorClasses}>{errors.investmentAmount}</p>}</div> )}
-          {selectedRoles.includes('future_player') && ( <div><label htmlFor="playAmount" className={labelClasses}>How much USDC will you play with? (Optional)</label><input type="text" id="playAmount" value={playAmount} onChange={(e) => setPlayMoney(e.target.value)} inputMode="decimal" className={`${inputClasses} ${errors.playAmount ? 'border-danger' : ''}`} />{errors.playAmount && <p id="property-error" className={errorClasses}>{errors.playAmount}</p>}</div> )}
+          {selectedRoles.includes('investor') && ( <div><label htmlFor="investmentAmount" className={labelClasses}>Investment Amount</label><input type="text" id="investmentAmount" value={investmentAmount} onChange={(e) => setInvestmentAmount(e.target.value)} inputMode="decimal" className={`${inputClasses} ${errors.investmentAmount ? 'border-danger' : ''}`} />{errors.investmentAmount && <p id="investment-error" className={errorClasses}>{errors.investmentAmount}</p>}</div> )}
+          {selectedRoles.includes('future_player') && ( <div><label htmlFor="playAmount" className={labelClasses}>How much USDC will you play with?</label><input type="text" id="playAmount" value={playAmount} onChange={(e) => setPlayMoney(e.target.value)} inputMode="decimal" className={`${inputClasses} ${errors.playAmount ? 'border-danger' : ''}`} />{errors.playAmount && <p id="property-error" className={errorClasses}>{errors.playAmount}</p>}</div> )}
 
           {/* Tickboxes Section */}
           <div className="lg:col-span-2">
@@ -460,7 +460,7 @@ const ContactForm: React.FC = () => {
           </div>
 
           {/* Message */}
-          <div className="lg:col-span-2"> <label htmlFor="message" className={labelClasses}>Message</label> <textarea id="message" rows={4} value={message} onChange={(e) => setMessage(e.target.value)} className={`${inputClasses}`} /> </div>
+          <div className="lg:col-span-2" > <label htmlFor="message" className={labelClasses}>Message</label> <textarea placeholder='Is there anything you want to tell us?' id="message" rows={4} value={message} onChange={(e) => setMessage(e.target.value)} className={`${inputClasses}`} /> </div>
 
        </div> {/* End of grid wrapper */}
 

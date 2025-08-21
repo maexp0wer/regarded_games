@@ -85,7 +85,7 @@ const GenericModal: FC<GenericModalProps> = ({
           md:w-full 
           md:max-w-2xl
           md:h-auto
-          md:max-h-[90vh]
+          md:max-h-[95vh]
         `}
         onClick={handleContentClick}
       >

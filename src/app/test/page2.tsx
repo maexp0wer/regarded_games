@@ -4,7 +4,7 @@ import { useState, useEffect, ReactNode } from 'react';
 import Head from 'next/head';
 import { useScrollNavigation } from '@/hooks/useScrollNavigation';
 import '../globals.css';
-import { MoonIcon, SunIcon, Token, Logo, Zuhausi, Ritardo, Carlo} from '@/components/icons';
+import { MoonIcon, SunIcon, Token, Logo, Zuhausi, Ritardo, Carlo} from '@/components/svg';
 import { useTheme } from '../../context/ThemeContext';
 
 

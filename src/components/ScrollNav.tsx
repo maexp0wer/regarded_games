@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useRef, MouseEvent } from 'react';
 import { useTheme } from '@/context/ThemeContext'; // Adjust path if needed
-import { MoonIcon, SunIcon } from './icons'; // Adjust path to your icons
+import { MoonIcon, SunIcon } from './svg'; // Adjust path to your icons
 
 export type NavLink = {
   id: string;
