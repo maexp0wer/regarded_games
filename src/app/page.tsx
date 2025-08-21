@@ -7,11 +7,12 @@ import './globals.css';
 import { Logo, Zuhausi, Ritardo, Carlo } from '@/components/icons';
 import { useTheme } from '@/context/ThemeContext';
 import Card from '@/components/Card';
+import CardPlain from '@/components/CardPlain';
 import ContactForm from '@/components/ContactForm';
 import GenericModal from '@/components/GenericModal';
 
 import ScrollNav from '@/components/ScrollNav'; // Import the new component
-import DataTable from '@/components/DataTable'; // Adjust path if needed
+import { ArrowDownCircleIcon, ArrowDownIcon } from '@heroicons/react/16/solid';
 
 export default function Home() {
   // Dark Mode State
@@ -54,7 +55,7 @@ export default function Home() {
     { id: 'sectionHero', label: 'Choose your Hero' },
     { id: 'sectionHow', label: 'How it works' },
     { id: 'sectionGame', label: 'Own the Game' },
-    { id: 'sectionBecomePlayer', label: 'Become a Player' }
+    { id: 'sectionGenesisProgram', label: 'Genesis Program' }
   ];
 
   const openLitepaper = () => {
@@ -69,6 +70,17 @@ export default function Home() {
   // This part remains exactly the same
   window.open(url, '_blank', 'noopener,noreferrer');
 };
+
+// The function from the previous answer
+  const scrollToId = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+  };
 
 
   return (
@@ -127,9 +139,9 @@ export default function Home() {
                 </button>
 
                 <button 
-                  onClick={() => scrollToSection('sectionBecomePlayer')}
+                  onClick={() => scrollToSection('sectionGenesisProgram')}
                   className=" bg-primary hover:bg-primary2 text-bg px-6 py-3 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-103">
-                  Become a Player
+                  Join the Game
                 </button>
               </div>
             </div>
@@ -250,13 +262,13 @@ export default function Home() {
               <Card
                 icon={<Zuhausi />}
                 title="True Player Ownership through a DAO"
-                description="Ritardo Games is a Decentralized Autonomous Organization (DAO). There is no central company that can change the rules or rig the outcome. All decisions—from game balance to treasury management—are made by the community of $RTD token holders. The players hold the power, permanently."
+                description="Ritardo Games is a Decentralized Autonomous Organization (DAO). There is no central company that can change the rules or rig the outcome. All decisions—from game balance to treasury management—are made by the community of Ritardo ($RTD) token holders. The players hold the power, permanently."
                 onButtonClick={() => openLitepaperToId('sectionDAOOverview')}
               />
               <Card
                 icon={<Zuhausi />}
                 title="A Productive Treasury & Real Yield"
-                description="The game's Prize Pool is put to work in blue-chip DeFi protocols, generating a stable yield. This revenue is the DAO's lifeblood, and it's streamed continuously to the staked $RTD holders. As the game grows, so do the rewards for its governors. Ownership is designed to be productive."
+                description="The game's Prize Pool is put to work in blue-chip DeFi protocols, generating a stable yield. This revenue is the DAO's lifeblood, and is distributed among the staked $RTD holders. As the game grows, so do the rewards for its governors. Ownership is designed to be productive."
                 onButtonClick={() => openLitepaperToId('sectionTokenomics')}
               />
               
@@ -271,56 +283,128 @@ export default function Home() {
           </div>
           </section>
 
-          {/* Get Involved */}
-          <section id="sectionBecomePlayer" className="py-16 mx-auto">
-            <h2 className="text-3xl font-bold mb-8 text-center">Become a Founding Player</h2>
-            <h2 className="text-xl font-bold mb-8 text-center">Ritardo Games is a community-owned ecosystem. The earliest and most dedicated contributors will be rewarded with a significant stake in its future.</h2>
+          {/* Genesis Programm */}
+          <section id="sectionGenesisProgram" className="py-16 mx-auto">
+
+            <h2 className="text-3xl font-bold mb-8 text-center">The Genesis Program - Your Path to Ownership</h2>
+            <h2 className="text-xl font-bold mb-8 text-center">Ritardo Games is a community-owned DAO. We're reserving a significant portion of the initial $RTD supply for our founding players. Your Contribution Score determines your share. Here's your quest board:</h2>
             
-            <div className="grid xl:grid-cols-4 gap-8 mb-8">
-            <div className="flex flex-col bg-card2 rounded-xl shadow-md overflow-hidden h-full">
-              
-              <h3 className="text-xl font-semibold m-4 text-center">1. Secure Your Spot</h3>
-              <div className="h-full bg-card flex justify-center">
-              <div className="m-6 space-y-2">
-                <p>Enter your email and wallet address below to join the waitlist. This is the first step to becoming eligible.</p>
-                <p><strong>Reward: :</strong> Secures a base allocation of the airdrop pool.</p>
-              </div>
-              </div>
-            </div>
+            <div className="grid md:grid-cols-2 gap-8 mb-8">
+              {/* Card 1: Community & Social */}
+        <CardPlain
+          icon={<Ritardo/>}
+          title="Join the Community"
+          description={
+            <>
+              <p className="text-sm">
+                Earn your base score and a multiplier for being an active, strategic
+                voice in our Discord and on social media.
+              </p>
+              <h5 className="font-bold mt-4 mb-1 text-card-foreground">Points Breakdown:</h5>
+              <ul className="list-disc list-inside text-sm space-y-1">
+                <li>Join the Program: 100 Points</li>
+                <li>Valued Contributor Bonus: Up to +400 Points (5x Multiplier)</li>
+              </ul>
+              <p className="my-4 font-semibold">Max Possible Score: 500 Points</p>
+              </>
+            }
+          actions={
+              <button 
+                onClick={() => scrollToId('contactForm')}
+                className="w-full lg:w-2/3 bg-primary hover:bg-primary2 text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
+                Join now
+              </button>
+          }
+        />
 
-            <div className="flex flex-col bg-card2 rounded-xl shadow-md overflow-hidden h-full">
-              <h3 className="text-xl font-semibold m-4 text-center">2. Join the Community</h3>
-              <div className="h-full bg-card flex justify-center">
-              <div className="m-6 space-y-2">
-                <p>Connect your Twitter and join our Discord. Participate in strategic discussions. The most insightful and helpful community members will be noticed.</p>
-                <p><strong>Reward: :</strong> Secures a base allocation of the airdrop pool.</p>
-              </div>
-              </div>
-            </div>
+        {/* Card 2: Ecosystem Growth */}
+        <CardPlain
+          icon={<Ritardo/>}
+          title="Spread the Word"
+          description={
+            <>
+              <p className="text-sm">
+                Use your unique referral code to bring other high-quality players
+                into the ecosystem. You're rewarded for the engaged members you
+                bring in.
+              </p>
+              <h5 className="font-bold mt-4 mb-1 text-card-foreground">Points Breakdown:</h5>
+              <ul className="list-disc list-inside text-sm space-y-1">
+                <li>Referrals 1-10: 50 Points each</li>
+                <li>Referrals 11-35: 20 Points each</li>
+                <li>Referrals 36-100: 5 Points each</li>
+              </ul>
+              <p className="mt-4 font-semibold">Max Possible Score: 1,325 Points</p>
+              </>
+            }
+          actions={
+            <button 
+              onClick={() => scrollToId('contactForm')}
+              className="w-full lg:w-2/3 bg-primary hover:bg-primary2 text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
+              Join now
+            </button>
+          }
+        />
 
-            <div className="flex flex-col bg-card2 rounded-xl shadow-md overflow-hidden h-full">
-              <h3 className="text-xl font-semibold m-4 text-center">3. Spread the Word</h3>
-              <div className="h-full bg-card flex justify-center">
-              <div className="m-6 space-y-2">
-                <p>During signup, you can create a unique referral code. Share it with other strategists, traders, and game theorists.</p>
-                <p><strong>Reward: :</strong> For every person who signs up with your code, your allocation will grow. The more valuable the members you bring in, the more you earn.</p>
-              </div>
-              </div>
-            </div>
+        {/* Card 3: Testnet Performance */}
+        <CardPlain
+          icon={<Ritardo/>}
+          title="Dominate the Testnet"
+          description={
+            <>
+              <p className="text-sm">
+                This is where the real strategists shine. Your skill on the
+                battlefield is a significant part of your score.
+              </p>
+              <h5 className="font-bold mt-4 mb-1 text-card-foreground">Points Breakdown:</h5>
+              <ul className="list-disc list-inside text-sm space-y-1">
+                <li>Be Active (Max): 200 Points</li>
+                <li>Be on the Winning Faction: 1,000 Points (vs. 100 for losing)</li>
+              </ul>
+              <p className="mt-4 font-semibold">Max Possible Score: 1,200 Points</p>
+              </>
+            }
+          actions={
+              <button 
+                onClick={() => scrollToId('contactForm')}
+                className="w-full lg:w-2/3 bg-primary hover:bg-primary2 text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
+                Open Testnet App
+              </button>
+          }
+        />
 
-            <div className="flex flex-col bg-card2 rounded-xl shadow-md overflow-hidden h-full">
-              <h3 className="text-xl font-semibold m-4 text-center">4. Join the Testnet</h3>
-              <div className="h-full bg-card flex justify-center">
-              <div className="m-6 space-y-2">
-                <p>Participate in our upcoming public Testnet on the Base network. Play the game, find bugs, and prove your strategic skill.</p>
-                <p><strong>Reward: :</strong> The largest portion of the airdrop will be reserved for our most active and successful Testnet players. Your performance on the battlefield is the ultimate proof of your value to the DAO.</p>
+        {/* Card 4: Protocol Security */}
+        <CardPlain
+          icon={<Ritardo/>}
+          title="Become a Guardian"
+          description={
+            <>
+              <p className="text-sm">
+                Help us secure the protocol. Find and responsibly report bugs to
+                earn a massive bonus.
+              </p>
+              <h5 className="font-bold m-4 mb-1">Points Breakdown:</h5>
+              <ul className="list-disc list-inside text-sm space-y-1">
+                <li>Critical Bug: 25,000 Points</li>
+                <li>High Severity Bug: 10,000 Points</li>
+                <li>Medium Severity Bug: 2,500 Points</li>
+                <li>Low Severity / Informational: 500 Points</li>
+              </ul>
+              </>
+            }
+          actions={
+            <button 
+              onClick={() => window.open('https://github.com/maexp0wer/ritardo_games')}
+              className="w-full lg:w-2/3 bg-primary hover:bg-primary2 text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
+              Open GitHub
+            </button>
+          }
+        />
               </div>
-              </div>
-            </div>
-          </div>
-
+              <div id='contactForm'>
+                <h3 className='text-center text-xl mt-12 mb-4'>Ready to start your campaign?</h3>
             <ContactForm/>
-            
+            </div>
           </section>
         </div>
       </main>

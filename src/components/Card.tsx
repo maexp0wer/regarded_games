@@ -32,7 +32,7 @@ const Card: React.FC<CardProps> = ({
         <h3 className="text-xl font-bold mb-3">
           {title} {/* Use the title prop */}
         </h3>
-        <p>{description}</p> {/* Use the description prop */}
+        <p className='text-sm'>{description}</p> {/* Use the description prop */}
       </div>
       {/* Button Area */}
       <div className='mt-auto text-right p-5 pr-12'> {/* mt-auto pushes this to the bottom */}
@@ -45,3 +45,4 @@ const Card: React.FC<CardProps> = ({
 };
 
 export default Card;
+

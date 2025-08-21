@@ -417,7 +417,7 @@ const ContactForm: React.FC = () => {
                   {/* Bounty Airdrop */}
                   <div className="relative flex items-start">
                       <div className="flex h-5 items-center"><input id="bountyAirdrop" name="bountyAirdrop" type="checkbox" checked={bountyAirdrop} onChange={handleBountyCheckboxChange} className={checkboxClasses} /></div>
-                      <div className="ml-3 text-sm"><label htmlFor="bountyAirdrop" className={checkboxLabelClasses}>Sign up for Bounty Airdrop</label></div>
+                      <div className="ml-3 text-sm"><label htmlFor="bountyAirdrop" className={checkboxLabelClasses}>Join the Genesis Program</label></div>
                   </div>
 
                   {/* Conditional Bounty Fields */}
