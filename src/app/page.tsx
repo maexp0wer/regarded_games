@@ -53,8 +53,8 @@ export default function Home() {
   const navLinks = [
     { id: 'sectionHero', label: 'Choose your Hero' },
     { id: 'sectionHow', label: 'How it works' },
-    { id: 'sectionGame', label: 'More than a Game' },
-    { id: 'sectionGetInvolved', label: 'Get Involved' }
+    { id: 'sectionGame', label: 'Own the Game' },
+    { id: 'sectionBecomePlayer', label: 'Become a Player' }
   ];
 
   const openLitepaper = () => {
@@ -127,9 +127,9 @@ export default function Home() {
                 </button>
 
                 <button 
-                  onClick={() => scrollToSection('sectionGetInvolved')}
+                  onClick={() => scrollToSection('sectionBecomePlayer')}
                   className=" bg-primary hover:bg-primary2 text-bg px-6 py-3 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-103">
-                  Get Involved
+                  Become a Player
                 </button>
               </div>
             </div>
@@ -140,12 +140,12 @@ export default function Home() {
 
           {/* Choose your Hero */}
           <section id="sectionHero" className="py-16 mx-auto">
-            <h2 className="text-4xl font-bold mb-8 text-center">Choose Your Hero</h2>
+            <h2 className="text-4xl font-bold mb-12 text-center">Choose Your Hero</h2>
             <div className="mx-auto">
               
               <div className="grid md:grid-cols-2 gap-8">
                 
-                <div className="flex flex-col items-center text-center">
+                <div className="flex flex-col items-center text-center bg-card p-8 rounded-xl shadow-md">
                   <Ritardo className="h-70 transition-transform duration-200 ease-in-out hover:scale-110" viewBox="0 0 800 800" onClick={openRitardoModal}/>
                   <h3 className="text-xl font-bold m-8">Ritardo, the Capitalist</h3>
                   <p className='mr-4'>Play the game of accumulation. Use your capital to concentrate power, outmaneuver rivals, and push the economy towards a state of perfect inequality. Victory means the spoils go to the elite. The "Oligarchy" splits 100% of the prize pool in a brutal, winner-take-all fight for the top.</p>
@@ -174,7 +174,7 @@ export default function Home() {
                   </div>
                 </GenericModal>
 
-                <div className="flex flex-col items-center text-center">
+                <div className="flex flex-col items-center text-center bg-card p-8 rounded-xl shadow-md">
                     <Carlo className="h-70 transition-transform duration-200 ease-in-out hover:scale-110" viewBox="0 0 1200 1200" onClick={openCarloModal}/>
                     <h3 className="text-xl font-bold m-8">Carlo, the Socialist</h3>
                     <p className='ml-4'>Play the game of coordination. Organize with other players, resist the pull of capital, and drive the economy towards a state of perfect distribution. Victory means the spoils are shared. The "Solidarity Fund" caps the winnings of the rich and redistributes the surplus to reward those who sacrificed the most for the collective cause.</p>
@@ -188,7 +188,7 @@ export default function Home() {
                   <div className="flex h-full flex-col items-center text-center text-text">
                     <div className="flex w-full flex-1 items-center justify-center min-h-0 p-2">
                       <Carlo
-                        className="h-auto w-auto max-w-full max-h-full md:max-h-100"
+                        className="h-auto w-auto max-w-full max-h-full md:max-h-70"
                         viewBox="0 0 1200 1200"
                       />
                     </div>
@@ -197,7 +197,7 @@ export default function Home() {
                         Carlo, the Socialist
                       </h3>
                       <p className="px-4 pb-2 text-text/90">
-                        Karl is a barista who trades from his sticky breakroom table, fueled by burnt coffee and pure resentment. He analyzes the market through the "Lens of Historical Materialism," shorting companies he deems the most exploitative. For Karl, every trade is a moral crusade to prove the whole game is rigged.
+                        Carlo is a barista who trades from his sticky breakroom table, fueled by burnt coffee and pure resentment. He analyzes the market through the "Lens of Historical Materialism," shorting companies he deems the most exploitative. For Karl, every trade is a moral crusade to prove the whole game is rigged.
                       </p>
                     </div>
                   </div>
@@ -218,14 +218,14 @@ export default function Home() {
               />
               <Card
                 icon={<Zuhausi />}
-                title="PLAY THE MARKET"
-                description="For 3 Months, trade $FIM on our transparent, buy-side only order book. Every trade impacts the live Gini Coefficient. Choose your trades wisely—who you trade with is as important as the price."
+                title="OUTPLAY THE MARKET"
+                description="For 3 Months, trade $FIM to impact the live Gini Coefficient, which measures wealth inequality. Choose your trades wisely and coordinate with your peers—who you trade with is as important as the price."
                 onButtonClick={() => openLitepaperToId('sectionPhase2')}
               />
               <Card
                 icon={<Zuhausi />}
                 title="CLAIM YOUR VICTORY"
-                description="The first faction to reach their goal wins. The prize pool is distributed according to the winning ideology's rules."
+                description="The first side to reach their goal wins. The prize pool is distributed according to the winning ideology's rules."
                 onButtonClick={() => openLitepaperToId('sectionWinningTheGame')}
               />
             </div>
@@ -234,35 +234,92 @@ export default function Home() {
 
           {/* More Than a Game */}
           <section id="sectionGame" className="py-16 mx-auto">
-            <h2 className="text-4xl font-bold mb-8 text-center">More Than a Game</h2>
+            <h2 className="text-3xl font-bold mb-8 text-center">Own the Game.</h2>
             <div className="mx-auto">
+              <p className='mb-10'>The modern financial market is a game rigged against the individual. Ritardo Games is built on a different foundation. It is a self-sustaining ecosystem owned and operated by its players, using the power of decentralization to create a fairer and more transparent world than the one it simulates.</p>
               
-
-              <p className='mb-4'>The crypto space was meant to be a tool for economic collaboration, but it's become a casino rigged against the individual. We're changing that.</p>
-              <p className='mb-4'>Ritardo Games is a DAO-governed ecosystem. The game is run by the players, for the players. Our governance token, Ritardo ($RTD), allows you to not only vote on the rules but also earn a share of the real yield generated by the game's prize pool. For a deep dive into our philosophy and technical architecture, read the full Whitepaper.</p>
+              
+              </div>
+              <div className="grid md:grid-cols-3 gap-8"> 
+              <Card
+                icon={<Zuhausi />}
+                title="A New Framework for Collaboration"
+                description="The crypto space has the potential to be more than a casino; it can be a framework for global economic collaboration. Ritardo Games is a contribution to steering the narrative away from speculative excess and back towards that foundational purpose. By playing, you are not just competing; you are participating in a grand experiment about the future of coordination."
+                onButtonClick={() => openLitepaperToId('sectionMarketOpportunity')}
+              />
+              <Card
+                icon={<Zuhausi />}
+                title="True Player Ownership through a DAO"
+                description="Ritardo Games is a Decentralized Autonomous Organization (DAO). There is no central company that can change the rules or rig the outcome. All decisions—from game balance to treasury management—are made by the community of $RTD token holders. The players hold the power, permanently."
+                onButtonClick={() => openLitepaperToId('sectionDAOOverview')}
+              />
+              <Card
+                icon={<Zuhausi />}
+                title="A Productive Treasury & Real Yield"
+                description="The game's Prize Pool is put to work in blue-chip DeFi protocols, generating a stable yield. This revenue is the DAO's lifeblood, and it's streamed continuously to the staked $RTD holders. As the game grows, so do the rewards for its governors. Ownership is designed to be productive."
+                onButtonClick={() => openLitepaperToId('sectionTokenomics')}
+              />
+              
             </div>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
+
+            <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8">
             <button 
-              onClick={() => openLitepaperToId('sectionTokenomics')}
+              onClick={() => openLitepaperToId('sectionHero')}
               className="bg-primary hover:bg-primary2 text-bg px-6 py-3 rounded-lg text-lg font-medium transition-all duration-200">
-              Discover our Tokenomics
-              
+              Read the Whitepaper
             </button>
           </div>
           </section>
 
           {/* Get Involved */}
-          <section id="sectionGetInvolved" className="py-16 mx-auto">
-            <h2 className="text-3xl font-bold mb-8 text-center">Get Involved</h2>
-            <div className="mx-auto">
-              <p className="mb-5">
-              Community is central to the Ritardo Games DAO. Without you, this Project will not succeed. Therefore, 10% of the total Token supply will be given away before the initial 
-              Token launch. You can take part in the giveaway by telling us why you are interested in Ritardo Games. The token will be evenly distributed to everyone that signs up for the Airdrop. 
-              You will also be able to spread the word and get a reference code. If people join the giveaway by providing your code, your initial cut of the giveaway supply will 
-              grow by 10%.</p>
+          <section id="sectionBecomePlayer" className="py-16 mx-auto">
+            <h2 className="text-3xl font-bold mb-8 text-center">Become a Founding Player</h2>
+            <h2 className="text-xl font-bold mb-8 text-center">Ritardo Games is a community-owned ecosystem. The earliest and most dedicated contributors will be rewarded with a significant stake in its future.</h2>
+            
+            <div className="grid xl:grid-cols-4 gap-8 mb-8">
+            <div className="flex flex-col bg-card2 rounded-xl shadow-md overflow-hidden h-full">
+              
+              <h3 className="text-xl font-semibold m-4 text-center">1. Secure Your Spot</h3>
+              <div className="h-full bg-card flex justify-center">
+              <div className="m-6 space-y-2">
+                <p>Enter your email and wallet address below to join the waitlist. This is the first step to becoming eligible.</p>
+                <p><strong>Reward: :</strong> Secures a base allocation of the airdrop pool.</p>
+              </div>
+              </div>
             </div>
-                      {/* <ContactForm/> */}
-                      <ContactForm/>
+
+            <div className="flex flex-col bg-card2 rounded-xl shadow-md overflow-hidden h-full">
+              <h3 className="text-xl font-semibold m-4 text-center">2. Join the Community</h3>
+              <div className="h-full bg-card flex justify-center">
+              <div className="m-6 space-y-2">
+                <p>Connect your Twitter and join our Discord. Participate in strategic discussions. The most insightful and helpful community members will be noticed.</p>
+                <p><strong>Reward: :</strong> Secures a base allocation of the airdrop pool.</p>
+              </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col bg-card2 rounded-xl shadow-md overflow-hidden h-full">
+              <h3 className="text-xl font-semibold m-4 text-center">3. Spread the Word</h3>
+              <div className="h-full bg-card flex justify-center">
+              <div className="m-6 space-y-2">
+                <p>During signup, you can create a unique referral code. Share it with other strategists, traders, and game theorists.</p>
+                <p><strong>Reward: :</strong> For every person who signs up with your code, your allocation will grow. The more valuable the members you bring in, the more you earn.</p>
+              </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col bg-card2 rounded-xl shadow-md overflow-hidden h-full">
+              <h3 className="text-xl font-semibold m-4 text-center">4. Join the Testnet</h3>
+              <div className="h-full bg-card flex justify-center">
+              <div className="m-6 space-y-2">
+                <p>Participate in our upcoming public Testnet on the Base network. Play the game, find bugs, and prove your strategic skill.</p>
+                <p><strong>Reward: :</strong> The largest portion of the airdrop will be reserved for our most active and successful Testnet players. Your performance on the battlefield is the ultimate proof of your value to the DAO.</p>
+              </div>
+              </div>
+            </div>
+          </div>
+
+            <ContactForm/>
             
           </section>
         </div>
