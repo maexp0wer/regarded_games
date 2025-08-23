@@ -19,7 +19,7 @@ const CardPlain: React.FC<CardProps> = ({
     <div className="flex flex-col bg-card rounded-xl shadow-md overflow-hidden h-full">
       {/* Image/Icon Area */}
       <div className="h-48 bg-card2 flex justify-center items-center shrink-0">
-        <div className="w-28">
+        <div className="w-full h-full p-5">
           {icon}
         </div>
       </div>

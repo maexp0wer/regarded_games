@@ -160,10 +160,10 @@ export default function Home() {
               
               <div className="grid md:grid-cols-2 gap-8">
                 
-                <div className="flex flex-col items-center text-center bg-card p-8 rounded-xl shadow-md">
-                  <Ritardo className="h-70 transition-transform duration-200 ease-in-out hover:scale-110" viewBox="0 0 500 800" onClick={openRitardoModal}/>
+                <div className="flex flex-col items-center text-center bg-card p-8 rounded-xl shadow-md max-h-screen">
+                  <Ritardo className="w-full h-auto max-h-70 transition-transform duration-200 ease-in-out hover:scale-110" viewBox="0 0 500 800" onClick={openRitardoModal}/>
                   <h3 className="text-xl font-bold m-8">Ritardo, the Capitalist</h3>
-                  <p className='mr-4'>Play the game of accumulation. Use your capital to concentrate power, outmaneuver rivals, and push the economy towards a state of perfect inequality. Victory means the spoils go to the elite. The "Oligarchy" splits 100% of the prize pool in a brutal, winner-take-all fight for the top.</p>
+                  <p className='text-sm'>Play the game of accumulation. Use your capital to concentrate power, outmaneuver rivals, and push the economy towards a state of perfect inequality. Victory means the spoils go to the elite. The "Oligarchy" splits 100% of the prize pool in a brutal, winner-take-all fight for the top.</p>
                 </div>
                 <GenericModal
                   isOpen={isRitardoModalOpen}
@@ -189,11 +189,11 @@ export default function Home() {
                   </div>
                 </GenericModal>
 
-                <div className="flex flex-col items-center text-center bg-card p-8 rounded-xl shadow-md">
-                    <Carlo className="h-70 transition-transform duration-200 ease-in-out hover:scale-110 pt-8" viewBox="0 0 500 800" onClick={openCarloModal}/>
-                    <h3 className="text-xl font-bold m-8">Carlo, the Socialist</h3>
-                    <p className='ml-4'>Play the game of coordination. Organize with other players, resist the pull of capital, and drive the economy towards a state of perfect distribution. Victory means the spoils are shared. The "Solidarity Fund" caps the winnings of the rich and redistributes the surplus to reward those who sacrificed the most for the collective cause.</p>
-                  </div>
+                <div className="flex flex-col items-center text-center bg-card p-8 rounded-xl shadow-md max-h-screen">
+                  <Carlo className="w-full h-auto max-h-70  transition-transform duration-200 ease-in-out hover:scale-110 pt-8" viewBox="0 0 500 800" onClick={openCarloModal}/>
+                  <h3 className="text-xl font-bold m-8">Carlo, the Socialist</h3>
+                  <p className='text-sm'>Play the game of coordination. Organize with other players, resist the pull of capital, and drive the economy towards a state of perfect distribution. Victory means the spoils are shared. The "Solidarity Fund" caps the winnings of the rich and redistributes the surplus to reward those who sacrificed the most for the collective cause.</p>
+                </div>
                 </div>
                 <GenericModal
                   isOpen={isCarloModalOpen}
@@ -295,7 +295,7 @@ export default function Home() {
             <div className="grid md:grid-cols-2 gap-8 mb-8">
               {/* Card 1: Community & Social */}
         <CardPlain
-          icon={<Ritardo/>}
+          icon={<Ritardo className='w-full h-full'/>}
           title="Join the Community"
           description={
             <>
@@ -322,7 +322,7 @@ export default function Home() {
 
         {/* Card 2: Ecosystem Growth */}
         <CardPlain
-          icon={<Ritardo/>}
+          icon={<Ritardo className='w-full h-full' viewBox='0 0 800 800'/>}
           title="Spread the Word"
           description={
             <>
