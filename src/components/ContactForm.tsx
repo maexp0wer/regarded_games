@@ -14,6 +14,9 @@ import {
 } from '@/lib/formOptions'; // Adjust path as needed
 
 
+
+
+
 interface FormErrors {
   email?: string;
   walletAddress?: string;
@@ -149,6 +152,8 @@ const ContactForm: React.FC = () => {
     const newErrors: FormErrors = {};
     let isValid = true;
 
+  
+
     // Role validation
     if (selectedRoles.length === 0) { newErrors.selectedRoles = 'Please select at least one role.'; isValid = false; }
     else {
@@ -252,14 +257,16 @@ const ContactForm: React.FC = () => {
   const subButtonBaseClasses = "px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out";
   const subButtonInactiveClasses = "bg-card2 border-card2 text-text hover:bg-card3";
   const subButtonActiveClasses = "bg-primary text-bg";
+  const { darkMode, toggleTheme } = useTheme();
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 p-6 bg-card rounded-lg shadow-md">
+
+  
+
+    <form onSubmit={handleSubmit} className="space-y-6 p-6 bg-card rounded-lg shadow-md ">
        {/* General Success/Error Messages */}
-       {submitStatus === 'success' && ( <div className="p-4 mb-4 text-sm text-bg  bg-success rounded-lg" role="alert">{submitMessage}</div> )}
+       {submitStatus === 'success' && ( <div className={`p-4 mb-4 text-sm ${darkMode ? 'dark text-bg' : 'texttext'} bg-success rounded-lg`} role="alert">{submitMessage}</div> )}
        {submitStatus === 'error' && ( <div className="p-4 mb-4 text-sm text-bg bg-danger rounded-lg" role="alert">{submitMessage || 'An error occurred. Please check the fields below.'}</div> )}
-
-
        <div className="grid grid-cols-1 gap-y-6 lg:grid-cols-2 lg:gap-x-6">
 
           {/* Role Buttons - Top */}
@@ -394,7 +401,7 @@ const ContactForm: React.FC = () => {
             <input
               type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)}
               className={`${inputClasses} ${errors.email ? 'border-danger' : ''}`}
-              required={newsletter || selectedRoles.includes('future_player') || selectedRoles.includes('contributor') || selectedRoles.includes('potential_partner')}
+              required={newsletter || selectedRoles.includes('contributor') || selectedRoles.includes('potential_partner')}
               aria-describedby={errors.email ? 'email-error' : undefined}
               aria-invalid={!!errors.email}
             />

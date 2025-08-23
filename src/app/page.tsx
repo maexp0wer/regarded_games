@@ -33,25 +33,7 @@ export default function Home() {
   const openCarloModal = () => setIsCarloModalOpen(true);
   const closeCarloModal = () => setIsCarloModalOpen(false);
 
-  useEffect(() => {
-    let initialTheme; // Declare without initial value
-    // Ensure this code runs only on the client
-    if (typeof window !== 'undefined') {
-        const savedTheme = localStorage.getItem('theme');
-
-        if (savedTheme) {
-            // If a theme is saved, respect it
-            initialTheme = savedTheme === 'dark';
-        } else {
-            // --- CHANGE IS HERE: If NO theme is saved, default to DARK ---
-            initialTheme = true; // true means dark mode
-        }
-
-        toggleTheme();
-        // Apply class immediately on load based on initial check
-        document.documentElement.classList.toggle('dark', initialTheme);
-    }
-  }, []);
+  
 
   // Navigation Links
   const navLinks = [
@@ -295,7 +277,7 @@ export default function Home() {
             <div className="grid md:grid-cols-2 gap-8 mb-8">
               {/* Card 1: Community & Social */}
         <CardPlain
-          icon={<Ritardo className='w-full h-full'/>}
+          icon={<Ritardo className='w-full h-full' viewBox='0 0 500 800'/>}
           title="Join the Community"
           description={
             <>
@@ -322,7 +304,7 @@ export default function Home() {
 
         {/* Card 2: Ecosystem Growth */}
         <CardPlain
-          icon={<Ritardo className='w-full h-full' viewBox='0 0 800 800'/>}
+          icon={<Ritardo className='w-full h-full' viewBox='0 0 500 800'/>}
           title="Spread the Word"
           description={
             <>
@@ -351,7 +333,7 @@ export default function Home() {
 
         {/* Card 3: Testnet Performance */}
         <CardPlain
-          icon={<Ritardo/>}
+          icon={<Ritardo className='w-full h-full' viewBox='0 0 500 800'/>}
           title="Dominate the Testnet"
           description={
             <>
@@ -378,7 +360,7 @@ export default function Home() {
 
         {/* Card 4: Protocol Security */}
         <CardPlain
-          icon={<Ritardo/>}
+          icon={<Ritardo className='w-full h-full' viewBox='0 0 500 800'/>}
           title="Become a Guardian"
           description={
             <>
