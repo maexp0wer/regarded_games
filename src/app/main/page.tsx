@@ -3,7 +3,7 @@
 import { useState, useEffect, ReactNode } from 'react';
 import Head from 'next/head';
 import { useScrollNavigation } from '@/hooks/useScrollNavigation';
-import './globals.css';
+import '../globals.css';
 import { Logo } from '@/components/svg';
 import { useTheme } from '@/context/ThemeContext';
 import Card from '@/components/Card';
@@ -13,6 +13,7 @@ import GenericModal from '@/components/GenericModal';
 import Ritardo from '@/components/icons/Ritardo.svg';
 import Carlo from '@/components/icons/Carlo.svg';
 import FIM1 from '@/components/icons/FIM1.svg';
+
 
 import ScrollNav from '@/components/ScrollNav'; // Import the new component
 import { ArrowDownCircleIcon, ArrowDownIcon } from '@heroicons/react/16/solid';
@@ -99,6 +100,7 @@ export default function Home() {
         
           {/* Hero Section */}
           <section className="hero-section min-h-screen flex items-center justify-center">
+            
             <div className="text-center max-w-4xl px-4">
               <h1 className="text-4xl md:text-6xl font-bold mb-2 text-primary">
                 A War of Ideas.
@@ -130,7 +132,6 @@ export default function Home() {
                 </button>
               </div>
             </div>
-            
           </section>
           
 
@@ -387,7 +388,7 @@ export default function Home() {
         />
               </div>
               <div id='contactForm'>
-                <h3 className='text-center text-xl mt-12 mb-4'>Ready to start your campaign?</h3>
+                <h3 className='text-center text-xl font-bold mt-12 mb-4'>Ready to start your campaign?</h3>
             <ContactForm/>
             </div>
           </section>

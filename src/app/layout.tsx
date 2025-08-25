@@ -1,8 +1,9 @@
 // app/layout.tsx
-import { ThemeProvider } from '../context/ThemeContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import './globals.css';
 import type { Metadata } from 'next';
 import { Exo_2, Orbitron } from 'next/font/google'; // 1. Import the fonts
+
 
 
 const orbitron = Orbitron({

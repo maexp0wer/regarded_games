@@ -12,12 +12,15 @@
     "@heroicons/react": "^2.2.0",
     "@next/font": "^14.2.15",
     "@svgr/webpack": "^8.1.0",
+    "@tanstack/react-query": "^5.85.5",
     "html-react-parser": "^5.2.6",
     "next": "^15.2.4",
     "pg": "^8.14.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-pdf": "^10.1.0"
+    "react-pdf": "^10.1.0",
+    "viem": "^2.35.1",
+    "wagmi": "^2.16.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

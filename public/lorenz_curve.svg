@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="177.63103mm"
+   height="112.36523mm"
+   viewBox="0 0 177.63103 112.36523"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4 (86a8ad7, 2024-10-11)"
+   sodipodi:docname="lorenz_curve.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.71891835"
+     inkscape:cx="556.39142"
+     inkscape:cy="-84.154202"
+     inkscape:window-width="1920"
+     inkscape:window-height="1009"
+     inkscape:window-x="1912"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-16.688665,-101.09201)">
+    <rect
+       style="fill:#ffffff;stroke-width:0.505138"
+       id="rect1"
+       width="177.02229"
+       height="0.73605937"
+       x="17.297398"
+       y="212.72118"
+       ry="0.36802968" />
+    <rect
+       style="fill:#ffffff;stroke-width:0.772459"
+       id="rect2"
+       width="0.73605943"
+       height="111.88103"
+       x="16.688665"
+       y="101.09201"
+       ry="0.43031168" />
+    <path
+       style="fill:#ffffff;stroke-width:1.07156"
+       d="m 19.505576,209.04089 c 60.179301,-2.12805 65.745238,-2.71556 100.029724,-4.02446 18.26718,-0.69739 51.32836,-0.20756 60.23284,-25.63129 7.53238,-21.50616 10.92195,-55.83093 14.20334,-74.20896 0,0 -2.66916,44.84593 -13.68287,76.98159 -2.49534,7.2809 -13.63907,22.00285 -40.44683,23.48604 -54.390403,3.00927 -120.336204,3.39708 -120.336204,3.39708 z"
+       id="path4"
+       sodipodi:nodetypes="csscssc" />
+    <path
+       style="fill:#ffffff;stroke-width:1.07156"
+       d="m 19.15056,207.89628 174.52841,-103.1428 0.17961,0.40229 L 19.517725,208.4576 Z"
+       id="path5"
+       sodipodi:nodetypes="ccccc" />
+  </g>
+</svg>

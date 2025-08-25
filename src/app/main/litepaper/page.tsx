@@ -5,7 +5,7 @@ import Head from 'next/head';
 import { useScrollNavigation } from '@/hooks/useScrollNavigation';
 import '../globals.css';
 import { Logo, ArrowRight} from '@/components/svg';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../../context/ThemeContext';
 
 
 import ScrollNav from '@/components/ScrollNav'; // Import the new component
