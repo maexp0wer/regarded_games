@@ -3,6 +3,7 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import './globals.css';
 import type { Metadata } from 'next';
 import { Exo_2, Orbitron } from 'next/font/google'; // 1. Import the fonts
+import { Providers } from './providers';
 
 
 
@@ -51,9 +52,11 @@ export default function RootLayout({
             __html: blockingThemeScript,
           }}
         />
+        <Providers>
         <ThemeProvider>
            {children}
         </ThemeProvider>
+        </Providers>
         <div id="modal-root"></div>
       </body>
     </html>
