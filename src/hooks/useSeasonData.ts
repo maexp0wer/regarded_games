@@ -3,34 +3,24 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAccount, useReadContract, useReadContracts } from 'wagmi';
-import { contractAddresses, gameControllerABI } from '@/lib/contracts';
-import { Address } from 'viem';
-
-// Define the shape of the data this hook will provide
-export interface SeasonDetails {
-  isActive: boolean;
-  gameSeason: Address;
-  auction: Address;
-}
-
-export interface ManifestDetails {
-  yieldVenues: readonly Address[];
-  allocationBps: readonly bigint[];
-  harvestGasPriceLimit: bigint;
-}
+import { contractAddresses, gameControllerABI, treasuryABI } from '@/lib/contracts';
+import { Address, formatUnits } from 'viem';
 
 export interface SeasonDataState {
   isMounted: boolean;
   isLoading: boolean;
   activeSeasonId: number | null;
-  seasonDetails?: SeasonDetails;
-  manifestDetails?: ManifestDetails;
-  error?: string;
+  isActive?: boolean;
+  gameSeasonAddress?: Address;
+  auctionAddress?: Address;
+  prizePool: string;
+  manifest?: {
+    yieldVenues: readonly Address[];
+    allocationBps: readonly bigint[];
+  };
 }
 
-// Define the explicit return type for our `getSeason` tuple
 type GetSeasonResult = readonly [boolean, Address, Address];
-// Define the explicit return type for our `getSeasonFinancialManifest` tuple
 type GetManifestResult = readonly [readonly Address[], readonly bigint[], bigint];
 
 export function useSeasonData(): SeasonDataState {
@@ -38,90 +28,73 @@ export function useSeasonData(): SeasonDataState {
   useEffect(() => setIsMounted(true), []);
 
   const [activeSeasonId, setActiveSeasonId] = useState<number | null>(null);
-
   const { chain } = useAccount();
   const addresses = chain ? contractAddresses[chain.id as keyof typeof contractAddresses] : undefined;
-  const gameControllerAddress = addresses?.gameController;
 
-  // STEP 1: Fetch the total number of seasons.
   const { data: totalSeasonsData, isLoading: isLoadingTotal } = useReadContract({
-    address: gameControllerAddress,
+    address: addresses?.gameController,
     abi: gameControllerABI,
     functionName: 'getTotalSeasons',
-    query: { enabled: !!gameControllerAddress },
+    query: { enabled: !!addresses },
   });
   const totalSeasons = totalSeasonsData ? Number(totalSeasonsData) : 0;
 
-  // STEP 2: Prepare a batch of calls to get the status of all seasons.
   const seasonStatusContracts = useMemo(() => {
-    if (!gameControllerAddress || totalSeasons === 0) return [];
+    if (!addresses || totalSeasons === 0) return [];
     return Array.from({ length: totalSeasons }, (_, i) => ({
-      address: gameControllerAddress,
+      address: addresses.gameController,
       abi: gameControllerABI,
       functionName: 'getSeason',
       args: [BigInt(i)],
     }));
-  }, [gameControllerAddress, totalSeasons]);
+  }, [addresses, totalSeasons]);
 
   const { data: seasonStatuses, isLoading: isLoadingStatuses } = useReadContracts({
     contracts: seasonStatusContracts,
     query: { enabled: totalSeasons > 0 },
   });
 
-  // STEP 3: Process the results to find the first active season.
   useEffect(() => {
     if (seasonStatuses) {
-      const firstActiveIndex = seasonStatuses.findIndex((season) => {
-        if (season.status !== 'success') return false;
-        const result = season.result as unknown as GetSeasonResult;
-        return result[0] === true;
-      });
-      setActiveSeasonId(firstActiveIndex !== -1 ? firstActiveIndex : null);
+      const idx = seasonStatuses.findIndex(s => s.status === 'success' && (s.result as unknown as GetSeasonResult)?.[0] === true);
+      setActiveSeasonId(idx !== -1 ? idx : null);
     }
   }, [seasonStatuses]);
 
-  // Derive the active season's full data from the already-fetched results
   const activeSeasonData = useMemo(() => {
-    if (activeSeasonId === null || !seasonStatuses || !seasonStatuses[activeSeasonId]) {
-      return undefined;
-    }
-    return seasonStatuses[activeSeasonId].result as unknown as GetSeasonResult;
+    if (activeSeasonId === null || !seasonStatuses) return undefined;
+    return seasonStatuses[activeSeasonId]?.result as unknown as GetSeasonResult | undefined;
   }, [activeSeasonId, seasonStatuses]);
 
-  // STEP 4: Fetch the manifest ONLY for the active season.
-  const { data: manifestDetailsData, isLoading: isLoadingManifest } = useReadContract({
-    address: gameControllerAddress,
-    abi: gameControllerABI,
-    functionName: 'getSeasonFinancialManifest',
-    // 🔴 THE FIX IS HERE 🔴
-    // We pass `undefined` for args when the hook is disabled. This satisfies TypeScript's
-    // `readonly [bigint] | undefined` type requirement.
+  const { data: prizePoolData, isLoading: isLoadingPrizePool } = useReadContract({
+    address: addresses?.treasury,
+    abi: treasuryABI,
+    functionName: 'seasonPrizePool',
     args: activeSeasonId !== null ? [BigInt(activeSeasonId)] : undefined,
-    query: {
-      enabled: activeSeasonId !== null,
-    },
+    query: { enabled: activeSeasonId !== null && !!addresses, refetchInterval: 5000 },
   });
 
-  // STEP 5: Consolidate and return the final state.
-  const isLoading = isLoadingTotal || isLoadingStatuses || isLoadingManifest;
-  
+  const { data: manifestData, isLoading: isLoadingManifest } = useReadContract({
+    address: addresses?.gameController,
+    abi: gameControllerABI,
+    functionName: 'getSeasonFinancialManifest',
+    args: activeSeasonId !== null ? [BigInt(activeSeasonId)] : undefined,
+    query: { enabled: activeSeasonId !== null },
+  });
+
+  const isLoading = isLoadingTotal || isLoadingStatuses || isLoadingPrizePool || isLoadingManifest;
+
   return {
     isMounted,
     isLoading,
     activeSeasonId,
-    seasonDetails: activeSeasonData
-      ? {
-          isActive: activeSeasonData[0],
-          gameSeason: activeSeasonData[1],
-          auction: activeSeasonData[2],
-        }
-      : undefined,
-    manifestDetails: manifestDetailsData
-      ? {
-          yieldVenues: (manifestDetailsData as unknown as GetManifestResult)[0],
-          allocationBps: (manifestDetailsData as unknown as GetManifestResult)[1],
-          harvestGasPriceLimit: (manifestDetailsData as unknown as GetManifestResult)[2],
-        }
-      : undefined,
+    isActive: activeSeasonData?.[0],
+    gameSeasonAddress: activeSeasonData?.[1],
+    auctionAddress: activeSeasonData?.[2],
+    prizePool: prizePoolData ? formatUnits(prizePoolData, 6) : '0.00',
+    manifest: manifestData ? {
+      yieldVenues: (manifestData as unknown as GetManifestResult)[0],
+      allocationBps: (manifestData as unknown as GetManifestResult)[1],
+    } : undefined,
   };
 }
