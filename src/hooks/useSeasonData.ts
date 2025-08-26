@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAccount, useReadContract, useReadContracts } from 'wagmi';
-import { contractAddresses, gameControllerABI, treasuryABI } from '@/lib/contracts';
+import { contractAddresses, gameControllerABI, treasuryABI, gameSeasonABI  } from '@/lib/contracts';
 import { Address, formatUnits } from 'viem';
 
 export interface SeasonDataState {
@@ -18,6 +18,7 @@ export interface SeasonDataState {
     yieldVenues: readonly Address[];
     allocationBps: readonly bigint[];
   };
+  phase: 'AUCTION' | 'TRADING' | 'ENDED' | 'UNKNOWN';
 }
 
 type GetSeasonResult = readonly [boolean, Address, Address];
@@ -82,7 +83,29 @@ export function useSeasonData(): SeasonDataState {
     query: { enabled: activeSeasonId !== null },
   });
 
+  const { data: currentStateData, isLoading: isLoadingCurrentState } = useReadContract({
+    address: activeSeasonData?.[1], // The `gameSeasonAddress` is the second element in the tuple
+    abi: gameSeasonABI,
+    functionName: 'currentState',
+    query: {
+      // Only run this query if we have found an active season
+      enabled: activeSeasonData !== undefined,
+      // Keep it live by refetching
+      refetchInterval: 5000,
+    }
+  });
+
   const isLoading = isLoadingTotal || isLoadingStatuses || isLoadingPrizePool || isLoadingManifest;
+
+  
+
+  const phase = useMemo(() => {
+    const state = currentStateData as number | undefined;
+    if (state === 0) return 'AUCTION';
+    if (state === 1) return 'TRADING';
+    if (state === 2) return 'ENDED';
+    return 'UNKNOWN';
+  }, [currentStateData]);
 
   return {
     isMounted,
@@ -96,5 +119,6 @@ export function useSeasonData(): SeasonDataState {
       yieldVenues: (manifestData as unknown as GetManifestResult)[0],
       allocationBps: (manifestData as unknown as GetManifestResult)[1],
     } : undefined,
+    phase
   };
 }

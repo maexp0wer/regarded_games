@@ -4,7 +4,8 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
 import { hardhat } from 'wagmi/chains';
-import { Address } from 'viem';
+// 🔴 THE DEFINITIVE FIX IS HERE: Import the `Chain` type from `viem`.
+import { type Address, type Chain } from 'viem';
 import { contractAddresses } from '@/lib/contracts';
 
 export interface ConnectionState {
@@ -12,6 +13,7 @@ export interface ConnectionState {
   isConnected: boolean;
   isWrongNetwork: boolean;
   address?: Address;
+  chain?: Chain; // This will now correctly resolve to the type we imported from viem
   connect: () => void;
   disconnect: () => void;
   switchNetwork?: () => void;
@@ -33,6 +35,7 @@ export function useConnection(): ConnectionState {
     isConnected,
     isWrongNetwork,
     address,
+    chain, // The `chain` object returned by useAccount conforms to the `viem` Chain type
     connect: () => connect({ connector: connectors[0] }),
     disconnect,
     switchNetwork: switchChain ? () => switchChain({ chainId: hardhat.id }) : undefined,

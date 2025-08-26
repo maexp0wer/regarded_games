@@ -6,6 +6,7 @@ import { useAccount, useSimulateContract, useWriteContract, useWaitForTransactio
 import { parseUnits, formatUnits, Address, zeroAddress } from 'viem';
 import { auctionTemplateABI, erc20ABI, contractAddresses } from '@/lib/contracts';
 
+// This is the "return type" of our hook. It defines everything the UI components can use.
 export interface AuctionState {
   usdcAmount: string;
   setUsdcAmount: (amount: string) => void;
@@ -30,7 +31,13 @@ export function useAuction(): AuctionState {
   const amountToSpend = usdcAmount ? parseUnits(usdcAmount, 6) : 0n;
 
   const fetchAllowance = useCallback(async () => {
-    if (!address || !addresses || !publicClient) return;
+    // We don't need to check isConnected here, as the hook's enabled flags handle it.
+    if (!address || !addresses || !publicClient) {
+      // If we're not connected, ensure allowance is reset
+      setAllowance(null);
+      setIsAllowanceLoading(false);
+      return;
+    }
     setIsAllowanceLoading(true);
     try {
       const result = await publicClient.readContract({
@@ -40,7 +47,11 @@ export function useAuction(): AuctionState {
     } catch (e) { console.error("Failed to fetch allowance", e); setAllowance(null); }
     finally { setIsAllowanceLoading(false); }
   }, [address, addresses, publicClient]);
-  useEffect(() => { fetchAllowance(); }, [fetchAllowance]);
+
+  // Refetch allowance whenever the user or chain changes
+  useEffect(() => {
+    fetchAllowance();
+  }, [fetchAllowance]);
 
   const needsApproval = !showSuccess && allowance !== null && allowance < amountToSpend;
   
@@ -60,6 +71,7 @@ export function useAuction(): AuctionState {
   useEffect(() => { if (isBuySuccess) handleBuySuccess(); }, [isBuySuccess, handleBuySuccess]);
 
   const buttonState = useMemo(() => {
+    // 🔴 THE FIX IS HERE: We check isConnected directly from the useAccount hook.
     if (!isConnected || !addresses) return 'no_wallet';
     if (showSuccess) return 'success';
     if (isAllowanceLoading) return 'loading_allowance';
@@ -73,7 +85,8 @@ export function useAuction(): AuctionState {
   const handleActionClick = () => { if (buttonState === 'approve' && approveRequest) approve(approveRequest.request); else if (buttonState === 'buy' && buyFimRequest) buyFIM(buyFimRequest.request); };
   
   return {
-    usdcAmount, setUsdcAmount,
+    usdcAmount,
+    setUsdcAmount,
     buttonState,
     buttonText: { success: 'Success!', loading_allowance: 'Verifying...', approving: 'Approving...', buying: 'Processing...', enter_amount: 'Enter an amount', approve: `Approve ${usdcAmount} USDC`, buy: 'Buy FIM', no_wallet: 'Connect Wallet First' }[buttonState],
     isButtonDisabled: ['success', 'loading_allowance', 'approving', 'buying', 'enter_amount', 'no_wallet'].includes(buttonState) || (buttonState === 'approve' && !approveRequest) || (buttonState === 'buy' && !buyFimRequest),
