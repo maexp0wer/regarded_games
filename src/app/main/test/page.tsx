@@ -4,7 +4,7 @@ import { useState, useEffect, ReactNode } from 'react';
 import Head from 'next/head';
 import { useScrollNavigation } from '@/hooks/useScrollNavigation';
 import '../globals.css';
-import { Logo } from '@/components/svg';
+import { Logo } from '@/components/icons/svg';
 import { useTheme } from '@/context/ThemeContext';
 import Card from '@/components/Card';
 import CardPlain from '@/components/CardPlain';

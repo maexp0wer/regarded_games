@@ -37,17 +37,6 @@ export const ArrowLeft = (props: SVGProps<SVGSVGElement>) => (
 );
 
 
-
-export const Zuhausi = (props: SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg"
-     version="1.1"
-     viewBox="0 0 283 283">
-    <circle cx="141.5" cy="141.5" r="140" fill="var(--color-primary)" />
-    <path fill="var(--color-bg)" d="M 140.5,52.5 C 142.255,53.0722 143.922,53.9055 145.5,55C 167.354,73.688 189.354,92.188 211.5,110.5C 212.5,142.493 212.833,174.493 212.5,206.5C 206.167,206.5 199.833,206.5 193.5,206.5C 193.667,177.831 193.5,149.165 193,120.5C 175.979,105.978 158.813,91.6451 141.5,77.5C 124.187,91.6451 107.021,105.978 90,120.5C 89.5,149.165 89.3334,177.831 89.5,206.5C 83.1667,206.5 76.8333,206.5 70.5,206.5C 70.1668,174.493 70.5001,142.493 71.5,110.5C 94.5443,91.1141 117.544,71.7808 140.5,52.5 Z"/>
-  </svg>
-);
-
-
 export const Ritardo = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"

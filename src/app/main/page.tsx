@@ -4,7 +4,7 @@ import { useState, useEffect, ReactNode } from 'react';
 import Head from 'next/head';
 import { useScrollNavigation } from '@/hooks/useScrollNavigation';
 import '../globals.css';
-import { Logo } from '@/components/svg';
+import { Logo } from '@/components/icons/svg';
 import { useTheme } from '@/context/ThemeContext';
 import Card from '@/components/Card';
 import CardPlain from '@/components/CardPlain';
@@ -352,9 +352,9 @@ export default function Home() {
             }
           actions={
               <button 
-                onClick={() => scrollToId('contactForm')}
+                onClick={() => window.open('http://app.localhost:3000')}
                 className="w-full lg:w-2/3 bg-primary hover:bg-primary2 text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
-                Open Testnet App
+                Launch Testnet App
               </button>
           }
         />
