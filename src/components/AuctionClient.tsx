@@ -2,8 +2,15 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import {
-  useAccount, useConnect, useDisconnect, useChainId,
-  useSimulateContract, useWriteContract, useWaitForTransactionReceipt, useSwitchChain, usePublicClient
+  useAccount,
+  useConnect,
+  useDisconnect,
+  useChainId,
+  useSimulateContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  useSwitchChain,
+  usePublicClient
 } from 'wagmi';
 import { parseUnits, formatUnits, Address } from 'viem';
 import { hardhat } from 'wagmi/chains';
@@ -16,7 +23,7 @@ interface ApproveButtonProps {
   usdcAddress: Address;
   treasuryAddress: Address;
   amountToSpend: bigint;
-  onApprovalSuccess: () => void;
+  onApprovalSuccess: () => void; // Callback to tell the parent to refetch
 }
 
 function ApproveButton({ usdcAddress, treasuryAddress, amountToSpend, onApprovalSuccess }: ApproveButtonProps) {
@@ -28,11 +35,11 @@ function ApproveButton({ usdcAddress, treasuryAddress, amountToSpend, onApproval
   });
 
   const { writeContract: approve, data: approveHash, isPending: isApproving } = useWriteContract();
-
   const { isLoading: isWaitingForApproval, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({
     hash: approveHash,
   });
 
+  // The correct wagmi v2 pattern: watch the `isSuccess` boolean to trigger side effects
   useEffect(() => {
     if (isApprovalSuccess) {
       console.log('✅ Approval transaction mined! Calling onApprovalSuccess.');
@@ -52,12 +59,12 @@ function ApproveButton({ usdcAddress, treasuryAddress, amountToSpend, onApproval
 }
 
 // =================================================================================
-// Sub-Component 2: Handles ONLY the Buy Logic (WITH UX TWEAKS)
+// Sub-Component 2: Handles ONLY the Buy Logic (with reset UX)
 // =================================================================================
 interface BuyFimButtonProps {
   auctionAddress: Address;
   amountToSpend: bigint;
-  onBuySuccess: () => void; // Callback to tell the parent the purchase is done
+  onBuySuccess: () => void;
 }
 
 function BuyFimButton({ auctionAddress, amountToSpend, onBuySuccess }: BuyFimButtonProps) {
@@ -69,24 +76,11 @@ function BuyFimButton({ auctionAddress, amountToSpend, onBuySuccess }: BuyFimBut
   });
 
   const { writeContract: buyFIM, data: buyFimHash, isPending: isBuying } = useWriteContract();
-  
-  const { isLoading: isWaitingForBuy, isSuccess: isBuySuccess } = useWaitForTransactionReceipt({ 
-    hash: buyFimHash 
-  });
+  const { isLoading: isWaitingForBuy, isSuccess: isBuySuccess } = useWaitForTransactionReceipt({ hash: buyFimHash });
 
-  // --- NEW: Reset logic after success ---
   useEffect(() => {
     if (isBuySuccess) {
-      // 1. Tell the parent component that the purchase succeeded
       onBuySuccess();
-
-      // 2. Set a timer to reset the button state after 5 seconds
-      const timer = setTimeout(() => {
-        // This effect will be handled by the parent component
-      }, 5000); // 5000 milliseconds = 5 seconds
-
-      // Cleanup function to clear the timer if the component unmounts
-      return () => clearTimeout(timer);
     }
   }, [isBuySuccess, onBuySuccess]);
 
@@ -99,7 +93,7 @@ function BuyFimButton({ auctionAddress, amountToSpend, onBuySuccess }: BuyFimBut
       >
         {isBuying ? 'Check Wallet...' : isWaitingForBuy ? 'Processing...' : isBuySuccess ? 'Success!' : 'Buy FIM'}
       </button>
-      {/* Moved success/error messages to the parent for better state control */}
+      {buyFimError && <div className="text-red-600 text-sm break-words"><p className="font-bold">Error:</p><p>{buyFimError.message}</p></div>}
     </>
   );
 }
@@ -114,8 +108,6 @@ export function AuctionClient() {
   const [usdcAmount, setUsdcAmount] = useState('');
   const [allowance, setAllowance] = useState<bigint | null>(null);
   const [isAllowanceLoading, setIsAllowanceLoading] = useState(true);
-  
-  // --- NEW: State to track purchase success for the reset timer ---
   const [showSuccess, setShowSuccess] = useState(false);
 
   const { address, isConnected, chain } = useAccount();
@@ -125,8 +117,9 @@ export function AuctionClient() {
   const { switchChain } = useSwitchChain();
   
   const addresses = chain ? contractAddresses[chain.id as keyof typeof contractAddresses] : undefined;
-  const amountToSpend = usdcAmount ? parseUnits(usdcAmount, 6) : BigInt(0);
+  const amountToSpend = usdcAmount ? parseUnits(usdcAmount, 6) : 0n;
 
+  // Use a robust manual fetch function to avoid reactive hook bugs
   const fetchAllowance = useCallback(async () => {
     if (!address || !addresses || !publicClient) return;
     setIsAllowanceLoading(true);
@@ -141,7 +134,7 @@ export function AuctionClient() {
 
   useEffect(() => { fetchAllowance(); }, [fetchAllowance]);
 
-  // --- NEW: Callback for when a purchase succeeds ---
+  // Callback to handle the success state and reset timer
   const handleBuySuccess = useCallback(() => {
     setShowSuccess(true);
     fetchAllowance(); // Refresh the allowance display
@@ -149,12 +142,11 @@ export function AuctionClient() {
     const timer = setTimeout(() => {
       setShowSuccess(false);
       setUsdcAmount(''); // Clear the input for the next purchase
-    }, 5000); // 5 seconds
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, [fetchAllowance]);
 
-  // If we are showing the success message, we don't need approval yet
   const needsApproval = !showSuccess && allowance !== null && allowance < amountToSpend;
 
   if (!isMounted) return null;
@@ -171,7 +163,7 @@ export function AuctionClient() {
           <button disabled className="w-full px-4 py-2 text-white rounded-lg bg-green-500">Success!</button>
         ) : isAllowanceLoading ? (
           <button disabled className="w-full px-4 py-2 text-white rounded-lg bg-gray-400">Verifying Allowance...</button>
-        ) : amountToSpend === BigInt(0) ? (
+        ) : amountToSpend === 0n ? (
           <button disabled className="w-full px-4 py-2 text-white bg-gray-400 rounded-lg">Enter an amount</button>
         ) : needsApproval ? (
           <ApproveButton usdcAddress={addresses.usdc} treasuryAddress={addresses.treasury} amountToSpend={amountToSpend} onApprovalSuccess={fetchAllowance} />

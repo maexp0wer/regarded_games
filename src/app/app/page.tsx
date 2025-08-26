@@ -2,6 +2,7 @@
 'use client';
 
 import { AuctionClient } from "@/components/AuctionClient";
+import { ActiveSeasonDisplay } from "@/components/ActiveSeasonDisplay";
 
 export default function DAppPage() {
   return (
@@ -10,6 +11,7 @@ export default function DAppPage() {
         <h1 className="text-4xl font-bold">FIM Token Auction</h1>
         <p className="text-gray-600 mt-2">Connect your wallet to purchase FIM with USDC.</p>
       </div>
+      <ActiveSeasonDisplay />
       <AuctionClient />
     </main>
   );
