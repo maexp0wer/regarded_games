@@ -2,7 +2,7 @@
 import { ethers } from "hardhat";
 
 async function main() {
-  const auctionAddress = "0xBA12646CC07ADBe43F8bD25D83FB628D29C8A762"; // The address from your frontend
+  const auctionAddress = "0xBA12646CC07ADBe43F8bD25D83FB628D29C8A762";
   
   console.log(`Reading public variables from Auction contract at: ${auctionAddress}`);
 
