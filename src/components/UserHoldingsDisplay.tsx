@@ -1,17 +1,11 @@
-// src/components/BalanceDisplay.tsx
 'use client';
-
-import { useFimBalanceContext } from '@/context/FimBalanceContext';
+import { useUserHoldingsContext } from '@/context/UserHoldingsContext';
 import { useConnectionContext } from '@/context/ConnectionContext';
 
-export function BalanceDisplay() {
-  const { isConnected } = useConnectionContext();
-  const { isMounted, isLoading, fimBalance, usdcBalance } = useFimBalanceContext();
-
-  // Don't render anything on the server or if the user isn't connected.
-  if (!isMounted || !isConnected) {
-    return null;
-  }
+export function UserHoldingsDisplay() {
+   const { isConnected } = useConnectionContext();
+  const { isMounted, isLoading, fimBalance, usdcBalance } = useUserHoldingsContext();
+  if (!isMounted || !isConnected) return null;
 
   return (
     // Use the main container style from your example

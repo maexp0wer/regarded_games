@@ -4,36 +4,45 @@
 // 1. Import all the providers
 import { ConnectionProvider } from '@/context/ConnectionContext';
 import { SeasonDataProvider } from '@/context/SeasonDataContext';
+import { UserHoldingsProvider } from '@/context/UserHoldingsContext';
 import { AuctionProvider } from '@/context/AuctionContext';
-import { FimBalanceProvider } from '@/context/FimBalanceContext';
+import { OrderBookProvider } from '@/context/OrderBookContext';
+import { OrderActionsProvider } from '@/context/OrderActionsContext';
 
 // 2. Import all the display components
 import { ConnectionDisplay } from '@/components/ConnectionDisplay';
 import { SeasonDisplay } from '@/components/SeasonDisplay';
+import { UserHoldingsDisplay } from '@/components/UserHoldingsDisplay';
 import { AuctionForm } from '@/components/AuctionForm';
-import { BalanceDisplay } from '@/components/BalanceDisplay';
+import { OrderBookDisplay } from '@/components/OrderBookDisplay';
+import { CreateOrderForm } from '@/components/CreateOrderForm';
 
 export default function DAppPage() {
   return (
-    // 3. Nest the providers correctly. FimBalanceProvider needs the others.
+    // 3. Nest the new provider
     <ConnectionProvider>
       <SeasonDataProvider>
-        <AuctionProvider>
-          <FimBalanceProvider>
-            <main className="flex min-h-screen flex-col items-center p-8 md-p-24 bg-bg">
-              <div className="w-full max-w-2xl text-center space-y-8">
-                <h1 className="text-4xl font-bold text-text">FIM Token Auction</h1>
-                
-                {/* 4. Render the components. You can place them in any order. */}
-                <ConnectionDisplay />
-                <AuctionForm />
-                <BalanceDisplay /> {/* 👈 Add the new component */}
-                <SeasonDisplay />
+        <UserHoldingsProvider>
+          <AuctionProvider>
+            <OrderBookProvider>
+              <OrderActionsProvider>
+                <main className="flex min-h-screen flex-col items-center p-8 md:p-24 bg-bg">
+                  <div className="w-full max-w-2xl text-center space-y-8">
+                    <h1 className="text-4xl font-bold">FIM Token Auction & Exchange</h1>
+                    
+                    <ConnectionDisplay />
+                    <AuctionForm />
+                    <CreateOrderForm />
+                    <UserHoldingsDisplay />
+                    <OrderBookDisplay />
+                    <SeasonDisplay />
 
-              </div>
-            </main>
-          </FimBalanceProvider>
-        </AuctionProvider>
+                  </div>
+                </main>
+              </OrderActionsProvider>
+            </OrderBookProvider>
+          </AuctionProvider>
+        </UserHoldingsProvider>
       </SeasonDataProvider>
     </ConnectionProvider>
   );

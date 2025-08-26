@@ -1,10 +1,8 @@
 // src/context/AuctionContext.tsx
 'use client';
-
 import { createContext, useContext, ReactNode } from 'react';
 import { useAuction, AuctionState } from '@/hooks/useAuction';
 
-// Create a default state that matches the AuctionState interface
 const defaultState: AuctionState = {
   usdcAmount: '',
   setUsdcAmount: () => {},
@@ -20,11 +18,7 @@ const AuctionContext = createContext<AuctionState>(defaultState);
 
 export function AuctionProvider({ children }: { children: ReactNode }) {
   const auctionState = useAuction();
-  return (
-    <AuctionContext.Provider value={auctionState}>
-      {children}
-    </AuctionContext.Provider>
-  );
+  return <AuctionContext.Provider value={auctionState}>{children}</AuctionContext.Provider>;
 }
 
 export function useAuctionContext() {

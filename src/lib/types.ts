@@ -1,4 +1,5 @@
 // src/lib/types.ts
+export type Address = `0x${string}`;
 
 // This type must exactly match the SeasonManifest struct in GameController.sol
 export interface SeasonManifest {
@@ -27,11 +28,12 @@ export interface Season {
   readonly manifest: SeasonManifest;
 }
 
-export type Address = `0x${string}`;
 
 export interface ContractSet {
   auction: Address;
   usdc: Address;
   treasury: Address;
   gameController: Address;
+  exchange: Address;
+  fimToken: Address;
 }
