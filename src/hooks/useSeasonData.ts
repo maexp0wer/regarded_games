@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAccount, useReadContract, useReadContracts } from 'wagmi';
-import { contractAddresses, gameControllerABI, treasuryABI, gameSeasonABI  } from '@/lib/contracts';
+import { contractAddresses, GameControllerABI, TreasuryABI, gameSeasonABI  } from '@/lib/contracts';
 import { Address, formatUnits } from 'viem';
 
 export interface SeasonDataState {
@@ -12,13 +12,13 @@ export interface SeasonDataState {
   activeSeasonId: number | null;
   isActive?: boolean;
   gameSeasonAddress?: Address;
-  auctionAddress?: Address;
+  AuctionAddress?: Address;
   prizePool: string;
   manifest?: {
     yieldVenues: readonly Address[];
     allocationBps: readonly bigint[];
   };
-  phase: 'AUCTION' | 'TRADING' | 'ENDED' | 'UNKNOWN';
+  phase: 'Auction' | 'TRADING' | 'ENDED' | 'UNKNOWN';
 }
 
 type GetSeasonResult = readonly [boolean, Address, Address];
@@ -33,8 +33,8 @@ export function useSeasonData(): SeasonDataState {
   const addresses = chain ? contractAddresses[chain.id as keyof typeof contractAddresses] : undefined;
 
   const { data: totalSeasonsData, isLoading: isLoadingTotal } = useReadContract({
-    address: addresses?.gameController,
-    abi: gameControllerABI,
+    address: addresses?.GameController,
+    abi: GameControllerABI,
     functionName: 'getTotalSeasons',
     query: { enabled: !!addresses },
   });
@@ -43,8 +43,8 @@ export function useSeasonData(): SeasonDataState {
   const seasonStatusContracts = useMemo(() => {
     if (!addresses || totalSeasons === 0) return [];
     return Array.from({ length: totalSeasons }, (_, i) => ({
-      address: addresses.gameController,
-      abi: gameControllerABI,
+      address: addresses.GameController,
+      abi: GameControllerABI,
       functionName: 'getSeason',
       args: [BigInt(i)],
     }));
@@ -68,16 +68,16 @@ export function useSeasonData(): SeasonDataState {
   }, [activeSeasonId, seasonStatuses]);
 
   const { data: prizePoolData, isLoading: isLoadingPrizePool } = useReadContract({
-    address: addresses?.treasury,
-    abi: treasuryABI,
+    address: addresses?.Treasury,
+    abi: TreasuryABI,
     functionName: 'seasonPrizePool',
     args: activeSeasonId !== null ? [BigInt(activeSeasonId)] : undefined,
     query: { enabled: activeSeasonId !== null && !!addresses, refetchInterval: 5000 },
   });
 
   const { data: manifestData, isLoading: isLoadingManifest } = useReadContract({
-    address: addresses?.gameController,
-    abi: gameControllerABI,
+    address: addresses?.GameController,
+    abi: GameControllerABI,
     functionName: 'getSeasonFinancialManifest',
     args: activeSeasonId !== null ? [BigInt(activeSeasonId)] : undefined,
     query: { enabled: activeSeasonId !== null },
@@ -101,7 +101,7 @@ export function useSeasonData(): SeasonDataState {
 
   const phase = useMemo(() => {
     const state = currentStateData as number | undefined;
-    if (state === 0) return 'AUCTION';
+    if (state === 0) return 'Auction';
     if (state === 1) return 'TRADING';
     if (state === 2) return 'ENDED';
     return 'UNKNOWN';
@@ -113,7 +113,7 @@ export function useSeasonData(): SeasonDataState {
     activeSeasonId,
     isActive: activeSeasonData?.[0],
     gameSeasonAddress: activeSeasonData?.[1],
-    auctionAddress: activeSeasonData?.[2],
+    AuctionAddress: activeSeasonData?.[2],
     prizePool: prizePoolData ? formatUnits(prizePoolData, 6) : '0.00',
     manifest: manifestData ? {
       yieldVenues: (manifestData as unknown as GetManifestResult)[0],

@@ -4,8 +4,8 @@ import { createContext, useContext, ReactNode } from 'react';
 import { useAuction, AuctionState } from '@/hooks/useAuction';
 
 const defaultState: AuctionState = {
-  usdcAmount: '',
-  setUsdcAmount: () => {},
+  USDCAmount: '',
+  setUSDCAmount: () => {},
   buttonState: 'no_wallet',
   buttonText: 'Loading...',
   isButtonDisabled: true,
@@ -17,8 +17,8 @@ const defaultState: AuctionState = {
 const AuctionContext = createContext<AuctionState>(defaultState);
 
 export function AuctionProvider({ children }: { children: ReactNode }) {
-  const auctionState = useAuction();
-  return <AuctionContext.Provider value={auctionState}>{children}</AuctionContext.Provider>;
+  const AuctionState = useAuction();
+  return <AuctionContext.Provider value={AuctionState}>{children}</AuctionContext.Provider>;
 }
 
 export function useAuctionContext() {

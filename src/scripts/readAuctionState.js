@@ -2,26 +2,26 @@
 import { ethers } from "hardhat";
 
 async function main() {
-  const auctionAddress = "0xBA12646CC07ADBe43F8bD25D83FB628D29C8A762";
+  const AuctionAddress = "0xBA12646CC07ADBe43F8bD25D83FB628D29C8A762";
   
-  console.log(`Reading public variables from Auction contract at: ${auctionAddress}`);
+  console.log(`Reading public variables from Auction contract at: ${AuctionAddress}`);
 
   // We can use a minimal ABI since we are just reading public state variables
-  const auctionABI = [
-    "function treasury() view returns (address)",
-    "function usdcToken() view returns (address)",
+  const AuctionABI = [
+    "function Treasury() view returns (address)",
+    "function USDCToken() view returns (address)",
     "function seasonId() view returns (uint256)"
   ];
 
-  const auctionContract = await ethers.getContractAt(auctionABI, auctionAddress);
+  const AuctionContract = await ethers.getContractAt(AuctionABI, AuctionAddress);
 
-  const storedTreasuryAddress = await auctionContract.treasury();
-  const storedUsdcAddress = await auctionContract.usdcToken();
-  const storedSeasonId = await auctionContract.seasonId();
+  const storedTreasuryAddress = await AuctionContract.Treasury();
+  const storedUSDCAddress = await AuctionContract.USDCToken();
+  const storedSeasonId = await AuctionContract.seasonId();
 
   console.log("\n--- Addresses Stored in Contract ---");
   console.log(`   Treasury Address: ${storedTreasuryAddress}`);
-  console.log(`   USDC Address:     ${storedUsdcAddress}`);
+  console.log(`   USDC Address:     ${storedUSDCAddress}`);
   console.log(`   Season ID:        ${storedSeasonId.toString()}`);
 
   console.log("\n--- Addresses in Your Frontend ---");

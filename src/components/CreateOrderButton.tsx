@@ -3,42 +3,42 @@
 
 import { useEffect, useMemo } from 'react';
 import { useAccount, useReadContract, useSimulateContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { contractAddresses, exchangeABI, erc20ABI } from '@/lib/contracts';
+import { contractAddresses, ExchangeABI, erc20ABI } from '@/lib/contracts';
 import { Address, formatUnits } from 'viem';
 
 interface CreateOrderButtonProps {
-  usdcAmountToSpend: bigint;
-  fimPricePerUsdc: bigint;
-  hasSufficientUsdc: boolean;
+  USDCAmountToSpend: bigint;
+  fimPricePerUSDC: bigint;
+  hasSufficientUSDC: boolean;
 }
 
-export function CreateOrderButton({ usdcAmountToSpend, fimPricePerUsdc, hasSufficientUsdc }: CreateOrderButtonProps) {
+export function CreateOrderButton({ USDCAmountToSpend, fimPricePerUSDC, hasSufficientUSDC }: CreateOrderButtonProps) {
   const { address, chain } = useAccount();
   const addresses = chain ? contractAddresses[chain.id as keyof typeof contractAddresses] : undefined;
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: addresses?.usdc,
+    address: addresses?.USDC,
     abi: erc20ABI,
     functionName: 'allowance',
-    args: [address!, addresses?.exchange!],
+    args: [address!, addresses?.Exchange!],
     query: { enabled: !!address && !!addresses }
   });
 
   const needsApproval = useMemo(() => {
-    if (allowance === undefined || usdcAmountToSpend <= 0n) return false;
-    return allowance < usdcAmountToSpend;
-  }, [allowance, usdcAmountToSpend]);
+    if (allowance === undefined || USDCAmountToSpend <= 0n) return false;
+    return allowance < USDCAmountToSpend;
+  }, [allowance, USDCAmountToSpend]);
 
   const { data: approveRequest } = useSimulateContract({
-    address: addresses?.usdc, abi: erc20ABI, functionName: 'approve', args: [addresses?.exchange!, usdcAmountToSpend],
+    address: addresses?.USDC, abi: erc20ABI, functionName: 'approve', args: [addresses?.Exchange!, USDCAmountToSpend],
     query: { enabled: needsApproval }
   });
   const { writeContract: approve, data: approveHash, isPending: isApproving } = useWriteContract();
   const { isLoading: isWaitingForApproval, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({ hash: approveHash });
 
   const { data: createOrderRequest, error: createOrderError } = useSimulateContract({
-    address: addresses?.exchange, abi: exchangeABI, functionName: 'createBuyOrder', args: [usdcAmountToSpend, fimPricePerUsdc],
-    query: { enabled: !needsApproval && hasSufficientUsdc && usdcAmountToSpend > 0n && fimPricePerUsdc > 0n }
+    address: addresses?.Exchange, abi: ExchangeABI, functionName: 'createBuyOrder', args: [USDCAmountToSpend, fimPricePerUSDC],
+    query: { enabled: !needsApproval && hasSufficientUSDC && USDCAmountToSpend > 0n && fimPricePerUSDC > 0n }
   });
   const { writeContract: createOrder, data: createOrderHash, isPending: isCreating } = useWriteContract();
   const { isLoading: isWaitingForCreate, isSuccess: isCreateSuccess } = useWaitForTransactionReceipt({ hash: createOrderHash });
@@ -52,14 +52,14 @@ export function CreateOrderButton({ usdcAmountToSpend, fimPricePerUsdc, hasSuffi
     if (isCreateSuccess) return 'success';
     if (isApproving || isWaitingForApproval) return 'approving';
     if (isCreating || isWaitingForCreate) return 'creating';
-    if (usdcAmountToSpend <= 0n || fimPricePerUsdc <= 0n) return 'enter_details';
-    if (!hasSufficientUsdc) return 'insufficient_funds';
+    if (USDCAmountToSpend <= 0n || fimPricePerUSDC <= 0n) return 'enter_details';
+    if (!hasSufficientUSDC) return 'insufficient_funds';
     if (needsApproval) return 'approve';
     return 'create';
-  }, [isCreateSuccess, isApproving, isWaitingForApproval, isCreating, isWaitingForCreate, usdcAmountToSpend, fimPricePerUsdc, hasSufficientUsdc, needsApproval]);
+  }, [isCreateSuccess, isApproving, isWaitingForApproval, isCreating, isWaitingForCreate, USDCAmountToSpend, fimPricePerUSDC, hasSufficientUSDC, needsApproval]);
 
   const buttonText = {
-    approve: `Approve ${formatUnits(usdcAmountToSpend, 6)} USDC`,
+    approve: `Approve ${formatUnits(USDCAmountToSpend, 6)} USDC`,
     create: 'Create Buy Order',
     approving: 'Approving...',
     creating: 'Processing...',

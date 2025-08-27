@@ -1,0 +1,24 @@
+{
+  "network": "localhost",
+  "permanentInfrastructure": {
+    "ExecutionCouncil": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+    "Token": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+    "USDC": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "Staking": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+    "GameController": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+    "Treasury": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"
+  },
+  "templates": {
+    "GameSeasonTemplate": "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
+    "AuctionTemplate": "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318",
+    "FIMTemplate": "0x610178dA211FEF7D417bC0e6FeD39F05609AD788",
+    "ExchangeTemplate": "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
+    "YieldVenue": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+  },
+  "genesisSeason": {
+    "GameSeason": "0x3B02fF1e626Ed7a8fd6eC5299e2C54e1421B626B",
+    "Auction": "0xBA12646CC07ADBe43F8bD25D83FB628D29C8A762",
+    "Exchange": "0x7ab4C4804197531f7ed6A6bc0f0781f706ff7953",
+    "FIMToken": "0xc8CB5439c767A63aca1c01862252B2F3495fDcFE"
+  }
+}

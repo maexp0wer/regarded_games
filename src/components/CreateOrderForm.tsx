@@ -8,8 +8,8 @@ import { CreateOrderButton } from './CreateOrderButton';
 
 export function CreateOrderForm() {
   const { isConnected } = useConnectionContext();
-  const { createUsdcAmount, setCreateUsdcAmount, createFimPrice, setCreateFimPrice, usdcAmountToSpend, fimPricePerUsdc, hasSufficientUsdc } = useOrderActionsContext();
-  const { usdcBalance } = useUserHoldingsContext();
+  const { createUSDCAmount, setCreateUSDCAmount, createFimPrice, setCreateFimPrice, USDCAmountToSpend, fimPricePerUSDC, hasSufficientUSDC } = useOrderActionsContext();
+  const { USDCBalance } = useUserHoldingsContext();
       
   if (!isConnected) return null;
 
@@ -23,13 +23,13 @@ export function CreateOrderForm() {
         <div>
           <div className="flex justify-between items-center text-xs text-text/70 mt-1">
             <span>USDC amount to spend</span>
-            <span>Balance: {usdcBalance} USDC</span>
+            <span>Balance: {USDCBalance} USDC</span>
           </div>
           <input 
-            id="create-usdc-amount" 
+            id="create-USDC-amount" 
             type="number" 
-            value={createUsdcAmount} 
-            onChange={(e) => setCreateUsdcAmount(e.target.value)} 
+            value={createUSDCAmount} 
+            onChange={(e) => setCreateUSDCAmount(e.target.value)} 
             placeholder="e.g., 500" 
             className="mt-1 block w-full px-3 py-2 border border-card2 bg-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
           />
@@ -51,7 +51,7 @@ export function CreateOrderForm() {
         </div>
 
         {/* Insufficient balance warning, styled to match */}
-        {createUsdcAmount && !hasSufficientUsdc && (
+        {createUSDCAmount && !hasSufficientUSDC && (
           <div className="p-2 rounded-md bg-danger/10 text-danger text-sm font-semibold text-center">
             Insufficient USDC balance.
           </div>
@@ -59,9 +59,9 @@ export function CreateOrderForm() {
 
         {/* The smart button handles all its own logic and styling */}
         <CreateOrderButton
-          usdcAmountToSpend={usdcAmountToSpend}
-          fimPricePerUsdc={fimPricePerUsdc}
-          hasSufficientUsdc={hasSufficientUsdc}
+          USDCAmountToSpend={USDCAmountToSpend}
+          fimPricePerUSDC={fimPricePerUSDC}
+          hasSufficientUSDC={hasSufficientUSDC}
         />
       </div>
     </div>

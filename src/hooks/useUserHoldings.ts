@@ -12,10 +12,10 @@ export interface UserHoldingsState {
   isMounted: boolean;
   isLoading: boolean;
   fimBalance: string;
-  fimBalanceBigInt: bigint; // 👈 ADD THIS
-  usdcBalance: string;
-  usdcBalanceBigInt: bigint;
-  refetch: () => void; // 👈 ADD THIS
+  fimBalanceBigInt: bigint;
+  USDCBalance: string;
+  USDCBalanceBigInt: bigint;
+  refetch: () => void;
 }
 
 export function useUserHoldings(): UserHoldingsState {
@@ -24,33 +24,33 @@ export function useUserHoldings(): UserHoldingsState {
 
   const { address, isConnected, chain } = useConnectionContext();
   const { gameSeasonAddress } = useSeasonDataContext();
-  const usdcAddress = chain ? contractAddresses[chain.id as keyof typeof contractAddresses]?.usdc : undefined;
+  const USDCAddress = chain ? contractAddresses[chain.id as keyof typeof contractAddresses]?.USDC : undefined;
 
   const { data: fimBalanceData, isLoading: isLoadingFim, refetch: refetchFim } = useReadContract({
     address: gameSeasonAddress, abi: gameSeasonABI, functionName: 'fimBalances', args: [address!],
     query: { enabled: isConnected && !!address && !!gameSeasonAddress, refetchInterval: 5000 }
   });
 
-  const { data: usdcBalanceData, isLoading: isLoadingUsdc, refetch: refetchUsdc } = useReadContract({
-    address: usdcAddress, abi: erc20ABI, functionName: 'balanceOf', args: [address!],
-    query: { enabled: isConnected && !!address && !!usdcAddress, refetchInterval: 5000 }
+  const { data: USDCBalanceData, isLoading: isLoadingUSDC, refetch: refetchUSDC } = useReadContract({
+    address: USDCAddress, abi: erc20ABI, functionName: 'balanceOf', args: [address!],
+    query: { enabled: isConnected && !!address && !!USDCAddress, refetchInterval: 5000 }
   });
 
   const fimBalanceBigInt = fimBalanceData ?? 0n;
-  const usdcBalanceBigInt = usdcBalanceData ?? 0n;
+  const USDCBalanceBigInt = USDCBalanceData ?? 0n;
 
   const refetch = () => {
     refetchFim();
-    refetchUsdc();
+    refetchUSDC();
   };
 
   return {
     isMounted,
-    isLoading: isLoadingFim || isLoadingUsdc,
+    isLoading: isLoadingFim || isLoadingUSDC,
     fimBalance: formatUnits(fimBalanceBigInt, 18),
-    fimBalanceBigInt, // 👈 ADD THIS
-    usdcBalance: formatUnits(usdcBalanceBigInt, 6),
-    usdcBalanceBigInt,
-    refetch, // 👈 ADD THIS
+    fimBalanceBigInt,
+    USDCBalance: formatUnits(USDCBalanceBigInt, 6),
+    USDCBalanceBigInt,
+    refetch,
   };
 }

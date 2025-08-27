@@ -8,8 +8,8 @@ import { parseUnits } from 'viem';
 export function AuctionForm() {
   // 1. Destructure `buttonState` so we can use it for styling
   const { 
-    usdcAmount, 
-    setUsdcAmount, 
+    USDCAmount, 
+    setUSDCAmount, 
     buttonState,
     buttonText, 
     isButtonDisabled, 
@@ -18,10 +18,10 @@ export function AuctionForm() {
     buyFimError 
   } = useAuctionContext();
   
-  const { usdcBalance, usdcBalanceBigInt } = useUserHoldingsContext();
+  const { USDCBalance, USDCBalanceBigInt } = useUserHoldingsContext();
 
-  const amountToSpend = usdcAmount ? parseUnits(usdcAmount, 6) : 0n;
-  const hasSufficientUsdc = usdcBalanceBigInt >= amountToSpend;
+  const amountToSpend = USDCAmount ? parseUnits(USDCAmount, 6) : 0n;
+  const hasSufficientUSDC = USDCBalanceBigInt >= amountToSpend;
 
   const getButtonClasses = () => {
     switch (buttonState) {
@@ -46,19 +46,19 @@ export function AuctionForm() {
         <div>
           <div className="flex justify-between items-center text-xs text-text/70 mt-1">
             <span>Enter USDC amount to spend</span>
-            <span>Balance: {usdcBalance} USDC</span>
+            <span>Balance: {USDCBalance} USDC</span>
           </div>
           <input 
-            id="usdc-amount" 
+            id="USDC-amount" 
             type="number" 
-            value={usdcAmount} 
-            onChange={(e) => setUsdcAmount(e.target.value)} 
+            value={USDCAmount} 
+            onChange={(e) => setUSDCAmount(e.target.value)} 
             placeholder="e.g., 100" 
             className="mt-1 block w-full px-3 py-2 border border-card2 bg-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
           />
         </div>
 
-        {usdcAmount && !hasSufficientUsdc && (
+        {USDCAmount && !hasSufficientUSDC && (
           <div className="p-2 rounded-md bg-danger/10 text-danger text-sm font-semibold text-center">
             Insufficient USDC balance.
           </div>
@@ -66,7 +66,7 @@ export function AuctionForm() {
 
         {/* 🔴 THE FIX IS HERE 🔴 */}
         <button
-          disabled={isButtonDisabled || (!!usdcAmount && !hasSufficientUsdc)}
+          disabled={isButtonDisabled || (!!USDCAmount && !hasSufficientUSDC)}
           onClick={handleActionClick}
           className={`w-full px-4 py-2 font-bold rounded-lg transition-colors 
             ${getButtonClasses()} 

@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useReadContract, useReadContracts } from 'wagmi';
-import { contractAddresses, exchangeABI } from '@/lib/contracts';
+import { contractAddresses, ExchangeABI } from '@/lib/contracts';
 import { useAccount } from 'wagmi';
 import { Address } from 'viem';
 
@@ -11,7 +11,7 @@ import { Address } from 'viem';
 export interface Order {
   id: bigint;
   creator: Address;
-  usdcAmountRemaining: bigint;
+  USDCAmountRemaining: bigint;
   fimPrice: bigint;
 }
 
@@ -27,8 +27,8 @@ export interface OrderBookState {
 type OrderResult = readonly [
   id: bigint,
   creator: Address,
-  usdcAmountTotal: bigint,
-  usdcAmountFilled: bigint,
+  USDCAmountTotal: bigint,
+  USDCAmountFilled: bigint,
   fimPrice: bigint,
   status: number // enum OrderStatus (Open=0, Filled=1, Canceled=2)
 ];
@@ -39,27 +39,27 @@ export function useOrderBook(): OrderBookState {
 
   const { chain } = useAccount();
   const addresses = chain ? contractAddresses[chain.id as keyof typeof contractAddresses] : undefined;
-  const exchangeAddress = addresses?.exchange;
+  const ExchangeAddress = addresses?.Exchange;
 
   // 1. Fetch the total number of orders ever created.
   const { data: orderCounter, isLoading: isLoadingCounter } = useReadContract({
-    address: exchangeAddress,
-    abi: exchangeABI,
+    address: ExchangeAddress,
+    abi: ExchangeABI,
     functionName: 'orderCounter',
-    query: { enabled: !!exchangeAddress, refetchInterval: 10000 },
+    query: { enabled: !!ExchangeAddress, refetchInterval: 10000 },
   });
   const totalOrders = orderCounter ? Number(orderCounter) : 0;
 
   // 2. Prepare a batch call to get the data for ALL orders.
   const orderQueries = useMemo(() => {
-    if (!exchangeAddress || totalOrders === 0) return [];
+    if (!ExchangeAddress || totalOrders === 0) return [];
     return Array.from({ length: totalOrders }, (_, i) => ({
-      address: exchangeAddress,
-      abi: exchangeABI,
+      address: ExchangeAddress,
+      abi: ExchangeABI,
       functionName: 'orders',
       args: [BigInt(i + 1)],
     }));
-  }, [exchangeAddress, totalOrders]);
+  }, [ExchangeAddress, totalOrders]);
 
   // 3. Execute the batch call.
   const { data: orderResults, isLoading: isLoadingOrders } = useReadContracts({
@@ -83,11 +83,11 @@ export function useOrderBook(): OrderBookState {
       .map(order => {
         // Now that it's filtered, TypeScript knows `result` is valid and has our shape.
         const result = order.result as unknown as OrderResult;
-        const [id, creator, usdcAmountTotal, usdcAmountFilled, fimPrice] = result;
+        const [id, creator, USDCAmountTotal, USDCAmountFilled, fimPrice] = result;
         return {
           id,
           creator,
-          usdcAmountRemaining: usdcAmountTotal - usdcAmountFilled,
+          USDCAmountRemaining: USDCAmountTotal - USDCAmountFilled,
           fimPrice,
         };
       })

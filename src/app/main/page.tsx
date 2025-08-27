@@ -210,7 +210,7 @@ export default function Home() {
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="ENTER THE ARENA"
-                description="Each season begins with an auction. Buy your in-game Fake Internet Money ($FIM) with $USDC to form the season's Prize Pool."
+                description="Each season begins with an Auction. Buy your in-game Fake Internet Money ($FIM) with $USDC to form the season's Prize Pool."
                 onButtonClick={() => openLitepaperToId('sectionTheGame')}
                 //buttonText="Learn more" // You could override the default if needed
               />
@@ -248,7 +248,7 @@ export default function Home() {
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="True Player Ownership through a DAO"
-                description="Ritardo Games is a Decentralized Autonomous Organization (DAO). There is no central company that can change the rules or rig the outcome. All decisions—from game balance to treasury management—are made by the community of Ritardo ($RTD) token holders. The players hold the power, permanently."
+                description="Ritardo Games is a Decentralized Autonomous Organization (DAO). There is no central company that can change the rules or rig the outcome. All decisions—from game balance to Treasury management—are made by the community of Ritardo ($RTD) token holders. The players hold the power, permanently."
                 onButtonClick={() => openLitepaperToId('sectionDAOOverview')}
               />
               <Card

@@ -3,12 +3,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount, useSimulateContract, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
 import { parseUnits, formatUnits, Address, zeroAddress } from 'viem';
-import { auctionTemplateABI, erc20ABI, contractAddresses } from '@/lib/contracts';
+import { AuctionTemplateABI, erc20ABI, contractAddresses } from '@/lib/contracts';
 import { useUserHoldingsContext } from '@/context/UserHoldingsContext';
 
 export interface AuctionState {
-  usdcAmount: string;
-  setUsdcAmount: (amount: string) => void;
+  USDCAmount: string;
+  setUSDCAmount: (amount: string) => void;
   buttonState: 'approve' | 'buy' | 'loading_allowance' | 'approving' | 'buying' | 'enter_amount' | 'success' | 'no_wallet';
   buttonText: string;
   isButtonDisabled: boolean;
@@ -20,21 +20,21 @@ export interface AuctionState {
 export function useAuction(): AuctionState {
   const { address, isConnected, chain } = useAccount();
   const publicClient = usePublicClient();
-  const [usdcAmount, setUsdcAmount] = useState('');
+  const [USDCAmount, setUSDCAmount] = useState('');
   const [allowance, setAllowance] = useState<bigint | null>(null);
   const [isAllowanceLoading, setIsAllowanceLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
   const addresses = chain ? contractAddresses[chain.id as keyof typeof contractAddresses] : undefined;
-  const amountToSpend = usdcAmount ? parseUnits(usdcAmount, 6) : 0n;
-  const { usdcBalanceBigInt } = useUserHoldingsContext() || { usdcBalanceBigInt: 0n };
-  const hasSufficientUsdc = usdcBalanceBigInt >= amountToSpend;
+  const amountToSpend = USDCAmount ? parseUnits(USDCAmount, 6) : 0n;
+  const { USDCBalanceBigInt } = useUserHoldingsContext() || { USDCBalanceBigInt: 0n };
+  const hasSufficientUSDC = USDCBalanceBigInt >= amountToSpend;
 
   const fetchAllowance = useCallback(async () => {
     if (!address || !addresses || !publicClient) return;
     setIsAllowanceLoading(true);
     try {
       const result = await publicClient.readContract({
-        address: addresses.usdc, abi: erc20ABI, functionName: 'allowance', args: [address, addresses.treasury],
+        address: addresses.USDC, abi: erc20ABI, functionName: 'allowance', args: [address, addresses.Treasury],
       });
       setAllowance(result);
     } catch (e) { console.error("Failed to fetch allowance", e); setAllowance(null); }
@@ -45,18 +45,18 @@ export function useAuction(): AuctionState {
   const needsApproval = !showSuccess && allowance !== null && allowance < amountToSpend;
   
   const { data: approveRequest } = useSimulateContract({
-    address: addresses?.usdc ?? zeroAddress, abi: erc20ABI, functionName: 'approve', args: [addresses?.treasury ?? zeroAddress, amountToSpend], query: { enabled: needsApproval && !!addresses },
+    address: addresses?.USDC ?? zeroAddress, abi: erc20ABI, functionName: 'approve', args: [addresses?.Treasury ?? zeroAddress, amountToSpend], query: { enabled: needsApproval && !!addresses },
   });
   const { writeContract: approve, data: approveHash, isPending: isApproving } = useWriteContract();
   const { isLoading: isWaitingForApproval, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({ hash: approveHash });
   useEffect(() => { if (isApprovalSuccess) fetchAllowance(); }, [isApprovalSuccess, fetchAllowance]);
 
   const { data: buyFimRequest, error: rawBuyFimError } = useSimulateContract({
-    address: addresses?.auction ?? zeroAddress, abi: auctionTemplateABI, functionName: 'buyFIM', args: [amountToSpend], query: { enabled: !needsApproval && amountToSpend > 0n && !!addresses && hasSufficientUsdc },
+    address: addresses?.Auction ?? zeroAddress, abi: AuctionTemplateABI, functionName: 'buyFIM', args: [amountToSpend], query: { enabled: !needsApproval && amountToSpend > 0n && !!addresses && hasSufficientUSDC },
   });
   const { writeContract: buyFIM, data: buyFimHash, isPending: isBuying } = useWriteContract();
   const { isLoading: isWaitingForBuy, isSuccess: isBuySuccess } = useWaitForTransactionReceipt({ hash: buyFimHash });
-  const handleBuySuccess = useCallback(() => { setShowSuccess(true); fetchAllowance(); const timer = setTimeout(() => { setShowSuccess(false); setUsdcAmount(''); }, 5000); return () => clearTimeout(timer); }, [fetchAllowance]);
+  const handleBuySuccess = useCallback(() => { setShowSuccess(true); fetchAllowance(); const timer = setTimeout(() => { setShowSuccess(false); setUSDCAmount(''); }, 5000); return () => clearTimeout(timer); }, [fetchAllowance]);
   useEffect(() => { if (isBuySuccess) handleBuySuccess(); }, [isBuySuccess, handleBuySuccess]);
 
   const buttonState = useMemo(() => {
@@ -73,9 +73,9 @@ export function useAuction(): AuctionState {
   const handleActionClick = () => { if (buttonState === 'approve' && approveRequest) approve(approveRequest.request); else if (buttonState === 'buy' && buyFimRequest) buyFIM(buyFimRequest.request); };
   
   return {
-    usdcAmount, setUsdcAmount,
+    USDCAmount, setUSDCAmount,
     buttonState,
-    buttonText: { success: 'Success!', loading_allowance: 'Verifying...', approving: 'Approving...', buying: 'Processing...', enter_amount: 'Enter an amount', approve: `Approve ${usdcAmount} USDC`, buy: 'Buy FIM', no_wallet: 'Connect Wallet First' }[buttonState],
+    buttonText: { success: 'Success!', loading_allowance: 'Verifying...', approving: 'Approving...', buying: 'Processing...', enter_amount: 'Enter an amount', approve: `Approve ${USDCAmount} USDC`, buy: 'Buy FIM', no_wallet: 'Connect Wallet First' }[buttonState],
     isButtonDisabled: ['success', 'loading_allowance', 'approving', 'buying', 'enter_amount', 'no_wallet'].includes(buttonState) || (buttonState === 'approve' && !approveRequest) || (buttonState === 'buy' && !buyFimRequest),
     handleActionClick,
     currentAllowance: allowance !== null ? formatUnits(allowance, 6) : '...',

@@ -1,12 +1,12 @@
 // src/lib/contracts.ts
+import { ContractSet } from "./types";
+import { Address } from "viem";
 
-
-
-type Address = `0x${string}`;
+import localConfig from '../../deployment-config-localhost.json';
 
 // Define the ABIs as before
-export const auctionTemplateABI = [
-  { "type": "function", "name": "buyFIM", "inputs": [{ "name": "usdcAmount", "type": "uint256", "internalType": "uint256" }], "outputs": [], "stateMutability": "nonpayable" }
+export const AuctionTemplateABI = [
+  { "type": "function", "name": "buyFIM", "inputs": [{ "name": "USDCAmount", "type": "uint256", "internalType": "uint256" }], "outputs": [], "stateMutability": "nonpayable" }
 ] as const;
 
 export const erc20ABI = [
@@ -40,13 +40,13 @@ export const erc20ABI = [
 ] as const;
 
 
-export const gameControllerABI = [
-  { "type": "function", "name": "getSeason", "inputs": [{ "name": "seasonId", "type": "uint256", "internalType": "uint256" }], "outputs": [{ "name": "isActive", "type": "bool", "internalType": "bool" }, { "name": "gameSeason", "type": "address", "internalType": "address" }, { "name": "auction", "type": "address", "internalType": "address" }], "stateMutability": "view" },
+export const GameControllerABI = [
+  { "type": "function", "name": "getSeason", "inputs": [{ "name": "seasonId", "type": "uint256", "internalType": "uint256" }], "outputs": [{ "name": "isActive", "type": "bool", "internalType": "bool" }, { "name": "gameSeason", "type": "address", "internalType": "address" }, { "name": "Auction", "type": "address", "internalType": "address" }], "stateMutability": "view" },
   { "type": "function", "name": "getSeasonFinancialManifest", "inputs": [{ "name": "seasonId", "type": "uint256", "internalType": "uint256" }], "outputs": [{ "name": "yieldVenues", "type": "address[]", "internalType": "address[]" }, { "name": "allocationBps", "type": "uint256[]", "internalType": "uint256[]" }, { "name": "harvestGasPriceLimit", "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
   { "type": "function", "name": "getTotalSeasons", "inputs": [], "outputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" }
 ] as const;
 
-export const treasuryABI = [
+export const TreasuryABI = [
   {
     "type": "function",
     "name": "seasonPrizePool",
@@ -73,14 +73,14 @@ export const gameSeasonABI = [
   }
 ] as const;
 
-export const exchangeABI = [
+export const ExchangeABI = [
   // --- Views ---
   { "type": "function", "name": "orderCounter", "inputs": [], "outputs": [{ "name": "", "type": "uint256" }], "stateMutability": "view" },
   {
     "type": "function", "name": "orders", "inputs": [{ "name": "", "type": "uint256" }],
     "outputs": [
       { "name": "id", "type": "uint256" }, { "name": "creator", "type": "address" },
-      { "name": "usdcAmountTotal", "type": "uint256" }, { "name": "usdcAmountFilled", "type": "uint256" },
+      { "name": "USDCAmountTotal", "type": "uint256" }, { "name": "USDCAmountFilled", "type": "uint256" },
       { "name": "fimPrice", "type": "uint256" }, { "name": "status", "type": "uint8" }
     ],
     "stateMutability": "view"
@@ -89,8 +89,8 @@ export const exchangeABI = [
   {
     "type": "function", "name": "createBuyOrder",
     "inputs": [
-      { "name": "usdcAmountToSpend", "type": "uint256" },
-      { "name": "fimPricePerUsdc", "type": "uint256" }
+      { "name": "USDCAmountToSpend", "type": "uint256" },
+      { "name": "fimPricePerUSDC", "type": "uint256" }
     ],
     "outputs": [{ "name": "orderId", "type": "uint256" }], "stateMutability": "nonpayable"
   },
@@ -103,43 +103,39 @@ export const exchangeABI = [
     "outputs": [], "stateMutability": "nonpayable"
   },
   // --- Events ---
-  { "type": "event", "name": "OrderCreated", "inputs": [{ "name": "orderId", "type": "uint256", "indexed": true }, { "name": "creator", "type": "address", "indexed": true }, { "name": "usdcAmount", "type": "uint256" }, { "name": "fimPrice", "type": "uint256" }], "anonymous": false },
-  { "type": "event", "name": "OrderFilled", "inputs": [{ "name": "orderId", "type": "uint256", "indexed": true }, { "name": "seller", "type": "address", "indexed": true }, { "name": "buyer", "type": "address", "indexed": true }, { "name": "fimAmount", "type": "uint256" }, { "name": "usdcAmount", "type": "uint256" }], "anonymous": false }
+  { "type": "event", "name": "OrderCreated", "inputs": [{ "name": "orderId", "type": "uint256", "indexed": true }, { "name": "creator", "type": "address", "indexed": true }, { "name": "USDCAmount", "type": "uint256" }, { "name": "fimPrice", "type": "uint256" }], "anonymous": false },
+  { "type": "event", "name": "OrderFilled", "inputs": [{ "name": "orderId", "type": "uint256", "indexed": true }, { "name": "seller", "type": "address", "indexed": true }, { "name": "buyer", "type": "address", "indexed": true }, { "name": "fimAmount", "type": "uint256" }, { "name": "USDCAmount", "type": "uint256" }], "anonymous": false }
 ] as const;
 
 
-// Define a type for a set of our contracts
-type ContractSet = {
-  auction: Address;
-  usdc: Address;
-  treasury: Address;
-  gameController: Address;
-  exchange: Address;
-  fimToken: Address;
-};
+
+
 
 // --- Your Deployed Addresses ---
 // We apply the strict `ContractSet` type here.
-const localAddresses: ContractSet = {
-  auction: '0xBA12646CC07ADBe43F8bD25D83FB628D29C8A762',  // Use the Season 0 Auction address
-  usdc: '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9',      
-  treasury: '0xa513E6E4b8f2a923D98304ec87F64353C4D5C853',
-  gameController: '0x0165878A594ca255338adfa4d48449f69242Eb8F',
-  exchange: '0x7ab4C4804197531f7ed6A6bc0f0781f706ff7953',
-  fimToken: '0xc8CB5439c767A63aca1c01862252B2F3495fDcFE',
-};
+function parseConfig(config: any): ContractSet {
+  // We use type assertion here because we are validating the structure.
+  return {
+    // From genesisSeason (ensure keys are lowercase)
+    Auction: config.genesisSeason.Auction as Address,
+    Exchange: config.genesisSeason.Exchange as Address,
+    FIMToken: config.genesisSeason.FIMToken as Address,
+    GameSeason: config.genesisSeason.GameSeason as Address,
+    
+    // From permanentInfrastructure (ensure keys are lowercase)
+    USDC: config.permanentInfrastructure.USDC as Address,
+    Treasury: config.permanentInfrastructure.Treasury as Address,
+    GameController: config.permanentInfrastructure.GameController as Address,
+  };
+}
 
-const sepoliaAddresses: ContractSet = {
-  auction: '0x0000000000000000000000000000000000000000',
-  usdc: '0x0000000000000000000000000000000000000000',
-  treasury: '0x0000000000000000000000000000000000000000',
-  gameController: '0x0000000000000000000000000000000000000000',
-  exchange: '0x0000000000000000000000000000000000000000',
-  fimToken: '0x0000000000000000000000000000000000000000',
-};
+// 2. Parse both configuration files into our clean format.
+const localAddresses: ContractSet = parseConfig(localConfig);
+
+
 
 // The main export, now fully typed.
 export const contractAddresses: Record<number, ContractSet> = {
   31337: localAddresses,
-  11155111: sepoliaAddresses,
+  //11155111: sepoliaAddresses,
 };

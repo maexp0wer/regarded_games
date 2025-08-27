@@ -8,35 +8,35 @@ import { useUserHoldingsContext } from '@/context/UserHoldingsContext';
 
 export interface OrderActionsState {
   // Create Order Form State
-  createUsdcAmount: string;
-  setCreateUsdcAmount: (amount: string) => void;
+  createUSDCAmount: string;
+  setCreateUSDCAmount: (amount: string) => void;
   createFimPrice: string;
   setCreateFimPrice: (price: string) => void;
   
   // Derived values for the create order button to use
-  usdcAmountToSpend: bigint;
-  fimPricePerUsdc: bigint;
-  hasSufficientUsdc: boolean;
+  USDCAmountToSpend: bigint;
+  fimPricePerUSDC: bigint;
+  hasSufficientUSDC: boolean;
 }
 
 export function useOrderActions(): OrderActionsState {
   const { isConnected } = useAccount();
-  const { usdcBalanceBigInt } = useUserHoldingsContext();
+  const { USDCBalanceBigInt } = useUserHoldingsContext();
 
-  const [createUsdcAmount, setCreateUsdcAmount] = useState('');
+  const [createUSDCAmount, setCreateUSDCAmount] = useState('');
   const [createFimPrice, setCreateFimPrice] = useState('');
 
-  const usdcAmountToSpend = createUsdcAmount ? parseUnits(createUsdcAmount, 6) : 0n;
-  const fimPricePerUsdc = createFimPrice ? parseUnits(createFimPrice, 18) : 0n;
-  const hasSufficientUsdc = isConnected && usdcBalanceBigInt >= usdcAmountToSpend;
+  const USDCAmountToSpend = createUSDCAmount ? parseUnits(createUSDCAmount, 6) : 0n;
+  const fimPricePerUSDC = createFimPrice ? parseUnits(createFimPrice, 18) : 0n;
+  const hasSufficientUSDC = isConnected && USDCBalanceBigInt >= USDCAmountToSpend;
 
   return {
-    createUsdcAmount,
-    setCreateUsdcAmount,
+    createUSDCAmount,
+    setCreateUSDCAmount,
     createFimPrice,
     setCreateFimPrice,
-    usdcAmountToSpend,
-    fimPricePerUsdc,
-    hasSufficientUsdc,
+    USDCAmountToSpend,
+    fimPricePerUSDC,
+    hasSufficientUSDC,
   };
 }

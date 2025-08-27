@@ -106,8 +106,8 @@ export default function Home() {
       ['Ecosystem & Player Incentives', '20%', '200,000,000', 'A dedicated fund for player acquisition, marketing campaigns, tournament prize pools, and community grants for third-party developers, content creators, and strategic contributors. To be released based on DAO-approved programs.'],
       ['Core Contributors & Future Team', '15%', '150,000,000', 'Reserved for the initial founding team and to attract future full-time talent to the ecosystem. This allocation is subject to a standard 4-year vesting schedule with a 12-month cliff to ensure long-term commitment.'],
       ['Seed Investors', '10%', '100,000,000', 'For early backers who provided initial capital via SAFT agreements. This allocation is subject to a 2-year vesting schedule with a 6-month cliff to align their interests with the project\'s foundational growth phase.'],
-      ['Foundation Operational Fund', '10%', '100,000,000', 'A multi-signature treasury held by the Swiss Foundation to cover essential, ongoing operational costs such as legal counsel, recurring security audits, platform hosting, and core infrastructure maintenance.'],
-      ['Public Launch & Airdrop', '5%', '50,000,000', 'To bootstrap the initial community of governors and players. A significant portion will be airdropped to early testnet participants and community members, with the remainder used to provide initial liquidity on decentralized exchanges.'],
+      ['Foundation Operational Fund', '10%', '100,000,000', 'A multi-signature Treasury held by the Swiss Foundation to cover essential, ongoing operational costs such as legal counsel, recurring security audits, platform hosting, and core infrastructure maintenance.'],
+      ['Public Launch & Airdrop', '5%', '50,000,000', 'To bootstrap the initial community of governors and players. A significant portion will be airdropped to early testnet participants and community members, with the remainder used to provide initial liquidity on decentralized Exchanges.'],
       ['Total', '100%', '1,000,000,000', ''],
   ];
 
@@ -194,8 +194,8 @@ export default function Home() {
             <p className='mb-4'><strong>Our Solution:</strong> We've built a perfect-information strategy game where collective action battles economic power for real-money stakes. The Ritardo Games ecosystem is powered by a sophisticated dual-token model that separates gameplay from governance and is engineered with unique mechanics to ensure a level playing field.</p>
             <h3 className="text-xl font-semibold mt-6 mb-4">The Ecosystem:</h3>
             <ul className="list-disc ml-8 space-y-2">
-              <li><strong>Gameplay Token ($FIM - Fake Internet Money):</strong> Each season, players mint a new, non-transferable $FIM token by committing USDC in a Batch Auction, which fairly prices the token and forms the Prize Pool. For one quarter, players trade $FIM on a buy-side only exchange—a strategic marketplace designed to prevent manipulation—to influence the game's Gini Coefficient.</li>
-              <li><strong>Governance Token ($RTD - Ritardo):</strong> This is the DAO's ownership token. Holders of $RTD govern the entire ecosystem, from the rules of the game to the management of the treasury.</li>
+              <li><strong>Gameplay Token ($FIM - Fake Internet Money):</strong> Each season, players mint a new, non-transferable $FIM token by committing USDC in a Batch Auction, which fairly prices the token and forms the Prize Pool. For one quarter, players trade $FIM on a buy-side only Exchange—a strategic marketplace designed to prevent manipulation—to influence the game's Gini Coefficient.</li>
+              <li><strong>Governance Token ($RTD - Ritardo):</strong> This is the DAO's ownership token. Holders of $RTD govern the entire ecosystem, from the rules of the game to the management of the Treasury.</li>
               <li><strong>Victory & Payout:</strong> Victory is achieved when one ideology is the first to shift the Gini Coefficient a set amount toward its goal (perfect inequality for Capitalism, or perfect equality for Socialism). The Prize Pool is then distributed according to the winning philosophy: a winner-take-all "Oligarchy" payout or a redistributive "Solidarity Fund" payout.</li>
             </ul>
             <p className='mt-6 mb-4'><strong>Sustainable Yield for Governors:</strong> The USDC in the Prize Pool is not idle. It is deployed into blue-chip DeFi protocols to generate a stable yield. This yield—the DAO's revenue—is distributed to staked $RTD holders as a continuous stream, rewarding long-term governors with a sustainable return and eliminating the volatility of discrete "dividend" events.</p>
@@ -207,7 +207,7 @@ export default function Home() {
             <h3 className="text-xl font-semibold mt-6 mb-4">DAO Identity: Ritardo Games</h3>
             <p className='mb-4'>Ritardo Games is a decentralized strategy game where players compete to collectively outsmart the dynamics of the high-risk crypto market. Our name, "Ritardo," reflects our core philosophy: deliberate analysis, collective prediction, and disciplined execution.</p>
             <h3 className="text-xl font-semibold mt-6 mb-4">Why This Must Be a DAO: The Pursuit of Credible Neutrality</h3>
-            <p className='mb-8'>This project's integrity demands a decentralized structure. A traditional company could be pressured by shareholders or regulators to change the game's rules, alter the payout structure, or censor participants. A DAO makes this impossible. The rules are code, the treasury is on-chain, and governance is in the hands of the players. This provides credible neutrality: a guarantee that the game will remain fair and unbiased in perpetuity, bound only by the will of the community.</p>
+            <p className='mb-8'>This project's integrity demands a decentralized structure. A traditional company could be pressured by shareholders or regulators to change the game's rules, alter the payout structure, or censor participants. A DAO makes this impossible. The rules are code, the Treasury is on-chain, and governance is in the hands of the players. This provides credible neutrality: a guarantee that the game will remain fair and unbiased in perpetuity, bound only by the will of the community.</p>
             <h3 className="text-xl font-semibold mt-6 mb-4">Legal Structure: The Ritardo Foundation & The DAO</h3>
 <p className='mb-4'>Our ecosystem uses a dual structure for maximum protection and credible neutrality: a Swiss non-profit Foundation to act as a legal steward, and the Ritardo Games DAO, the fully on-chain, player-governed game engine.</p>
             <div className="grid md:grid-cols-2 gap-8 my-8 p-6 bg-bg-light dark:bg-bg-dark rounded-lg">
@@ -223,7 +223,7 @@ export default function Home() {
               <div>
                   <h4 className="text-xl font-bold mb-4">The DAO (On-Chain Brain)</h4>
                   <ul className="list-disc list-inside space-y-2">
-                      <li>Has exclusive control over the game's smart contracts and the community treasury.</li>
+                      <li>Has exclusive control over the game's smart contracts and the community Treasury.</li>
                       <li>Governs all game rules, risk parameters, and the strategic direction of the ecosystem.</li>
                       <li>Executes all decisions via on-chain voting by $RTD holders.</li>
                       <li><strong>Treasury Security:</strong> On-chain funds are held in a DAO-controlled, multi-signature wallet.</li>
@@ -301,7 +301,7 @@ export default function Home() {
     <li><strong>EVM Compatibility:</strong> Full compatibility with the Ethereum Virtual Machine allows for rapid development using standard tools like Solidity and ensures that our protocol is portable to other EVM-compatible chains in the future.</li>
     <li><strong>Low Transaction Costs:</strong> As a Layer 2, Base offers significantly lower gas fees than the Ethereum mainnet. This is critical for our game, which encourages active trading, making it affordable and accessible for all players.</li>
     <li><strong>Coinbase Ecosystem Access:</strong> Building on Base provides a seamless on-ramp for millions of Coinbase users, reducing friction and potentially accelerating player adoption through integrated wallets and fiat gateways.</li>
-    <li><strong>Ethereum Security:</strong> Base inherits the robust security and decentralization of the Ethereum mainnet, ensuring that our players' assets and the DAO's treasury are fundamentally secure.</li>
+    <li><strong>Ethereum Security:</strong> Base inherits the robust security and decentralization of the Ethereum mainnet, ensuring that our players' assets and the DAO's Treasury are fundamentally secure.</li>
 </ul>
                     </section>
           
@@ -319,7 +319,7 @@ export default function Home() {
                       <p className='mb-4'>Instead of a simple fixed-price sale, each season begins with a Batch Auction to ensure a fair launch and prevent whale manipulation of the starting conditions.</p>
                       <ol className="list-decimal ml-8 space-y-2">
                         <li><strong>Commitment Phase:</strong> Players commit USDC to a pool over a set period.</li>
-                        <li><strong>Price Discovery:</strong> At the end of the auction, a single clearing price for $FIM is determined based on the total USDC committed and the total $FIM being minted for the season.</li>
+                        <li><strong>Price Discovery:</strong> At the end of the Auction, a single clearing price for $FIM is determined based on the total USDC committed and the total $FIM being minted for the season.</li>
                         <li><strong>Distribution:</strong> Every participant receives their $FIM at this same final price.</li>
                       </ol>
                       <h3 className="text-xl font-semibold mt-6 mb-4" id='sectionPhase2'>Phase 2: The Game & The Buy-Side Only Exchange</h3>
@@ -420,7 +420,7 @@ export default function Home() {
         <ul className="list-disc ml-8 mt-2 space-y-2">
             <li>Game rules (Victory Threshold, Multiplier formula, etc.).</li>
             <li>Whitelist of DeFi protocols for yield generation.</li>
-            <li>DAO treasury management and spending.</li>
+            <li>DAO Treasury management and spending.</li>
             <li>New game modes and feature development.</li>
         </ul>
     </li>

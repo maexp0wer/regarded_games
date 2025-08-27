@@ -49,14 +49,14 @@ export function OrderBookDisplay() {
                   </td>
                   <td className="p-2 text-right text-success">
                     {/* USDC has 6 decimals */}
-                    {formatUnits(order.usdcAmountRemaining, 6)}
+                    {formatUnits(order.USDCAmountRemaining, 6)}
                   </td>
                   <td className="p-2 opacity-70">
                     {`${order.creator.slice(0, 6)}...${order.creator.slice(-4)}`}
                   </td>
                   <td className="p-2 text-right">
                     {/* Render the self-contained smart button for each order */}
-                    <FillOrderButton orderId={order.id} />
+                    <FillOrderButton order={order} />
                   </td>
                 </tr>
               ))
