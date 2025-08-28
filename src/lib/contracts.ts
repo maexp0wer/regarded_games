@@ -10,33 +10,9 @@ export const AuctionTemplateABI = [
 ] as const;
 
 export const erc20ABI = [
-  {
-    "type": "function",
-    "name": "approve",
-    "inputs": [
-      { "name": "spender", "type": "address", "internalType": "address" },
-      { "name": "amount", "type": "uint256", "internalType": "uint256" }
-    ],
-    "outputs": [{ "name": "", "type": "bool", "internalType": "bool" }],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "allowance",
-    "inputs": [
-      { "name": "owner", "type": "address", "internalType": "address" },
-      { "name": "spender", "type": "address", "internalType": "address" }
-    ],
-    "outputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "balanceOf",
-    "inputs": [{ "name": "account", "type": "address", "internalType": "address" }],
-    "outputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
-    "stateMutability": "view"
-  }
+  { "type": "function", "name": "approve", "inputs": [{ "name": "spender", "type": "address" }, { "name": "amount", "type": "uint256" }], "outputs": [{ "name": "", "type": "bool" }], "stateMutability": "nonpayable" },
+  { "type": "function", "name": "allowance", "inputs": [{ "name": "owner", "type": "address" }, { "name": "spender", "type": "address" }], "outputs": [{ "name": "", "type": "uint256" }], "stateMutability": "view" },
+  { "type": "function", "name": "balanceOf", "inputs": [{ "name": "account", "type": "address" }], "outputs": [{ "name": "", "type": "uint256" }], "stateMutability": "view" }
 ] as const;
 
 
@@ -99,39 +75,18 @@ export const gameSeasonABI = [
 
 // --- The new, more complete Exchange ABI ---
 export const exchangeABI = [
-  // --- Events ---
   { "type": "event", "name": "AskCreated", "inputs": [{"name":"orderId","type":"uint256","indexed":true},{"name":"creator","type":"address","indexed":true},{"name":"fimAmount","type":"uint256","indexed":false},{"name":"usdcAmount","type":"uint256","indexed":false}], "anonymous": false },
   { "type": "event", "name": "BidCreated", "inputs": [{"name":"orderId","type":"uint256","indexed":true},{"name":"creator","type":"address","indexed":true},{"name":"usdcAmount","type":"uint256","indexed":false},{"name":"fimAmount","type":"uint256","indexed":false}], "anonymous": false },
   { "type": "event", "name": "OrderCanceled", "inputs": [{"name":"orderId","type":"uint256","indexed":true}], "anonymous": false },
   { "type": "event", "name": "OrderFilled", "inputs": [{"name":"orderId","type":"uint256","indexed":true},{"name":"filler","type":"address","indexed":true},{"name":"creator","type":"address","indexed":true},{"name":"fimAmount","type":"uint256","indexed":false},{"name":"usdcAmount","type":"uint256","indexed":false}], "anonymous": false },
-
-  // --- 🔴 ADD THE CUSTOM ERRORS HERE 🔴 ---
-  { "type": "error", "name": "AlreadyInitialized", "inputs": [] },
-  { "type": "error", "name": "NotLive", "inputs": [] },
-  { "type": "error", "name": "InvalidOrder", "inputs": [] },
-  { "type": "error", "name": "NotOrderCreator", "inputs": [] },
-  { "type": "error", "name": "ZeroAmount", "inputs": [] },
-  { "type": "error", "name": "BidPriceTooLow", "inputs": [] },
   { "type": "error", "name": "AskPriceTooHigh", "inputs": [] },
-  { "type": "error", "name": "FillAmountExceedsOrder", "inputs": [] },
-
-  // --- Functions (remain the same) ---
-  { "type": "function", "name": "PAR_VALUE_FIM_PER_USDC", "inputs": [], "outputs": [{ "name": "", "type": "uint256" }], "stateMutability": "view" },
+  { "type": "error", "name": "BidPriceTooLow", "inputs": [] },
   { "type": "function", "name": "cancelOrder", "inputs": [{ "name": "orderId", "type": "uint256" }], "outputs": [], "stateMutability": "nonpayable" },
   { "type": "function", "name": "createAsk", "inputs": [{ "name": "fimAmount", "type": "uint256" }, { "name": "usdcAmount", "type": "uint256" }], "outputs": [{ "name": "orderId", "type": "uint256" }], "stateMutability": "nonpayable" },
   { "type": "function", "name": "createBid", "inputs": [{ "name": "usdcAmount", "type": "uint256" }, { "name": "fimAmount", "type": "uint256" }], "outputs": [{ "name": "orderId", "type": "uint256" }], "stateMutability": "nonpayable" },
   { "type": "function", "name": "fillOrder", "inputs": [{ "name": "orderId", "type": "uint256" }, { "name": "amountProvidedByFiller", "type": "uint256" }], "outputs": [], "stateMutability": "nonpayable" },
   { "type": "function", "name": "orderCounter", "inputs": [], "outputs": [{ "name": "", "type": "uint256" }], "stateMutability": "view" },
-  {
-    "type": "function", "name": "orders", "inputs": [{ "name": "", "type": "uint256" }],
-    "outputs": [
-      { "name": "id", "type": "uint256" }, { "name": "creator", "type": "address" },
-      { "name": "orderType", "type": "uint8" },
-      { "name": "amountToSell", "type": "uint256" }, { "name": "amountToBuy", "type": "uint256" },
-      { "name": "amountFilled", "type": "uint256" }, { "name": "status", "type": "uint8" }
-    ],
-    "stateMutability": "view"
-  }
+  { "type": "function", "name": "orders", "inputs": [{ "name": "", "type": "uint256" }], "outputs": [{ "name": "id", "type": "uint256" }, { "name": "creator", "type": "address" }, { "name": "orderType", "type": "uint8" }, { "name": "amountToSell", "type": "uint256" }, { "name": "amountToBuy", "type": "uint256" }, { "name": "amountFilled", "type": "uint256" }, { "name": "status", "type": "uint8" }], "stateMutability": "view" }
 ] as const;
 
 
