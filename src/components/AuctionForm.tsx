@@ -18,10 +18,28 @@ export function AuctionForm() {
     buyFimError 
   } = useAuctionContext();
   
-  const { USDCBalance, USDCBalanceBigInt } = useUserHoldingsContext();
+  const { usdcBalance, usdcBalanceBigInt } = useUserHoldingsContext();
 
   const amountToSpend = USDCAmount ? parseUnits(USDCAmount, 6) : 0n;
-  const hasSufficientUSDC = USDCBalanceBigInt >= amountToSpend;
+  const hasSufficientUSDC = usdcBalanceBigInt >= amountToSpend;
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    
+    // This regex matches numbers with up to 6 decimal places.
+    // It will effectively prevent the 7th decimal from being typed.
+    const regex = /^(\d*)(\.?)(\d{0,6})/;
+    const match = value.match(regex);
+    
+    if (match) {
+      // Reconstruct the sanitized value from the regex match
+      const sanitizedValue = match[1] + match[2] + match[3];
+      setUSDCAmount(sanitizedValue);
+    } else if (value === '') {
+      // Allow the user to clear the input
+      setUSDCAmount('');
+    }
+  };
 
   const getButtonClasses = () => {
     switch (buttonState) {
@@ -46,15 +64,16 @@ export function AuctionForm() {
         <div>
           <div className="flex justify-between items-center text-xs text-text/70 mt-1">
             <span>Enter USDC amount to spend</span>
-            <span>Balance: {USDCBalance} USDC</span>
+            <span>Balance: {usdcBalance} USDC</span>
           </div>
           <input 
             id="USDC-amount" 
             type="number" 
             value={USDCAmount} 
-            onChange={(e) => setUSDCAmount(e.target.value)} 
+            onChange={handleAmountChange}
             placeholder="e.g., 100" 
             className="mt-1 block w-full px-3 py-2 border border-card2 bg-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+            step="0.000001"
           />
         </div>
 
@@ -64,7 +83,6 @@ export function AuctionForm() {
           </div>
         )}
 
-        {/* 🔴 THE FIX IS HERE 🔴 */}
         <button
           disabled={isButtonDisabled || (!!USDCAmount && !hasSufficientUSDC)}
           onClick={handleActionClick}

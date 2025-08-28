@@ -21,14 +21,14 @@ export interface OrderActionsState {
 
 export function useOrderActions(): OrderActionsState {
   const { isConnected } = useAccount();
-  const { USDCBalanceBigInt } = useUserHoldingsContext();
+  const { usdcBalanceBigInt } = useUserHoldingsContext();
 
   const [createUSDCAmount, setCreateUSDCAmount] = useState('');
   const [createFimPrice, setCreateFimPrice] = useState('');
 
   const USDCAmountToSpend = createUSDCAmount ? parseUnits(createUSDCAmount, 6) : 0n;
   const fimPricePerUSDC = createFimPrice ? parseUnits(createFimPrice, 18) : 0n;
-  const hasSufficientUSDC = isConnected && USDCBalanceBigInt >= USDCAmountToSpend;
+  const hasSufficientUSDC = isConnected && usdcBalanceBigInt >= USDCAmountToSpend;
 
   return {
     createUSDCAmount,

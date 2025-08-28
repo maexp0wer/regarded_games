@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useReadContract, useReadContracts } from 'wagmi';
-import { contractAddresses, ExchangeABI } from '@/lib/contracts';
+import { contractAddresses, exchangeABI } from '@/lib/contracts';
 import { useAccount } from 'wagmi';
 import { Address } from 'viem';
 
@@ -39,12 +39,12 @@ export function useOrderBook(): OrderBookState {
 
   const { chain } = useAccount();
   const addresses = chain ? contractAddresses[chain.id as keyof typeof contractAddresses] : undefined;
-  const ExchangeAddress = addresses?.Exchange;
+  const ExchangeAddress = addresses?.exchange;
 
   // 1. Fetch the total number of orders ever created.
   const { data: orderCounter, isLoading: isLoadingCounter } = useReadContract({
     address: ExchangeAddress,
-    abi: ExchangeABI,
+    abi: exchangeABI,
     functionName: 'orderCounter',
     query: { enabled: !!ExchangeAddress, refetchInterval: 10000 },
   });
@@ -55,7 +55,7 @@ export function useOrderBook(): OrderBookState {
     if (!ExchangeAddress || totalOrders === 0) return [];
     return Array.from({ length: totalOrders }, (_, i) => ({
       address: ExchangeAddress,
-      abi: ExchangeABI,
+      abi: exchangeABI,
       functionName: 'orders',
       args: [BigInt(i + 1)],
     }));

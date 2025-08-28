@@ -26,8 +26,8 @@ export function useAuction(): AuctionState {
   const [showSuccess, setShowSuccess] = useState(false);
   const addresses = chain ? contractAddresses[chain.id as keyof typeof contractAddresses] : undefined;
   const amountToSpend = USDCAmount ? parseUnits(USDCAmount, 6) : 0n;
-  const { USDCBalanceBigInt } = useUserHoldingsContext() || { USDCBalanceBigInt: 0n };
-  const hasSufficientUSDC = USDCBalanceBigInt >= amountToSpend;
+  const { usdcBalanceBigInt } = useUserHoldingsContext() || { usdcBalanceBigInt: 0n };
+  const hasSufficientUSDC = usdcBalanceBigInt >= amountToSpend;
 
   const fetchAllowance = useCallback(async () => {
     if (!address || !addresses || !publicClient) return;

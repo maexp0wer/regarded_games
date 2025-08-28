@@ -13,8 +13,8 @@ export interface UserHoldingsState {
   isLoading: boolean;
   fimBalance: string;
   fimBalanceBigInt: bigint;
-  USDCBalance: string;
-  USDCBalanceBigInt: bigint;
+  usdcBalance: string;
+  usdcBalanceBigInt: bigint;
   refetch: () => void;
 }
 
@@ -31,13 +31,13 @@ export function useUserHoldings(): UserHoldingsState {
     query: { enabled: isConnected && !!address && !!gameSeasonAddress, refetchInterval: 5000 }
   });
 
-  const { data: USDCBalanceData, isLoading: isLoadingUSDC, refetch: refetchUSDC } = useReadContract({
+  const { data: usdcBalanceData, isLoading: isLoadingUSDC, refetch: refetchUSDC } = useReadContract({
     address: USDCAddress, abi: erc20ABI, functionName: 'balanceOf', args: [address!],
     query: { enabled: isConnected && !!address && !!USDCAddress, refetchInterval: 5000 }
   });
 
   const fimBalanceBigInt = fimBalanceData ?? 0n;
-  const USDCBalanceBigInt = USDCBalanceData ?? 0n;
+  const usdcBalanceBigInt = usdcBalanceData ?? 0n;
 
   const refetch = () => {
     refetchFim();
@@ -49,8 +49,8 @@ export function useUserHoldings(): UserHoldingsState {
     isLoading: isLoadingFim || isLoadingUSDC,
     fimBalance: formatUnits(fimBalanceBigInt, 18),
     fimBalanceBigInt,
-    USDCBalance: formatUnits(USDCBalanceBigInt, 6),
-    USDCBalanceBigInt,
+    usdcBalance: formatUnits(usdcBalanceBigInt, 6),
+    usdcBalanceBigInt,
     refetch,
   };
 }

@@ -4,7 +4,7 @@ import { useConnectionContext } from '@/context/ConnectionContext';
 
 export function UserHoldingsDisplay() {
    const { isConnected } = useConnectionContext();
-  const { isMounted, isLoading, fimBalance, USDCBalance } = useUserHoldingsContext();
+  const { isMounted, isLoading, fimBalance, usdcBalance } = useUserHoldingsContext();
   if (!isMounted || !isConnected) return null;
 
   return (
@@ -36,7 +36,7 @@ export function UserHoldingsDisplay() {
           {isLoading ? (
             <div className="h-6 w-24 bg-card2 rounded animate-pulse" />
           ) : (
-            <span className="text-2xl font-bold text-primary">${USDCBalance}</span>
+            <span className="text-2xl font-bold text-primary">${usdcBalance}</span>
           )}
         </div>
         

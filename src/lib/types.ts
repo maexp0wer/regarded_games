@@ -35,7 +35,6 @@ export interface ContractSet {
   Exchange: Address;
   FIMToken: Address;
   GameSeason: Address;
-  
 
   // From permanentInfrastructure
   USDC: Address;

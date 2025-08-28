@@ -4,7 +4,7 @@
 import { useSeasonDataContext } from '@/context/SeasonDataContext';
 
 export function SeasonDisplay() {
-  const { isMounted, isLoading, activeSeasonId, isActive, prizePool, gameSeasonAddress, AuctionAddress, manifest, phase } = useSeasonDataContext();
+  const { isMounted, isLoading, activeSeasonId, isActive, prizePool, gameSeasonAddress, auctionAddress, manifest, phase } = useSeasonDataContext();
 
   if (!isMounted) return <div className="p-4 border rounded-lg bg-gray-200 animate-pulse h-48 w-full max-w-2xl mt-8" />;
   
@@ -14,7 +14,7 @@ export function SeasonDisplay() {
 
   const getPhaseBadgeColor = () => {
     switch (phase) {
-      case 'Auction':
+      case 'AUCTION':
         return 'bg-blue-100 text-blue-800';
       case 'TRADING':
         return 'bg-yellow-100 text-yellow-800';
@@ -37,7 +37,7 @@ export function SeasonDisplay() {
         <p className="text-xl font-bold py-5">Prize Pool:<span className="font-bold text-primary p-5 m-2">${prizePool} USDC</span></p>
         
         <p><strong>GameSeason Contract:</strong> <code className="bg-card2 p-1 rounded text-xs">{gameSeasonAddress}</code></p>
-        <p><strong>Auction Contract:</strong> <code className="bg-card2 p-1 rounded text-xs">{AuctionAddress}</code></p>
+        <p><strong>Auction Contract:</strong> <code className="bg-card2 p-1 rounded text-xs">{auctionAddress}</code></p>
         
         <div className="pt-4 mt-4 border-t">
           <h3 className="text-lg font-semibold mb-2 text-text">Treasury Allocations</h3>

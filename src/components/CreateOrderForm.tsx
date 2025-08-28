@@ -9,7 +9,7 @@ import { CreateOrderButton } from './CreateOrderButton';
 export function CreateOrderForm() {
   const { isConnected } = useConnectionContext();
   const { createUSDCAmount, setCreateUSDCAmount, createFimPrice, setCreateFimPrice, USDCAmountToSpend, fimPricePerUSDC, hasSufficientUSDC } = useOrderActionsContext();
-  const { USDCBalance } = useUserHoldingsContext();
+  const { usdcBalance } = useUserHoldingsContext();
       
   if (!isConnected) return null;
 
@@ -23,7 +23,7 @@ export function CreateOrderForm() {
         <div>
           <div className="flex justify-between items-center text-xs text-text/70 mt-1">
             <span>USDC amount to spend</span>
-            <span>Balance: {USDCBalance} USDC</span>
+            <span>Balance: {usdcBalance} USDC</span>
           </div>
           <input 
             id="create-USDC-amount" 
@@ -59,9 +59,9 @@ export function CreateOrderForm() {
 
         {/* The smart button handles all its own logic and styling */}
         <CreateOrderButton
-          USDCAmountToSpend={USDCAmountToSpend}
-          fimPricePerUSDC={fimPricePerUSDC}
-          hasSufficientUSDC={hasSufficientUSDC}
+          usdcAmountToSpend={USDCAmountToSpend}
+          fimPricePerUsdc={fimPricePerUSDC}
+          hasSufficientUsdc={hasSufficientUSDC}
         />
       </div>
     </div>
