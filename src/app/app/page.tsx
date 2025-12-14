@@ -1,5 +1,5 @@
 // src/app/app/page.tsx
-'use client';
+'use client' ;
 
 import { ConnectionProvider } from '@/context/ConnectionContext';
 import { SeasonDataProvider } from '@/context/SeasonDataContext';

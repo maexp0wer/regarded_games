@@ -3,7 +3,7 @@
 import { useEffect, } from 'react';
 import Head from 'next/head';
 import { useScrollNavigation } from '@/hooks/useScrollNavigation';
-import '../globals.css';
+import '@/app/globals.css';
 import { Logo, ArrowRight} from '@/components/icons/svg';
 import { useTheme } from '../../../context/ThemeContext';
 
