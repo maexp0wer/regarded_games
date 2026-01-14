@@ -103,11 +103,18 @@ export default function DocsShell({
     return h1.children.some(child => activeId === child.id);
   };
 
+  const isH2Open = (h2: HeadingNode) => {
+    // Open if the H2 itself is active
+    if (activeId === h2.id) return true;
+    // OR if any of its H3 children are active
+    return h2.children.some(h3 => activeId === h3.id);
+  };
+
   // --- Sidebar Content ---
   const SidebarContent = () => (
-    <nav className="space-y-4 py-4 px-2">
+    <nav className="space-y-4 py-4 px-2 pb-20">
       
-      {/* SEARCH RESULTS MODE */}
+      {/* SEARCH MODE */}
       {searchQuery ? (
         <div className="space-y-1">
           <p className="px-2 text-xs font-semibold text-text/50 uppercase tracking-wider mb-2">
@@ -119,14 +126,14 @@ export default function DocsShell({
               href={`/docs/${result.docSlug}${result.headingId ? `#${result.headingId}` : ''}`}
               className="block px-4 py-2 text-sm rounded-md hover:bg-card transition-colors group"
             >
-              {result.level > 1 && (
-                 <span className="block text-xs text-text/50 mb-0.5 group-hover:text-primary/70">
-                    {result.docTitle} /
-                 </span>
-              )}
               <span className="font-medium text-text group-hover:text-primary">
                 {result.headingTitle}
               </span>
+              {result.level > 1 && (
+                 <span className="block text-xs text-text/50 mt-0.5 group-hover:text-primary/70">
+                    in {result.docTitle}
+                 </span>
+              )}
             </Link>
           ))}
           {searchResults.length === 0 && (
@@ -134,82 +141,98 @@ export default function DocsShell({
           )}
         </div>
       ) : (
-        /* STANDARD NAVIGATION MODE */
+        /* STANDARD NAV MODE */
         <>
           {docs.map((doc) => {
             const isDocActive = isFileActive(doc.slug);
-            const isDocExactActive = isDocActive && !activeId;
+            const hasHeadings = isDocActive && currentHeadings.length > 0;
 
-            return (
-              <div key={doc.slug} className="mb-2">
-                {/* 1. Main File Link */}
-                <Link
-                  href={`/docs/${doc.slug}`}
-                  onClick={() => {
-                    if (!isDocActive) setActiveId(''); 
-                  }}
-                  className={`block px-4 py-2 text-sm rounded-md transition-all duration-200 ${
-                     isDocExactActive 
-                       ? 'bg-card text-primary font-bold' 
-                       : 'text-text font-bold hover:bg-primary hover:text-bg'
-                  }`}
-                >
-                  {doc.title}
-                </Link>
+            // CASE 1: Active Page with Headings (Render H1s as Root)
+            if (hasHeadings) {
+              return (
+                <div key={doc.slug} className="mb-2 space-y-0.5">
+                  {currentHeadings.map((h1) => {
+                    const h1Active = activeId === h1.id;
+                    return (
+                      <div key={h1.id} className="relative">
+                        {/* Level 0: H1 (Mimics the root Doc Title style) */}
+                        <a
+                          href={`#${h1.id}`}
+                          onClick={(e) => handleLinkClick(e, h1.id)}
+                          className={`block px-4 py-2 text-sm rounded-md transition-all duration-200 ${
+                            h1Active
+                              ? 'bg-card text-primary font-bold shadow-sm' 
+                              : 'text-text font-bold hover:bg-primary hover:text-bg'
+                          }`}
+                        >
+                          {h1.title}
+                        </a>
 
-                {/* 2. Internal Headings Tree */}
-                {isDocActive && currentHeadings.length > 0 && (
-                  <div className="mt-1 ml-4 border-l-2 border-card pl-2 space-y-0.5 relative">
-                    {currentHeadings.map((h1) => {
-                      const h1Active = activeId === h1.id;
-                      const h1IsOpen = isH1Open(h1);
+                        {/* Level 1: H2 (Indented) */}
+                        {h1.children.length > 0 && (
+                          <div className="ml-4 border-l-2 border-card pl-2 mt-1 space-y-0.5">
+                            {h1.children.map((h2) => {
+                              const h2Active = activeId === h2.id;
+                              const h2IsOpen = isH2Open(h2);
 
-                      return (
-                        <div key={h1.id} className="relative">
-                          {/* H1 Link */}
-                          <a
-                            href={`#${h1.id}`}
-                            onClick={(e) => handleLinkClick(e, h1.id)} // <--- USE NEW HANDLER
-                            className={`block px-3 py-1.5 text-sm rounded-md transition-all duration-200 ${
-                              h1Active
-                                ? 'bg-card text-primary font-semibold shadow-sm' 
-                                : 'text-text/80 hover:bg-primary hover:text-bg'
-                            }`}
-                          >
-                            {h1.title}
-                          </a>
-
-                          {/* H2 Links */}
-                          {h1.children.length > 0 && (
-                            <div 
-                              className={`ml-3 pl-2 border-l-2 border-card overflow-hidden transition-all duration-300 ${
-                                h1IsOpen ? 'max-h-[500px] opacity-100 mt-1 mb-1' : 'max-h-0 opacity-0'
-                              }`}
-                            >
-                              {h1.children.map((h2) => {
-                                const h2Active = activeId === h2.id;
-                                return (
+                              return (
+                                <div key={h2.id}>
                                   <a
-                                    key={h2.id}
                                     href={`#${h2.id}`}
-                                    onClick={(e) => handleLinkClick(e, h2.id)} // <--- USE NEW HANDLER
-                                    className={`block px-3 py-1 text-xs rounded-md transition-all duration-200 ${
-                                      h2Active 
-                                        ? 'bg-card text-primary font-semibold shadow-sm' 
+                                    onClick={(e) => handleLinkClick(e, h2.id)}
+                                    className={`block px-3 py-1 text-sm rounded-md transition-all duration-200 ${
+                                      h2Active
+                                        ? 'text-primary font-semibold bg-card/50'
                                         : 'text-text/70 hover:bg-primary hover:text-bg'
                                     }`}
                                   >
                                     {h2.title}
                                   </a>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+
+                                  {/* Level 2: H3 (Double Indented, conditional visibility) */}
+                                  {h2.children.length > 0 && (
+                                    <div
+                                      className={`ml-3 border-l border-card/50 overflow-hidden transition-all duration-300 ${
+                                        h2IsOpen ? 'max-h-[300px] opacity-100 my-1' : 'max-h-0 opacity-0'
+                                      }`}
+                                    >
+                                      {h2.children.map((h3) => (
+                                        <a
+                                          key={h3.id}
+                                          href={`#${h3.id}`}
+                                          onClick={(e) => handleLinkClick(e, h3.id)}
+                                          className={`block px-3 py-1 text-[11px] rounded-md transition-all duration-200 ${
+                                            activeId === h3.id
+                                              ? 'text-primary font-medium'
+                                              : 'text-text/60 hover:text-primary'
+                                          }`}
+                                        >
+                                          {h3.title}
+                                        </a>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            }
+
+            // CASE 2: Inactive Page OR Active Page without headings (Fallback to Title)
+            return (
+              <div key={doc.slug} className="mb-2">
+                <Link
+                  href={`/docs/${doc.slug}`}
+                  className="block px-4 py-2 text-sm rounded-md text-text font-bold hover:bg-primary hover:text-bg transition-all duration-200"
+                >
+                  {doc.title}
+                </Link>
               </div>
             );
           })}
@@ -267,10 +290,12 @@ export default function DocsShell({
           </div>
         )}
 
-        <main className="flex-1 w-full md:pl-64">
-           <div className="mx-auto w-full max-w-7xl px-6 py-10 md:px-12">
+        <main className="flex-1 w-full md:pl-64 flex flex-col">
+           {/* Add 'mdx-content' to this div */}
+           <div className="mx-auto w-full max-w-7xl px-6 py-10 md:px-12 flex-1 mdx-content">
               {children}
            </div>
+
         </main>
       </div>
     </div>
