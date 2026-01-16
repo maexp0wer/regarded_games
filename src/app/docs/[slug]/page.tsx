@@ -51,12 +51,12 @@ const customComponents = {
     </ol>
   ),
   blockquote: (props: any) => (
-    <blockquote {...props} className="border-l-4 border-primary/50 pl-4 italic my-6 text-text/80 bg-card/30 py-2 rounded-r-md">
+    <blockquote {...props} className="border-l-4 border-primary/50 pl-4 italic  text-text bg-card rounded-r-md">
       {props.children}
     </blockquote>
   ),
   code: (props: any) => (
-    <code {...props} className="bg-card text-primary px-1.5 py-0.5 rounded text-sm font-mono border border-text/10">
+    <code {...props} className="bg-card text-primary  py-0.5 rounded text-sm font-mono border border-text/10">
       {props.children}
     </code>
   ),
@@ -80,7 +80,7 @@ const customComponents = {
       return (
         <Link 
           href={href} 
-          className="text-primary font-medium underline underline-offset-4 decoration-primary/30 hover:decoration-primary transition-all" 
+          className="text-text font-medium underline underline-offset-4 decoration-text/30 hover:decoration-primary transition-all" 
           {...rest}
         >
           {children}

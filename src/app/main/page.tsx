@@ -13,14 +13,16 @@ import GenericModal from '@/components/GenericModal';
 import Ritardo from '@/components/icons/Ritardo.svg';
 import Carlo from '@/components/icons/Carlo.svg';
 import FIM1 from '@/components/icons/FIM1.svg';
+import { useDocNavigation } from '@/hooks/useDocNavigation';
 
 
 import ScrollNav from '@/components/ScrollNav'; // Import the new component
-import { ArrowDownCircleIcon, ArrowDownIcon } from '@heroicons/react/16/solid';
 
 export default function Home() {
   // Dark Mode State
   const { darkMode, toggleTheme } = useTheme();
+
+  const navigateToDocs = useDocNavigation();
   
   // Scroll Navigation
   const { activeSection, isNavVisible, scrollToSection } = useScrollNavigation();
@@ -49,13 +51,10 @@ export default function Home() {
     window.open('/litepaper', '_blank', 'noopener,noreferrer');
   };
 
-  const openLitepaperToId = (elementId: string) => {
-  // Construct the full URL with the hash
-  const url = `/litepaper#${elementId}`;
+  
 
-  // This part remains exactly the same
-  window.open(url, '_blank', 'noopener,noreferrer');
-};
+
+  
 
 // The function from the previous answer
   const scrollToId = (id: string) => {
@@ -115,19 +114,19 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row justify-center gap-4">
                 <button 
                   onClick={() => scrollToSection('sectionHero')}
-                  className=" bg-card2 hover:bg-card3 text-text px-6 py-3 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-103">
+                  className="btn-secondary">
                   Learn More
                 </button>
                 
                 <button 
-                  onClick={openLitepaper}
-                  className="bg-text hover:bg-text2 text-bg px-6 py-3 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-103">
+                  onClick={() => navigateToDocs('intro')}
+                  className="btn-secondary">
                   Read Docs
                 </button>
 
                 <button 
                   onClick={() => scrollToSection('sectionGenesisProgram')}
-                  className=" bg-primary hover:bg-primary2 text-bg px-6 py-3 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-103">
+                  className="btn-primary">
                   Join the Game
                 </button>
               </div>
@@ -214,20 +213,20 @@ export default function Home() {
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="ENTER THE ARENA"
                 description="Each season begins with an Auction. Buy your in-game Fake Internet Money ($FIM) with $USDC to form the season's Prize Pool."
-                onButtonClick={() => openLitepaperToId('sectionTheGame')}
+                onButtonClick={() => navigateToDocs('intro#phase-1-auction')}
                 //buttonText="Learn more" // You could override the default if needed
               />
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="OUTPLAY THE MARKET"
                 description="For 3 Months, trade $FIM to impact the live Gini Coefficient, which measures wealth inequality. Choose your trades wisely and coordinate with your peers—who you trade with is as important as the price."
-                onButtonClick={() => openLitepaperToId('sectionPhase2')}
+                onButtonClick={() => navigateToDocs('intro#phase-3-victory-payouts')}
               />
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="ENFORCE YOUR IDEOLOGY"
                 description="It’s a race. The first faction to shift the Gini Coefficient by 25% captures the Treasury. The winner dictates the payout rules; the loser pays the price."
-                onButtonClick={() => openLitepaperToId('sectionWinningTheGame')}
+                onButtonClick={() => navigateToDocs('intro#phase-3-victory-and-payouts')}
               />
             </div>
           </section>
@@ -244,28 +243,28 @@ export default function Home() {
               <div className="grid md:grid-cols-3 gap-8"> 
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
-                title="A New Framework for Collaboration"
-                description="Crypto should be a tool for coordination, not just a casino. Ritardo Games is a live laboratory dedicated to this foundational purpose. By playing, you aren't just competing—you are participating in a grand experiment on the future of human organization."
-                onButtonClick={() => openLitepaperToId('sectionMarketOpportunity')}
-              />
-              <Card
-                icon={<FIM1 viewBox="0 0 850 850" />}
                 title="True Player Ownership"
                 description="No central company. No rigged outcomes. Ritardo Games is a DAO owned entirely by its players. From balancing the game to managing the Treasury, every decision is voted on by $RTD holders. The community holds the power, permanently."
-                onButtonClick={() => openLitepaperToId('sectionDAOOverview')}
+                onButtonClick={() => navigateToDocs('intro#5-governance')}
               />
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="Active Value Accrual"
                 description="The Prize Pool generates constant yield via blue-chip DeFi. The DAO controls this revenue, voting to execute deflationary buybacks, deepen liquidity, or supercharge future Jackpots. Ownership is designed to be productive, not passive."
-                onButtonClick={() => openLitepaperToId('sectionTokenomics')}
+                onButtonClick={() => navigateToDocs('intro#revenue-allocation')}
+              />
+              <Card
+                icon={<FIM1 viewBox="0 0 850 850" />}
+                title="A New Framework for Collaboration"
+                description="Crypto should be a tool for coordination, not just a casino. Ritardo Games is a live laboratory dedicated to this foundational purpose. By playing, you aren't just competing—you are participating in a grand experiment on the future of human organization."
+                onButtonClick={() => navigateToDocs('mission')}
               />
               
             </div>
 
             <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8">
             <button 
-              onClick={() => openLitepaperToId('sectionHero')}
+              onClick={() => navigateToDocs('sectionHero')}
               className=" bg-card2 hover:bg-card3 text-text px-6 py-3 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-103">
               Read the Whitepaper
             </button>

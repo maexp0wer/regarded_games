@@ -1,6 +1,15 @@
 // src/components/DocsShell.tsx
 'use client';
 
+/*
+Usage of Links:
+My Title → my-title
+Same Document:
+See the [Game Setup](#game-setup) section for details
+Different Document:
+Check the [Rules of Play](/docs/rules#winning-the-game) to see how to win.
+*/
+
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -9,6 +18,7 @@ import { MoonIcon, SunIcon } from './icons/svg';
 import { DocMetadata } from '@/lib/docs-structure';
 import { HeadingNode } from '@/lib/toc';
 import { SearchIndexItem } from '@/lib/docs';
+import { Logo } from '@/components/icons/svg';
 
 interface DocsShellProps {
   children: React.ReactNode;
@@ -252,7 +262,10 @@ export default function DocsShell({
                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
             </svg>
           </button>
-          <div className="font-bold text-lg md:text-xl whitespace-nowrap hidden sm:block">Documentation</div>
+          <div className='text-primary flex justify-center items-center '>
+                      <Link href="/"><Logo className="w-40 text-white" /></Link>
+                    </div>
+          <div className="font-bold text-lg md:text-xl whitespace-nowrap hidden sm:block pl-5">Documentation</div>
           <div className="flex-1 flex justify-center max-w-md mx-auto">
             <div className="relative w-full">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none">

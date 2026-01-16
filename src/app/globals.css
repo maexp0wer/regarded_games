@@ -6,21 +6,22 @@
 
 @theme {
     /* Light theme colors */
-    --color-primary: #6f1cd4ff;
-    --color-primary2: #873ce7ff;
-    --color-primary3: #a38bdf;
-    --color-secondary: #d4a31c;
-    --color-success: #81d41c;
-    --color-info: #0dcaf0;
-    --color-warning: #ebc35a;
-    --color-danger: #d41c81;
-    --color-bg: #fafafa;
-    --color-card: #edeceeff;
-    --color-card2: #e4e4e7ff;
-    --color-card3: #beb7d2ff;
-    --color-text: #19141fff;
-    --color-text2: #281e2eff;
-    --color-border: #dee2e6;
+    --color-primary: #CC4713;
+    --color-primary2: #e95217;
+    --color-primary3: #faeab5;
+    --color-secondary: #8a4ad1;
+    --color-secondary2: #dcc2fa;
+    --color-success: #5dae0e;
+    --color-info: #3b66d1;
+    --color-warning: #e0a800;
+    --color-danger: #d63384;
+    --color-bg: #f9f9f7;
+    --color-card: #ffffff;
+    --color-card2: #f0efe9;
+    --color-card3: #e6e4dc;
+    --color-text: #2e2e2a;
+    --color-text2: #5c5c57;
+    --color-border: #dbd9d1;
 
     --font-display: "Exo 2", "sans-serif";
     
@@ -62,6 +63,27 @@
     background-color: var(--color-bg) !important;  /*Or any bright color */
     scroll-behavior: smooth;
   }
+
+
+.btn-primary {
+    @apply px-6 py-3 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.03];
+    @apply bg-primary hover:bg-primary2 text-bg border border-none;
+
+    .dark & {
+      @apply border-none;
+    }
+  }
+
+
+.btn-secondary {
+    @apply px-6 py-3 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.03];
+    @apply bg-card2 hover:bg-card3 text-text border border-card3;
+
+    .dark & {
+      @apply border-none;
+    }
+  }
+
 
   /* Custom Scrollbar Styling */
 .custom-scrollbar {

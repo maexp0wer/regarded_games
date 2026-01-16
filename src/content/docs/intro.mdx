@@ -1,147 +1,171 @@
----
-slug: intro
-order: 1
----
+# Intro
 
-# Ritardo Games: An Introduction
+## 1. Economic Warfare On-Chain
 
-Ritardo Games is a perfect-information strategy game where collective action battles economic power for real-money stakes. It is a live, on-chain economic simulation designed to confront the systemic flaws of modern finance.
+**Ritardo Games** is a perfect-information strategy game where **Capital** battles **Coordination** for real-money stakes.
 
-The platform stages a quarterly battle between two opposing economic philosophies: Capitalism and Socialism. Your objective is to use strategic trading to drive the economy toward your chosen ideology's goal.
-
-## The Two Factions
-
-The state of the economic battle is tracked by the [Gini Coefficient](#gini-coefficient).
+Unlike speculative trading where insiders dump on retail, Ritardo Games is a closed-loop economic simulation. It stages a quarterly battle between two opposing ideologies: **Capitalism** and **Socialism**.
 
 ### The Objective
 
-The first side to achieve 25% of the total possible progress toward their goal wins the season and enforces its philosophical payout structure on the entire Prize Pool.
+Two factions compete to shift the game's economic state—measured by the [Gini Coefficient](#gini-coefficient)—towards their goal.
 
-*   The Capitalist Goal: Push the Gini Coefficient towards 1.0 (Concentration of wealth).
-*   The Socialist Goal: Push the Gini Coefficient towards 0.0 (Redistribution of wealth).
+*   **The Capitalist Goal:** Concentrate wealth. Push the [Gini Coefficient](#gini-coefficient) towards **1.0**.
+*   **The Socialist Goal:** Redistribute wealth. Push the [Gini Coefficient](#gini-coefficient) towards **0.0**.
 
-## The Genesis Program (Meritocratic Distribution)
+The first side to move the economy **25%** toward their target wins the season and dictates how the Prize Pool is distributed.
 
-The Ritardo Games DAO is launching with a Meritocratic Distribution. Your share of the initial supply is determined by your **Contribution Score**.
+### The Core Assets
 
-### Overview & Scoring
+| Asset | Name | Function |
+| :--- | :--- | :--- |
+| **$RTD** | Ritardo | **Governance & Access.** You must stake $RTD to play the game and vote on the rules. |
+| **$FIM** | Fake Internet Money | **Gameplay.** The seasonal token you trade inside the simulation to change the [Gini Coefficient](#gini-coefficient). |
 
-The scoring formula rewards value-add actions and strategic contribution.
+
+## 2. The Genesis Program
+
+The Ritardo Games DAO is launching with a **Meritocratic Distribution**. Your share of the initial supply is determined by your **Contribution Score**.
+
+> Contribution Score = (Citizen Base Score * Multiplier) + Recruiter Score + Strategist Score + Guardian Score
 
 ### Quest 1: The Citizen (Community)
-Secure your identity and prove your strategic value in the community.
-*   **Action:** Register on the platform.
-*   **Bonus:** Earn a 5x Multiplier by being an active, constructive voice in our community forums.
+Secure your identity on the ledger.
+*   **Action:** Register your wallet and email on the landing page.
+*   **Bonus:** Join Discord and engage in strategic debate. High-value contributors receive a **5x Multiplier** from the Admins.
+*   **Points:** 100 (Base) $\to$ 500 (Max).
 
 ### Quest 2: The Recruiter (Growth)
-Incentivize organic ecosystem growth.
+Bring high-quality players into the ecosystem.
 *   **Action:** Share your unique referral code.
-*   **Anti-Sybil Mechanism:** Points are only awarded for referees who meet a Proof-of-Engagement threshold, ensuring you are rewarded for quality, active players, not low-effort bots.
+*   **Anti-Sybil Rule:** You only earn points if your referee executes **at least 5 trades** on the Testnet. Bots earn you nothing.
+*   **Max Score:** 1,325 Points.
 
 ### Quest 3: The Strategist (Testnet)
-Prove your mastery of the game theory in the competitive preseason.
-*   **Action:** Participate in the Testnet simulation.
-*   **Weighting:** The largest score bonus is awarded to the members of the Winning Faction—a direct reward for achieving collective action and strategic coordination.
+Prove your skill in the preseason arena.
+*   **Activity:** Execute trades to earn up to **200 Activity Points**.
+*   **Victory Bonus:** If your faction wins the Testnet season, you receive a **1,000 Point Bonus**. Losing faction members receive only 100.
+*   **Max Score:** 1,200 Points.
 
 ### Quest 4: The Guardian (Security)
-Help secure the foundational integrity of the protocol.
-*   **Action:** Discover and responsibly report technical bugs or economic exploits.
-*   **Reward:** Earn a massive bonus based on the severity of the vulnerability reported.
+Find bugs. Protect the protocol.
+*   **Critical Severity:** 25,000 Points
+*   **High Severity:** 10,000 Points
+*   **Medium Severity:** 2,500 Points
 
-## Game Mechanics
 
-### The Game Loop
 
-The entire simulation follows a structured, three-phase cycle each quarter.
+## 3. Game Mechanics
 
-### Phase 1: The Auction (1 Month)
-**Goal:** Capital Formation & Accountability.
+Each season lasts for one quarter (3 months) and follows a strict three-phase cycle.
 
-*   **Entry:** Players mint the seasonal token, $FIM, using USDC. All USDC forms the Prize Pool.
-*   **Collateral Requirement:** Participation is gated. To ensure Sybil Resistance, a player must hold $RTD$ equal to 10% of their $FIM$ buy, aligning their long-term interests with the protocol's stability.
-*   **Accountability:** Each player's capital is recorded as Net Contribution to enable the "Proof of Sacrifice" metric for the Socialist payout.
+### Phase 1: Auction
+**Objective: Capital Formation & Entry**
 
-### Phase 2: The Simulation (Trading)
-**Goal:** Strategic Gini Manipulation.
+Players enter the game by minting the seasonal token, **$FIM**, using stablecoin collateral (USDC).
 
-*   **The Marketplace:** Trading occurs on our internal Peer-to-Peer Exchange.
-*   **Gini-Aware Trading:** Every transaction is a strategic choice. The open order book allows players to analyze a counterparty's holdings and execute a trade based on its calculated impact on the global Gini Coefficient.
+*   **The Collateral Rule:** To prevent [Sybil attacks](#sybil-attack), you must hold **$RTD** tokens equal to **10%** of the value of $FIM you wish to buy. This ensures everyone has skin in the game.
+*   **The Prize Pool:** All USDC collected forms the Prize Pool, which is immediately deployed into DeFi protocols to generate yield.
 
-### Phase 3: Victory & Payouts
-The distribution of the Prize Pool is the financial fulfillment of the winning ideology.
+### Phase 2: Trading
+**Objective: Move the [Gini Coefficient](#gini-coefficient)**
 
-### Scenario A: Capitalist Victory (The Oligarchy)
-*   **The Payout:** Winner-Take-All. The smallest group of players controlling over 50% of the $FIM$ supply (the Oligarchy) splits the entire Prize Pool. All other players receive zero.
+For the duration of the season, players trade $FIM on the internal **Peer-to-Peer Exchange**.
 
-### Scenario B: Socialist Victory (The Solidarity Fund)
-*   **The Payout:** Redistribution. Winnings for the top 50% are capped. The resulting surplus is collected into the Solidarity Fund and redistributed to all players based on their Net Contribution (Proof of Sacrifice).
+*   **Transparent Order Book:** You can see exactly *who* is buying and selling.
+*   **Gini-Aware Execution:** Every trade impacts the [Gini Coefficient](#gini-coefficient).
+    *   Selling to a **Whale** $\to$ Increases Inequality (Capitalist Move).
+    *   Selling to a **Plebeian** $\to$ Reduces Inequality (Socialist Move).
+*   **Strategy:** You must choose your counterparties carefully to help your faction win.
 
-## The Economy
+### Phase 3: Victory and Payouts
+The game ends when one faction shifts the [Gini Coefficient](#gini-coefficient) by **25%** from its starting point.
 
-### Tokens: $RTD$ vs $FIM$
+#### Scenario A: Capitalist Victory (The Oligarchy)
+*   **Condition:** The [Gini Coefficient](#gini-coefficient) increases significantly.
+*   **The Payout:** Winner-Take-All. The **Oligarchy** (the smallest group of whales holding >50% of the supply) splits the entire Prize Pool.
+*   **The Losers:** Everyone else gets $0.
 
-| Token | Role | Key Feature |
+#### Scenario B: Socialist Victory (The Solidarity Fund)
+*   **Condition:** The [Gini Coefficient](#gini-coefficient) decreases significantly.
+*   **The Payout:** Redistribution.
+    *   **The Cap:** The winnings of the richest players are capped.
+    *   **The Fund:** The surplus is seized and distributed to *all* players based on their **Net Contribution**.
+*   **The Philosophy:** Those who sacrificed capital to hold the line are rewarded.
+
+
+
+## 4. The Economy
+
+### 1. $FIM (Fake Internet Money)
+*   **Type:** Seasonal Utility Token.
+*   **Use Case:** Playing the current season.
+*   **Lifespan:** **Ephemeral.** At the end of the season, $FIM is settled and becomes useless.
+
+### 2. $RTD (The Ritardo)
+*   **Type:** Governance & Access Token.
+*   **Supply:** Fixed at **1,000,000,000**.
+*   **Use Case 1: Access.** You cannot play the game without staking $RTD (10% Collateral Rule).
+*   **Use Case 2: Value Control.** Holders vote on how to use the DAO's revenue.
+
+### Revenue Allocation
+The DAO votes to use the USDC profits generated by the Treasury for **Active Value Creation**:
+
+1.  **Buyback & Burn:** Purchasing $RTD from the market and destroying it (Deflationary).
+2.  **Liquidity Injection:** Adding Protocol-Owned Liquidity (POL) to stabilize the token.
+3.  **Reinvestment:** Adding funds to the next season’s Prize Pool to attract more players ("Jackpot Multiplier").
+
+### Supply Distribution
+
+| Allocation | % | Purpose |
 | :--- | :--- | :--- |
-| $RTD | Governance & Access | Required Collateral. Fixed supply. Long-term ownership. |
-| $FIM | Gameplay | Seasonal. Traded for Gini impact. Functionally deprecated after the season ends. |
-
-### Revenue & Value Accrual
-
-The DAO utilizes a Dynamic Revenue Allocation model.
-
-*   **Source:** USDC profits generated by the Prize Pool's deployment into secure DeFi protocols.
-*   **Value Creation:** $RTD$ holders vote on how to deploy this revenue:
-    1.  **Deflation:** Use profits to execute buybacks and burn $RTD$.
-    2.  **Stability:** Use profits to boost the token's market liquidity.
-    3.  **Growth:** Reinvest profits to increase the next season's Prize Pool (Jackpot Multiplier).
-
-### Supply Distribution (The 75% Community Standard)
-
-The total supply of $RTD$ is fixed at 1 Billion. The distribution is weighted heavily toward long-term community ownership.
-
-| Category | Allocation | Purpose |
-| :--- | :--- | :--- |
-| DAO Treasury Reserve | 50% | Long-Term Capital. Controlled by governance. |
-| Growth & Ecosystem | 15% | Player Rewards, Marketing, & Grants. |
-| Core Contributors | 15% | Team Alignment (4-year vesting). |
-| Operational Reserve | 10% | Legal & Infrastructure (US DAO LLC). |
-| Genesis Liquidity | 10% | Market Initialization & Airdrop. |
-
-## Governance
-
-### The DAO & Ownership
-
-Ritardo Games is structured as a DAO wrapped in a US-based DAO LLC.
-
-*   **Credible Neutrality:** The rules are code, immutable by the founding team, and governed by the community.
-*   **Your Power:** Ownership of $RTD$ grants you the power to vote on game balance, risk parameters, and treasury allocation.
-
-### The Coordination Hub
-
-Effective collective action requires infrastructure. The **Ritardo Forum** serves as the **Coordination Hub** for the community, providing:
-
-*   **Strategic Planning:** Dedicated channels for Capitalist and Socialist factions to organize market moves.
-*   **Governance Debate:** A formal space for long-form discussion and analysis before proposals go to a final vote.
-
-### The Voting System
-
-*   **Snapshot:** All voting is conducted on Snapshot, ensuring gasless (free) participation for all $RTD$ holders.
-*   **The Execution Council:** A Gnosis Safe Multi-Sig acts as the executive arm, initiating the on-chain transactions approved by the DAO's votes.
-
-## Security
-
-### Audits & Risks
-
-The foundation of the project relies on a multi-layered Defense-in-Depth strategy.
-
-*   **Pre-Launch Security:** The code undergoes a **Competitive Audit** to leverage adversarial crowdsourcing for vulnerability identification.
-*   **Post-Launch Security:** A permanent **Bug Bounty Program** provides continuous scrutiny.
-*   **Mitigation:** The DAO's ability to **Emergency Pause** the game and patch rules for future seasons ensures anti-fragility against both contract and economic exploits.
+| **DAO Treasury** | 50% | Long-term growth & Capitalization. |
+| **Ecosystem Incentives** | 20% | Marketing, Rewards, & Grants. |
+| **Core Team** | 15% | Vested over 4 years. |
+| **Genesis Liquidity** | 10% | 5% Airdrop / 5% Initial Liquidity. |
+| **Operational Reserve** | 10% | Legal/LLC costs. |
 
 
-## Glossary
+
+## 5. Governance
+
+Ritardo Games utilizes a **Hybrid Governance Model** to ensure decisions are secure, legal, and accessible.
+
+### 1. The Legal Wrapper
+The DAO is wrapped in a **US-based DAO LLC**. This provides a liability shield for contributors while contractually binding the entity to execute the will of the token holders.
+
+### 2. Snapshot (The Voice)
+Voting is conducted on **Snapshot**, allowing for **gasless** participation.
+*   **Voting Power:** Determined by your held + staked $RTD.
+*   **Scope:** Holders vote on Game Rules (adjusting the Multiplier), Treasury Spending, and Election of Council members.
+
+### 3. The Execution Council (The Hands)
+A Gnosis Safe Multi-Sig wallet acts as the operational arm of the DAO.
+*   **Role:** The Council initiates the on-chain transactions approved by Snapshot votes.
+*   **Safety:** The Council has a non-discretionary mandate. They *must* execute passed votes unless a critical security threat is identified.
+
+
+
+## 6. Security
+
+### Security Strategy
+We employ a **Defense-in-Depth** approach:
+1.  **Competitive Audit:** Before launch, the codebase undergoes a competitive audit via platforms like Code4rena to identify vulnerabilities via crowdsourced incentives.
+2.  **Bug Bounty:** A permanent bounty program on Immunefi rewards white-hat hackers for responsible disclosure.
+3.  **Emergency Pause:** The Execution Council holds the power to pause the game contracts in the event of a zero-day exploit, pending a DAO vote to resume.
+
+
+
+## 7. Glossary
+
 ### Gini Coefficient
+A statistical measure of wealth distribution used to gauge economic inequality. The score ranges from **0.0 (Perfect Equality)** to **1.0 (Absolute Concentration)**. The Ritardo Games Gini Coefficient is calculated on-chain and is the single arbiter of the game's state.
 
-It is an objective metric that measures the inequality of wealth distribution. Think of it as the ultimate scoreboard for the battle of ideas:
-*   0.0 = Perfect Equality.
-*   1.0 = Absolute Concentration.
+### Sybil Attack
+The act of one malicious entity creating and controlling multiple pseudo-anonymous identities (wallets) in order to gain a disproportionate amount of influence, votes, or rewards from a system.
+
+### Sybil Resistance
+Mechanisms designed to make a [Sybil attack](#sybil-attack) economically irrational or technically impossible. In Ritardo Games, the **RTD Collateral Rule** is the primary Sybil Resistance mechanism, enforcing a high financial cost on any actor attempting to manipulate the system with multiple wallets.
+
+### Net Contribution
+A core metric calculated as a player's total money spent (MoneyIn) minus their total money sold for (MoneyOut). This metric is **Sybil-resistant** and is used to determine proportional rewards for the winning Socialist faction, ensuring that players who risked the most for the collective cause are rewarded.
