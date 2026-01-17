@@ -1,5 +1,5 @@
 // lib/db.ts OR src/lib/db.ts
-import { Pool, types, QueryResult } from 'pg';
+import { Pool, types, QueryResult, QueryResultRow } from 'pg';
 
 // --- Explicit Type Parsers ---
 // Resolve potential ambiguities and ensure consistent type handling.
@@ -35,6 +35,8 @@ const connectionOptions = {
   // }
 };
 
+
+
 if (!process.env.POSTGRES_URL) {
   console.error("ERROR: Missing POSTGRES_URL environment variable. Database connections will fail.");
   // In production, you might want to prevent the app from starting or handle this more gracefully.
@@ -47,34 +49,42 @@ if (!process.env.POSTGRES_URL) {
 }
 
 // Listen for errors on idle clients
+/*
 pool.on('error', (err, client) => {
   console.error('DATABASE POOL ERROR: Unexpected error on idle client', err);
   // Consider more robust error handling or process exit in production
   // process.exit(-1);
 });
-
+*/
 /**
  * Executes a SQL query against the database pool.
  * @param text The SQL query string with placeholders ($1, $2, etc.).
  * @param params An optional array of parameters to safely substitute into the query.
  * @returns A Promise resolving to the QueryResult.
  */
-export const query = async (text: string, params?: any[]): Promise<QueryResult<any>> => {
+export const query = async <T extends QueryResultRow = QueryResultRow>(
+  text: string,
+  params?: unknown[] // 2. Use 'unknown[]' instead of 'any[]' for input safety
+): Promise<QueryResult<T>> => {
   let client;
   try {
     client = await pool.connect();
-    const result = await client.query(text, params);
+    
+    // 3. We cast 'params' to 'any[]' here because the 'pg' library internally 
+    // expects 'any[]'. This isolates the 'any' usage to this one line.
+    const result = await client.query<T>(text, params as (string | number | boolean | Date | null | undefined)[]);
+    
     return result;
   } catch (error) {
      console.error('DATABASE QUERY ERROR:', {
         error: error,
-        queryText: text, // Log failed query text
-        queryParams: params // Log parameters (be careful with sensitive data in production logs)
+        queryText: text,
+        queryParams: params
     });
-     throw error; // Re-throw the error for the calling function to handle
+     throw error;
   } finally {
     if (client) {
-        client.release(); // Release client back to pool
+        client.release();
     }
   }
 };

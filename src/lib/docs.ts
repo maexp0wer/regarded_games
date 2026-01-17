@@ -7,6 +7,13 @@ import { getHeadingsFromMarkdown } from './toc';
 // Define the path to your MDX files
 const docsDirectory = path.join(process.cwd(), 'src/content/docs');
 
+interface HeadingNode {
+  title: string;
+  level: number;
+  id?: string;             // Optional because you check 'if (node.id)'
+  children?: HeadingNode[]; // Recursive array
+}
+
 export type SearchIndexItem = {
   docSlug: string;
   docTitle: string;
@@ -68,6 +75,8 @@ export function getDocContent(slug: string) {
   return { content, meta: data };
 }
 
+
+
 /**
  * 3. Build the Global Search Index
  * Scans ALL files and extracts H2/H3 headings for the Search Bar
@@ -95,7 +104,7 @@ export function getGlobalSearchIndex(): SearchIndexItem[] {
     const headings = getHeadingsFromMarkdown(content);
 
     // Recursive helper to flatten the tree
-    const traverse = (nodes: any[]) => {
+    const traverse = (nodes: HeadingNode[]) => {
       nodes.forEach((node) => {
         // We skip Level 1 (H1) inside content if it duplicates the page title,
         // but since we allow multiple H1s now, we generally include them if they have IDs.
@@ -108,6 +117,8 @@ export function getGlobalSearchIndex(): SearchIndexItem[] {
             level: node.level,
           });
         }
+        
+        // Recursive call now works because TypeScript knows 'children' is also HeadingNode[]
         if (node.children) traverse(node.children);
       });
     };

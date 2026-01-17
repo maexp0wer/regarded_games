@@ -12,6 +12,7 @@ export function SeasonDisplay() {
 
   if (activeSeasonId === null) return <div className="p-4 text-center mt-8">No Active Season Found.</div>;
 
+  /*
   const getPhaseBadgeColor = () => {
     switch (phase) {
       case 'AUCTION':
@@ -24,7 +25,7 @@ export function SeasonDisplay() {
         return 'bg-gray-100 text-gray-800';
     }
   };
-
+*/
   return (
     <div className="p-6 rounded-lg bg-card shadow-sm text-left w-full max-w-2xl mt-8 text-text">
       <div className="space-y-2 font-mono">

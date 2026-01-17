@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount, useSimulateContract, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
-import { parseUnits, formatUnits, Address, zeroAddress } from 'viem';
+import { parseUnits, formatUnits, zeroAddress } from 'viem';
 import { AuctionTemplateABI, erc20ABI, contractAddresses } from '@/lib/contracts';
 import { useUserHoldingsContext } from '@/context/UserHoldingsContext';
 

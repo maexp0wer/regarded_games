@@ -3,7 +3,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap");
 @import "tailwindcss";
 
-
 @theme {
     /* Light theme colors */
     --color-primary: #CC4713;

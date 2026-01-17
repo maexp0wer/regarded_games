@@ -1,8 +1,32 @@
 // src/lib/contracts.ts
-import { ContractSet } from "./types";
-import { Address } from "viem";
+
+import { type Address, getAddress } from "viem";
 
 import localConfig from '../../deployment-config-localhost.json';
+
+export interface ContractSet {
+  Auction: Address;
+  Exchange: Address;
+  FIMToken: Address;
+  GameSeason: Address;
+  USDC: Address;
+  Treasury: Address;
+  GameController: Address;
+}
+
+interface RawConfig {
+  genesisSeason: {
+    Auction: string;
+    Exchange: string;
+    FIMToken: string;
+    GameSeason: string;
+  };
+  permanentInfrastructure: {
+    USDC: string;
+    Treasury: string;
+    GameController: string;
+  };
+}
 
 // Define the ABIs as before
 export const AuctionTemplateABI = [
@@ -92,19 +116,30 @@ export const exchangeABI = [
 
 // --- Your Deployed Addresses ---
 // We apply the strict `ContractSet` type here.
-function parseConfig(config: any): ContractSet {
-  // We use type assertion here because we are validating the structure.
+export function parseConfig(config: RawConfig): ContractSet {
+  // Helper: Validates that a string is a real Ethereum address
+  // 'getAddress' from viem automatically checksums and throws if invalid.
+  const validate = (addr: string, fieldName: string): Address => {
+    try {
+      return getAddress(addr); 
+    } catch {
+      console.error(`Invalid address found for ${fieldName}: ${addr}`);
+      // Fallback to a zero address or re-throw depending on strictness
+      throw new Error(`Config Error: ${fieldName} is not a valid Ethereum address.`);
+    }
+  };
+
   return {
-    // From genesisSeason (ensure keys are lowercase)
-    Auction: config.genesisSeason.Auction as Address,
-    Exchange: config.genesisSeason.Exchange as Address,
-    FIMToken: config.genesisSeason.FIMToken as Address,
-    GameSeason: config.genesisSeason.GameSeason as Address,
+    // Genesis Season
+    Auction: validate(config.genesisSeason.Auction, 'Auction'),
+    Exchange: validate(config.genesisSeason.Exchange, 'Exchange'),
+    FIMToken: validate(config.genesisSeason.FIMToken, 'FIMToken'),
+    GameSeason: validate(config.genesisSeason.GameSeason, 'GameSeason'),
     
-    // From permanentInfrastructure (ensure keys are lowercase)
-    USDC: config.permanentInfrastructure.USDC as Address,
-    Treasury: config.permanentInfrastructure.Treasury as Address,
-    GameController: config.permanentInfrastructure.GameController as Address,
+    // Permanent Infrastructure
+    USDC: validate(config.permanentInfrastructure.USDC, 'USDC'),
+    Treasury: validate(config.permanentInfrastructure.Treasury, 'Treasury'),
+    GameController: validate(config.permanentInfrastructure.GameController, 'GameController'),
   };
 }
 

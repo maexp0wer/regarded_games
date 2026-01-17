@@ -1,7 +1,7 @@
 // components/ContactForm.tsx
 'use client';
 
-import React, { useState, useEffect, FormEvent } from 'react';
+import React, { useState, FormEvent } from 'react';
 import { useTheme } from '../context/ThemeContext';
 // Assuming validation functions are correctly defined in this path
 import { isValidEmail, isValidErc20Address, isValidNumber } from '@/lib/validation';
@@ -257,7 +257,7 @@ const ContactForm: React.FC = () => {
   const subButtonBaseClasses = "px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out";
   const subButtonInactiveClasses = "bg-card2 border-card2 text-text hover:bg-card3";
   const subButtonActiveClasses = "bg-primary text-bg";
-  const { darkMode, toggleTheme } = useTheme();
+  const { darkMode} = useTheme();
 
   return (
 

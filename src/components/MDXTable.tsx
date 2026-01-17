@@ -24,8 +24,8 @@ function extractContent(node: ReactNode): ReactNode {
 }
 
 function extractTableData(children: React.ReactNode): { headers: string[], rows: (string | number | React.ReactNode)[][], caption?: string } {
-  let headers: string[] = [];
-  let rows: (string | number | React.ReactNode)[][] = [];
+  const headers: string[] = [];
+  const rows: (string | number | React.ReactNode)[][] = [];
   let caption: string | undefined = undefined;
 
   Children.forEach(children, tablePart => {

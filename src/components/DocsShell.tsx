@@ -107,11 +107,6 @@ export default function DocsShell({
 
   const isFileActive = (slug: string) => pathname.endsWith(`/${slug}`);
 
-  // Determine if a parent H1 should be open
-  const isH1Open = (h1: HeadingNode) => {
-    if (activeId === h1.id) return true;
-    return h1.children.some(child => activeId === child.id);
-  };
 
   const isH2Open = (h2: HeadingNode) => {
     // Open if the H2 itself is active

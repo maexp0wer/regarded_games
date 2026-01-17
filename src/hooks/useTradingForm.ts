@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAccount, useReadContract, useSimulateContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { contractAddresses, erc20ABI } from '@/lib/contracts';
-import { Address, parseUnits, formatUnits } from 'viem';
+import { parseUnits, formatUnits, zeroAddress } from 'viem';
 
 export type TradeSide = 'buy' | 'sell';
 
@@ -46,11 +46,11 @@ export function useTradingForm(): TradingFormState {
 
   // --- 🔴 THE FIX: Centralized Allowance Fetching 🔴 ---
   const { data: usdcAllowanceData, refetch: refetchUsdcAllowance } = useReadContract({
-    address: addresses?.USDC, abi: erc20ABI, functionName: 'allowance', args: [address!, addresses?.Exchange!],
+    address: addresses?.USDC, abi: erc20ABI, functionName: 'allowance', args: [address ?? zeroAddress, addresses?.Exchange ?? zeroAddress],
     query: { enabled: !!address && !!addresses }
   });
   const { data: fimAllowanceData, refetch: refetchFimAllowance } = useReadContract({
-    address: addresses?.FIMToken, abi: erc20ABI, functionName: 'allowance', args: [address!, addresses?.Exchange!],
+    address: addresses?.FIMToken, abi: erc20ABI, functionName: 'allowance', args: [address ?? zeroAddress, addresses?.Exchange ?? zeroAddress],
     query: { enabled: !!address && !!addresses }
   });
 
@@ -61,7 +61,7 @@ export function useTradingForm(): TradingFormState {
   }, [activeAllowance, amountAsBigInt]);
 
   const { data: approveRequest } = useSimulateContract({
-    address: tokenToTrade, abi: erc20ABI, functionName: 'approve', args: [addresses?.Exchange!, amountAsBigInt],
+    address: tokenToTrade, abi: erc20ABI, functionName: 'approve', args: [addresses?.Exchange ?? zeroAddress, amountAsBigInt],
     query: { enabled: needsApproval }
   });
   

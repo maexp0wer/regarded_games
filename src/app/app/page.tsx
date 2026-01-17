@@ -1,39 +1,19 @@
-// src/app/app/page.tsx
-'use client' ;
+import Link from 'next/link';
+import { Logo } from '@/components/icons/svg';
+import { WalletButton } from './_components/WalletButton';
 
-import { ConnectionProvider } from '@/context/ConnectionContext';
-import { SeasonDataProvider } from '@/context/SeasonDataContext';
-import { UserHoldingsProvider } from '@/context/UserHoldingsContext';
-import { AuctionProvider } from '@/context/AuctionContext';
-// We no longer need a separate ExchangeProvider, as the component provides its own.
 
-import { ConnectionDisplay } from '@/components/ConnectionDisplay';
-import { SeasonDisplay } from '@/components/SeasonDisplay';
-import { UserHoldingsDisplay } from '@/components/UserHoldingsDisplay';
-import { AuctionForm } from '@/components/AuctionForm';
-import { Exchange } from '@/components/Exchange';
-
-export default function DAppPage() {
+export default function Navbar() {
+  const mainSiteUrl = process.env.NEXT_PUBLIC_MAIN_DOMAIN;
   return (
-    <ConnectionProvider>
-      <SeasonDataProvider>
-        <UserHoldingsProvider>
-          <AuctionProvider>
-              <main className="flex min-h-screen flex-col items-center p-8 md:p-24 bg-gray-50">
-                <div className="w-full max-w-4xl text-center space-y-8">
-                  <h1 className="text-4xl font-bold">FIM Token Auction & Exchange</h1>
-                  
-                  <ConnectionDisplay />
-                  <AuctionForm />
-                  <UserHoldingsDisplay />
-                  <Exchange />
-                  <SeasonDisplay />
-
-                </div>
-              </main>
-          </AuctionProvider>
-        </UserHoldingsProvider>
-      </SeasonDataProvider>
-    </ConnectionProvider>
+    <nav className="flex justify-between items-center p-4 border-b border-zinc-800">
+      
+      {/* Place it anywhere you want */}
+      
+      <div className='text-primary flex justify-center items-center '>
+        <Link href={mainSiteUrl || '/'}><Logo className="w-40 text-white" /></Link>
+      </div>
+      <WalletButton />
+    </nav>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, ReactNode } from 'react';
+import { useState} from 'react';
 import Head from 'next/head';
 import { useScrollNavigation } from '@/hooks/useScrollNavigation';
 import '@/app/globals.css';
@@ -20,7 +20,7 @@ import ScrollNav from '@/components/ScrollNav'; // Import the new component
 
 export default function Home() {
   // Dark Mode State
-  const { darkMode, toggleTheme } = useTheme();
+  const { darkMode } = useTheme();
 
   const navigateToDocs = useDocNavigation();
   
@@ -46,10 +46,7 @@ export default function Home() {
     { id: 'sectionGenesisProgram', label: 'Genesis Program' }
   ];
 
-  const openLitepaper = () => {
-    // The third argument to window.open handles the 'noopener' and 'noreferrer'
-    window.open('/litepaper', '_blank', 'noopener,noreferrer');
-  };
+
 
   
 
@@ -73,7 +70,6 @@ export default function Home() {
       <Head>
         <title>Ritardo Games</title>
         <link rel="icon" href="/logo.png" />
-        <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&display=swap" rel="stylesheet" />
         <meta name="viewport" content="width=device-width, initial-scale=1"></meta>
       </Head>
 
@@ -91,7 +87,7 @@ export default function Home() {
           : 'relative mx-auto md:transform md:-translate-x-[65px]'
       }`}>
 
-        <div className="w-full max-w-6xl p-8 text-text">        
+        <div className="w-full max-w-6xl p-8 text-text">
           <div className='text-primary flex justify-center items-center '>
             <Logo className='w-40 text-white'/>
           </div>
@@ -145,7 +141,7 @@ export default function Home() {
                 <div className="flex flex-col items-center text-center bg-card p-8 rounded-xl shadow-md max-h-screen">
                   <Ritardo className="w-full h-auto max-h-70 transition-transform duration-200 ease-in-out hover:scale-110" viewBox="0 0 500 800" onClick={openRitardoModal}/>
                   <h3 className="text-xl font-bold mt-8 m-3">Ritardo, the Capitalist</h3>
-                  <p className='text-sm'>Play the game of accumulation. Use your capital to concentrate power, outmaneuver rivals, and push the economy towards a state of perfect inequality. If you win, the "Oligarchy"—the select few controlling 50% of the supply—splits the entire prize pool. The rest get nothing.</p>
+                  <p className='text-sm'>Play the game of accumulation. Use your capital to concentrate power, outmaneuver rivals, and push the economy towards a state of perfect inequality. If you win, the Oligarchy - the select few controlling 50% of the supply - splits the entire prize pool. The rest get nothing.</p>
                 </div>
                 <GenericModal
                   isOpen={isRitardoModalOpen}
@@ -165,7 +161,7 @@ export default function Home() {
                         Ritardo, the Capitalist
                       </h3>
                       <p className="px-4 p-2 text-text/90">
-                        Operating from his mom's basement, Ritardo wields what he calls "weaponized autism" and his grandma's 401k. He sees the market as a live-action video game, where fundamentals are "boomer magic" and the only true indicator is meme-velocity. For Ritardo, the goal is to win big, or go home in a blaze of loss-porn glory.
+                        Operating from his mom&apos;s basement, Ritardo wields what he calls weaponized autism and his grandma&apos;s 401k. He sees the market as a live-action video game, where fundamentals are boomer magic and the only true indicator is meme-velocity. For Ritardo, the goal is to win big, or go home in a blaze of loss-porn glory.
                       </p>
                     </div>
                   </div>
@@ -175,7 +171,7 @@ export default function Home() {
                   <Carlo className="w-full h-auto max-h-70  transition-transform duration-200 ease-in-out hover:scale-110 pt-8" viewBox="0 0 500 800" onClick={openCarloModal}/>
                   <h3 className="text-xl font-bold mt-8 m-3">Carlo, the Socialist</h3>
                   <p className='text-sm'>Play the game of coordination. Organize with the masses to resist the pull of capital and drive the economy towards perfect distribution.
-                    If you win, the "Solidarity Fund" caps the rich and pays the surplus to those who sacrificed for the collective.
+                    If you win, the Solidarity Fund caps the rich and pays the surplus to those who sacrificed for the collective.
                   </p>
                 
                 </div>
@@ -197,7 +193,7 @@ export default function Home() {
                         Carlo, the Socialist
                       </h3>
                       <p className="px-4 p-2 text-text/90">
-                        Carlo is a barista who trades from his sticky breakroom table, fueled by burnt coffee and pure resentment. He analyzes the market through the "Lens of Historical Materialism," shorting companies he deems the most exploitative. For Karl, every trade is a moral crusade to prove the whole game is rigged.
+                        Carlo is a barista who trades from his sticky breakroom table, fueled by burnt coffee and pure resentment. He analyzes the market through the Lens of Historical Materialism, shorting companies he deems the most exploitative. For Karl, every trade is a moral crusade to prove the whole game is rigged.
                       </p>
                     </div>
                   </div>
@@ -275,7 +271,7 @@ export default function Home() {
           <section id="sectionGenesisProgram" className="py-16 mx-auto">
 
             <h2 className="text-3xl font-bold mb-8 text-center">Join the Genesis Program</h2>
-            <h2 className="text-xl font-bold mb-8 text-center">Ritardo Games is a community-owned DAO. We're reserving a significant portion of the initial $RTD supply for our founding players. Your Contribution Score determines your share. Here's your quest board:</h2>
+            <h2 className="text-xl font-bold mb-8 text-center">Ritardo Games is a community-owned DAO. We&apos;re reserving a significant portion of the initial $RTD supply for our founding players. Your Contribution Score determines your share. Here&apos;s your quest board:</h2>
             <div className="grid md:grid-cols-2 gap-8 mb-8">
               {/* Card 1: Community & Social */}
         <CardPlain
@@ -310,7 +306,7 @@ export default function Home() {
           description={
             <>
               <p className="text-sm">
-                Use your unique code to recruit other high-quality players. You're rewarded for the engaged members you
+                Use your unique code to recruit other high-quality players. You&apos;re rewarded for the engaged members you
                 bring in.
               </p>
               <h5 className="font-bold mt-4 mb-1 text-card-foreground">Points Breakdown:</h5>

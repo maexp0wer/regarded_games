@@ -39,7 +39,7 @@ export function useOrderBook(): OrderBookState {
 
   const { chain } = useAccount();
   const addresses = chain ? contractAddresses[chain.id as keyof typeof contractAddresses] : undefined;
-  const ExchangeAddress = addresses?.exchange;
+  const ExchangeAddress = addresses?.Exchange;
 
   // 1. Fetch the total number of orders ever created.
   const { data: orderCounter, isLoading: isLoadingCounter } = useReadContract({

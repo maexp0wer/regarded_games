@@ -1,4 +1,3 @@
-import React, { Children, isValidElement, ReactNode } from 'react';
 
 // Simplified type definitions for this specific component
 interface ResponsiveMDXTableProps {

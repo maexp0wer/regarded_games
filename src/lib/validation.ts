@@ -14,7 +14,7 @@ export const isValidErc20Address = (address: string): boolean => {
   return addressRegex.test(address);
 };
   
-export const isValidNumber = (value: any): boolean => {
+export const isValidNumber = (value: unknown): boolean => {
   // Check if it's a non-empty string that can be parsed as a finite number
   if (typeof value !== 'string' || value.trim() === '') return false;
   const num = Number(value);

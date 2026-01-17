@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useReadContract } from 'wagmi';
-import { formatUnits, Address } from 'viem';
+import { formatUnits} from 'viem';
 import { gameSeasonABI, erc20ABI, contractAddresses } from '@/lib/contracts';
 import { useConnectionContext } from '@/context/ConnectionContext';
 import { useSeasonDataContext } from '@/context/SeasonDataContext';

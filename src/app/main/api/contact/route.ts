@@ -1,12 +1,12 @@
 // app/api/contact/route.ts
-import crypto from 'crypto';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 // Assuming db utility is correctly set up in this path
 import { query } from '@/lib/db';
 // Assuming validation functions are correctly defined in this path
 import { isValidEmail, isValidErc20Address, isValidNumber } from '@/lib/validation';
 // Assuming options are correctly defined and exported from this path
 import { contributorTypeOptions } from '@/lib/formOptions'; // Adjust path as needed
+import crypto from 'node:crypto'; 
 
 interface ContactFormData {
     name?: string | null;
@@ -26,6 +26,12 @@ interface ContactFormData {
     partnerSpecification?: string | null;
     otherIdentity?: string | null;
     message?: string | null;
+}
+
+interface DatabaseError extends Error {
+  code?: string;
+  constraint?: string;
+  detail?: string;
 }
 
 // Helper function to format role labels (Capitalize and replace underscores)
@@ -55,7 +61,8 @@ function formatContributorTypes(types: string[] = [], otherText?: string | null)
 }
 
 // Helper function to extract IP address
-function getClientIp(request: Request): string | null {
+
+function getClientIp(request: NextRequest): string | null {
     const xForwardedFor = request.headers.get('x-forwarded-for');
     if (xForwardedFor) {
         // The first IP in the list is the original client IP
@@ -71,10 +78,10 @@ function getClientIp(request: Request): string | null {
     return null; // Return null if no standard header found
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     console.log("API: Received POST /api/contact request.");
 
-    // const clientIp = getClientIp(request);
+    const clientIp = getClientIp(request);
     // console.log("API: Detected Client IP:", clientIp); //We dont want that, really
 
     let formData: ContactFormData;
@@ -154,7 +161,7 @@ export async function POST(request: Request) {
             } else {
                  console.log("API Info: Provided reference code is valid.");
             }
-        } catch (dbError: any) {
+        } catch (dbError: unknown) {
             console.error("API Error: Database error during reference code check:", dbError);
             // Don't expose DB errors directly, return a generic error or fail validation
             errors.general = "Could not verify reference code due to a server error.";
@@ -162,7 +169,7 @@ export async function POST(request: Request) {
     }
 
     // --- IP Hash Duplicate Check (only if bounty is selected) ---
-    /* UNCOMMENT IN PRODUCTION
+    
     let ipHash: string | null = null;
     if (bountyAirdrop) {
         if (!clientIp) {
@@ -183,13 +190,13 @@ export async function POST(request: Request) {
                 } else {
                     console.log("API Info: No duplicate IP hash found for bounty.");
                 }
-            } catch (dbError: any) {
+            } catch (dbError: unknown) {
                 console.error("API Error: Database error during IP hash check:", dbError);
                 errors.general = (errors.general ? errors.general + " " : "") + "Could not perform bounty check due to a server error.";
             }
         }
     }
-        */
+    
 
     if (Object.keys(errors).length > 0) {
         console.warn("API Validation Failed:", errors);
@@ -255,7 +262,7 @@ export async function POST(request: Request) {
         const finalOwnReferenceCode = bountyAirdrop ? (ownReferenceCode?.trim() || null) : null;
 
         // const finalIpHash = bountyAirdrop ? ipHash : null;   // UNCOMMENT IN PRODUCTION
-        const finalIpHash = null;
+        //const finalIpHash = null;
         
 
 
@@ -296,27 +303,34 @@ export async function POST(request: Request) {
              return NextResponse.json({ message: "Failed to save submission due to unexpected database result." }, { status: 500 });
         }
 
-    } catch (error: any) {
-        console.error("API Error (Database Interaction):", error);
-        if (error.code === '23505') { // Unique violation
-            let field = 'Data';
-            let fieldKey = 'general'; // Default error key for frontend state
-            let message = `${field} already exists.`;
-            // Check constraint name (better) or detail string (fallback)
-            if (error.constraint === 'contacts_email_key' || error.detail?.includes('(email)')) {
-                field = 'Email';
-                fieldKey = 'email';
-            } else if (error.constraint === 'contacts_wallet_address_key' || error.detail?.includes('(wallet_address)')) {
-                field = 'ERC-20 Wallet Address';
-                fieldKey = 'walletAddress';
-            // --- ADD THIS ELSE IF BLOCK START ---
-            } else if (error.constraint === 'contacts_requested_ref_code_key' || error.detail?.includes('(requested_ref_code)')) {
-                field = 'Desired Reference Code';
-                fieldKey = 'ownReferenceCode'; // Target the specific input field on the frontend
-            } /*else if (error.constraint === 'contacts_ip_hash_key' || error.detail?.includes('(ip_hash)')) {   //UNCOMMENT  IN PRODUCTION
-                field = 'Bounty Entry'; fieldKey = 'general'; // Send general error for this
-                message = 'A bounty entry from this network location already exists.'; 
-            } */
+    } catch (err: unknown) { // 2. Catch as unknown (safe)
+  
+            // 3. Cast it to your interface so TypeScript knows about .code and .constraint
+            const error = err as DatabaseError; 
+
+            console.error("API Error (Database Interaction):", error);
+
+            // Now TypeScript is happy with accessing .code
+            if (error.code === '23505') { 
+                let field = 'Data';
+                let fieldKey = 'general'; 
+                //let message = `${field} already exists.`;
+
+                // TypeScript now knows .constraint and .detail exist
+                if (error.constraint === 'contacts_email_key' || error.detail?.includes('(email)')) {
+                    field = 'Email';
+                    fieldKey = 'email';
+                } else if (error.constraint === 'contacts_wallet_address_key' || error.detail?.includes('(wallet_address)')) {
+                    field = 'ERC-20 Wallet Address';
+                    fieldKey = 'walletAddress';
+                } else if (error.constraint === 'contacts_requested_ref_code_key' || error.detail?.includes('(requested_ref_code)')) {
+                    field = 'Desired Reference Code';
+                    fieldKey = 'ownReferenceCode'; 
+                }
+                else if (error.constraint === 'contacts_ip_hash_key' || error.detail?.includes('(ip_hash)')) {   //UNCOMMENT  IN PRODUCTION
+                    field = 'Bounty Entry'; fieldKey = 'general'; // Send general error for this
+                    //message = 'A bounty entry from this network location already exists.'; 
+                }
             
    
             console.warn(`API Info: Unique constraint violation (${field}), returning 409.`);
