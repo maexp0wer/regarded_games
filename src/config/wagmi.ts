@@ -1,5 +1,5 @@
 import { http, createConfig, cookieStorage, createStorage } from 'wagmi';
-import { mainnet, sepolia } from 'wagmi/chains';
+import { foundry, base, baseSepolia } from 'wagmi/chains'; // 1. Import chains
 import { connectorsForWallets } from '@rainbow-me/rainbowkit';
 import {
   rainbowWallet,
@@ -10,7 +10,15 @@ import {
 
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '';
 
-// ✅ FIX: Ensure connectors are only initialized on the client to prevent server crashes
+// 1. Define all chains (Anvil for dev, Base for test/prod)
+const chains = [
+  foundry, // Anvil (31337)
+  baseSepolia,
+  base,
+] as const;
+
+
+// 2. Set up the connectors (Wallet UI logic)
 const connectors = typeof window !== 'undefined' ? connectorsForWallets(
   [
     {
@@ -24,18 +32,25 @@ const connectors = typeof window !== 'undefined' ? connectorsForWallets(
     },
   ],
   {
-    appName: 'Ritardo Games',
+    appName: 'My Blockchain App',
     projectId,
   }
-) : []; 
+) : [];
 
+// 3. Create the main Wagmi Config
 export const config = createConfig({
-  chains: [mainnet, sepolia],
+  chains,
   transports: {
-    [mainnet.id]: http(`https://eth-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`),
-    [sepolia.id]: http(`https://eth-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`),
+    // Local Anvil Node
+    [foundry.id]: http(process.env.NEXT_PUBLIC_ANVIL_RPC_URL),
+    
+    // Base Sepolia Testnet (Alchemy)
+    [baseSepolia.id]: http(process.env.NEXT_PUBLIC_ALCHEMY_BASE_SEPOLIA_RPC_URL),
+    
+    // Base Mainnet (Alchemy)
+    [base.id]: http(process.env.NEXT_PUBLIC_ALCHEMY_BASE_RPC_URL),
   },
-  connectors,
+  connectors, 
   ssr: true,
   storage: createStorage({
     storage: cookieStorage,

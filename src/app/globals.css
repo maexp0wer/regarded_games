@@ -83,6 +83,16 @@
     }
   }
 
+.btn-three {
+    @apply px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-[1.03];
+    @apply bg-card2 hover:bg-card3 text-text border border-card3;
+
+    .dark & {
+      @apply border-none;
+    }
+  }
+
+
 
   /* Custom Scrollbar Styling */
 .custom-scrollbar {

@@ -191,7 +191,7 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
               {link.label}
             </button>
           ))}
-          {isOverflowing && <div className="flex-grow" />}
+          {isOverflowing && <div className="grow" />}
           <div className='w-full mx-auto pr-2 text-right transition-colors duration-300 border-t border-card mt-3 pt-3'>
             <button
               onClick={toggleTheme}
@@ -229,7 +229,7 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
 
               <nav 
                 ref={mobileNavRef}
-                className="mt-4 mb-4 flex-grow overflow-y-auto custom-scrollbar"
+                className="mt-4 mb-4 grow overflow-y-auto custom-scrollbar"
               >
                 <ul className="space-y-3 pr-2">
                   {navLinks.map((link) => (

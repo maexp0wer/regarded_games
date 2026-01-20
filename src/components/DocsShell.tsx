@@ -198,7 +198,7 @@ export default function DocsShell({
                                   {h2.children.length > 0 && (
                                     <div
                                       className={`ml-3 border-l border-card/50 overflow-hidden transition-all duration-300 ${
-                                        h2IsOpen ? 'max-h-[300px] opacity-100 my-1' : 'max-h-0 opacity-0'
+                                        h2IsOpen ? 'max-h-75 opacity-100 my-1' : 'max-h-0 opacity-0'
                                       }`}
                                     >
                                       {h2.children.map((h3) => (

@@ -73,7 +73,7 @@ export default function DataTable({ headers, rows, caption, className, breakpoin
                   return (
                     <th scope="row" key={cellIndex} data-label={showLabelOnMobile ? headerConfig.label + ':' : ''}
                         className={`block py-2 px-1 ${mobileLayoutClasses} ${desktopClasses.cell[breakpoint]} ${desktopClasses.thScopeRow[breakpoint]}`}>
-                      <span className="break-words">{cell}</span>
+                      <span className="wrap-break-word">{cell}</span>
                     </th>
                   );
                 }
@@ -81,7 +81,7 @@ export default function DataTable({ headers, rows, caption, className, breakpoin
                 return (
                   <td key={cellIndex} data-label={showLabelOnMobile ? headerConfig.label + ':' : ''}
                       className={`block py-2 px-1 ${mobileLayoutClasses} ${desktopClasses.cell[breakpoint]}`}>
-                    <span className="break-words">{cell}</span>
+                    <span className="wrap-break-word">{cell}</span>
                   </td>
                 );
               })}
