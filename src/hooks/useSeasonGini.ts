@@ -75,3 +75,43 @@ export function useSeasonGini(seasonAddress: string | undefined) {
     refetchInterval: 5000,
   });
 }
+
+export function useSeasonById(id: string | undefined) {
+  return useQuery({
+    queryKey: ["seasonById", id],
+    queryFn: async () => {
+      if (!id) return null;
+
+      // 1. Get the number from the slug (e.g., "season_1" -> "1")
+      const slugNumber = id.replace("season_", "");
+      
+      // 2. Convert to Database ID (Human 1 = DB 0)
+      const dbId = (BigInt(slugNumber) - 1n).toString();
+      
+      const query = `
+        query GetSeasonByNumber($id: BigInt!) {
+          seasonss(where: { seasonId: $id }) {
+            items {
+              address
+              fimAddress
+              exchangeAddress
+            }
+          }
+        }
+      `;
+
+      const response = await fetch(PONDER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          query, 
+          variables: { id: dbId } 
+        }),
+      });
+
+      const result = await response.json();
+      return result?.data?.seasonss?.items[0] || null;
+    },
+    enabled: !!id,
+  });
+}

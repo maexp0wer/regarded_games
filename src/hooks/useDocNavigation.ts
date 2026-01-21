@@ -1,27 +1,31 @@
 // src/hooks/useDocNavigation.ts
 'use client';
 
-import { useRouter } from 'next/navigation';
-
 export const useDocNavigation = () => {
-  const router = useRouter(); 
-
-  // --- CRITICAL CHANGE: Default value for openInNewTab is now TRUE ---
   const navigateToDocs = (docSlug: string, sectionId?: string, openInNewTab: boolean = true) => {
-    let url = `/docs/${docSlug}`;
+    
+    const mainUrl = process.env.NEXT_PUBLIC_MAIN_DOMAIN || '';
+
+    const docsBaseUrl = mainUrl.replace("://", "://docs.");
+
+    // 3. Construct the absolute URL
+    // Ensure we don't end up with double slashes if docSlug starts with one
+    const cleanSlug = docSlug.startsWith('/') ? docSlug.slice(1) : docSlug;
+    
+    let url = `${docsBaseUrl}/${cleanSlug}`;
+
     if (sectionId) {
-      // NOTE: Assume the caller is passing the correctly slugified sectionId
       url += `#${sectionId}`;
     }
 
     if (openInNewTab) {
-      // Use window.open for opening a new tab
       window.open(url, '_blank', 'noopener,noreferrer');
     } else {
-      // Use router.push for internal navigation
-      router.push(url); 
+      // 4. Use window.location.href for subdomain navigation
+      // (Next.js router is for same-domain client-side transitions)
+      window.location.href = url;
     }
   };
 
-  return navigateToDocs; // Return the navigation function
+  return navigateToDocs;
 };

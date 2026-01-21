@@ -2,7 +2,7 @@
 
 import { useSeasonGini } from "@/hooks/useSeasonGini";
 
-export function GiniDisplay({ 
+export function TradingGiniDisplay({ 
   seasonAddress, 
   gInitial = 4500, // You can fetch this via useReadContract
   threshold = 2500 

@@ -8,6 +8,8 @@ import { useQuery } from '@tanstack/react-query';
 import coreDeployment from '@/deployments/core.json';
 import { SeasonGiniMicro } from '../_components/SeasonGiniMicro';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
+import Link from 'next/link';
+
 
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 
@@ -63,8 +65,11 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
     const { data: ponderData } = useSeasonGini(season.season);
     
     const livePrizePool = ponderData?.prizePool ?? 0;
+    const seasonNumber = totalCount - index;
+    const slug = `season_${seasonNumber}`;
 
     return (
+      <Link href={`/${slug}`} className="block transition-transform hover:scale-[1.01] active:scale-[0.99]">
         <div className="p-4 rounded-lg"
              style={{ backgroundColor: 'var(--color-card2)' }}>
             
@@ -102,6 +107,7 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
                 </p>
             </div>
         </div>
+        </Link>
     );
 }
 
@@ -137,6 +143,7 @@ export function SeasonsList() {
                 });
 
                 allSeasons.push({
+                  
                     season: data[0], auction: data[1], exchange: data[2], fim: data[3],
                     phase: ph as string, auctionStartTime: cAt,
                     tradingStartTime: cAt + aDu, seasonEndTime: cAt + aDu + gDu, gameDuration: gDu
@@ -146,6 +153,7 @@ export function SeasonsList() {
         return allSeasons;
     },
     enabled: !!controllerAddress && !!publicClient,
+    
   });
 
   if (isLoading) return <p style={{ color: 'var(--color-primary)' }}>Loading seasons data...</p>;
@@ -166,5 +174,6 @@ export function SeasonsList() {
         {filtered.map((s, i) => <SeasonCard key={s.season} season={s} totalCount={display.length} index={i} />)}
       </div>
     </div>
+    
   );
 }
