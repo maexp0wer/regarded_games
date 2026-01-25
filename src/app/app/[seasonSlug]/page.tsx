@@ -1,29 +1,177 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useReadContract } from 'wagmi';
-import { useSeasonById } from '@/hooks/useSeasonGini';
+
+// Hooks/Abis (Assuming these are available in your project structure)
+import { useSeasonGini, useSeasonById } from '@/hooks/useSeasonGini';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
-import { AuctionInterface } from '../_components/AuctionInterface';
+
+// PRESENTATIONAL COMPONENTS (You must ensure these files exist and have 'h-full' on their root element)
+import { SeasonHeader } from '../_components/SeasonHeader';
+import { GiniDisplay } from '../_components/GiniDisplay';
+import { SeasonDetails } from '../_components/SeasonDetails';
+import { AuctionMask } from '../_components/AuctionMask';
 import { AuctionActivityFeed } from '../_components/AuctionActivityFeed';
+import { OrderBook } from '../_components/OrderBook';
+import { OrderConfigurator } from '../_components/OrderConfigurator';
+import { TradingActivityFeed } from '../_components/TradingActivityFeed';
+import { TradingMask } from '../_components/TradingMask';
 
-// Components
-import { GiniDashboard } from '../_components/GiniDashboard';
 
+
+
+
+// ============================================================================
+// PAGE COMPONENT: SeasonDetailPage
+// ============================================================================
 export default function SeasonDetailPage() {
   const { seasonSlug } = useParams() as { seasonSlug: string };
   const { data: metadata, isLoading: isMetaLoading } = useSeasonById(seasonSlug);
+  
+  const seasonAddress = metadata?.address || '0x0';
+  const auctionAddress = metadata?.auctionAddress || '0x0';
+  const fimAddress = metadata?.fimAddress || '0x0';
 
-  // Fetch Phase at the page level to decide which Dashboard to render
-  const { data: phase, isLoading: isPhaseLoading } = useReadContract({
-    address: metadata?.address as `0x${string}`,
+  // --- A. Data Fetching ---
+  const { data: giniData, isLoading: isGiniLoading } = useSeasonGini(seasonAddress);
+  
+  const { data: rawConfig, isLoading: isConfigLoading } = useReadContract({
+    address: seasonAddress as `0x${string}`,
     abi: GameSeasonAbi as any,
-    functionName: 'getPhase',
-    query: { enabled: !!metadata?.address }
+    functionName: 'getConfig',
+    query: { enabled: !!seasonAddress, staleTime: Infinity }
   });
 
-  if (isMetaLoading || isPhaseLoading) {
+  const { data: gInitialRaw, refetch: refetchGInitial } = useReadContract({
+    address: seasonAddress as `0x${string}`,
+    abi: GameSeasonAbi as any,
+    functionName: 'g_initial',
+    query: { enabled: !!seasonAddress } 
+  });
+
+  const { data: phase, isLoading: isPhaseLoading } = useReadContract({
+    address: seasonAddress as `0x${string}`,
+    abi: GameSeasonAbi as any,
+    functionName: 'getPhase',
+    query: { enabled: !!seasonAddress, refetchInterval: 3000 }
+  });
+
+  // --- B. Phase Change Effect ---
+  useEffect(() => {
+    if (phase === "TRADING") {
+        refetchGInitial();
+    }
+  }, [phase, refetchGInitial]);
+
+
+  // --- C. Logic & Math ---
+  const { 
+    config, 
+    gCurrent, 
+    gInitial, 
+    capTargetBps, 
+    socTargetBps, 
+    M_dynamic,
+    progressPercent,
+    winningSide,
+    isVictoryPending
+  } = useMemo(() => {
+    const safeDefaults = { config: null, gCurrent: 5000, gInitial: 5000, capTargetBps: 0, socTargetBps: 0, M_dynamic: 0, progressPercent: 0, winningSide: 'none' as 'soc' | 'cap' | 'none', isVictoryPending: false };
+    if (!rawConfig) return safeDefaults;
+
+    const currentPhase = phase as string;
+    const isAuction = currentPhase === "AUCTION" || currentPhase === "BOOTSTRAP";
+    const isTradingPhase = currentPhase === "TRADING";
+
+    const r = rawConfig as any;
+    const getVal = (key: string, index: number) => r[key] !== undefined ? r[key] : r[index];
+
+    const cfg = {
+      createdAt: Number(getVal('createdAt', 0)),
+      auctionDuration: Number(getVal('auctionDuration', 1)),
+      gameDuration: Number(getVal('gameDuration', 2)),
+      victoryThresholdBps: Number(getVal('victoryThresholdBps', 3)),
+      baseBeta: Number(getVal('beta', 4)), 
+      buybackBps: Number(getVal('buybackBps', 5)),
+      liquidityBps: Number(getVal('liquidityBps', 6)),
+      reinvestBps: Number(getVal('reinvestBps', 7)),
+      daoBps: Number(getVal('daoBps', 8)),
+    };
+
+    const rawGini = giniData?.gini || 0;
+    const rawGInit = gInitialRaw ? Number(gInitialRaw) : 0;
+    const playerCount = giniData?.playerCount || 0;
+    
+    let gCurrVal = 0;
+    let gInitVal = 0;
+
+    if (isAuction) {
+        gCurrVal = playerCount === 0 ? 5000 : rawGini;
+        gInitVal = gCurrVal; 
+    } else {
+        gInitVal = rawGInit;
+        gCurrVal = rawGini;
+    }
+
+    const gI_Norm = gInitVal / 10000;
+    const V = cfg.victoryThresholdBps / 10000;
+    const rawBeta = cfg.baseBeta / 10000;
+    const M = rawBeta + Math.pow(1 - gI_Norm, 2);
+
+    const capTargetNorm = gI_Norm + (V * (1 - gI_Norm));
+    const socTerm = M > 0 ? (V / M) : 0;
+    const socTargetNorm = gI_Norm * (1 - socTerm);
+
+    const capTarget = capTargetNorm * 10000;
+    const socTarget = socTargetNorm * 10000;
+
+    let prog = 0;
+    let side: 'soc' | 'cap' | 'none' = 'none';
+
+    if (!isAuction) {
+        if (gCurrVal > gInitVal) {
+            side = 'cap';
+            const dist = capTarget - gInitVal;
+            const covered = gCurrVal - gInitVal;
+            prog = dist > 0 ? (covered / dist) * 100 : 0;
+        } else if (gCurrVal < gInitVal) {
+            side = 'soc';
+            const dist = gInitVal - socTarget;
+            const covered = gInitVal - gCurrVal;
+            prog = dist > 0 ? (covered / dist) * 100 : 0;
+        }
+    }
+
+    const victoryConditionMet = isTradingPhase && (gCurrVal >= capTarget || gCurrVal <= socTarget);
+
+    return { 
+        config: cfg, 
+        gCurrent: gCurrVal, 
+        gInitial: gInitVal,
+        capTargetBps: capTarget, 
+        socTargetBps: socTarget, 
+        M_dynamic: M,
+        progressPercent: Math.min(Math.max(prog, 0), 100),
+        winningSide: side,
+        isVictoryPending: victoryConditionMet
+    };
+  }, [giniData, rawConfig, gInitialRaw, phase]);
+
+  // --- D. UI State ---
+  const currentPhase = phase as string;
+  const isAuctionOrBootstrap = currentPhase === "AUCTION" || currentPhase === "BOOTSTRAP";
+  const isTrading = currentPhase === "TRADING";
+  const isPayout = currentPhase === "PAYOUT";
+  
+  const tradingStart = (config?.createdAt || 0) + (config?.auctionDuration || 0);
+  const seasonEnd = (config?.createdAt || 0) + (config?.auctionDuration || 0) + (config?.gameDuration || 0);
+
+  const formattedName = seasonSlug?.replace(/_/g, " ") || 'Season Dashboard';
+
+  // --- E. Loading & Error States ---
+  if (isMetaLoading || isGiniLoading || isConfigLoading || isPhaseLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-primary animate-pulse font-display text-xl uppercase tracking-widest">
         Reading Ledger...
@@ -31,35 +179,168 @@ export default function SeasonDetailPage() {
     );
   }
 
-  if (!metadata) return (
+  if (!metadata || !seasonAddress) return (
     <div className="min-h-screen p-24 text-text text-center">Blockchain Data Unavailable</div>
   );
 
-  const currentPhase = phase as string;
-  const isAuctionOrBootstrap = currentPhase === "AUCTION" || currentPhase === "BOOTSTRAP";
-  const formattedName = seasonSlug.replace(/_/g, " ");
 
+  // --- F. Render (Conditional Layout) ---
   return (
     <main className="p-4 md:p-8 max-w-350 mx-auto space-y-6 animate-in fade-in duration-700">
-      <GiniDashboard seasonAddress={metadata.address} seasonName={formattedName} />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start max-w-7xl mx-auto mt-8">
+      
+      {/* Root Grid: 3 Columns on Large Screens */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* LEFT COLUMN: ACTIONS (Stake / Buy) */}
-        <div>
-           <AuctionInterface 
-             seasonAddress={metadata?.address}
-             auctionAddress={metadata?.auctionAddress}
-             fimAddress={metadata?.fimAddress}
-           />
+        {/* ROW 1: HEADER & STATUS (Always 3 columns) */}
+        {/* We wrap SeasonHeader in a 3-column div to ensure the next grid rows start correctly */}
+        <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-6">
+             <SeasonHeader 
+                seasonName={formattedName}
+                prizePool={giniData?.prizePool || 0}
+                playerCount={giniData?.playerCount || 0}
+                currentPhase={currentPhase}
+                isBootstrap={isAuctionOrBootstrap} 
+                isPayout={isPayout}
+                isVictoryPending={isVictoryPending}
+                tradingStart={tradingStart}
+                seasonEnd={seasonEnd}
+             />
         </div>
 
-        {/* RIGHT COLUMN: ACTIVITY FEED */}
-        <div>
-           <AuctionActivityFeed 
-             seasonAddress={metadata?.address || ""} 
-           />
-        </div>
+        {/* ========================================================= */}
+        {/* AUCTION / BOOTSTRAP LAYOUT (Original 2x2 Layout) */}
+        {/* ========================================================= */}
+        {isAuctionOrBootstrap && (
+          <>
+            {/* ROW 2: AUCTION MASK (1/3) + GINI DISPLAY (2/3) */}
+            <div className="lg:col-span-1 h-full">
+              <AuctionMask 
+                seasonAddress={seasonAddress}
+                auctionAddress={auctionAddress}
+                fimAddress={fimAddress}
+                currentPhase={currentPhase}
+              />
+            </div>
+
+            <div className="lg:col-span-2 h-full">
+              <GiniDisplay 
+                gCurrent={gCurrent} 
+                gInitial={gInitial}
+                socTargetBps={socTargetBps} 
+                capTargetBps={capTargetBps} 
+                winningSide={winningSide}
+                progressPercent={progressPercent}
+                currentPhase={currentPhase}
+                isAuction={true} // Explicitly true for Auction/Bootstrap phase
+                isBootstrap={isAuctionOrBootstrap}
+              />
+            </div>
+
+
+            {/* ROW 3: ACTIVITY FEED (1/3) + SEASON DETAILS (2/3) */}
+            <div className="lg:col-span-1 h-full">
+              <AuctionActivityFeed 
+                seasonAddress={seasonAddress} 
+              />
+            </div>
+
+            <div className="lg:col-span-2 h-full">
+              <SeasonDetails 
+                tradingStart={tradingStart}
+                seasonEnd={seasonEnd}
+                M_dynamic={M_dynamic}
+                config={config}
+              />
+            </div>
+          </>
+        )}
+
+       {/* ========================================================= */}
+        {/* TRADING LAYOUT (New 3x2 Grid Structure) */}
+        {/* ========================================================= */}
+        {isTrading && (
+          // We don't use the standard lg:col-span-1/lg:col-span-2 structure here.
+          // We render components sequentially in a 3-column grid, making 3 distinct rows.
+          <>
+            {/* ROW 2 - TradingMask (1/3) + OrderBook (2/3) */}
+            
+            {/* 1/3 Width: TradingMask */}
+            <div className="lg:col-span-1 h-full"> 
+              <TradingMask 
+              />
+            </div>
+
+            {/* 2/3 Width: OrderBook */}
+            <div className="lg:col-span-2 h-full"> 
+              <OrderBook 
+              />
+            </div>
+            
+            
+            {/* ROW 3 - OrderConfigurator (1/3) + GiniDisplay (2/3) */}
+            
+            {/* 1/3 Width: OrderConfigurator */}
+            <div className="lg:col-span-1 h-full"> 
+              <OrderConfigurator 
+              />
+            </div>
+
+            {/* 2/3 Width: GiniDisplay */}
+            <div className="lg:col-span-2 h-full"> 
+              <GiniDisplay 
+                gCurrent={gCurrent} 
+                gInitial={gInitial}
+                socTargetBps={socTargetBps} 
+                capTargetBps={capTargetBps} 
+                winningSide={winningSide}
+                progressPercent={progressPercent}
+                currentPhase={currentPhase}
+                isAuction={false}
+                isBootstrap={false}
+              />
+            </div>
+            
+            
+            {/* ROW 4 - TradingActivityFeed (1/3) + SeasonDetails (2/3) */}
+            
+            {/* 1/3 Width: TradingActivityFeed */}
+            <div className="lg:col-span-1 h-full"> 
+              <TradingActivityFeed 
+              />
+            </div>
+
+            {/* 2/3 Width: SeasonDetails */}
+            <div className="lg:col-span-2 h-full"> 
+              <SeasonDetails 
+                tradingStart={tradingStart}
+                seasonEnd={seasonEnd}
+                M_dynamic={M_dynamic}
+                config={config}
+              />
+            </div>
+          </>
+        )}
+
+        {/* ========================================================= */}
+        {/* PAYOUT / CONCLUDED LAYOUT (Optional fallback) */}
+        {/* ========================================================= */}
+        {(!isAuctionOrBootstrap && !isTrading) && (
+            <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 h-full">
+                    <GiniDisplay 
+                        gCurrent={gCurrent} gInitial={gInitial} socTargetBps={socTargetBps} capTargetBps={capTargetBps} 
+                        winningSide={winningSide} progressPercent={progressPercent} currentPhase={currentPhase} 
+                        isAuction={false} isBootstrap={false}
+                    />
+                </div>
+                <div className="lg:col-span-1 h-full">
+                    <SeasonDetails tradingStart={tradingStart} seasonEnd={seasonEnd} M_dynamic={M_dynamic} config={config} />
+                </div>
+                <div className="lg:col-span-3 bg-card p-6 rounded-2xl text-text2 text-center border border-border/20">
+                    Season Concluded - Final Stats Area
+                </div>
+            </div>
+        )}
 
       </div>
 
@@ -67,7 +348,7 @@ export default function SeasonDetailPage() {
       <div className="pt-8 flex flex-col items-center gap-2">
         <p className="text-[9px] font-mono text-text2 uppercase tracking-widest">Protocol Reference</p>
         <code className="text-[10px] bg-card2 px-3 py-1 rounded-full text-text2 font-mono">
-          {metadata.address}
+          {metadata?.address}
         </code>
       </div>
     </main>

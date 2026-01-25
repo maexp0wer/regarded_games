@@ -1,6 +1,6 @@
 'use client';
 
-import { Stake } from '../_components/Stake';
+import { Stake } from '../_components/StakeMask';
 
 export default function StakePage() {
   return (

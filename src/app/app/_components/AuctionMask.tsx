@@ -18,7 +18,24 @@ const DEAD_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 type WorkflowStep = 'idle' | 'approving' | 'mining_approval' | 'buying' | 'mining_buy' | 'success' | 'canceled' | 'failed' | 'no_gas';
 
-export function AuctionInterface({ seasonAddress: propSeason, auctionAddress: propAuction, fimAddress: propFim }: { seasonAddress?: string, auctionAddress?: string, fimAddress?: string }) {
+// ********** MODIFIED PARENT COMPONENT **********
+export function AuctionMask({ 
+    seasonAddress: propSeason, 
+    auctionAddress: propAuction, 
+    fimAddress: propFim,
+    // ********** NEW PROPS ADDED **********
+    currentPhase, 
+    isPhaseLoading = false, // Default to false if not provided
+    isPhaseError = false    // Default to false if not provided
+    // *************************************
+}: { 
+    seasonAddress?: string, 
+    auctionAddress?: string, 
+    fimAddress?: string,
+    currentPhase: string | null | undefined, // Phase is now a mandatory prop
+    isPhaseLoading?: boolean,
+    isPhaseError?: boolean
+}) {
   const { isConnected } = useAccount();
 
   const resolvedAuction = (propAuction || DEAD_ADDRESS) as `0x${string}`;
@@ -36,7 +53,7 @@ export function AuctionInterface({ seasonAddress: propSeason, auctionAddress: pr
   if (!isConnected) {
     return (
       <div className="bg-card rounded-xl p-5 border border-border/10 shadow-sm transition-all text-center space-y-6 w-full">
-          <h3 className="text-lg font-black uppercase text-text2 tracking-wider mt-4">Auction Participation</h3>
+          <h3 className="text-lg font-black uppercase text-text2 tracking-wider mt-4">Auction</h3>
           <p className="text-sm text-text2 mb-4">Connect your wallet to participate.</p>
           <div className="pt-2"><WalletButton /></div>
       </div>
@@ -50,17 +67,42 @@ export function AuctionInterface({ seasonAddress: propSeason, auctionAddress: pr
       </div>
     );
   }
+  
+  // NOTE: Phase read logic is NOT here, as it's passed in via props.
 
   return (
-    <AuctionInterfaceInner 
+    <AuctionMaskInner 
       seasonAddress={resolvedSeason} 
       auctionAddress={resolvedAuction} 
       fimAddress={resolvedFim} 
+      // ********** PASSING PROPS **********
+      currentPhase={currentPhase} 
+      isPhaseLoading={isPhaseLoading}
+      isPhaseError={isPhaseError}
+      // ***********************************
     />
   );
 }
+// *************************************************
 
-function AuctionInterfaceInner({ seasonAddress, auctionAddress, fimAddress }: { seasonAddress: string, auctionAddress: string, fimAddress: string }) {
+// ********** MODIFIED INNER COMPONENT **********
+function AuctionMaskInner({ 
+    seasonAddress, 
+    auctionAddress, 
+    fimAddress, 
+    // ********** NEW PROPS **********
+    currentPhase, 
+    isPhaseLoading, 
+    isPhaseError 
+    // *******************************
+}: { 
+    seasonAddress: string, 
+    auctionAddress: string, 
+    fimAddress: string,
+    currentPhase: string | null | undefined, // Added type definition for the new prop
+    isPhaseLoading: boolean,
+    isPhaseError: boolean
+}) {
   const { address } = useAccount();
   const publicClient = usePublicClient(); 
   const queryClient = useQueryClient();
@@ -90,6 +132,7 @@ function AuctionInterfaceInner({ seasonAddress, auctionAddress, fimAddress }: { 
   const { data: usdcAllowance, refetch: refetchUsdcAllowance } = useReadContract({ 
     address: usdcAddr, abi: ERC20Abi, functionName: 'allowance', args: [address, auctionAddress as `0x${string}`], query: { staleTime: 0 } 
   });
+  // Phase read logic is now in the parent, not here.
 
   const { writeContractAsync } = useWriteContract();
 
@@ -101,6 +144,10 @@ function AuctionInterfaceInner({ seasonAddress, auctionAddress, fimAddress }: { 
   const currentPrice = (rtdPrice as bigint) ?? 1n;
   const currentFim = (fimWallet as bigint) ?? 0n;
   const currentUsdcInWallet = (usdcWallet as bigint) ?? 0n;
+
+  // ********** PHASE LOGIC (Using props) **********
+  const isAuctionPhase = currentPhase === "AUCTION";
+  // ***********************************************
 
   const totalEligibleFim = useMemo(() => {
     if (!stakedBalances || !rtdPrice) return 0n;
@@ -119,9 +166,10 @@ function AuctionInterfaceInner({ seasonAddress, auctionAddress, fimAddress }: { 
 
   // --- 3. THE ORCHESTRATOR ---
   const handleStartFlow = async () => {
+    // ... (handleStartFlow remains unchanged)
     if (!publicClient || !address) return;
     if (!usdcToBuyBigInt) return;
-
+    // ... (rest of the transaction logic)
     try {
       const liveAllowance = await publicClient.readContract({
         address: usdcAddr, abi: ERC20Abi, functionName: 'allowance', args: [address, auctionAddress as `0x${string}`]
@@ -157,7 +205,6 @@ function AuctionInterfaceInner({ seasonAddress, auctionAddress, fimAddress }: { 
     } catch (err: any) {
       console.error("Workflow Error:", err);
       
-      // Parse specific error types
       const isRejection = err.shortMessage?.includes("rejected") || err.message?.includes("User rejected");
       const isInsufficientGas = err.message?.includes("insufficient funds") || err.name === 'InsufficientFundsError';
       
@@ -173,10 +220,12 @@ function AuctionInterfaceInner({ seasonAddress, auctionAddress, fimAddress }: { 
     }
   };
 
+
   // --- 4. UI Helpers ---
   const fimDisplayValue = isFimFetching ? "..." : Number(formatUnits(currentFim, 18)).toLocaleString();
-  const lockedDisplay = Number(formatUnits(currentLocked, 18)).toFixed(2);
+  const lockedDisplay = Number(formatUnits(currentLocked, 18)).toLocaleString(undefined, { maximumFractionDigits: 0 });
   const eligibleDisplay = Number(formatUnits(totalEligibleFim, 18)).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const stakedDisplay = Number(formatUnits(currentStaked, 18)).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
   const getProgressWidth = () => {
     switch (status) {
@@ -200,10 +249,7 @@ function AuctionInterfaceInner({ seasonAddress, auctionAddress, fimAddress }: { 
       case 'canceled': return "Canceled";
       case 'no_gas': return "Insufficient Gas";
       case 'failed': return "Transaction Failed";
-      default: 
-        if (!buyAmount || usdcToBuyBigInt === 0n) return "Buy FIM";
-        const currentAllowance = (usdcAllowance as bigint) ?? 0n;
-        return currentAllowance < usdcToBuyBigInt ? "Step 1: Approve" : "Step 2: Buy FIM";
+      default: return "Buy FIM";
     }
   };
 
@@ -213,29 +259,12 @@ function AuctionInterfaceInner({ seasonAddress, auctionAddress, fimAddress }: { 
   const isButtonDisabled = isBusy || isSuccess || isError || !buyAmount || !hasStakedAnything;
 
   return (
-    <div className="bg-card rounded-xl p-5 border border-border/10 shadow-sm transition-all space-y-6 w-full">
+    <div className="bg-card rounded-xl p-5 shadow-sm transition-all space-y-6 w-full h-full">
       
-      {/* 4-COLUMN HEADER */}
-      <div className="border-b border-border/40 pb-5 mb-5">
-        <div className="grid grid-cols-4 gap-2 text-left px-1">
-          <div className="flex flex-col">
-            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">FIM Balance</span>
-            <span className="text-lg font-black text-primary tracking-tighter leading-none">{fimDisplayValue}</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Staked RTD</span>
-            <span className="text-lg font-black text-text tracking-tighter leading-none">{Number(formatUnits(currentStaked, 18)).toLocaleString()}</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1 text-danger">Locked</span>
-            <span className="text-lg font-black text-danger tracking-tighter leading-none">{currentLocked > 0n ? lockedDisplay : "0.00"}</span>
-          </div>
-          <div className="flex flex-col text-right">
-            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1 text-success">Total Eligible FIM</span>
-            <span className="text-lg font-black text-success tracking-tighter leading-none">{eligibleDisplay}</span>
-          </div>
+      <div className="flex flex-col">
+          <span className="text-[10px] uppercase font-bold text-text2 tracking-widest mb-1">FIM Balance</span>
+          <span className="text-lg md:text-2xl font-black text-primary leading-none">{fimDisplayValue}</span>
         </div>
-      </div>
 
       <div className={`space-y-4 pt-2`}>
         {!hasStakedAnything && (
@@ -247,54 +276,88 @@ function AuctionInterfaceInner({ seasonAddress, auctionAddress, fimAddress }: { 
           </Link>
         )}
 
-        <div className={`bg-card2 rounded-xl p-4 border border-border/10 ${!hasStakedAnything ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
-          <div className="flex justify-between items-end mb-2 px-1">
-            <label className="text-[9px] uppercase font-bold text-text2 tracking-widest">Buy FIM with USDC</label>
-            <span className="text-[9px] font-mono text-text2 uppercase tracking-tighter opacity-70">
-                Wallet: {Number(formatUnits(currentUsdcInWallet, 6)).toLocaleString()}
-            </span>
+        {/* ********** MODIFIED: PHASE FILTER IMPLEMENTATION ********** */}
+        {isPhaseLoading ? (
+          <div className="p-4 bg-card2 rounded-xl text-center shadow-inner">
+            <p className="text-[10px] font-black uppercase text-text2">Loading Auction Phase...</p>
           </div>
-          <div className="flex items-center">
-            <input 
-              type="number" placeholder="0.00"
-              className="bg-transparent border-none p-0 w-full text-3xl font-mono font-black text-text outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              value={buyAmount} 
-              onChange={(e) => setBuyAmount(e.target.value)}
-              disabled={isBusy || isSuccess || isError}
-            />
-            <button 
-                onClick={handleMax} 
-                className="text-[9px] font-black bg-primary/10 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-all ml-4"
-                disabled={isBusy || isSuccess || isError}
-            >MAX</button>
+        ) : isPhaseError || currentPhase === null || currentPhase === undefined ? (
+           <div className="p-4 bg-danger/10 border border-danger/20 rounded-xl text-center shadow-inner">
+             <p className="text-[10px] font-black uppercase text-danger">⚠️ PHASE DATA UNAVAILABLE</p>
+             <p className="text-[10px] text-text2 mt-1 uppercase tracking-tighter">Cannot determine current season phase.</p>
           </div>
-        </div>
-
-        <div className="relative w-full rounded-xl overflow-hidden shadow-lg transition-all active:scale-[0.99]">
-            {status !== 'idle' && !isError && (
-                <div 
-                    className={`absolute top-0 left-0 h-full transition-all duration-500 ease-out ${isSuccess ? 'bg-success' : 'bg-primary/30'}`}
-                    style={{ width: getProgressWidth() }}
+        ) : !isAuctionPhase ? (
+          <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl text-center shadow-inner">
+            <p className="text-[10px] uppercase font-bold text-primary tracking-widest">Season on Hold</p>
+          </div>
+        ) : (
+          <>
+            <div className={`bg-card2 rounded-xl px-4 py-3  ${!hasStakedAnything ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
+              <div className="flex justify-between items-end mb-2 px-1">
+                <label className="text-[9px] uppercase font-bold text-text2 tracking-widest">Buy FIM with USDC</label>
+                <span className="text-[9px] font-mono text-text2 uppercase tracking-tighter opacity-70">
+                    Wallet: {Number(formatUnits(currentUsdcInWallet, 6)).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center">
+                <input 
+                  type="number" placeholder="0.00"
+                  className="bg-transparent border-none p-0 w-full text-2xl font-mono font-black text-text outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  value={buyAmount} 
+                  onChange={(e) => setBuyAmount(e.target.value)}
+                  disabled={isBusy || isSuccess || isError}
                 />
-            )}
-            
-            <button 
-                className={`relative w-full py-4 font-black text-[10px] uppercase tracking-widest z-10 flex items-center justify-center gap-2 transition-all duration-200
-                    ${isButtonDisabled && !isBusy && !isSuccess && !isError ? 'bg-muted/20 text-text2 cursor-not-allowed shadow-none' : ''}
-                    ${isBusy ? 'cursor-not-allowed text-text' : ''}
-                    ${isSuccess ? 'cursor-not-allowed text-card shadow-lg' : ''}
-                    ${isError ? 'bg-danger text-card cursor-not-allowed shadow-lg' : ''}
-                    ${status === 'idle' && !isButtonDisabled ? 'bg-primary text-card hover:brightness-110 shadow-lg' : ''}
-                    ${status !== 'idle' && !isSuccess && !isError ? 'text-text' : ''}
-                `}
-                disabled={isButtonDisabled} 
-                onClick={handleStartFlow}
-            >
-                {isBusy && <div className="w-3 h-3 border-2 border-text border-t-transparent rounded-full animate-spin" />}
-                {getStatusText()}
-            </button>
+                <button 
+                    onClick={handleMax} 
+                    className="text-[9px] font-black bg-primary/10 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-all ml-4"
+                    disabled={isBusy || isSuccess || isError}
+                >MAX</button>
+              </div>
+            </div>
+
+            <div className="relative w-full rounded-xl overflow-hidden shadow-lg transition-all active:scale-[0.99]">
+                {status !== 'idle' && !isError && (
+                    <div 
+                        className={`absolute top-0 left-0 h-full transition-all duration-500 ease-out ${isSuccess ? 'bg-success' : 'bg-primary/30'}`}
+                        style={{ width: getProgressWidth() }}
+                    />
+                )}
+                
+                <button 
+                    className={`relative w-full py-4 font-black text-[10px]  uppercase tracking-widest z-10 flex items-center justify-center gap-2 transition-all duration-200
+                        ${isButtonDisabled && !isBusy && !isSuccess && !isError ? 'bg-card2 text-text2 cursor-not-allowed shadow-none' : ''}
+                        ${isBusy ? 'cursor-not-allowed text-text' : ''}
+                        ${isSuccess ? 'cursor-not-allowed text-card shadow-lg' : ''}
+                        ${isError ? 'bg-danger text-card cursor-not-allowed shadow-lg' : ''}
+                        ${status === 'idle' && !isButtonDisabled ? 'bg-primary text-card hover:brightness-110 shadow-lg' : ''}
+                        ${status !== 'idle' && !isSuccess && !isError ? 'text-text' : ''}
+                    `}
+                    disabled={isButtonDisabled} 
+                    onClick={handleStartFlow}
+                >
+                    {isBusy && <div className="w-3 h-3 border-2 border-text border-t-transparent rounded-full animate-spin" />}
+                    {getStatusText()}
+                </button>
+            </div>
+          </>
+        )}
+
+        <div className="grid grid-cols-3 gap-2 text-left px-1">
+          <div className="flex flex-col">
+            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Eligible FIM</span>
+            <span className="font-black text-success tracking-tighter leading-none">{eligibleDisplay}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Staked RTD</span>
+            <span className="font-black text-text tracking-tighter leading-none">{stakedDisplay}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Locked RTD</span>
+            <span className="font-black text-danger tracking-tighter leading-none">{currentLocked > 0n ? lockedDisplay : "0"}</span>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+// *************************************************

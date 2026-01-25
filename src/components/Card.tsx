@@ -40,7 +40,7 @@ const Card: React.FC<CardProps> = ({
         {sizedIcon}
       </div>
 
-      <div className="p-6 pb-0 flex-grow">
+      <div className="p-6 pb-0 grow">
         <h3 className="text-xl font-bold mb-3">
           {title}
         </h3>

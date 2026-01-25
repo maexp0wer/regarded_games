@@ -25,7 +25,7 @@ const CardPlain: React.FC<CardProps> = ({
       </div>
       
       {/* Content Area */}
-      <div className="p-6 flex-grow">
+      <div className="p-6 grow">
         <h3 className="text-xl font-bold mb-3">
           {title}
         </h3>
