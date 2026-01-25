@@ -36,3 +36,24 @@ yarn-error.log*
 next-env.d.ts
 
 .dev_seed.txt
+
+
+
+# Dependencies
+indexer/node_modules
+
+# Debug
+indexer/npm-debug.log*
+indexer/yarn-debug.log*
+indexer/yarn-error.log*
+indexer/.pnpm-debug.log*
+
+# Misc
+indexer/.DS_Store
+
+# Env files
+indexer/.env*.local
+
+# Ponder
+indexer/generated/
+indexer/.ponder/

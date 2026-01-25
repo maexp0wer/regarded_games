@@ -1,4 +1,4 @@
-[
+export const GameSeasonAbi = [
   {
     "type": "constructor",
     "inputs": [
@@ -978,4 +978,4 @@
       }
     ]
   }
-]
+] as const;
