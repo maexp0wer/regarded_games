@@ -3,7 +3,7 @@ import { Orbitron } from 'next/font/google';
 import { headers } from 'next/headers';
 import { cookieToInitialState } from 'wagmi';
 import { config } from '@/config/wagmi';
-import { Providers } from '@/components/providers';
+import { Providers } from '@/components/Providers';
 
 // Global Styles
 import './globals.css';

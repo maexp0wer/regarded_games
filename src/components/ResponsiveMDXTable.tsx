@@ -50,7 +50,7 @@ export default function ResponsiveMDXTable({ headers, rows, caption }: Responsiv
                   return (
                     <th scope="row" key={cellIndex} data-label={label + ':'}
                         className={`${cellBaseClasses} ${mobileLayoutClasses} sm:font-medium sm:text-text`}>
-                      <span className="break-words">{cell}</span>
+                      <span className="wrap-break-word">{cell}</span>
                     </th>
                   );
                 }
@@ -58,7 +58,7 @@ export default function ResponsiveMDXTable({ headers, rows, caption }: Responsiv
                 return (
                   <td key={cellIndex} data-label={label + ':'}
                       className={`${cellBaseClasses} ${mobileLayoutClasses}`}>
-                    <span className="break-words">{cell}</span>
+                    <span className="wrap-break-word">{cell}</span>
                   </td>
                 );
               })}

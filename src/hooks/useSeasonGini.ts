@@ -17,6 +17,7 @@ export interface SeasonMetadata {
   address: string;
   fimAddress: string;
   exchangeAddress: string;
+  auctionAddress: string;
 }
 
 // --- Helper: Gini Math (Matches Solidity) ---

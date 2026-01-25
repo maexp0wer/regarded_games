@@ -169,6 +169,7 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
     if (!season.config) return null;
 
     return (
+        <div className="flex flex-col gap-4 w-full mx-auto"> 
       <Link href={`/${slug}`} className="block group transition-all duration-300 hover:scale-[1.01]">
         <div className="bg-card rounded-xl p-5 shadow-sm border border-transparent group-hover:border-border/30 transition-colors">
             
@@ -302,6 +303,7 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
             </div>
         </div>
       </Link>
+        </div>
     );
 }
 

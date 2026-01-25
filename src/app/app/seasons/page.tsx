@@ -5,17 +5,12 @@ import { useTheme } from '@/context/ThemeContext';
 
 
 
-export default function Navbar() {
-  const mainSiteUrl = process.env.NEXT_PUBLIC_MAIN_DOMAIN;
-  const { darkMode } = useTheme();
-  return (
-    <div className='items-center justify-center'>
-    
-      <div>
-
-      <SeasonsList />
-
+export default function SeasonList() {
+    return (
+    <main className="w-full px-4 py-8">
+      <div className="max-w-4xl mx-auto">
+        <SeasonsList />
       </div>
-    </div>
+    </main>
   );
 }
