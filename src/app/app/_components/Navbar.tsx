@@ -19,18 +19,18 @@ export function Navbar() {
     const navLinks = [
         { name: 'Dashboard', href: '/dashboard' },
         { name: 'Seasons', href: '/seasons' },
-        { name: 'Staking', href: '/staking' },
+        { name: 'Stake', href: '/stake' },
         { name: 'Docs', href: `${docsUrl}`, external: true },
     ];
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-[--color-border] bg-[--color-card]/80 backdrop-blur-md">
+    <nav className="top-0 z-50 w-full bg-card backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         
         {/* Brand/Logo */}
         <div className="flex items-center gap-8">
-          <div className={`text-primary flex justify-center items-center font-display ${darkMode ? 'dark bg-bg' : 'bg-bg'}`}>
-        <Link href={mainUrl || '/'}><Logo className="w-40 text-white" /></Link>
+          <div className={`text-primary flex justify-center items-center font-display`}>
+        <Link href={mainUrl || '/'}><Logo className="w-40 bg-card" /></Link>
       </div>
 
           {/* Navigation Links */}
@@ -74,7 +74,7 @@ export function Navbar() {
           {/* Mode Switcher */}
           <button
               onClick={toggleTheme}
-              className="bg-card p-2 rounded-full text-text hover:bg-primary hover:text-bg transition-colors duration-300"
+              className="bg-card p-1.5 rounded-full text-text hover:bg-primary hover:text-bg transition-colors duration-300"
               aria-label="Toggle dark mode"
             >
               {darkMode ? <SunIcon/> : <MoonIcon />}

@@ -41,7 +41,7 @@ export default function Home() {
   // Navigation Links
   const navLinks = [
     { id: 'sectionHero', label: 'Choose your Hero' },
-    { id: 'sectionHow', label: 'How it works' },
+    { id: 'sectionPlay', label: 'Play' },
     { id: 'sectionGame', label: 'Own the Game' },
     { id: 'sectionGenesisProgram', label: 'Genesis Program' }
   ];
@@ -83,8 +83,8 @@ export default function Home() {
 
       <main className={`transition-all duration-300 ${
         isNavVisible
-          ? 'relative mx-auto 2xl:transform 2xl:-translate-x-[65px]'
-          : 'relative mx-auto md:transform md:-translate-x-[65px]'
+          ? 'relative mx-auto 2xl:transform 2xl:-translate-x-16.25'
+          : 'relative mx-auto md:transform md:-translate-x-16.25'
       }`}>
 
         <div className="w-full max-w-6xl p-8 text-text">
@@ -156,7 +156,7 @@ export default function Home() {
                         viewBox="0 0 500 800"
                       />
                     </div>
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                       <h3 className="mt-4 mb-2 text-2xl font-bold">
                         Ritardo, the Capitalist
                       </h3>
@@ -188,7 +188,7 @@ export default function Home() {
                         viewBox="0 0 500 800"
                       />
                     </div>
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                       <h3 className="mt-4 mb-2 text-2xl font-bold">
                         Carlo, the Socialist
                       </h3>
@@ -202,8 +202,8 @@ export default function Home() {
           </section>
 
           {/* How it Works */}
-          <section id="sectionHow" className="py-16 mx-auto ">
-            <h2 className="text-3xl font-semibold mb-12 text-center">How it Works</h2>
+          <section id="sectionPlay" className="py-16 mx-auto ">
+            <h2 className="text-3xl font-semibold mb-12 text-center">Play</h2>
             <div className="grid md:grid-cols-3 gap-8"> 
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}

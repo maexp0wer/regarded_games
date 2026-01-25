@@ -15,25 +15,18 @@ export const WalletButton = () => {
         authenticationStatus,
         mounted,
       }) => {
-        // 1. Note: If your app doesn't use authentication, you
-        // can remove all 'authenticationStatus' checks
         const ready = mounted && authenticationStatus !== 'loading';
         const connected =
           ready &&
           account &&
           chain &&
-          (!authenticationStatus ||
-            authenticationStatus === 'authenticated');
+          (!authenticationStatus || authenticationStatus === 'authenticated');
 
         return (
           <div
             {...(!ready && {
               'aria-hidden': true,
-              'style': {
-                opacity: 0,
-                pointerEvents: 'none',
-                userSelect: 'none',
-              },
+              style: { opacity: 0, pointerEvents: 'none', userSelect: 'none' },
             })}
           >
             {(() => {
@@ -42,7 +35,7 @@ export const WalletButton = () => {
                   <button
                     onClick={openConnectModal}
                     type="button"
-                    className="btn-primary"
+                    className="px-6 py-2 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98] bg-primary hover:bg-primary2 text-bg shadow-md"
                   >
                     Connect Wallet
                   </button>
@@ -54,7 +47,7 @@ export const WalletButton = () => {
                   <button
                     onClick={openChainModal}
                     type="button"
-                    className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-all"
+                    className="bg-danger text-text font-bold py-2 px-4 rounded-xl shadow-lg transition-all"
                   >
                     Wrong Network
                   </button>
@@ -62,48 +55,40 @@ export const WalletButton = () => {
               }
 
               return (
-                <div style={{ display: 'flex', gap: 12 }}>
+                <div className="flex items-center gap-3">
+                  {/* Chain Button */}
                   <button
                     onClick={openChainModal}
-                    style={{ display: 'flex', alignItems: 'center' }}
                     type="button"
-                    className="hidden md:flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white py-2 px-4 rounded-xl border border-zinc-700 transition-all"
+                    className="hidden md:flex items-center gap-2 bg-card2 hover:bg-card3 text-text py-2 px-4 rounded-xl transition-all"
                   >
                     {chain.hasIcon && (
-                      <div
-                        style={{
-                          background: chain.iconBackground,
-                          width: 12,
-                          height: 12,
-                          borderRadius: 999,
-                          overflow: 'hidden',
-                          marginRight: 4,
-                        }}
-                      >
+                      <div className="w-4 h-4 rounded-full overflow-hidden" style={{ background: chain.iconBackground }}>
                         {chain.iconUrl && (
                           <Image
                             alt={chain.name ?? 'Chain icon'}
                             src={chain.iconUrl}
-                            width={12}
-                            height={12}
-                            unoptimized // <--- This allows external URLs without config
-                            className="rounded-full" // Optional: using tailwind class instead of inline style
+                            width={16}
+                            height={16}
+                            unoptimized
                           />
                         )}
                       </div>
                     )}
-                    {chain.name}
+                    <span className="text-sm font-semibold">{chain.name}</span>
                   </button>
 
+                  {/* Account Button */}
                   <button
                     onClick={openAccountModal}
                     type="button"
-                    className="flex items-center gap-2 bg-zinc-100 hover:bg-zinc-200 text-black font-medium py-2 px-4 rounded-xl transition-all"
+                    // text-textMain inherits --color-text: #2e2e2a
+                    className="flex items-center gap-2 bg-card text-text font-bold py-2 px-4 rounded-xl transition-all hover:bg-card2 shadow-sm"
                   >
-                    {account.displayName}
-                    {account.displayBalance
-                      ? ` (${account.displayBalance})`
-                      : ''}
+                    <span className="text-sm">
+                      {account.displayName}
+                    </span>
+                    {/* ETH balance display logic removed from here */}
                   </button>
                 </div>
               );

@@ -178,6 +178,11 @@
         "name": "_liquidityBps",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "_existentialThreshold",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],

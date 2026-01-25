@@ -9,7 +9,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     // This div ensures the entire DApp hierarchy inherits the .dark class
     <div className={darkMode ? 'dark' : ''}>
-      <div className="min-h-screen bg-[--color-bg] transition-colors duration-300">
+      <div className="min-h-screen bg-bg transition-colors duration-300">
         <Navbar />
         <div className="mx-auto max-w-7xl">
           {children}

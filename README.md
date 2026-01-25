@@ -8,5 +8,4 @@ npm run dev
 /indexer
 pnpm dev
 
-#elete database
-pnpm ponder db drop
+ponder dev --reset

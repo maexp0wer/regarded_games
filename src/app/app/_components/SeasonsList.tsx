@@ -1,18 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useChainId, usePublicClient } from 'wagmi'; 
+import React, { useState, useMemo } from 'react';
+import { useChainId, usePublicClient, useReadContract } from 'wagmi'; 
 import { Address, getAddress } from 'viem';
 import { base, baseSepolia, foundry } from 'wagmi/chains';
 import { useQuery } from '@tanstack/react-query';
 import coreDeployment from '@/deployments/core.json';
-import { SeasonGiniMicro } from '../_components/SeasonGiniMicro';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
 import Link from 'next/link';
-
-
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 
+// --- ABI Definitions ---
 const GAME_CONTROLLER_SEASONS_ABI = [
   {
     "type": "function",
@@ -30,18 +28,27 @@ const GAME_CONTROLLER_SEASONS_ABI = [
 
 const GAME_SEASON_FULL_ABI = GameSeasonAbi as any; 
 
+// --- Types ---
 type SeasonRegistry = {
   season: Address;
-  auction: Address;
-  exchange: Address;
-  fim: Address;
   phase: string;
+  config: {
+    createdAt: number;
+    auctionDuration: number;
+    gameDuration: number;
+    victoryThresholdBps: number;
+    baseBeta: number;
+    buybackBps: number;
+    liquidityBps: number;
+    reinvestBps: number;
+    daoBps: number;
+  };
   auctionStartTime: number; 
   tradingStartTime: number;
   seasonEndTime: number;
-  gameDuration: number;
 };
 
+// --- Helpers ---
 const getControllerAddress = (chainId: number): Address | undefined => {
   const chainNameMap: { [key: number]: string } = {
     [foundry.id]: 'Controller',
@@ -54,63 +61,253 @@ const getControllerAddress = (chainId: number): Address | undefined => {
   return controllerAddress ? getAddress(controllerAddress) : undefined;
 };
 
-const formatTime = (timestamp: number) => {
-    if (!timestamp || timestamp === 0) return 'N/A';
-    return new Date(timestamp * 1000).toLocaleString();
+// Adjusted to 24-hour format
+const formatDate = (timestamp: number) => {
+    if (!timestamp) return 'N/A';
+    return new Date(timestamp * 1000).toLocaleString(undefined, { 
+      month: 'short', 
+      day: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false // Forces 24-hour format
+    });
 };
 
-// Sub-component for each card to handle its own live Ponder data
+// ============================================================================
+// SUB-COMPONENT: SEASON CARD
+// ============================================================================
 function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, totalCount: number, index: number }) {
-    // This hook now fetches both Gini and PrizePool from Ponder
-    const { data: ponderData } = useSeasonGini(season.season);
     
-    const livePrizePool = ponderData?.prizePool ?? 0;
+    // 1. Fetch Live Data
+    const { data: giniData } = useSeasonGini(season.season);
+    
+    const { data: gInitialRaw } = useReadContract({
+        address: season.season,
+        abi: GameSeasonAbi as any,
+        functionName: 'g_initial',
+        query: { enabled: season.phase === 'TRADING' || season.phase === 'PAYOUT', staleTime: Infinity }
+    });
+
     const seasonNumber = totalCount - index;
     const slug = `season_${seasonNumber}`;
 
-    return (
-      <Link href={`/${slug}`} className="block transition-transform hover:scale-[1.01] active:scale-[0.99]">
-        <div className="p-4 rounded-lg"
-             style={{ backgroundColor: 'var(--color-card2)' }}>
-            
-            <div className="flex justify-between items-center mb-2">
-                <span className="font-semibold text-lg font-display" style={{ color: 'var(--color-primary)' }}>
-                    Season {totalCount - index} 
-                </span>
-                <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                    season.phase === 'TRADING' ? 'bg-success text-bg' : 
-                    (season.phase === 'BOOTSTRAP' || season.phase === 'AUCTION') ? 'bg-info text-bg' :
-                    'bg-card3 text-text'
-                }`}>
-                    {season.phase}
-                </span>
-            </div>
-            
-            <div className="text-sm space-y-1 pt-2" style={{ color: 'var(--color-text2)', borderTop: '1px solid var(--color-border)' }}>
-                <p>
-                    Prize Pool: 
-                    <span style={{ color: 'var(--color-text)' }} className="font-medium ml-1">
-                        ${livePrizePool.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC
-                    </span>
-                </p>
+    // 2. Math & Logic (Mirrors GiniDashboard)
+    const { 
+        gCurrent, 
+        progressPercent, 
+        winningSide,
+        isVictoryPending 
+    } = useMemo(() => {
+        if (!season.config) return { gCurrent: 0, progressPercent: 0, winningSide: 'none', isVictoryPending: false };
 
-                <SeasonGiniMicro seasonAddress={season.season} phase={season.phase} />
+        const rawGini = giniData?.gini || 0;
+        const playerCount = giniData?.playerCount || 0;
+        
+        const isAuction = season.phase === 'AUCTION' || season.phase === 'BOOTSTRAP';
+        const gCurrVal = (isAuction && playerCount === 0) ? 5000 : rawGini;
+        
+        const rawGInit = gInitialRaw ? Number(gInitialRaw) : 0;
+        const gInitVal = isAuction ? gCurrVal : rawGInit;
+
+        const gI_Norm = gInitVal / 10000;
+        const V = (season.config.victoryThresholdBps || 2500) / 10000;
+        const rawBeta = (season.config.baseBeta || 14000) / 10000;
+        const M = rawBeta + Math.pow(1 - gI_Norm, 2);
+
+        const capTargetNorm = gI_Norm + (V * (1 - gI_Norm));
+        const socTerm = M > 0 ? (V / M) : 0;
+        const socTargetNorm = gI_Norm * (1 - socTerm);
+
+        const capTarget = capTargetNorm * 10000;
+        const socTarget = socTargetNorm * 10000;
+
+        let prog = 0;
+        let side = 'none';
+
+        if (!isAuction) {
+            if (gCurrVal > gInitVal) {
+                side = 'cap';
+                const dist = capTarget - gInitVal;
+                const covered = gCurrVal - gInitVal;
+                prog = dist > 0 ? (covered / dist) * 100 : 0;
+            } else if (gCurrVal < gInitVal) {
+                side = 'soc';
+                const dist = gInitVal - socTarget;
+                const covered = gInitVal - gCurrVal;
+                prog = dist > 0 ? (covered / dist) * 100 : 0;
+            }
+        }
+
+        const victoryPending = (season.phase === 'TRADING') && (gCurrVal >= capTarget || gCurrVal <= socTarget);
+
+        return { 
+            gCurrent: gCurrVal, 
+            progressPercent: Math.min(Math.max(prog, 0), 100),
+            winningSide: side,
+            isVictoryPending: victoryPending
+        };
+    }, [giniData, season, gInitialRaw]);
+
+    // 3. UI/Style Definitions
+    const isBootstrap = season.phase === 'BOOTSTRAP';
+    const isPayout = season.phase === 'PAYOUT' || season.phase === 'ENDED';
+    const isTrading = season.phase === 'TRADING';
+
+    const phaseColor = isBootstrap ? 'text-danger' : isPayout ? 'text-info' : 'text-success';
+    const phaseBg = isBootstrap ? 'bg-danger' : isPayout ? 'bg-info' : 'bg-success';
+    
+    const statusText = isBootstrap ? 'On Hold' : isPayout ? 'Concluded' : (isTrading ? 'Ends' : 'Starts');
+    const statusTime = isBootstrap ? formatDate(season.tradingStartTime) : (isTrading ? formatDate(season.seasonEndTime) : formatDate(season.tradingStartTime));
+
+    const economicItems = [
+        { label: "Buyback", value: season.config.buybackBps },
+        { label: "Liquidity", value: season.config.liquidityBps },
+        { label: "Reinvest", value: season.config.reinvestBps },
+        { label: "DAO Treasury", value: season.config.daoBps },
+    ].filter(item => item.value > 0);
+
+    if (!season.config) return null;
+
+    return (
+      <Link href={`/${slug}`} className="block group transition-all duration-300 hover:scale-[1.01]">
+        <div className="bg-card rounded-xl p-5 shadow-sm border border-transparent group-hover:border-border/30 transition-colors">
+            
+            {/* --- HEADER (Flex Layout for Max Spread, Left Justified Content) --- */}
+            <div className="flex justify-between items-center gap-4 mb-4 border-b border-border/40 pb-4">
                 
-                <div className="mt-2 pt-2 border-t border-border/50">
-                    <p>Auction Start: <span style={{ color: 'var(--color-text)' }}>{formatTime(season.auctionStartTime)}</span></p>
-                    <p>Trading Start: <span style={{ color: 'var(--color-text)' }}>{formatTime(season.tradingStartTime)}</span></p>
-                    <p>Season End: <span style={{ color: 'var(--color-text)' }}>{formatTime(season.seasonEndTime)}</span></p>
+                {/* 1. Title & Phase (Left-most, explicit width to manage shrinkage) */}
+                <div className="flex flex-col items-start gap-1 w-1/4 min-w-min">
+                    <span className="font-bold text-lg font-display uppercase tracking-tight text-text text-left">
+                        Season {seasonNumber}
+                    </span>
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-card2 rounded-full">
+                        <div className={`w-1.5 h-1.5 rounded-full ${phaseBg} animate-pulse`} />
+                        <span className={`text-[9px] font-black ${phaseColor} tracking-widest uppercase`}>
+                            {season.phase}
+                        </span>
+                    </div>
                 </div>
+
+                {/* 2. Prize Pool (Left-aligned content) */}
+                <div className="flex flex-col items-start text-left w-1/4">
+                    <span className="text-[9px] uppercase font-bold text-text2 tracking-widest mb-0.5">Prize Pool</span>
+                    <span className="text-xl font-black text-primary tracking-tighter leading-none">
+                        ${(giniData?.prizePool ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                </div>
+
+                {/* 3. Participants (Left-aligned content) */}
+                <div className="flex flex-col items-start text-left w-1/4">
+                    <span className="text-[9px] uppercase font-bold text-text2 tracking-widest mb-0.5">Participants</span>
+                    <span className="text-xl font-black text-text tracking-tighter leading-none">
+                        {(giniData?.playerCount ?? 0).toLocaleString()}
+                    </span>
+                </div>
+
+                {/* 4. Status/Time (Left-aligned content) */}
+                <div className="flex flex-col items-start text-left w-1/4">
+                    <span className="text-[9px] uppercase font-bold text-text2 tracking-widest mb-0.5">
+                        {isBootstrap ? 'STATUS' : (isTrading ? 'SEASON ENDS' : 'TRADING STARTS')}
+                    </span>
+                    <span className="text-sm font-bold text-text leading-tight">
+                         {isBootstrap ? 'ON HOLD' : statusTime}
+                    </span>
+                </div>
+
+            </div>
+
+            {/* --- BODY --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                <p className="text-xs font-mono truncate mt-2">
-                    Contract: <code style={{ backgroundColor: 'var(--color-card3)', color: 'var(--color-text)' }} className="px-1 rounded">{season.season}</code>
-                </p>
+                {/* 1. GINI / PROGRESS (Left - 1/3) */}
+                <div className="flex flex-col justify-center gap-2 lg:col-span-1">
+                    <span className="text-[10px] uppercase font-bold text-text2 tracking-widest">
+                        Live Gini Position
+                    </span>
+                    <div className="flex flex-col gap-1">
+                        
+                        {/* Gini Value and Target Progress on one line */}
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-black font-mono text-text">
+                                {gCurrent.toString()}
+                            </span>
+                            <span className="text-sm text-text2 font-bold">BPS</span>
+                            
+                            {/* UPDATED: Progress is now on the same line, styled to match BPS size */}
+                            {isTrading && winningSide !== 'none' && (
+                                <span className={`text-sm font-black font-mono uppercase tracking-wide ml-2 ${winningSide === 'cap' ? 'text-info' : 'text-danger'}`}>
+                                    ({progressPercent.toFixed(1)}% towards {winningSide === 'cap' ? 'CAPITALIST' : 'SOCIALIST'} Victory)
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                    {isVictoryPending && (
+                        <p className="text-[10px] font-bold text-yellow-500 mt-1 uppercase tracking-wide">
+                            ⚠️ Settlement Pending
+                        </p>
+                    )}
+                </div>
+                {/* 2. POLICY (Right - 2/3) */}
+                <div className="lg:col-span-2 grid grid-cols-3 gap-x-6 gap-y-4">
+                    
+                    {/* --- COLUMN 1 --- */}
+
+                    {/* Comp. Multiplier (M) - (Row 1, Col 1) */}
+                    <div className="flex flex-col items-start gap-1">
+                        <span className="text-[9px] text-text2 uppercase tracking-widest">Compensation Multiplier</span>
+                        <span className="text-sm font-bold text-primary text-left">
+                            {(season.config.baseBeta / 10000 + Math.pow(1 - (gCurrent / 10000), 2)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })}x
+                        </span>
+                    </div>
+
+                    {/* Buyback - (Row 2, Col 1) */}
+                    <div className="flex flex-col items-start gap-1 row-start-2">
+                        <span className="text-[9px] text-text2 uppercase tracking-widest">Buyback Allocation</span>
+                        <span className="text-sm font-bold text-text text-left">{(season.config.buybackBps / 100)}%</span>
+                    </div>
+
+                    {/* --- COLUMN 2 --- */}
+
+                    {/* Victory Threshold - (Row 1, Col 2) */}
+                    <div className="flex flex-col items-start gap-1 col-start-2">
+                        <span className="text-[9px] text-text2 uppercase tracking-widest">Victory Threshold</span>
+                        <span className="text-sm font-bold text-text text-left">{season.config.victoryThresholdBps / 100}%</span>
+                    </div>
+
+                    {/* Reinvest - (Row 2, Col 2) */}
+                    <div className="flex flex-col items-start gap-1 col-start-2 row-start-2">
+                        <span className="text-[9px] text-text2 uppercase tracking-widest">Reinvest Allocation</span>
+                        <span className="text-sm font-bold text-text text-left">{(season.config.reinvestBps / 100)}%</span>
+                    </div>                 
+                    
+                    
+                    {/* --- COLUMN 3 (Dynamic Items) --- */}
+
+                    {/* Liquidity/DAO Treasury - Dynamically placed in Col 3 */}
+                    {economicItems.filter(item => item.label !== "Buyback" && item.label !== "Reinvest").map((item, i) => (
+                        <div 
+                            key={item.label} 
+                            className="flex justify-between items-center" 
+                            style={{ 
+                                gridColumnStart: 3, 
+                                gridRowStart: i + 1, // Forces to row 1, 2, 3... of column 3
+                            }}
+                        >
+                            <span className="text-xs text-text2">{item.label}</span>
+                            <span className="text-sm font-bold text-text">{(item.value / 100)}%</span>
+                        </div>
+                    ))}
+                </div>
+
             </div>
         </div>
-        </Link>
+      </Link>
     );
 }
 
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 export function SeasonsList() {
   const chainId = useChainId();
   const controllerAddress = getControllerAddress(chainId);
@@ -118,10 +315,11 @@ export function SeasonsList() {
   const publicClient = usePublicClient(); 
 
   const { data: seasonsData, isLoading } = useQuery({
-    queryKey: ['allSeasons', chainId, controllerAddress],
+    queryKey: ['allSeasons_v2', chainId, controllerAddress],
     queryFn: async () => {
         if (!controllerAddress || !publicClient) return [];
         const allSeasons: SeasonRegistry[] = [];
+        
         for (let i = 0; i < 50; i++) {
             try {
                 const data = await publicClient.readContract({
@@ -135,45 +333,84 @@ export function SeasonsList() {
                     address: data[0], abi: GAME_SEASON_FULL_ABI, functionName: 'getConfig' 
                 });
 
-                const cAt = Number((cfg.createdAt ?? cfg[0]).toString());
-                const aDu = Number((cfg.auctionDuration ?? cfg[1]).toString());
-                const gDu = Number((cfg.gameDuration ?? cfg[2]).toString());
-                const ph = await publicClient.readContract({ 
+                const phase = await publicClient.readContract({ 
                     address: data[0], abi: GAME_SEASON_FULL_ABI, functionName: 'getPhase' 
                 });
 
+                const getVal = (key: string, idx: number) => cfg[key] !== undefined ? cfg[key] : cfg[idx];
+                
+                const cAt = Number(getVal('createdAt', 0));
+                const aDu = Number(getVal('auctionDuration', 1));
+                const gDu = Number(getVal('gameDuration', 2));
+                
+                const parsedConfig = {
+                    createdAt: cAt,
+                    auctionDuration: aDu,
+                    gameDuration: gDu,
+                    victoryThresholdBps: Number(getVal('victoryThresholdBps', 3)),
+                    baseBeta: Number(getVal('beta', 4)),
+                    // Add Policy BPS for list display
+                    buybackBps: Number(getVal('buybackBps', 5) || 0),
+                    liquidityBps: Number(getVal('liquidityBps', 6) || 0),
+                    reinvestBps: Number(getVal('reinvestBps', 7) || 0),
+                    daoBps: Number(getVal('daoBps', 8) || 0),
+                };
+
                 allSeasons.push({
-                  
-                    season: data[0], auction: data[1], exchange: data[2], fim: data[3],
-                    phase: ph as string, auctionStartTime: cAt,
-                    tradingStartTime: cAt + aDu, seasonEndTime: cAt + aDu + gDu, gameDuration: gDu
+                    season: data[0], 
+                    phase: phase as string, 
+                    config: parsedConfig,
+                    auctionStartTime: cAt,
+                    tradingStartTime: cAt + aDu, 
+                    seasonEndTime: cAt + aDu + gDu, 
                 });
             } catch { break; }
         }
         return allSeasons;
     },
     enabled: !!controllerAddress && !!publicClient,
-    
-  });
+});
 
-  if (isLoading) return <p style={{ color: 'var(--color-primary)' }}>Loading seasons data...</p>;
+  if (isLoading) return (
+    <div className="w-full max-w-3xl p-12 text-center">
+        <span className="text-primary font-display uppercase tracking-widest animate-pulse">Scanning Seasons...</span>
+    </div>
+  );
 
   const display = [...(seasonsData || [])].reverse();
-  const filtered = display.filter(s => showAll ? true : s.phase !== 'ENDED');
+  
+  const filtered = display.filter(s => showAll ? true : (s.phase !== 'PAYOUT' && s.phase !== 'ENDED'));
 
   return (
-    <div className="p-6 rounded-xl shadow-xl w-full max-w-3xl"
-         style={{ backgroundColor: 'var(--color-card)', color: 'var(--color-text)'}}>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Seasons</h2>
+    <div className="w-full max-w-4xl space-y-6">
+      
+      {/* List Header */}
+      <div className="flex justify-between items-center px-2">
+        <h2 className="text-xl font-bold font-display uppercase text-text">
+            {showAll ? 'All Seasons' : 'Active Seasons'}
+        </h2>
+        
         <button onClick={() => setShowAll(!showAll)} className="btn-three py-2 px-4 text-sm">
           {showAll ? 'Show Active' : 'Show All'}
         </button>
       </div>
+
+      {/* List */}
       <div className="space-y-4">
-        {filtered.map((s, i) => <SeasonCard key={s.season} season={s} totalCount={display.length} index={i} />)}
+        {filtered.map((s, i) => (
+            <SeasonCard 
+                key={s.season} 
+                season={s} 
+                totalCount={display.length} 
+                index={i} 
+            />
+        ))}
+        {filtered.length === 0 && (
+            <div className="p-8 text-center bg-card rounded-xl border border-dashed border-border text-text2 text-sm">
+                No active seasons found.
+            </div>
+        )}
       </div>
     </div>
-    
   );
 }
