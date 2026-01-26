@@ -2,7 +2,6 @@ import { ponder } from "ponder:registry";
 import { seasons, playerSeasonStats } from "ponder:schema";
 import { eq } from "ponder";
 import * as schema from "../ponder.schema";
-import { auctionMints } from "ponder:schema";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
@@ -166,4 +165,59 @@ ponder.on("GameSeason:LedgerUpdated", async ({ event, context }) => {
         netContribution: row.netContribution - usdcAmount,
       }));
   }
+});
+
+
+// 1. Order Created
+ponder.on("Exchange:OrderCreated", async ({ event, context }) => {
+  const { id, owner, isBuy, fimAmount, usdcPrice } = event.args;
+  
+  const season = await context.db.sql
+    .select()
+    .from(schema.seasons)
+    .where(eq(schema.seasons.exchangeAddress, event.log.address))
+    .limit(1);
+  
+  if (!season[0]) return;
+
+  await context.db.insert(schema.orders).values({
+    id: id.toString(),
+    seasonAddress: season[0].address,
+    maker: owner,
+    isBuy: isBuy,
+    price: usdcPrice,
+    initialAmount: fimAmount,
+    remainingAmount: fimAmount,
+    active: true,
+    timestamp: event.block.timestamp,
+  });
+});
+
+// 2. Order Filled
+ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
+  const { id, fimAmount, usdcPrice } = event.args; // Ensure your event emits these!
+
+  // 1. Find the current order in the database
+  const order = await context.db.find(schema.orders, { id: id.toString() });
+  if (!order) return;
+
+  // 2. Calculate the new remaining amount
+  const newRemaining = order.remainingAmount - fimAmount;
+
+  // 3. Update the database
+  await context.db.update(schema.orders, { id: id.toString() }).set({
+    remainingAmount: newRemaining,
+    // ONLY set active to false if no FIM is left
+    active: newRemaining > 0n 
+  });
+});
+
+// 3. Order Cancelled
+ponder.on("Exchange:OrderCancelled", async ({ event, context }) => {
+  const { id } = event.args;
+  
+  await context.db.update(schema.orders, { id: id.toString() }).set({
+    active: false,
+    remainingAmount: 0n
+  });
 });

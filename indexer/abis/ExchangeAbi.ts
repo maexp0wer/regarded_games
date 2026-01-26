@@ -38,14 +38,37 @@ export const ExchangeAbi = [
     "name": "createOrder",
     "inputs": [
       {
+        "name": "isBuy",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
         "name": "fimAmount",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "usdcTotalCost",
+        "name": "usdcPrice",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "fillBatch",
+    "inputs": [
+      {
+        "name": "orderIds",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      },
+      {
+        "name": "amounts",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
       }
     ],
     "outputs": [],
@@ -125,6 +148,11 @@ export const ExchangeAbi = [
         "internalType": "address"
       },
       {
+        "name": "isBuy",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
         "name": "fimAmount",
         "type": "uint256",
         "internalType": "uint256"
@@ -185,6 +213,12 @@ export const ExchangeAbi = [
         "internalType": "address"
       },
       {
+        "name": "isBuy",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      },
+      {
         "name": "fimAmount",
         "type": "uint256",
         "indexed": false,
@@ -220,6 +254,18 @@ export const ExchangeAbi = [
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      },
+      {
+        "name": "fimAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "usdcPrice",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false

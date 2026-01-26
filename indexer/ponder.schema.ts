@@ -27,3 +27,15 @@ export const auctionMints = onchainTable("auction_mints", (t) => ({
   fimAmount: t.bigint().notNull(),
   timestamp: t.bigint().notNull(),
 }));
+
+export const orders = onchainTable("orders", (t) => ({
+  id: t.text().primaryKey(), // Using the contract's Order ID
+  seasonAddress: t.hex().notNull(),
+  maker: t.hex().notNull(),
+  isBuy: t.boolean().notNull(), // True = BID (Buy FIM), False = ASK (Sell FIM)
+  price: t.bigint().notNull(),
+  initialAmount: t.bigint().notNull(),
+  remainingAmount: t.bigint().notNull(),
+  active: t.boolean().notNull().default(true),
+  timestamp: t.bigint().notNull(),
+}));

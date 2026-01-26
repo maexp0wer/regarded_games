@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useReadContract } from 'wagmi';
 
-// Hooks/Abis (Assuming these are available in your project structure)
+// Hooks/Abis
 import { useSeasonGini, useSeasonById } from '@/hooks/useSeasonGini';
+import { Order } from '@/hooks/useOrderBook'; // Import Order type
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 
-// PRESENTATIONAL COMPONENTS (You must ensure these files exist and have 'h-full' on their root element)
+// PRESENTATIONAL COMPONENTS
 import { SeasonHeader } from '../_components/SeasonHeader';
 import { GiniDisplay } from '../_components/GiniDisplay';
 import { SeasonDetails } from '../_components/SeasonDetails';
@@ -19,22 +20,50 @@ import { OrderConfigurator } from '../_components/OrderConfigurator';
 import { TradingActivityFeed } from '../_components/TradingActivityFeed';
 import { TradingMask } from '../_components/TradingMask';
 
-
-
-
-
 // ============================================================================
 // PAGE COMPONENT: SeasonDetailPage
 // ============================================================================
 export default function SeasonDetailPage() {
   const { seasonSlug } = useParams() as { seasonSlug: string };
+  
+  // --- 1. Routing & Metadata ---
   const { data: metadata, isLoading: isMetaLoading } = useSeasonById(seasonSlug);
   
   const seasonAddress = metadata?.address || '0x0';
   const auctionAddress = metadata?.auctionAddress || '0x0';
+  const exchangeAddress = metadata?.exchangeAddress || '0x0';
   const fimAddress = metadata?.fimAddress || '0x0';
 
-  // --- A. Data Fetching ---
+  // --- 2. TRADING STATE (Lifted from Dashboard) ---
+  const [isBuy, setIsBuy] = useState(true);
+  const [isMaker, setIsMaker] = useState(false); // Default to Taker
+  const [targetAmount, setTargetAmount] = useState("");
+  const [selectedOrders, setSelectedOrders] = useState<Order[]>([]);
+
+  // --- 3. TRADING HANDLERS ---
+  const handleSelectOrder = (order: Order) => {
+    // Prevent duplicates
+    if (!selectedOrders.find(o => o.id === order.id)) {
+      setSelectedOrders(prev => [...prev, order]);
+    }
+  };
+
+  const handleRemoveOrder = (id: string) => {
+    setSelectedOrders(prev => prev.filter(o => o.id !== id));
+  };
+
+  const handleMoveOrder = (index: number, direction: -1 | 1) => {
+    const newOrders = [...selectedOrders];
+    // Boundary checks
+    if (index + direction < 0 || index + direction >= newOrders.length) return;
+    
+    const temp = newOrders[index];
+    newOrders[index] = newOrders[index + direction];
+    newOrders[index + direction] = temp;
+    setSelectedOrders(newOrders);
+  };
+
+  // --- 4. Data Fetching (Gini & Config) ---
   const { data: giniData, isLoading: isGiniLoading } = useSeasonGini(seasonAddress);
   
   const { data: rawConfig, isLoading: isConfigLoading } = useReadContract({
@@ -58,7 +87,7 @@ export default function SeasonDetailPage() {
     query: { enabled: !!seasonAddress, refetchInterval: 3000 }
   });
 
-  // --- B. Phase Change Effect ---
+  // --- 5. Phase Change Effect ---
   useEffect(() => {
     if (phase === "TRADING") {
         refetchGInitial();
@@ -66,7 +95,7 @@ export default function SeasonDetailPage() {
   }, [phase, refetchGInitial]);
 
 
-  // --- C. Logic & Math ---
+  // --- 6. Logic & Math (Gini Calculations) ---
   const { 
     config, 
     gCurrent, 
@@ -192,7 +221,6 @@ export default function SeasonDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* ROW 1: HEADER & STATUS (Always 3 columns) */}
-        {/* We wrap SeasonHeader in a 3-column div to ensure the next grid rows start correctly */}
         <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-6">
              <SeasonHeader 
                 seasonName={formattedName}
@@ -208,11 +236,10 @@ export default function SeasonDetailPage() {
         </div>
 
         {/* ========================================================= */}
-        {/* AUCTION / BOOTSTRAP LAYOUT (Original 2x2 Layout) */}
+        {/* AUCTION / BOOTSTRAP LAYOUT */}
         {/* ========================================================= */}
         {isAuctionOrBootstrap && (
           <>
-            {/* ROW 2: AUCTION MASK (1/3) + GINI DISPLAY (2/3) */}
             <div className="lg:col-span-1 h-full">
               <AuctionMask 
                 seasonAddress={seasonAddress}
@@ -231,17 +258,13 @@ export default function SeasonDetailPage() {
                 winningSide={winningSide}
                 progressPercent={progressPercent}
                 currentPhase={currentPhase}
-                isAuction={true} // Explicitly true for Auction/Bootstrap phase
+                isAuction={true}
                 isBootstrap={isAuctionOrBootstrap}
               />
             </div>
 
-
-            {/* ROW 3: ACTIVITY FEED (1/3) + SEASON DETAILS (2/3) */}
             <div className="lg:col-span-1 h-full">
-              <AuctionActivityFeed 
-                seasonAddress={seasonAddress} 
-              />
+              <AuctionActivityFeed seasonAddress={seasonAddress} />
             </div>
 
             <div className="lg:col-span-2 h-full">
@@ -256,37 +279,48 @@ export default function SeasonDetailPage() {
         )}
 
        {/* ========================================================= */}
-        {/* TRADING LAYOUT (New 3x2 Grid Structure) */}
+        {/* TRADING LAYOUT (Integrated Logic) */}
         {/* ========================================================= */}
         {isTrading && (
-          // We don't use the standard lg:col-span-1/lg:col-span-2 structure here.
-          // We render components sequentially in a 3-column grid, making 3 distinct rows.
           <>
             {/* ROW 2 - TradingMask (1/3) + OrderBook (2/3) */}
             
-            {/* 1/3 Width: TradingMask */}
+            {/* 1/3 Width: TradingMask (With State Passed Down) */}
             <div className="lg:col-span-1 h-full"> 
-              <TradingMask 
+              <TradingMask
+                exchangeAddress={exchangeAddress}
+                fimAddress={fimAddress}
+                isBuy={isBuy} 
+                setIsBuy={setIsBuy}
+                isMaker={isMaker} 
+                setIsMaker={setIsMaker}
+                targetAmount={targetAmount} 
+                setTargetAmount={setTargetAmount}
+                selectedOrders={selectedOrders}
+                onRemoveOrder={handleRemoveOrder}
+                onMoveOrder={handleMoveOrder}
               />
             </div>
 
-            {/* 2/3 Width: OrderBook */}
             <div className="lg:col-span-2 h-full"> 
-              <OrderBook 
+              <OrderBook
+                seasonAddress={seasonAddress}
+                isBuy={isBuy}
+                isMaker={isMaker}
+                onSelectOrder={handleSelectOrder}
               />
             </div>
             
             
             {/* ROW 3 - OrderConfigurator (1/3) + GiniDisplay (2/3) */}
             
-            {/* 1/3 Width: OrderConfigurator */}
+            {/* 1/3 Width: OrderConfigurator (Shown if Taker, otherwise placeholder) */}
             <div className="lg:col-span-1 h-full"> 
-              <OrderConfigurator 
-              />
+              
             </div>
 
             {/* 2/3 Width: GiniDisplay */}
-            <div className="lg:col-span-2 h-full"> 
+            <div className="lg:col-span-3 h-full"> 
               <GiniDisplay 
                 gCurrent={gCurrent} 
                 gInitial={gInitial}
@@ -303,13 +337,10 @@ export default function SeasonDetailPage() {
             
             {/* ROW 4 - TradingActivityFeed (1/3) + SeasonDetails (2/3) */}
             
-            {/* 1/3 Width: TradingActivityFeed */}
             <div className="lg:col-span-1 h-full"> 
-              <TradingActivityFeed 
-              />
+              <TradingActivityFeed/>
             </div>
 
-            {/* 2/3 Width: SeasonDetails */}
             <div className="lg:col-span-2 h-full"> 
               <SeasonDetails 
                 tradingStart={tradingStart}
@@ -322,7 +353,7 @@ export default function SeasonDetailPage() {
         )}
 
         {/* ========================================================= */}
-        {/* PAYOUT / CONCLUDED LAYOUT (Optional fallback) */}
+        {/* PAYOUT / CONCLUDED LAYOUT */}
         {/* ========================================================= */}
         {(!isAuctionOrBootstrap && !isTrading) && (
             <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-6">
