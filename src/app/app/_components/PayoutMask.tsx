@@ -50,7 +50,30 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
     refetch: refetchPayout 
   } = usePayout(seasonAddress, address);
   
-  const { data: rankData } = usePlayerPercentile(seasonAddress, address);
+  const { data: rankData, isLoading: rankLoading } = usePlayerPercentile(seasonAddress, address);
+
+  // --- TRANSFORMATION MATH ---
+  let pointerPos = 50;
+  let displayPercent = 0;
+  let factionName = "";
+  let factionColor = "text-white";
+
+  if (rankData) {
+    factionName = rankData.isCapitalist ? "Capitalist" : "Socialist";
+    factionColor = rankData.isCapitalist ? "text-blue-400" : "text-red-500";
+
+    if (rankData.isCapitalist) {
+      // 0% (Poorest Cap) -> 50% (Center)
+      // 100% (Richest Cap) -> 100% (Far Right)
+      displayPercent = rankData.factionPercentile;
+      pointerPos = 50 + (rankData.factionPercentile / 2);
+    } else {
+      // 0% (Poorest Soc) -> 0% (Far Left)
+      // 100% (Richest Soc) -> 50% (Center)
+      displayPercent = 100 - rankData.factionPercentile;
+      pointerPos = (rankData.factionPercentile / 2);
+    }
+  }
 
   // --- EFFECT: HANDLE SUCCESS ---
   useEffect(() => {
@@ -85,9 +108,7 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
   const canClaim = payout > 0;
 
   // Determine Faction Status for Wealth Bar
-  const isWinningFaction = rankData 
-    ? (isOligarchyWin ? (100 - rankData.percentile < 50) : (100 - rankData.percentile >= 50)) 
-    : false; // Simplified logic, adjust based on exact massThreshold if needed
+
 
   const handleClaim = () => {
     // 1. Snapshot the current correct PnL before we burn the ticket
@@ -132,22 +153,43 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
         </div>
       </div>
 
-      {/* WEALTH BAR */}
-      {rankData && (
-        <div className="mb-6 bg-card2/30 p-3 rounded-lg border border-border/50">
-           <div className="flex justify-between text-[10px] text-text2 uppercase mb-1">
-             <span>Your Rank</span>
-             <span className="text-text font-bold">Top {(100 - rankData.percentile).toFixed(1)}%</span>
-           </div>
-           <div className="relative w-full h-2 bg-card rounded-full overflow-hidden border border-border mt-1">
-              <div className="absolute inset-0 bg-gradient-to-r from-danger/20 to-info/20"></div>
-              <div 
-                className="absolute top-0 bottom-0 w-1 bg-text z-10 shadow-sm"
-                style={{ left: `${rankData.percentile}%` }}
-              />
-           </div>
+      {/* HEADER */}
+      <div className="mb-10">
+        {!rankData ? (
+          <div className="h-8 w-64 bg-white/5 animate-pulse rounded" />
+        ) : (
+          <h3 className="font-display text-xl font-bold uppercase text-white leading-tight tracking-tight">
+            You finished <span className={factionColor}>{displayPercent.toFixed(1)}%</span> into the {factionName} faction
+          </h3>
+        )}
+      </div>
+
+      {/* BIPOLAR BIPOLAR BAR */}
+      <div className="mb-12 relative px-2">
+        <div className="flex justify-between text-[10px] font-black uppercase mb-4 tracking-widest opacity-40">
+          <span className="text-red-500">100% Socialist</span>
+          <span>Equilibrium</span>
+          <span className="text-blue-400">100% Capitalist</span>
         </div>
-      )}
+
+        <div className="relative w-full h-4 bg-black/40 rounded-full border border-white/10 shadow-inner overflow-visible">
+          <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 via-transparent to-blue-400/10 rounded-full" />
+          <div className="absolute left-1/2 top-[-4px] bottom-[-4px] w-px bg-white/30 z-0" />
+
+          {rankData && (
+            <div 
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 transition-all duration-1000 ease-out z-10"
+              style={{ left: `${pointerPos}%` }}
+            >
+              <div className={`w-4 h-4 rounded-full border-2 border-white shadow-[0_0_15px_rgba(255,255,255,0.4)] ${rankData.isCapitalist ? 'bg-blue-400' : 'bg-red-500'}`} />
+              <div className="absolute -top-7 left-1/2 -translate-x-1/2">
+                <span className="text-[10px] font-black bg-white text-black px-2 py-0.5 rounded shadow-2xl">YOU</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
 
       {/* USER STATS */}
       <div className="bg-card2 rounded-lg p-4 space-y-3 mb-6 border border-border">
