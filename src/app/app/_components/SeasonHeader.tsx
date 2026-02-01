@@ -59,45 +59,51 @@ export function SeasonHeader({
 }: SeasonHeaderProps) {
     
     const isAuction = currentPhase === "AUCTION";
+    
+    // FIX: logic to ignore isBootstrap visuals if we are in Auction mode
+    const showBootstrapWarning = isBootstrap && !isAuction;
+
+    // Determine target time: If Auction or Bootstrap, count to trading start. Else season end.
     const targetTime = (isAuction || isBootstrap) ? tradingStart : seasonEnd;
     const countdownText = useCountdown(targetTime);
 
     return (
         <>
-            {/* 1. HEADER (Original component part 1) */}
+            {/* 1. HEADER */}
             <div className="lg:col-span-2 bg-card rounded-2xl p-4 md:p-6 shadow-sm flex flex-row justify-between items-center gap-2 h-full">
                 <div className="flex flex-col items-start gap-1 md:gap-2">
                     <h1 className="text-lg md:text-3xl font-bold font-display uppercase tracking-tight text-text text-left">
                         {seasonName}
                     </h1>
                     <div className="flex items-center gap-1.5 px-2 md:px-3 py-0.5 md:py-1 bg-card2 rounded-full">
-                        <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${isBootstrap ? 'bg-danger' : isPayout ? 'bg-info' : 'bg-success'} animate-pulse`} />
-                        <span className={`text-[9px] md:text-xs font-black ${isBootstrap ? 'text-danger' : isPayout ? 'text-info' : 'text-success'} tracking-widest uppercase`}>
+                        {/* FIX: Check showBootstrapWarning instead of isBootstrap */}
+                        <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${showBootstrapWarning ? 'bg-danger' : isPayout ? 'bg-info' : 'bg-success'} animate-pulse`} />
+                        <span className={`text-[9px] md:text-xs font-black ${showBootstrapWarning ? 'text-danger' : isPayout ? 'text-info' : 'text-success'} tracking-widest uppercase`}>
                             {currentPhase || "UNKNOWN"}
                         </span>
                     </div>
                 </div>
 
                 <div className="flex flex-col items-center">
-                    <span className="text-[10px] md:text-[10px] uppercase font-bold text-text2 tracking-widest block mb-0.5 md:mb-1">Total Prize Pool</span>
+                    <span className="h3-app mb-0.5 md:mb-1">Total Prize Pool</span>
                     <span className="text-lg md:text-3xl font-black text-primary block leading-none">
                         ${prizePool.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                 </div>
 
                 <div className="flex flex-col items-end">
-                    <span className="text-[10px] md:text-[10px] uppercase font-bold text-text2 tracking-widest block mb-0.5 md:mb-1">Participants</span>
+                    <span className="h3-app mb-0.5 md:mb-1">Participants</span>
                     <span className="text-lg md:text-3xl font-black text-text tracking-tighter block leading-none">
                         {playerCount.toLocaleString()}
                     </span>
                 </div>
             </div>
 
-            {/* 2. STATUS BOX (Original component part 2 - Countdown/Warning) */}
-            <div className={`lg:col-span-1 bg-card rounded-2xl p-4 shadow-sm flex flex-col items-center justify-center text-center h-full ${(isBootstrap || isVictoryPending) ? 'border border-yellow-500/20 bg-yellow-500/5' : ''}`}>
+            {/* 2. STATUS BOX */}
+            <div className={`lg:col-span-1 bg-card rounded-2xl p-4 shadow-sm flex flex-col items-center justify-center text-center h-full ${(showBootstrapWarning || isVictoryPending) ? 'border border-yellow-500/20 bg-yellow-500/5' : ''}`}>
                 
-                {/* Warning State */}
-                {(isBootstrap || isVictoryPending) && (
+                {/* Warning State: Only show if Victory Pending OR (Bootstrap AND NOT Auction) */}
+                {(showBootstrapWarning || isVictoryPending) && (
                     <div className="space-y-1">
                         <div className="flex items-center justify-center gap-2 mb-1">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -116,7 +122,7 @@ export function SeasonHeader({
                 {/* Payout State */}
                 {isPayout && (
                     <div>
-                        <span className="text-[10px] uppercase font-bold text-text2 tracking-widest block mb-1">Status</span>
+                        <span className="h3-app mb-1">Status</span>
                         <span className="text-2xl font-bold text-text font-display tracking-tight block">
                             Season Concluded
                         </span>
@@ -124,9 +130,10 @@ export function SeasonHeader({
                 )}
 
                 {/* Standard Countdown State */}
-                {(!isBootstrap && !isVictoryPending && !isPayout) && (
+                {/* FIX: Logic updated to show countdown if it's Auction, even if isBootstrap is true */}
+                {(!showBootstrapWarning && !isVictoryPending && !isPayout) && (
                     <>
-                        <span className="text-[10px] uppercase font-bold text-text2 tracking-widest block">
+                        <span className="h3-app">
                             {isAuction ? "Auction Ends In" : "Season Ends In"}
                         </span>
                         <span className="text-lg md:text-3xl font-bold text-text font-display tracking-tight block">

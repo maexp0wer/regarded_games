@@ -45,8 +45,8 @@ export function SeasonDetails({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
             
             {/* Card 1: Schedule - UPDATED */}
-            <div className="bg-card rounded-2xl p-6 shadow-sm space-y-3">
-                <h3 className="text-[10px] font-black uppercase text-text2 tracking-widest border-b border-border/50 pb-2">Schedule</h3>
+            <div className="card-app">
+                <h3 className="h3-app cardline-app">Schedule</h3>
                 <div className="flex justify-between text-xs">
                     <span className="text-text2">Season Start</span> 
                     {/* Using config.createdAt for the absolute start of the season */}
@@ -64,7 +64,7 @@ export function SeasonDetails({
             
             {/* Card 2: Policy - UPDATED */}
             <div className="bg-card rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 className="text-[10px] font-black uppercase text-text2 tracking-widest border-b border-border/50 pb-2">Policy</h3>
+                <h3 className="h3-app border-b border-border/50 pb-2">Policy</h3>
                 <div className="space-y-3">
                     <div className="flex justify-between items-center">
                         <span className="text-xs text-text2">Current Multiplier (M)</span>
@@ -88,7 +88,7 @@ export function SeasonDetails({
             
             {/* Card 3: Lending Distribution (Remains the same) */}
             <div className="bg-card rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 className="text-[10px] font-black uppercase text-text2 tracking-widest border-b border-border/50 pb-2">Lending Distribution</h3>
+                <h3 className="h3-app border-b border-border/50 pb-2">Lending Distribution</h3>
                 <div className="space-y-3">
                     {economicItems.length > 0 ? (
                         economicItems.map((item) => (

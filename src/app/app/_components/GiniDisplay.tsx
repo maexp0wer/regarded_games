@@ -96,7 +96,7 @@ function TradingGauge({ gCurrent, gInitial, socTarget, capTarget, winningSide, p
   return (
     <>
       <div className="absolute top-6 left-6 right-6 flex justify-between items-start">
-        <h2 className="text-xs font-bold uppercase text-text2 tracking-widest">
+        <h2 className="h2-app">
            {isFinal ? "Final Gini Position" : "Live Gini Position"}
         </h2>
         <div className="text-right">

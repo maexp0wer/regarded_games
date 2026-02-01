@@ -94,6 +94,25 @@
 
 
 
+  .h2-app{
+    @apply text-[11px] md:text-xs uppercase font-bold text-text2 tracking-widest;
+  }
+    .h3-app{
+    @apply text-[9px] md:text-[10px] uppercase font-bold text-text2 tracking-widest;
+  }
+    .h4-app{
+    @apply text-[8px] md:text-[9px] uppercase font-bold text-text2 tracking-widest;
+  }
+
+  .card-app {
+    @apply bg-card rounded-2xl p-6 shadow-sm space-y-3 h-full;
+  }
+  .cardline-app {
+    @apply border-b border-border/50 pb-2;
+  }
+ 
+
+
   /* Custom Scrollbar Styling */
 .custom-scrollbar {
   /* For Firefox */

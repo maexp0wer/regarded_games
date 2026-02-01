@@ -3,6 +3,7 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useReadContract } from 'wagmi';
+import { useAccount } from 'wagmi';
 
 // Hooks/Abis
 import { useSeasonGini, useSeasonById } from '@/hooks/useSeasonGini';
@@ -16,9 +17,11 @@ import { SeasonDetails } from '../_components/SeasonDetails';
 import { AuctionMask } from '../_components/AuctionMask';
 import { AuctionActivityFeed } from '../_components/AuctionActivityFeed';
 import { OrderBook } from '../_components/OrderBook';
-import { OrderConfigurator } from '../_components/OrderConfigurator';
 import { TradingActivityFeed } from '../_components/TradingActivityFeed';
 import { TradingMask } from '../_components/TradingMask';
+import { OpenOrders } from '../_components/OpenOrders';
+import { useOpenOrders } from '@/hooks/useOpenOrders';
+import { PayoutMask } from '../_components/PayoutMask';
 
 // ============================================================================
 // PAGE COMPONENT: SeasonDetailPage
@@ -28,6 +31,7 @@ export default function SeasonDetailPage() {
   
   // --- 1. Routing & Metadata ---
   const { data: metadata, isLoading: isMetaLoading } = useSeasonById(seasonSlug);
+  const { address: userAddress } = useAccount();
   
   const seasonAddress = metadata?.address || '0x0';
   const auctionAddress = metadata?.auctionAddress || '0x0';
@@ -63,6 +67,10 @@ export default function SeasonDetailPage() {
     setSelectedOrders(newOrders);
   };
 
+  const handleReorderOrders = (newOrders: Order[]) => {
+  setSelectedOrders(newOrders);
+};
+
   // --- 4. Data Fetching (Gini & Config) ---
   const { data: giniData, isLoading: isGiniLoading } = useSeasonGini(seasonAddress);
   
@@ -86,6 +94,13 @@ export default function SeasonDetailPage() {
     functionName: 'getPhase',
     query: { enabled: !!seasonAddress, refetchInterval: 3000 }
   });
+
+  const { 
+    data: myOrders, 
+    refetch: refetchOpenOrders 
+  } = useOpenOrders(seasonAddress, userAddress);
+
+  const hasOrders = myOrders && myOrders.length > 0;
 
   // --- 5. Phase Change Effect ---
   useEffect(() => {
@@ -299,6 +314,7 @@ export default function SeasonDetailPage() {
                 selectedOrders={selectedOrders}
                 onRemoveOrder={handleRemoveOrder}
                 onMoveOrder={handleMoveOrder}
+                onReorderOrders={handleReorderOrders}
               />
             </div>
 
@@ -312,33 +328,39 @@ export default function SeasonDetailPage() {
             </div>
             
             
-            {/* ROW 3 - OrderConfigurator (1/3) + GiniDisplay (2/3) */}
+            {/* ROW 3 - OpenOrders (1/3) + GiniDisplay (2/3) */}            
             
-            {/* 1/3 Width: OrderConfigurator (Shown if Taker, otherwise placeholder) */}
-            <div className="lg:col-span-1 h-full"> 
-              
-            </div>
+              {/* 1. Open Orders: Only render this div if orders exist */}
+              {hasOrders && (
+                <div className="lg:col-span-1 h-full">
+                  <OpenOrders 
+                    orders={myOrders || []}
+                    exchangeAddress={exchangeAddress}
+                    onRefresh={refetchOpenOrders} 
+                  />
+                </div>
+              )}
 
-            {/* 2/3 Width: GiniDisplay */}
-            <div className="lg:col-span-3 h-full"> 
-              <GiniDisplay 
-                gCurrent={gCurrent} 
-                gInitial={gInitial}
-                socTargetBps={socTargetBps} 
-                capTargetBps={capTargetBps} 
-                winningSide={winningSide}
-                progressPercent={progressPercent}
-                currentPhase={currentPhase}
-                isAuction={false}
-                isBootstrap={false}
-              />
-            </div>
+              {/* 2. Gini Display: Change the width class based on hasOrders */}
+              <div className={`h-full ${hasOrders ? "lg:col-span-2" : "lg:col-span-3"}`}>
+                <GiniDisplay 
+                  gCurrent={gCurrent} 
+                  gInitial={gInitial}
+                  socTargetBps={socTargetBps} 
+                  capTargetBps={capTargetBps} 
+                  winningSide={winningSide}
+                  progressPercent={progressPercent}
+                  currentPhase={currentPhase}
+                  isAuction={false}
+                  isBootstrap={false}
+                />
+              </div>
             
             
             {/* ROW 4 - TradingActivityFeed (1/3) + SeasonDetails (2/3) */}
             
             <div className="lg:col-span-1 h-full"> 
-              <TradingActivityFeed/>
+              <TradingActivityFeed seasonAddress={seasonAddress}/>
             </div>
 
             <div className="lg:col-span-2 h-full"> 
@@ -353,25 +375,42 @@ export default function SeasonDetailPage() {
         )}
 
         {/* ========================================================= */}
-        {/* PAYOUT / CONCLUDED LAYOUT */}
-        {/* ========================================================= */}
-        {(!isAuctionOrBootstrap && !isTrading) && (
-            <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 h-full">
-                    <GiniDisplay 
-                        gCurrent={gCurrent} gInitial={gInitial} socTargetBps={socTargetBps} capTargetBps={capTargetBps} 
-                        winningSide={winningSide} progressPercent={progressPercent} currentPhase={currentPhase} 
-                        isAuction={false} isBootstrap={false}
-                    />
-                </div>
-                <div className="lg:col-span-1 h-full">
-                    <SeasonDetails tradingStart={tradingStart} seasonEnd={seasonEnd} M_dynamic={M_dynamic} config={config} />
-                </div>
-                <div className="lg:col-span-3 bg-card p-6 rounded-2xl text-text2 text-center border border-border/20">
-                    Season Concluded - Final Stats Area
-                </div>
-            </div>
-        )}
+{/* PAYOUT / CONCLUDED LAYOUT */}
+{/* ========================================================= */}
+{isPayout && (
+    <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* LEFT: REDEEM MASK */}
+        <div className="lg:col-span-1 h-full">
+            <PayoutMask seasonAddress={seasonAddress} />
+        </div>
+
+        {/* CENTER: RESULTS VISUALIZATION */}
+        <div className="lg:col-span-2 h-full">
+            <GiniDisplay 
+                gCurrent={gCurrent} 
+                gInitial={gInitial} 
+                socTargetBps={socTargetBps} 
+                capTargetBps={capTargetBps} 
+                winningSide={winningSide} 
+                progressPercent={progressPercent} 
+                currentPhase={currentPhase} 
+                isAuction={false} 
+                isBootstrap={false}
+            />
+        </div>
+
+        {/* BOTTOM: FINAL MANIFEST (Optional, reusing existing component) */}
+        <div className="lg:col-span-3">
+             <SeasonDetails 
+                tradingStart={tradingStart} 
+                seasonEnd={seasonEnd} 
+                M_dynamic={M_dynamic} 
+                config={config} 
+             />
+        </div>
+    </div>
+)}
 
       </div>
 

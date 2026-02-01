@@ -6,6 +6,8 @@ const PONDER_URL = "http://127.0.0.1:42069/graphql";
 
 export interface Order {
   id: string;
+  orderId: bigint;
+  seasonAddress: string;
   maker: string;
   isBuy: boolean;
   price: number;
@@ -33,7 +35,7 @@ export function useOrderBook(seasonAddress: string | undefined) {
             limit: 1000
           ) {
             items { 
-              id, maker, isBuy, price, remainingAmount, active 
+              id, maker, isBuy, price, remainingAmount, active, orderId, seasonAddress
             }
           }
           playerSeasonStatss(where: { seasonAddress: $season }) {
@@ -69,6 +71,8 @@ export function useOrderBook(seasonAddress: string | undefined) {
 
         const format = (o: any): Order => ({
           id: o.id,
+          orderId: BigInt(o.orderId),
+          seasonAddress: o.seasonAddress,
           maker: o.maker,
           isBuy: o.isBuy,
           price: Number(BigInt(o.price)) / 1_000_000, 

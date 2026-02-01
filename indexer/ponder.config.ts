@@ -9,6 +9,10 @@ import { AuctionAbi } from "./abis/AuctionAbi";
 const CONTROLLER_ADDRESS = "0x0165878A594ca255338adfa4d48449f69242Eb8F";
 
 export default createConfig({
+  database: {
+    kind: "postgres",
+    connectionString: process.env.DATABASE_URL,
+  },
   chains: {
     anvil: {
       id: 31337,
@@ -38,6 +42,7 @@ export default createConfig({
         event: parseAbiItem("event SeasonDeployed(uint256 indexed seasonId, address season, address auction, address exchange, address fim)"),
         parameter: "season",
       }),
+      startBlock: 0,
     },
     FIM: {
       abi: FimAbi,
@@ -47,6 +52,7 @@ export default createConfig({
         event: parseAbiItem("event SeasonDeployed(uint256 indexed seasonId, address season, address auction, address exchange, address fim)"),
         parameter: "fim",
       }),
+      startBlock: 0,
     },
     Exchange: {
       abi: ExchangeAbi,
@@ -56,8 +62,9 @@ export default createConfig({
         event: parseAbiItem("event SeasonDeployed(uint256 indexed seasonId, address season, address auction, address exchange, address fim)"),
         parameter: "exchange",
       }),
+      startBlock: 0,
     },
-     Auction: { // <--- NEW CONTRACT BLOCK
+     Auction: {
       abi: AuctionAbi,
       chain: "anvil",
       address: factory({

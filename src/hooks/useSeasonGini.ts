@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useReadContract } from 'wagmi';
+import { formatUnits } from "viem";
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 
 const PONDER_URL = "http://127.0.0.1:42069/graphql";
@@ -20,13 +21,10 @@ export interface SeasonMetadata {
   auctionAddress: string;
 }
 
-// --- Helper: Gini Math (Matches Solidity) ---
+// --- Helper: Gini Math ---
 function calculateGiniBps(balances: number[]): number {
   if (balances.length === 0) return 0;
-  
-  // 1. Sort Ascending (Poorest to Richest)
   const sorted = [...balances].sort((a, b) => a - b);
-  
   const N = sorted.length;
   let accumulator = 0;
   let totalBalance = 0;
@@ -39,158 +37,133 @@ function calculateGiniBps(balances: number[]): number {
   }
 
   if (totalBalance === 0) return 0;
-
-  // Formula: G = (2 * Sum(i * y) / (N * Total)) - (N+1)/N
   const term1 = (2 * accumulator) / (N * totalBalance);
   const term2 = (N + 1) / N;
   const gini = term1 - term2;
-
-  // Convert to BPS and clamp
   return Math.max(0, Math.floor(gini * 10000));
 }
 
-// --- Hook 1: Live Stats (Gini & Pool) ---
+// --- Hook 1: Metadata by Slug ---
+export function useSeasonById(slug: string | undefined) {
+  return useQuery<SeasonMetadata | null>({
+    queryKey: ["seasonById", slug],
+    queryFn: async () => {
+      if (!slug) return null;
+      const numberPart = slug.replace(/[^0-9]/g, '');
+      if (!numberPart) return null;
+      const dbId = (BigInt(numberPart) - 1n).toString();
+      
+      const query = `
+        query GetSeasonByNumber($id: BigInt!) {
+          seasonss(where: { seasonId: $id }) {
+            items { address fimAddress exchangeAddress auctionAddress }
+          }
+        }
+      `;
+
+      const response = await fetch(PONDER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, variables: { id: dbId } }),
+      });
+
+      const result = await response.json();
+      return result?.data?.seasonss?.items[0] || null;
+    },
+    enabled: !!slug,
+    staleTime: Infinity,
+  });
+}
+
+// --- Hook 2: The Core Logic (Gini + Unfilled Orders) ---
 export function useSeasonGini(seasonAddress: string | undefined) {
-  // 1. Fetch the threshold from the blockchain (Source of Truth)
   const { data: thresholdRaw } = useReadContract({
     address: seasonAddress as `0x${string}`,
     abi: GameSeasonAbi as any,
-    functionName: 'existentialThreshold', // Matches your Solidity variable
+    functionName: 'existentialThreshold',
     query: { enabled: !!seasonAddress }
   });
 
   const threshold = thresholdRaw ? BigInt(thresholdRaw.toString()) : 0n;
 
   return useQuery<SeasonLiveStats | null>({
-    // 2. Add threshold to queryKey so it refetches if the threshold changes
     queryKey: ["seasonGini", seasonAddress?.toLowerCase(), threshold.toString()],
     queryFn: async () => {
       if (!seasonAddress) return null;
-
       const addr = seasonAddress.toLowerCase();
 
       const query = `
-        query GetSeasonLiveStats($address: String!) {
-          playerSeasonStatss(
-            where: { seasonAddress: $address },
-            orderBy: "fimBalance",
-            orderDirection: "asc",
-            limit: 1000 
-          ) {
-            items {
-              playerAddress
-              fimBalance
-            }
+        query GetGiniData($address: String!) {
+          playerSeasonStatss(where: { seasonAddress: $address }, limit: 1000) {
+            items { playerAddress fimBalance }
+          }
+          orderss(where: { seasonAddress: $address, active: true, isBuy: false }, limit: 1000) {
+            items { maker remainingAmount }
           }
           seasonss(where: { address: $address }) {
-            items {
-              prizePool
-              exchangeAddress
-            }
+            items { prizePool exchangeAddress }
           }
         }
       `;
 
-      try {
-        const response = await fetch(PONDER_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query, variables: { address: addr } }),
-        });
+      const response = await fetch(PONDER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, variables: { address: addr } }),
+      });
 
-        const result = await response.json();
-        const rawPlayers = result?.data?.playerSeasonStatss?.items || [];
-        const seasonInfo = result?.data?.seasonss?.items[0];
-        const exchangeAddr = seasonInfo?.exchangeAddress?.toLowerCase();
+      const result = await response.json();
+      const rawPlayers = result?.data?.playerSeasonStatss?.items || [];
+      const rawOrders = result?.data?.orderss?.items || [];
+      const seasonInfo = result?.data?.seasonss?.items[0];
+      const exchangeAddr = seasonInfo?.exchangeAddress?.toLowerCase();
 
-        // 3. APPLY THE EXISTENTIAL FILTER
-        // We filter out the Exchange AND anyone below the threshold.
-        // Because they are "non-existent," they are removed from the count (N).
-        const validPlayers = rawPlayers.filter((p: any) => {
-            const isExchange = exchangeAddr && p.playerAddress.toLowerCase() === exchangeAddr;
-            const isAboveThreshold = BigInt(p.fimBalance) >= threshold;
-            return !isExchange && isAboveThreshold;
-        });
+      // 1. Aggregate tokens locked in SELL orders
+      const orderWealth: Record<string, bigint> = {};
+      rawOrders.forEach((o: any) => {
+        const m = o.maker.toLowerCase();
+        orderWealth[m] = (orderWealth[m] || 0n) + BigInt(o.remainingAmount);
+      });
 
-        // 4. Normalize Balances (Wei -> Ether) using only the valid participants
-        const balances = validPlayers.map((p: any) => {
-            return Number(BigInt(p.fimBalance) / 1000000000000000000n);
-        });
+      // 2. Combine Wallet + Sell Orders
+      const wealthMap = new Map<string, bigint>();
+      rawPlayers.forEach((p: any) => {
+        wealthMap.set(p.playerAddress.toLowerCase(), BigInt(p.fimBalance));
+      });
+      Object.entries(orderWealth).forEach(([maker, amt]) => {
+        wealthMap.set(maker, (wealthMap.get(maker) || 0n) + amt);
+      });
 
-        const giniBps = calculateGiniBps(balances);
+      // 3. Filter by Threshold & Calculate
+      const balances: number[] = [];
+      wealthMap.forEach((total, player) => {
+        if (player !== exchangeAddr && total >= threshold) {
+          balances.push(Number(total / 1000000000000000000n));
+        }
+      });
 
-        const rawPool = BigInt(seasonInfo?.prizePool || "0");
-        const prizePoolFormatted = Number(rawPool) / 1_000_000;
-
-        return {
-          gini: giniBps,
-          playerCount: validPlayers.length, // Now reflects only active players
-          prizePool: prizePoolFormatted
-        };
-      } catch (error) {
-        console.error("Indexer Error:", error);
-        return { gini: 0, playerCount: 0, prizePool: 0 };
-      }
+      return {
+        gini: calculateGiniBps(balances),
+        playerCount: balances.length,
+        prizePool: Number(BigInt(seasonInfo?.prizePool || "0")) / 1_000_000
+      };
     },
     enabled: !!seasonAddress,
     refetchInterval: 5000,
   });
 }
 
-// --- Hook 2: Metadata by Slug ---
-export function useSeasonById(slug: string | undefined) {
-  return useQuery<SeasonMetadata | null>({
-    queryKey: ["seasonById", slug],
-    queryFn: async () => {
-      if (!slug) return null;
+// --- Hook 3: Combined "By ID" Hook ---
+export function useGiniById(slug: string | undefined) {
+  // First, get the address
+  const { data: metadata, isLoading: loadingMeta } = useSeasonById(slug);
+  
+  // Second, get the Gini using that address
+  const giniQuery = useSeasonGini(metadata?.address);
 
-      // Extract number from slug (e.g. "season_1" -> "1")
-      const numberPart = slug.replace(/[^0-9]/g, '');
-      if (!numberPart) return null;
-      
-      // Convert to 0-based index for DB lookup
-      const dbId = (BigInt(numberPart) - 1n).toString();
-      
-      const query = `
-        query GetSeasonByNumber($id: BigInt!) {
-          seasonss(where: { seasonId: $id }) {
-            items {
-              address
-              fimAddress
-              exchangeAddress
-              auctionAddress
-            }
-          }
-        }
-      `;
-
-      try {
-        const response = await fetch(PONDER_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            query, 
-            variables: { id: dbId } 
-          }),
-        });
-
-        const result = await response.json();
-        const item = result?.data?.seasonss?.items[0];
-
-        if (!item) return null;
-
-        return {
-          address: item.address,
-          fimAddress: item.fimAddress,
-          exchangeAddress: item.exchangeAddress,
-          auctionAddress: item.auctionAddress
-        };
-      } catch (error) {
-        console.error("Failed to fetch season metadata:", error);
-        return null;
-      }
-    },
-    enabled: !!slug,
-    staleTime: Infinity,
-  });
+  return {
+    ...giniQuery,
+    isLoading: loadingMeta || giniQuery.isLoading,
+    metadata
+  };
 }

@@ -125,9 +125,6 @@ ponder.on("Auction:FimPurchased", async ({ event, context }) => {
         fimAmount: fimMinted,
         timestamp: event.block.timestamp,
     });
-    
-    // Optional: Log success
-    // console.log(`[Indexer] 💰 Auction Mint: +${formatUnits(fimMinted, 18)} to ${buyer}`);
 });
 
 // 3. Track Net Contribution (Wealth shift via EVENT)
@@ -168,10 +165,11 @@ ponder.on("GameSeason:LedgerUpdated", async ({ event, context }) => {
 });
 
 
-// 1. Order Created
+
 ponder.on("Exchange:OrderCreated", async ({ event, context }) => {
-  const { id, owner, isBuy, fimAmount, usdcPrice } = event.args;
+  const { id, owner, isBuy, fimAmount, usdcPrice } = event.args; 
   
+  // 1. Lookup Season Address (Keep your existing logic)
   const season = await context.db.sql
     .select()
     .from(schema.seasons)
@@ -179,10 +177,17 @@ ponder.on("Exchange:OrderCreated", async ({ event, context }) => {
     .limit(1);
   
   if (!season[0]) return;
+  const seasonAddress = season[0].address;
 
+  // 2. Construct the Deterministic String ID
+  // Since you are grouping by Season, "${SeasonAddress}-${OrderId}" is the safest ID.
+  const uniqueId = `${seasonAddress}-${id}`;
+
+  // 3. Insert with the new 'id' field
   await context.db.insert(schema.orders).values({
-    id: id.toString(),
-    seasonAddress: season[0].address,
+    id: uniqueId,                 // <--- NEW: The Primary Key String
+    orderId: id,                  // The contract's numeric ID
+    seasonAddress: seasonAddress, 
     maker: owner,
     isBuy: isBuy,
     price: usdcPrice,
@@ -190,34 +195,87 @@ ponder.on("Exchange:OrderCreated", async ({ event, context }) => {
     remainingAmount: fimAmount,
     active: true,
     timestamp: event.block.timestamp,
-  });
+  }).onConflictDoNothing();
 });
 
-// 2. Order Filled
+// 2. Order Filled (Fixing all issues)
 ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
-  const { id, fimAmount, usdcPrice } = event.args; // Ensure your event emits these!
+  // 1. Destructure all required event arguments
+  const { id, buyer, seller, fimAmount, usdcPrice } = event.args; 
+  
+  // 2. Find seasonAddress (Dependency)
+  const season = await context.db.sql
+    .select()
+    .from(schema.seasons)
+    .where(eq(schema.seasons.exchangeAddress, event.log.address))
+    .limit(1);
+    
+  if (!season[0]) return;
+  const seasonAddress = season[0].address;
 
-  // 1. Find the current order in the database
-  const order = await context.db.find(schema.orders, { id: id.toString() });
+  // Recreate the primary key used in insert
+  const uniqueId = `${seasonAddress}-${id}`;
+
+  // 3. Find the current order state using the primary key 'id'
+  const order = await context.db.find(schema.orders, { id: uniqueId });
   if (!order) return;
 
-  // 2. Calculate the new remaining amount
+  // 4. Calculate new remaining amount (Critical step)
   const newRemaining = order.remainingAmount - fimAmount;
 
-  // 3. Update the database
-  await context.db.update(schema.orders, { id: id.toString() }).set({
+  // 5. Update the Order state (using primary key 'id')
+  await context.db.update(schema.orders, { id: uniqueId }).set({
     remainingAmount: newRemaining,
-    // ONLY set active to false if no FIM is left
     active: newRemaining > 0n 
+  });
+
+  // 6. Record the Trade History
+  await context.db.insert(schema.trades).values({
+    // Using Transaction Hash + Log Index for unique ID
+    id: `${event.transaction.hash}-${event.log.logIndex}`, 
+    seasonAddress: seasonAddress,
+    buyer: buyer,
+    seller: seller,
+    fimAmount: fimAmount,
+    usdcAmount: usdcPrice,
+    timestamp: event.block.timestamp,
+    txHash: event.transaction.hash,
   });
 });
 
 // 3. Order Cancelled
 ponder.on("Exchange:OrderCancelled", async ({ event, context }) => {
-  const { id } = event.args;
+  const { id } = event.args; // Order ID
   
-  await context.db.update(schema.orders, { id: id.toString() }).set({
+  // 1. Find seasonAddress (Dependency)
+  const season = await context.db.sql.select().from(schema.seasons).where(eq(schema.seasons.exchangeAddress, event.log.address)).limit(1);
+  if (!season[0]) return;
+  const seasonAddress = season[0].address;
+
+  // Recreate the primary key used in insert
+  const uniqueId = `${seasonAddress}-${id}`;
+
+  // 2. Update using the primary key 'id'
+  await context.db.update(schema.orders, { id: uniqueId }).set({ // <-- FIXED
     active: false,
     remainingAmount: 0n
   });
+});
+
+ponder.on("GameSeason:PayoutClaimed", async ({ event, context }) => {
+  const { user, amount } = event.args;
+  const seasonAddress = event.log.address;
+
+  await context.db
+    .insert(playerSeasonStats)
+    .values({
+      seasonAddress: seasonAddress,
+      playerAddress: user,
+      fimBalance: 0n,
+      netContribution: 0n,
+      realizedPayout: amount, // Initialize if row missing (unlikely)
+    })
+    .onConflictDoUpdate((row) => ({
+      realizedPayout: row.realizedPayout + amount,
+    }));
 });

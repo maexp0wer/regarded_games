@@ -199,7 +199,7 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
 
                 {/* 3. Participants (Left-aligned content) */}
                 <div className="flex flex-col items-start text-left w-1/4">
-                    <span className="text-[9px] uppercase font-bold text-text2 tracking-widest mb-0.5">Participants</span>
+                    <span className="h3-app">Participants</span>
                     <span className="text-xl font-black text-text tracking-tighter leading-none">
                         {(giniData?.playerCount ?? 0).toLocaleString()}
                     </span>
@@ -222,7 +222,7 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
                 
                 {/* 1. GINI / PROGRESS (Left - 1/3) */}
                 <div className="flex flex-col justify-center gap-2 lg:col-span-1">
-                    <span className="text-[10px] uppercase font-bold text-text2 tracking-widest">
+                    <span className="h3-app">
                         Live Gini Position
                     </span>
                     <div className="flex flex-col gap-1">
@@ -408,7 +408,7 @@ export function SeasonsList() {
             />
         ))}
         {filtered.length === 0 && (
-            <div className="p-8 text-center bg-card rounded-xl border border-dashed border-border text-text2 text-sm">
+            <div className="p-8 text-center bg-card rounded-xl border-border text-text2 text-sm">
                 No active seasons found.
             </div>
         )}

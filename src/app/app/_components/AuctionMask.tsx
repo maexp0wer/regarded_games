@@ -262,7 +262,7 @@ function AuctionMaskInner({
     <div className="bg-card rounded-xl p-5 shadow-sm transition-all space-y-6 w-full h-full">
       
       <div className="flex flex-col">
-          <span className="text-[10px] uppercase font-bold text-text2 tracking-widest mb-1">FIM Balance</span>
+          <span className="h3-app">FIM Balance</span>
           <span className="text-lg md:text-2xl font-black text-primary leading-none">{fimDisplayValue}</span>
         </div>
 
@@ -360,4 +360,3 @@ function AuctionMaskInner({
     </div>
   );
 }
-// *************************************************
