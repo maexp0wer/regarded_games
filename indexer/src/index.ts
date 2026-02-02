@@ -265,17 +265,49 @@ ponder.on("Exchange:OrderCancelled", async ({ event, context }) => {
 ponder.on("GameSeason:PayoutClaimed", async ({ event, context }) => {
   const { user, amount } = event.args;
   const seasonAddress = event.log.address;
+  const id = `${seasonAddress}:${user}`; // IMPORTANT: Must match the other handler's ID
+
+  await context.db
+    .insert(playerSeasonStats)
+    // You must provide the ID here so onConflictDoUpdate knows which row to update
+    .values({ 
+      id: id,
+      seasonAddress: seasonAddress,
+      playerAddress: user,
+      fimBalance: 0n, 
+      netContribution: 0n,
+      totalPotentialPayout: 0n, // Defaults
+      realizedPayout: amount, 
+    })
+    .onConflictDoUpdate((row) => ({
+      // Only update realizedPayout on claim
+      realizedPayout: row.realizedPayout + amount,
+    }));
+});
+
+ponder.on("GameSeason:PlayerSeasonStatsFinalized", async ({ event, context }) => {
+  const { user, totalPotentialPayoutUSDC, netContributions, fimBalances } = event.args;
+  const seasonAddress = event.log.address.toLowerCase() as `0x${string}`;
+  const playerAddress = user.toLowerCase() as `0x${string}`;
+  
+  // LOGGING (Good practice)
+  console.log(`Finalized for ${playerAddress}: Payout ${totalPotentialPayoutUSDC}`);
 
   await context.db
     .insert(playerSeasonStats)
     .values({
+      // Provide the key fields
       seasonAddress: seasonAddress,
-      playerAddress: user,
-      fimBalance: 0n,
-      netContribution: 0n,
-      realizedPayout: amount, // Initialize if row missing (unlikely)
+      playerAddress: playerAddress,
+      
+      // Provide all fields you want to set for this event
+      fimBalance: fimBalances,
+      netContribution: netContributions, // Ensure you handle int256 -> BigInt here!
+      totalPotentialPayout: totalPotentialPayoutUSDC, 
+      realizedPayout: 0n, // Explicitly set or re-set claimed to 0 if this is the only insert
     })
-    .onConflictDoUpdate((row) => ({
-      realizedPayout: row.realizedPayout + amount,
+    .onConflictDoUpdate(() => ({
+      totalPotentialPayout: totalPotentialPayoutUSDC,
+      fimBalance: fimBalances,
     }));
 });

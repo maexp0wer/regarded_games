@@ -7,6 +7,8 @@ import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 // Hooks
 import { usePayout } from '@/hooks/usePayout';
 import { usePlayerPercentile } from '@/hooks/usePlayerPercentile';
+import PlayerRankDisplay from './PlayerRankDisplay'; // Adjust path
+
 
 // Icons
 import Ritardo from '@/components/icons/Ritardo.svg';
@@ -189,6 +191,11 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
           )}
         </div>
       </div>
+
+      <PlayerRankDisplay 
+        seasonAddress={seasonAddress} 
+        userAddress={address} 
+      />
 
 
       {/* USER STATS */}
