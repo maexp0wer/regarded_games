@@ -1,9 +1,26 @@
 'use client';
 
+import React, { useMemo } from 'react';
 import { useRecentTrades } from "@/hooks/useRecentTrades";
+import { useBatchPlayerPercentiles } from "@/hooks/useBatchPlayerPercentiles";
+import { PercentileCircle } from "./PercentileCircle";
 
 export function TradingActivityFeed({ seasonAddress }: { seasonAddress: string }) {
   const { data: trades, isLoading } = useRecentTrades(seasonAddress);
+
+  // 1. Gather all unique participants (Sellers & Buyers) for batch fetching
+  const participants = useMemo(() => {
+    if (!trades) return [];
+    const addrs = new Set<string>();
+    trades.forEach(t => {
+      if (t.seller) addrs.add(t.seller.toLowerCase());
+      if (t.buyer) addrs.add(t.buyer.toLowerCase());
+    });
+    return Array.from(addrs);
+  }, [trades]);
+
+  // 2. Fetch Percentile Data for everyone in the feed
+  const { data: percentileMap, isFetching } = useBatchPlayerPercentiles(seasonAddress, participants);
 
   const formatTime = (ts: number) => {
     return new Date(ts * 1000).toLocaleTimeString([], { 
@@ -14,83 +31,86 @@ export function TradingActivityFeed({ seasonAddress }: { seasonAddress: string }
     });
   };
 
-  const short = (addr: string | undefined | null) => {
-    if (!addr) return '...';
-    return `${addr.substring(0, 4)}..${addr.substring(addr.length - 4)}`;
-  };
-
-  // Helper to format large balances (e.g. 1.2k, 500)
-  const formatBal = (bal: number) => {
-    if (bal >= 1000000) return (bal / 1000000).toFixed(1) + 'M';
-    if (bal >= 1000) return (bal / 1000).toFixed(1) + 'k';
-    return bal.toFixed(0);
-  };
-
   return (
-    <div className="card-app">
-                <h3 className="h3-app cardline-app">Recent Activity</h3>
+    <div className="bg-card rounded-xl p-6 shadow-sm h-full flex flex-col">
+      {/* Header Area */}
+      <div className="flex justify-between items-center border-b border-border/40 pb-3">
+        <h3 className="text-[9px] font-black uppercase text-text2 tracking-[0.2em]">Recent Activity</h3>
+      </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar relative">
         {isLoading ? (
-            <div className="absolute inset-0 flex items-center justify-center text-xs text-text2 animate-pulse">
-                Scanning Ledger...
-            </div>
+          <div className="absolute inset-0 flex items-center justify-center text-[10px] uppercase font-bold text-text2 animate-pulse">
+            Scanning Ledger...
+          </div>
         ) : !trades || trades.length === 0 ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center opacity-40">
-                <span className="text-xl">📉</span>
-                <p className="text-[10px] mt-2 font-bold uppercase text-text2">No Trades Yet</p>
-            </div>
+          <p className="text-[10px] uppercase font-bold text-text2 italic text-center py-12 opacity-40">
+            No Trades Found
+          </p>
         ) : (
-            <div className="space-y-2">
-                {trades.map((trade) => (
-                    <div 
-                        key={trade.id} 
-                        className="bg-card2/50 p-2 rounded-lg flex justify-between items-center transition-all text-xs"
-                    >
-                        {/* Price & Volume */}
-                        <div className="flex flex-col min-w-[60px]">
-                            <span className="font-mono font-bold text-text">
-                                ${trade.price.toFixed(4)}
-                            </span>
-                            <span className="text-[9px] text-text2 font-mono">
-                                {trade.amount.toFixed(0)} Vol
-                            </span>
-                        </div>
+          <div className="space-y-1">
+            {trades.map((trade) => {
+              const sellerStats = percentileMap?.[trade.seller?.toLowerCase() || ''];
+              const buyerStats = percentileMap?.[trade.buyer?.toLowerCase() || ''];
 
-                        {/* Flow: Seller -> Buyer (With Balances) */}
-                        <div className="flex items-center gap-2 px-1">
-                            
-                            {/* Seller */}
-                            <div className="flex flex-col items-end">
-                                <span className="font-mono text-[10px] text-danger/80 bg-danger/5 px-1 rounded">
-                                    {short(trade.seller)}
-                                </span>
-                                <span className="text-[8px] text-text2 font-mono mt-0.5" title="Seller Holding">
-                                    {formatBal(trade.sellerBalance)}
-                                </span>
-                            </div>
+              return (
+                <div 
+                  key={trade.id} 
+                  className="flex items-center justify-between py-2 border-b border-border/5 transition-colors gap-4"
+                >
+                  
+                  {/* 1. LEFT SIDE: TIME (Pushed to left edge) */}
+                  <div className="flex-1 flex justify-start">
+                    <span className="text-text2 text-xs font-mono leading-none">
+                      {formatTime(trade.timestamp)}
+                    </span>
+                  </div>
 
-                            <span className="text-[8px] text-text2">➔</span>
-
-                            {/* Buyer */}
-                            <div className="flex flex-col items-start">
-                                <span className="font-mono text-[10px] text-success/80 bg-success/5 px-1 rounded">
-                                    {short(trade.buyer)}
-                                </span>
-                                <span className="text-[8px] text-text2 font-mono mt-0.5" title="Buyer Holding">
-                                    {formatBal(trade.buyerBalance)}
-                                </span>
-                            </div>
-
-                        </div>
-
-                        {/* Time */}
-                        <div className="text-[10px] text-text2 font-mono text-right min-w-[40px]">
-                            {formatTime(trade.timestamp)}
-                        </div>
+                  {/* 2. MIDDLE SIDE: PARTICIPANTS (Centered Anchor) */}
+                  <div className="shrink-0 flex items-center justify-left gap-3">
+                    {/* Seller Container */}
+                    <div className="flex items-center">
+                      {sellerStats ? (
+                        <PercentileCircle 
+                          percentage={sellerStats.factionPercentile} 
+                          isCapitalist={sellerStats.isCapitalist} 
+                          size="sm"
+                        />
+                      ) : (
+                        <span className="text-[9px] opacity-20 italic">anon</span>
+                      )}
                     </div>
-                ))}
-            </div>
+                    
+                    <span className="text-text2 text-[10px] opacity-30 shrink-0">➔</span>
+                    
+                    {/* Buyer Container */}
+                    <div className="flex items-center">
+                      {buyerStats ? (
+                        <PercentileCircle 
+                          percentage={buyerStats.factionPercentile} 
+                          isCapitalist={buyerStats.isCapitalist} 
+                          size="sm"
+                        />
+                      ) : (
+                        <span className="text-[9px] opacity-20 italic">anon</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 3. RIGHT SIDE: FINANCIALS (Pushed to right edge) */}
+                  <div className="flex-1 flex items-center justify-end whitespace-nowrap gap-2">
+                    <span className="text-primary font-bold font-mono text-xs leading-none">
+                      {trade.amount.toLocaleString()} FIM
+                    </span>
+                    <span className="text-text2 font-mono text-[9px] opacity-80 leading-none">
+                      (${trade.price.toFixed(4)})
+                    </span>
+                  </div>
+
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>

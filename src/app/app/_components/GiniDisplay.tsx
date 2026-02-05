@@ -99,18 +99,35 @@ function TradingGauge({ gCurrent, gInitial, socTarget, capTarget, winningSide, p
         <h2 className="h2-app">
            {isFinal ? "Final Gini Position" : "Live Gini Position"}
         </h2>
-        <div className="text-right">
-            <span className="text-xs uppercase text-text2 font-bold block">Start Line (Initial) {gInitial.toLocaleString()} BPS</span>
-        </div>
+
       </div>
 
       <div className="relative w-full h-2 bg-card2 rounded-full my-16">
         
-        {/* Initial Marker (Track Tick) */}
-        <div 
-          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-text2/30 rounded-full z-10 -translate-x-1/2 border-2 border-card"
-          style={{ left: `${getPosition(gInitial)}%` }}
-        />
+        {/* --- INITIAL MARKER (BOTTOM LABEL) --- */}
+      <div 
+          className="absolute -translate-x-1/2 flex flex-col items-center z-20" 
+          style={{ 
+              left: `${getPosition(gInitial)}%`, 
+              top: 'calc(50% + 8px)' // Starts exactly below the center-track dot
+          }}
+      >
+          {/* Short Vertical Line (Tick) pointing up to the dot */}
+          <div className="w-0.5 h-2 bg-text2/30 mb-1"></div>
+
+          {/* The Mono Number (Slightly smaller: text-base) */}
+          <span className="text-xs font-black text-text2/50 font-mono leading-none">
+              {gInitial.toLocaleString()}
+          </span>
+
+          {/* Subtitle (Slightly smaller: text-[8px]) */}
+          <span className="text-[8px] uppercase font-bold text-text2/30 tracking-widest mt-0.5">
+              Initial
+          </span>
+      </div>
+
+      
+        
 
         {/* --- ICONS (TOP) --- */}
         <div className="absolute bottom-4 -translate-x-1/2 flex flex-col items-center z-10" style={{ left: `${getPosition(socTarget)}%` }}>
@@ -128,9 +145,10 @@ function TradingGauge({ gCurrent, gInitial, socTarget, capTarget, winningSide, p
             <div className="flex flex-col items-center gap-1 mt-0.5">
                 <span className="text-[9px] uppercase font-bold text-danger/50 tracking-widest">Target</span>
                 {winningSide === 'soc' && (
-                    <span className="text-[9px] font-black text-white bg-danger px-1.5 py-0.5 rounded animate-pulse whitespace-nowrap shadow-sm">
-                        {progress.toFixed(1)}% Progress
-                    </span>
+                  <span className={`text-[9px] font-bold text-card bg-danger px-1.5 py-0.5 rounded whitespace-nowrap shadow-sm ${isFinal ? '' : 'animate-pulse'}`}>
+                    {progress.toFixed(1)}% Progress
+                  </span>
+ 
                 )}
             </div>
         </div>
@@ -142,7 +160,7 @@ function TradingGauge({ gCurrent, gInitial, socTarget, capTarget, winningSide, p
             <div className="flex flex-col items-center gap-1 mt-0.5">
                 <span className="text-[9px] uppercase font-bold text-info/50 tracking-widest">Target</span>
                 {winningSide === 'cap' && (
-                    <span className="text-[9px] font-black text-white bg-info px-1.5 py-0.5 rounded animate-pulse whitespace-nowrap shadow-sm">
+                    <span className={`text-[9px] font-bold text-card bg-info px-1.5 py-0.5 rounded whitespace-nowrap shadow-sm ${isFinal ? '' : 'animate-pulse'}`}>
                         {progress.toFixed(1)}% Progress
                     </span>
                 )}
@@ -168,9 +186,11 @@ function TradingGauge({ gCurrent, gInitial, socTarget, capTarget, winningSide, p
 
         {/* Dots */}
         <div className="absolute inset-0 flex items-center">
-            <div className="absolute w-3 h-3 rounded-full z-20 -translate-x-1/2 shadow-lg transition-all duration-700 bg-primary" style={{ left: `${getPosition(gCurrent)}%` }} />
+            <div className={`absolute w-3 h-3 rounded-full z-20 -translate-x-1/2 transition-all duration-700 bg-primary ${isFinal ? '' : 'animate-pulse'}`} style={{ left: `${getPosition(gCurrent)}%` }} />
             <div className="absolute w-2 h-2 bg-danger rounded-full z-20 -translate-x-1/2" style={{ left: `${getPosition(socTarget)}%` }} />
             <div className="absolute w-2 h-2 bg-info rounded-full z-20 -translate-x-1/2" style={{ left: `${getPosition(capTarget)}%` }} />
+            <div className="absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-text2/30 rounded-full z-10 -translate-x-1/2"style={{ left: `${getPosition(gInitial)}%` }}
+      />
         </div>
       </div>
     </>

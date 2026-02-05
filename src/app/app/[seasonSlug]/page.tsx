@@ -22,6 +22,7 @@ import { TradingMask } from '../_components/TradingMask';
 import { OpenOrders } from '../_components/OpenOrders';
 import { useOpenOrders } from '@/hooks/useOpenOrders';
 import { PayoutMask } from '../_components/PayoutMask';
+import PlayerRankDisplay from '../_components/PlayerRankDisplay'; // Path to the UPDATED PlayerRankDisplay
 
 // ============================================================================
 // PAGE COMPONENT: SeasonDetailPage
@@ -303,6 +304,7 @@ export default function SeasonDetailPage() {
             {/* 1/3 Width: TradingMask (With State Passed Down) */}
             <div className="lg:col-span-1 h-full"> 
               <TradingMask
+                seasonAddress={seasonAddress}
                 exchangeAddress={exchangeAddress}
                 fimAddress={fimAddress}
                 isBuy={isBuy} 
@@ -379,37 +381,43 @@ export default function SeasonDetailPage() {
 {/* ========================================================= */}
 {isPayout && (
     <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* LEFT: REDEEM MASK */}
-        <div className="lg:col-span-1 h-full">
-            <PayoutMask seasonAddress={seasonAddress} />
-        </div>
-
-        {/* CENTER: RESULTS VISUALIZATION */}
-        <div className="lg:col-span-2 h-full">
-            <GiniDisplay 
-                gCurrent={gCurrent} 
-                gInitial={gInitial} 
-                socTargetBps={socTargetBps} 
-                capTargetBps={capTargetBps} 
-                winningSide={winningSide} 
-                progressPercent={progressPercent} 
-                currentPhase={currentPhase} 
-                isAuction={false} 
-                isBootstrap={false}
-            />
-        </div>
-
-        {/* BOTTOM: FINAL MANIFEST (Optional, reusing existing component) */}
-        <div className="lg:col-span-3">
-             <SeasonDetails 
-                tradingStart={tradingStart} 
-                seasonEnd={seasonEnd} 
-                M_dynamic={M_dynamic} 
-                config={config} 
-             />
-        </div>
+    
+    {/* LEFT: REDEEM MASK */}
+    <div className="lg:col-span-1">
+        <PayoutMask seasonAddress={seasonAddress} />
     </div>
+    
+    {/* CENTER: RESULTS VISUALIZATION */}
+    {/* Changed: Removed h-full, added flex-col & gap to ensure the grid row expands to fit both components */}
+    <div className="lg:col-span-2 flex flex-col gap-6">
+        <PlayerRankDisplay 
+            seasonAddress={seasonAddress} 
+            userAddress={userAddress || ''} 
+        />
+    
+        <GiniDisplay 
+            gCurrent={gCurrent} 
+            gInitial={gInitial} 
+            socTargetBps={socTargetBps} 
+            capTargetBps={capTargetBps} 
+            winningSide={winningSide} 
+            progressPercent={progressPercent} 
+            currentPhase={currentPhase} 
+            isAuction={false} 
+            isBootstrap={false}
+        />
+    </div>
+
+    {/* BOTTOM: FINAL MANIFEST */}
+    <div className="lg:col-span-3">
+            <SeasonDetails 
+            tradingStart={tradingStart} 
+            seasonEnd={seasonEnd} 
+            M_dynamic={M_dynamic} 
+            config={config} 
+            />
+    </div>
+</div>
 )}
 
       </div>

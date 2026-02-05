@@ -2,19 +2,20 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useReadContract } from 'wagmi';
-import { formatUnits } from "viem";
+// import { formatUnits } from "viem"; // Removed, we pass raw BigInts to API to be precise
+
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 
-const PONDER_URL = "http://127.0.0.1:42069/graphql";
-
 export interface PercentileData {
-  factionPercentile: number; // 0% (edge) to 100% (equilibrium center)
+  factionPercentile: number;
   isCapitalist: boolean;
   totalInFaction: number;
   factionRank: number;
 }
 
 export function usePlayerPercentile(seasonAddress: string | undefined, userAddress: string | undefined) {
+  
+  // 1. Get the Threshold from the Contract
   const { data: massThresholdRaw } = useReadContract({
     address: seasonAddress as `0x${string}`,
     abi: GameSeasonAbi,
@@ -22,75 +23,40 @@ export function usePlayerPercentile(seasonAddress: string | undefined, userAddre
     query: { enabled: !!seasonAddress }
   });
   
-  const massThreshold = massThresholdRaw ? Number(formatUnits(massThresholdRaw as bigint, 18)) : 0;
-  
+  // We keep the threshold as a string to preserve BigInt precision when sending to API
+  const massThresholdStr = massThresholdRaw ? massThresholdRaw.toString() : "0";
+
   return useQuery<PercentileData | null>({
-    queryKey: ["playerFactionStanding", seasonAddress, userAddress, massThreshold],
+    queryKey: ["playerFactionStanding", seasonAddress, userAddress, massThresholdStr],
+    
+    // Only fetch if we have all necessary data
+    enabled: !!seasonAddress && !!userAddress && !!massThresholdRaw,
+    
     queryFn: async () => {
       if (!userAddress || !seasonAddress) return null;
 
-      const sAddr = seasonAddress.toLowerCase();
-      const uAddr = userAddress.toLowerCase();
-
-      // IMPORTANT: Using plural 'playerSeasonStatss' because of composite primary key
-      const query = `
-        query GetStanding($season: String!, $player: String!) {
-          userStats: playerSeasonStatss(
-            where: { seasonAddress: $season, playerAddress: $player }
-          ) {
-            items { fimBalance }
-          }
-          allPlayers: playerSeasonStatss(
-            where: { seasonAddress: $season },
-            orderBy: "fimBalance",
-            orderDirection: "asc",
-            limit: 1000
-          ) {
-            items { playerAddress, fimBalance }
-          }
-        }
-      `;
-
       try {
-        const response = await fetch(PONDER_URL, {
+        const response = await fetch("/api/player-percentile", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query, variables: { season: sAddr, player: uAddr } }),
+          body: JSON.stringify({ 
+            seasonAddress, 
+            userAddress, 
+            massThreshold: massThresholdStr 
+          }),
         });
 
-        const result = await response.json();
-        const userItem = result?.data?.userStats?.items?.[0];
-        const allItems = result?.data?.allPlayers?.items || [];
+        if (!response.ok) return null;
+        
+        const data = await response.json();
+        if (!data) return null;
 
-        if (!userItem || allItems.length === 0) return null;
-
-        const userBalance = Number(formatUnits(BigInt(userItem.fimBalance), 18));
-        const isCapitalist = userBalance > massThreshold;
-
-        // Group into faction
-        const factionMembers = allItems
-            .map((p: any) => ({
-                address: p.playerAddress.toLowerCase(),
-                balance: Number(formatUnits(BigInt(p.fimBalance), 18))
-            }))
-            .filter((p: any) => isCapitalist ? p.balance > massThreshold : p.balance <= massThreshold);
-
-        const indexInFaction = factionMembers.findIndex((p: any) => p.address === uAddr);
-        const safeIndex = indexInFaction === -1 ? 0 : indexInFaction;
-
-        return {
-          // 0% = Poorest in Faction, 100% = Richest in Faction
-          factionPercentile: (safeIndex / (factionMembers.length - 1 || 1)) * 100,
-          isCapitalist,
-          totalInFaction: factionMembers.length,
-          factionRank: factionMembers.length - safeIndex
-        };
+        return data as PercentileData;
       } catch (e) {
         console.error("Percentile Hook Error:", e);
         return null;
       }
     },
-    enabled: !!seasonAddress && !!userAddress, 
     refetchInterval: 10000, 
   });
 }

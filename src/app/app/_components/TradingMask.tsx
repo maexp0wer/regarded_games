@@ -7,8 +7,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import ExchangeAbi from '@/deployments/abis/Exchange.json';
 import { Order } from '@/hooks/useOrderBook';
 import Core from '@/deployments/core.json';
+import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
+import { PercentileCircle } from './PercentileCircle';
 
 interface TradingMaskProps {
+  seasonAddress: string;
   exchangeAddress: string;
   fimAddress: string;
   isBuy: boolean;
@@ -33,7 +36,7 @@ interface GroupedOrder extends Order {
 }
 
 export function TradingMask({ 
-  exchangeAddress, fimAddress, isBuy, setIsBuy, isMaker, setIsMaker, 
+  seasonAddress, exchangeAddress, fimAddress, isBuy, setIsBuy, isMaker, setIsMaker, 
   targetAmount, setTargetAmount, selectedOrders, onRemoveOrder, onMoveOrder, onReorderOrders
 }: TradingMaskProps) {
   
@@ -69,6 +72,7 @@ export function TradingMask({
     query: { enabled: !!address, refetchInterval: 5000 }
   });
 
+  
   // --- 2. CALCULATIONS ---
   
   // NEW: Group Consecutive Orders Logic
@@ -105,6 +109,45 @@ export function TradingMask({
     return groups;
   }, [selectedOrders]);
 
+
+  const queueMakers = useMemo(() => 
+    Array.from(new Set(groupedQueue.map(g => g.maker?.toLowerCase()).filter(Boolean))), 
+    [groupedQueue]
+  );
+
+  // Added isFetched to detect when the API call is actually done
+  const { 
+    data: percentileMap, 
+    isLoading: isPercentileLoading, 
+    isFetched 
+  } = useBatchPlayerPercentiles(seasonAddress, queueMakers);
+
+  // Helper to render Identity (Icon vs Address)
+  const renderMakerIdentity = (maker: string) => {
+    const mAddr = maker.toLowerCase();
+    const stats = percentileMap?.[mAddr];
+
+    if (isPercentileLoading && !isFetched) {
+      return <span className="text-[8px] bg-card2 px-1.5 py-0.5 rounded text-text2 animate-pulse">Loading...</span>;
+    }
+
+    if (stats) {
+      return (
+        <PercentileCircle 
+          percentage={stats.factionPercentile} 
+          isCapitalist={stats.isCapitalist} 
+          size="xl"
+        />
+      );
+    }
+
+    // Fallback: Show address if player not found in stats DB
+    return (
+      <span className="text-[8px] bg-card2 px-1.5 py-0.5 rounded text-text2">
+        {maker.slice(0, 6)}...{maker.slice(-4)}
+      </span>
+    );
+  };
 
   const executionPayload = useMemo(() => {
     if (isMaker) return { ids: [], amounts: [], totalCostRaw: 0n, totalFimRaw: 0n };
@@ -277,18 +320,41 @@ export function TradingMask({
 
   if (!isConnected) return <div className="p-6 bg-card rounded-xl border border-border/10 text-center text-text2 text-sm">Please Connect Wallet</div>;
 
+  const userMakers = useMemo(() => (address ? [address.toLowerCase()] : []), [address]);
+  const { data: userStatsMap, isFetched: userStatsFetched } = useBatchPlayerPercentiles(seasonAddress, userMakers);
+  const userStats = address ? userStatsMap?.[address.toLowerCase()] : undefined;
+
   return (
     <div className="flex flex-col h-full">
     <div className="bg-card rounded-t-2xl p-6 pb-2 shadow-sm space-y-3 flex flex-col">
       {/* WALLET BALANCES */}
-      <div className="grid grid-cols-2 pb-4 border-b border-border/10">
-          <div className="flex flex-col text-left">
-            <span className="h3-app mb-1">FIM Balance</span>
-            <span className="text-lg md:text-2xl font-black text-primary block leading-none">
-                {Number(formatUnits(fimBalance || 0n, 18)).toLocaleString()}
-            </span>
-          </div>
-      </div>
+<div className="grid grid-cols-2 pb-4 border-b border-border/10">
+    {/* FIM Balance */}
+    <div className="flex flex-col text-left">
+        <span className="h3-app mb-1">FIM Balance</span>
+        <span className="text-lg md:text-2xl font-black text-primary block leading-none">
+            {Number(formatUnits(fimBalance || 0n, 18)).toLocaleString()}
+        </span>
+    </div>
+
+    {/* Stats Section */}
+    <div className="flex flex-col text-left">
+        
+        <div className="flex items-center h-full">
+            {userStats ? (
+                <PercentileCircle 
+                    percentage={userStats.factionPercentile} 
+                    isCapitalist={userStats.isCapitalist} 
+                    size="lg"
+                />
+            ) : (
+                <span className="text-text2 text-[10px] uppercase font-bold tracking-widest opacity-50">
+                    {userStatsFetched ? "No Rank Yet" : "Loading..."}
+                </span>
+            )}
+        </div>
+    </div>
+</div>
   </div>
       <div className="bg-card rounded-b-2xl p-6 pt-2 shadow-sm space-y-3 h-full flex flex-col">
 
@@ -393,70 +459,83 @@ export function TradingMask({
           </>
         ) : (
           /* TAKER EXECUTION QUEUE (GROUPED) */
-          <div className="flex flex-col flex-1">
-            <label className="h3-app mb-2 px-1">Order Execution Queue</label>
-            <div className="flex-1 overflow-y-auto custom-scrollbar bg-card p-2 rounded-xl space-y-2 border border-border/10">
-                {groupedQueue.length === 0 ? (
-                    <div className="h-full bg-card rounded-xl flex flex-col items-center justify-center opacity-80 py-10">
-                        <p className="h3-app">Select Order(s) from Order Book</p>
+        <div className="flex flex-col flex-1">
+          <label className="h3-app mb-2 px-1">Order Execution Queue</label>
+          <div className="flex-1 overflow-y-auto custom-scrollbar bg-card p-2 rounded-xl space-y-2 border border-border/10">
+            {groupedQueue.length === 0 ? (
+              <div className="h-full bg-card rounded-xl flex flex-col items-center justify-center opacity-80 py-10">
+                <p className="h3-app">Select Order(s) from Order Book</p>
+              </div>
+            ) : (
+              groupedQueue.map((group, groupIdx) => {
+                const limit = Number(targetAmount) || Infinity;
+                const filledBefore = groupedQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
+                const localFill = Math.max(0, Math.min(group.amount, limit - filledBefore));
+                
+                // Lookup percentile data
+                const stats = percentileMap?.[group.maker?.toLowerCase()];
+
+                return (
+                  <div 
+                    key={group.ids[0]} 
+                    draggable 
+                    onDragStart={() => setDraggedGroupIdx(groupIdx)} 
+                    onDragOver={(e) => handleGroupDragOver(e, groupIdx)} 
+                    onDragEnd={() => setDraggedGroupIdx(null)}
+                    className={`bg-card2 p-3 rounded-lg border flex justify-between items-center cursor-grab active:cursor-grabbing transition-all
+                        ${draggedGroupIdx === groupIdx ? 'opacity-40 border-text ring-1 ring-primary/20' : 'border-none shadow-sm'}
+                        ${localFill === 0 ? 'grayscale opacity-40' : 'opacity-100'}
+                    `}>
+                    <div className="flex items-center gap-3">
+                      <div className="text-text text-[10px]">☰</div>
+                      <div className="flex flex-col text-left">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[11px] font-bold ${group.isBuy ? 'text-success' : 'text-danger'}`}>
+                            ${parseFloat(group.unitPrice).toFixed(4)}
+                          </span>
+                          
+                          
+                        </div>
+                        <span className="text-[11px] text-text2 font-bold uppercase mt-0.5">
+                          Fill: {localFill.toLocaleString()} / {group.amount.toLocaleString()} FIM
+                        </span>
+                      </div>
                     </div>
-                ) : (
-                    groupedQueue.map((group, groupIdx) => {
-                        const limit = Number(targetAmount) || Infinity;
-                        
-                        // Calculate fills based on previous GROUPS
-                        const filledBefore = groupedQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
-                        const localFill = Math.max(0, Math.min(group.amount, limit - filledBefore));
-                        
-                        return (
-                            <div 
-                              key={group.ids[0]} // Use first ID as key
-                              draggable 
-                              onDragStart={() => setDraggedGroupIdx(groupIdx)} 
-                              onDragOver={(e) => handleGroupDragOver(e, groupIdx)} 
-                              onDragEnd={() => setDraggedGroupIdx(null)}
-                              className={`bg-card2 p-3 rounded-lg border flex justify-between items-center cursor-grab active:cursor-grabbing transition-all
-                                  ${draggedGroupIdx === groupIdx ? 'opacity-40 border-text ring-1 ring-primary/20' : 'border-none shadow-sm'}
-                                  ${localFill === 0 ? 'grayscale opacity-40' : 'opacity-100'}
-                              `}>
-                                <div className="flex items-center gap-3">
-                                    <div className="text-text text-[10px]">☰</div>
-                                    <div className="flex flex-col text-left">
-                                        <div className="flex items-center gap-2">
-                                            <span className={`text-[11px] font-bold ${group.isBuy ? 'text-success' : 'text-danger'}`}>
-                                                ${parseFloat(group.unitPrice).toFixed(4)}
-                                            </span>
-                                            <span className="text-[8px] bg-card2 px-1.5 py-0.5 rounded text-text2">
-                                                {group.maker?.slice(0,6)}...{group.maker?.slice(-4)}
-                                            </span>
-                                        </div>
-                                        <span className="text-[11px] text-text2 font-bold uppercase mt-0.5">
-                                            Fill: {localFill.toLocaleString()} / {group.amount.toLocaleString()} FIM
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <button 
-                                      onClick={() => handleMoveGroupButton(groupIdx, -1)} 
-                                      disabled={groupIdx === 0} 
-                                      className="bg-text/50 p-1 px-2 rounded text-bg text-[8px] hover:bg-primary hover:text-bg transition-colors"
-                                    >▲</button>
-                                    <button 
-                                      onClick={() => handleMoveGroupButton(groupIdx, 1)} 
-                                      disabled={groupIdx === groupedQueue.length - 1} 
-                                      className="bg-text/50 p-1 px-2 rounded text-bg text-[8px] hover:bg-primary hover:text-bg transition-colors"
-                                    >▼</button>
-                                    <button 
-                                      onClick={() => handleRemoveGroup(group)} 
-                                      className="text-text2 hover:text-primary ml-1 p-1"
-                                    >×</button>
-                                </div>
-                            </div>
-                        );
-                    })
-                )}
-            </div>
+
+                    {/* REPLACED ADDRESS WITH PERCENTILE COMPONENT */}
+                          {stats ? (
+                            <PercentileCircle 
+                              percentage={stats.factionPercentile} 
+                              isCapitalist={stats.isCapitalist} 
+                              size="md"
+                            />
+                          ) : (
+                            <span className="text-[8px] bg-card2 px-1.5 py-0.5 rounded text-text2 animate-pulse">
+                              Loading...
+                            </span>
+                          )}
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => handleMoveGroupButton(groupIdx, -1)} 
+                        disabled={groupIdx === 0} 
+                        className="bg-text/50 p-1 px-2 rounded text-bg text-[8px] hover:bg-primary hover:text-bg transition-colors"
+                      >▲</button>
+                      <button 
+                        onClick={() => handleMoveGroupButton(groupIdx, 1)} 
+                        disabled={groupIdx === groupedQueue.length - 1} 
+                        className="bg-text/50 p-1 px-2 rounded text-bg text-[8px] hover:bg-primary hover:text-bg transition-colors"
+                      >▼</button>
+                      <button 
+                        onClick={() => handleRemoveGroup(group)} 
+                        className="text-text2 hover:text-primary ml-1 p-1"
+                      >×</button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
+        </div>
         )}
       </div>
 
@@ -472,7 +551,7 @@ export function TradingMask({
           {!isMaker && (
             <div className="text-right">
                 <span className="text-[9px] font-bold text-text2 uppercase tracking-widest block">
-                    {isBuy ? "Receiving" : "Selling"}
+                    {isBuy ? "Buying" : "Selling"}
                 </span>
                 <span className={`text-sm font-black leading-none ${isBuy ? 'text-success' : 'text-danger'}`}>
                     {Number(formatUnits(executionPayload.totalFimRaw, 18)).toLocaleString()} FIM

@@ -14,6 +14,7 @@ export interface PayoutData {
   userNetContrib: number;   // Final Net Contribution (from Ponder)
   hasBalance: boolean;
   hasClaimed: boolean;
+  realizedPayout: number;
   loading: boolean;
   refetch: () => void;
 }
@@ -72,7 +73,7 @@ export function usePayout(seasonAddress: string, userAddress: string | undefined
   const refetch = () => { refetchRpc(); refetchPonder(); };
 
   if (isLoading || !rpcData) {
-    return { payout: 0, pnl: 0, userFim: 0, userNetContrib: 0, hasBalance: false, hasClaimed: false, loading: true, refetch };
+    return { payout: 0, pnl: 0, userFim: 0, userNetContrib: 0, hasBalance: false, hasClaimed: false, realizedPayout: 0, loading: true, refetch };
   }
   
   // RPC Data Access (fimBalances is rpcData[0])
@@ -86,7 +87,8 @@ export function usePayout(seasonAddress: string, userAddress: string | undefined
           userFim: Number(formatUnits(balanceRaw, 18)), 
           userNetContrib: 0, 
           hasBalance: balanceRaw > 0n, 
-          hasClaimed: false, 
+          hasClaimed: false,
+          realizedPayout: 0,
           loading: false, 
           refetch 
       };
@@ -108,6 +110,7 @@ export function usePayout(seasonAddress: string, userAddress: string | undefined
     const totalValueUsdc = Number(formatUnits(totalValueRaw, 6));  // Total Won (Ponder)
     const contribUsdc = Number(formatUnits(contribRaw, 6));         // Net Contrib (Ponder)
     const fimBal = Number(formatUnits(balanceRaw, 18));            // Live FIM (RPC)
+    const realizedPayout = Number(formatUnits(claimedPayoutRaw, 6)); // Already Claimed (Ponder)
 
     return {
         payout: payoutUsdc, 
@@ -116,11 +119,12 @@ export function usePayout(seasonAddress: string, userAddress: string | undefined
         userNetContrib: contribUsdc,
         hasBalance: balanceRaw > 0n,
         hasClaimed: claimedPayoutRaw > 0n,
+        realizedPayout: realizedPayout,
         loading: false,
         refetch
     };
   } catch (e) {
     console.error("Error processing payout data:", e);
-    return { payout: 0, pnl: 0, userFim: 0, userNetContrib: 0, hasBalance: false, hasClaimed: false, loading: false, refetch };
+    return { payout: 0, pnl: 0, userFim: 0, userNetContrib: 0, hasBalance: false, hasClaimed: false, realizedPayout: 0, loading: false, refetch };
   }
 }
