@@ -183,6 +183,11 @@ export const GameControllerAbi = [
         "name": "_existentialThreshold",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "_collateralRatioBps",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],

@@ -124,9 +124,9 @@ export function OrderBook({
 };
 
   return (
-    <div className="bg-card rounded-xl border border-border/10 shadow-lg flex flex-col h-full min-h-150 overflow-hidden transition-all">
+    <div className="bg-card rounded-xl shadow-lg flex flex-col h-full min-h-150 overflow-hidden transition-all">
       
-      <div className="p-4 border-b border-border/10 bg-card2/20 text-center">
+      <div className="p-4 border-b border-border/20 text-center">
           <h3 className="h3-app">Order Book</h3>
       </div>
 

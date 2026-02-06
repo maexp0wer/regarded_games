@@ -35,7 +35,7 @@ export function TradingActivityFeed({ seasonAddress }: { seasonAddress: string }
     <div className="bg-card rounded-xl p-6 shadow-sm h-full flex flex-col">
       {/* Header Area */}
       <div className="flex justify-between items-center border-b border-border/40 pb-3">
-        <h3 className="text-[9px] font-black uppercase text-text2 tracking-[0.2em]">Recent Activity</h3>
+        <h3 className="h3-app">Recent Activity</h3>
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar relative">
@@ -102,11 +102,12 @@ export function TradingActivityFeed({ seasonAddress }: { seasonAddress: string }
                     <span className="text-primary font-bold font-mono text-xs leading-none">
                       {trade.amount.toLocaleString()} FIM
                     </span>
+                    {/*
                     <span className="text-text2 font-mono text-[9px] opacity-80 leading-none">
                       (${trade.price.toFixed(4)})
                     </span>
+                    */}
                   </div>
-
                 </div>
               );
             })}

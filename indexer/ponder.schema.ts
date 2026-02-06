@@ -57,3 +57,19 @@ export const trades = onchainTable("trades", (t) => ({
   
 }));
 
+export const yieldEvents = onchainTable("yield_events", (t) => ({
+  id: t.text().primaryKey(),
+  seasonAddress: t.hex(),
+  totalYield: t.bigint(),
+  buybackAmt: t.bigint(),
+  liquidityAmt: t.bigint(),
+  reinvestAmt: t.bigint(),
+  daoAmt: t.bigint(),
+  timestamp: t.bigint(),
+}));
+
+export const protocolStats = onchainTable("protocol_stats", (t) => ({
+  id: t.text().primaryKey(), // "global"
+  totalYieldGenerated: t.bigint(),
+  totalBuybacks: t.bigint(),
+}));

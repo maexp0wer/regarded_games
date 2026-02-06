@@ -30,6 +30,7 @@ const GAME_SEASON_FULL_ABI = GameSeasonAbi as any;
 
 // --- Types ---
 type SeasonRegistry = {
+    id: number;
   season: Address;
   phase: string;
   config: {
@@ -88,7 +89,7 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
         query: { enabled: season.phase === 'TRADING' || season.phase === 'PAYOUT', staleTime: Infinity }
     });
 
-    const seasonNumber = totalCount - index;
+    const seasonNumber = season.id + 1;
     const slug = `season_${seasonNumber}`;
 
     // 2. Math & Logic (Mirrors GiniDashboard)
@@ -162,7 +163,7 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
     const economicItems = [
         { label: "Buyback", value: season.config.buybackBps },
         { label: "Liquidity", value: season.config.liquidityBps },
-        { label: "Reinvest", value: season.config.reinvestBps },
+        { label: "Prize Pool Bonus", value: season.config.reinvestBps },
         { label: "DAO Treasury", value: season.config.daoBps },
     ].filter(item => item.value > 0);
 
@@ -217,90 +218,87 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
 
             </div>
 
-            {/* --- BODY --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {/* 1. GINI / PROGRESS (Left - 1/3) */}
-                <div className="flex flex-col justify-center gap-2 lg:col-span-1">
-                    <span className="h3-app">
-                        Live Gini Position
+            {/* --- BODY (Now 4 Columns) --- */}
+<div className="grid grid-cols-4 gap-6">
+    
+    {/* 1. GINI / PROGRESS (Column 1) */}
+    <div className="flex flex-col justify-center gap-2">
+        <span className="h3-app">
+            Live Gini Position
+        </span>
+        <div className="flex flex-col gap-1">
+            <div className="flex flex-col">
+                {/* Top Line: Gini Value and BPS Label */}
+                <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black font-mono text-text leading-none">
+                        {gCurrent.toString()}
                     </span>
-                    <div className="flex flex-col gap-1">
-                        
-                        {/* Gini Value and Target Progress on one line */}
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-black font-mono text-text">
-                                {gCurrent.toString()}
-                            </span>
-                            <span className="text-sm text-text2 font-bold">BPS</span>
-                            
-                            {/* UPDATED: Progress is now on the same line, styled to match BPS size */}
-                            {isTrading && winningSide !== 'none' && (
-                                <span className={`text-sm font-black font-mono uppercase tracking-wide ml-2 ${winningSide === 'cap' ? 'text-info' : 'text-danger'}`}>
-                                    ({progressPercent.toFixed(1)}% towards {winningSide === 'cap' ? 'CAPITALIST' : 'SOCIALIST'} Victory)
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                    {isVictoryPending && (
-                        <p className="text-[10px] font-bold text-yellow-500 mt-1 uppercase tracking-wide">
-                            ⚠️ Settlement Pending
-                        </p>
-                    )}
+                    <span className="text-sm text-text2 font-bold uppercase">BPS</span>
                 </div>
-                {/* 2. POLICY (Right - 2/3) */}
-                <div className="lg:col-span-2 grid grid-cols-3 gap-x-6 gap-y-4">
-                    
-                    {/* --- COLUMN 1 --- */}
-
-                    {/* Comp. Multiplier (M) - (Row 1, Col 1) */}
-                    <div className="flex flex-col items-start gap-1">
-                        <span className="text-[9px] text-text2 uppercase tracking-widest">Compensation Multiplier</span>
-                        <span className="text-sm font-bold text-primary text-left">
-                            {(season.config.baseBeta / 10000 + Math.pow(1 - (gCurrent / 10000), 2)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })}x
-                        </span>
+                
+                {/* Bottom Line: Progress Percentage */}
+                {isTrading && winningSide !== 'none' && (
+                    <div className={`text-[11px] font-bold uppercase tracking-wider mt-1 ${winningSide === 'cap' ? 'text-info' : 'text-danger'}`}>
+                        {progressPercent.toFixed(1)}% {winningSide === 'cap' ? 'CAPitalist' : 'SOCialist'} Progress
                     </div>
-
-                    {/* Buyback - (Row 2, Col 1) */}
-                    <div className="flex flex-col items-start gap-1 row-start-2">
-                        <span className="text-[9px] text-text2 uppercase tracking-widest">Buyback Allocation</span>
-                        <span className="text-sm font-bold text-text text-left">{(season.config.buybackBps / 100)}%</span>
-                    </div>
-
-                    {/* --- COLUMN 2 --- */}
-
-                    {/* Victory Threshold - (Row 1, Col 2) */}
-                    <div className="flex flex-col items-start gap-1 col-start-2">
-                        <span className="text-[9px] text-text2 uppercase tracking-widest">Victory Threshold</span>
-                        <span className="text-sm font-bold text-text text-left">{season.config.victoryThresholdBps / 100}%</span>
-                    </div>
-
-                    {/* Reinvest - (Row 2, Col 2) */}
-                    <div className="flex flex-col items-start gap-1 col-start-2 row-start-2">
-                        <span className="text-[9px] text-text2 uppercase tracking-widest">Reinvest Allocation</span>
-                        <span className="text-sm font-bold text-text text-left">{(season.config.reinvestBps / 100)}%</span>
-                    </div>                 
-                    
-                    
-                    {/* --- COLUMN 3 (Dynamic Items) --- */}
-
-                    {/* Liquidity/DAO Treasury - Dynamically placed in Col 3 */}
-                    {economicItems.filter(item => item.label !== "Buyback" && item.label !== "Reinvest").map((item, i) => (
-                        <div 
-                            key={item.label} 
-                            className="flex justify-between items-center" 
-                            style={{ 
-                                gridColumnStart: 3, 
-                                gridRowStart: i + 1, // Forces to row 1, 2, 3... of column 3
-                            }}
-                        >
-                            <span className="text-xs text-text2">{item.label}</span>
-                            <span className="text-sm font-bold text-text">{(item.value / 100)}%</span>
-                        </div>
-                    ))}
-                </div>
-
+                )}
             </div>
+        </div>
+        {isVictoryPending && (
+            <p className="text-[10px] font-bold text-yellow-500 mt-1 uppercase tracking-wide">
+                ⚠️ Settlement Pending
+            </p>
+        )}
+    </div>
+
+    {/* 2. FIXED POLICY (Column 2) */}
+    <div className="flex flex-col gap-4 justify-center">
+        {/* Comp. Multiplier */}
+        <div className="flex flex-col items-start gap-1">
+            <span className="text-[9px] text-text2 uppercase tracking-widest leading-tight">Comp. Multiplier</span>
+            <span className="text-sm font-bold text-primary text-left">
+                {(season.config.baseBeta / 10000 + Math.pow(1 - (gCurrent / 10000), 2)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })}x
+            </span>
+        </div>
+
+        {/* Victory Threshold */}
+        <div className="flex flex-col items-start gap-1">
+            <span className="text-[9px] text-text2 uppercase tracking-widest leading-tight">Victory Threshold</span>
+            <span className="text-sm font-bold text-text text-left">
+                {season.config.victoryThresholdBps / 100}%
+            </span>
+        </div>
+    </div>
+
+    {/* 3. DYNAMIC POLICY A (Column 3) */}
+    <div className="flex flex-col gap-4 justify-center">
+        {economicItems.slice(0, 2).map((item) => (
+            <div key={item.label} className="flex flex-col items-start gap-1">
+                <span className="text-[9px] text-text2 uppercase tracking-widest leading-tight">
+                    {item.label}
+                </span>
+                <span className="text-sm font-bold text-text text-left">
+                    {(item.value / 100)}%
+                </span>
+            </div>
+        ))}
+    </div>
+
+    {/* 4. DYNAMIC POLICY B (Column 4) */}
+    <div className="flex flex-col gap-4 justify-center">
+        {economicItems.slice(2, 4).map((item) => (
+            <div key={item.label} className="flex flex-col items-start gap-1">
+                <span className="text-[9px] text-text2 uppercase tracking-widest leading-tight">
+                    {item.label}
+                </span>
+                <span className="text-sm font-bold text-text text-left">
+                    {(item.value / 100)}%
+                </span>
+            </div>
+        ))}
+    </div>
+
+</div>
         </div>
       </Link>
         </div>
@@ -359,6 +357,7 @@ export function SeasonsList() {
                 };
 
                 allSeasons.push({
+                    id: i,
                     season: data[0], 
                     phase: phase as string, 
                     config: parsedConfig,
@@ -399,12 +398,12 @@ export function SeasonsList() {
 
       {/* List */}
       <div className="space-y-4">
-        {filtered.map((s, i) => (
+        {filtered.map((s) => (
             <SeasonCard 
                 key={s.season} 
                 season={s} 
                 totalCount={display.length} 
-                index={i} 
+                index={s.id} 
             />
         ))}
         {filtered.length === 0 && (

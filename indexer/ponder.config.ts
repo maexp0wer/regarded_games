@@ -5,8 +5,10 @@ import { GameSeasonAbi } from "./abis/GameSeasonAbi";
 import { FimAbi } from "./abis/FimAbi";
 import { ExchangeAbi } from "./abis/ExchangeAbi";
 import { AuctionAbi } from "./abis/AuctionAbi";
+import { TreasuryAbi } from "./abis/TreasuryAbi";
 
 const CONTROLLER_ADDRESS = "0x0165878A594ca255338adfa4d48449f69242Eb8F";
+const TREASURY_ADDRESS = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
 
 export default createConfig({
   database: {
@@ -72,6 +74,12 @@ export default createConfig({
         event: parseAbiItem("event SeasonDeployed(uint256 indexed seasonId, address season, address auction, address exchange, address fim)"),
         parameter: "auction",
       }),
+    },
+    Treasury: {
+      abi: TreasuryAbi,
+      chain: "anvil",
+      address: TREASURY_ADDRESS,
+      startBlock: 0,
     },
   },
 });

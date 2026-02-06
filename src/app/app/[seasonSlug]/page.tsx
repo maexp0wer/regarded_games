@@ -27,6 +27,14 @@ import PlayerRankDisplay from '../_components/PlayerRankDisplay'; // Path to the
 // ============================================================================
 // PAGE COMPONENT: SeasonDetailPage
 // ============================================================================
+
+interface YieldTotals {
+    buyback: bigint;
+    liquidity: bigint;
+    reinvest: bigint;
+    dao: bigint;
+}
+
 export default function SeasonDetailPage() {
   const { seasonSlug } = useParams() as { seasonSlug: string };
   
@@ -44,6 +52,7 @@ export default function SeasonDetailPage() {
   const [isMaker, setIsMaker] = useState(false); // Default to Taker
   const [targetAmount, setTargetAmount] = useState("");
   const [selectedOrders, setSelectedOrders] = useState<Order[]>([]);
+
 
   // --- 3. TRADING HANDLERS ---
   const handleSelectOrder = (order: Order) => {
@@ -215,6 +224,7 @@ export default function SeasonDetailPage() {
 
   const formattedName = seasonSlug?.replace(/_/g, " ") || 'Season Dashboard';
 
+
   // --- E. Loading & Error States ---
   if (isMetaLoading || isGiniLoading || isConfigLoading || isPhaseLoading) {
     return (
@@ -239,6 +249,7 @@ export default function SeasonDetailPage() {
         {/* ROW 1: HEADER & STATUS (Always 3 columns) */}
         <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-6">
              <SeasonHeader 
+                seasonAddress={seasonAddress}
                 seasonName={formattedName}
                 prizePool={giniData?.prizePool || 0}
                 playerCount={giniData?.playerCount || 0}
@@ -289,6 +300,7 @@ export default function SeasonDetailPage() {
                 seasonEnd={seasonEnd}
                 M_dynamic={M_dynamic}
                 config={config}
+                seasonAddress={seasonAddress}
               />
             </div>
           </>
@@ -371,6 +383,7 @@ export default function SeasonDetailPage() {
                 seasonEnd={seasonEnd}
                 M_dynamic={M_dynamic}
                 config={config}
+                seasonAddress={seasonAddress}
               />
             </div>
           </>
@@ -414,7 +427,8 @@ export default function SeasonDetailPage() {
             tradingStart={tradingStart} 
             seasonEnd={seasonEnd} 
             M_dynamic={M_dynamic} 
-            config={config} 
+            config={config}
+            seasonAddress={seasonAddress}
             />
     </div>
 </div>

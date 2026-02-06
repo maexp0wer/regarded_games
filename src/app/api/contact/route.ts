@@ -79,7 +79,7 @@ function getClientIp(request: NextRequest): string | null {
 }
 
 export async function POST(request: NextRequest) {
-    console.log("API: Received POST /api/contact request.");
+    // console.log("API: Received POST /api/contact request.");
 
     const clientIp = getClientIp(request);
     // console.log("API: Detected Client IP:", clientIp); //We dont want that, really
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     // --- Server-Side Validation ---
     const errors: Record<string, string> = {};
-    console.log("API: Starting server-side validation...");
+    // console.log("API: Starting server-side validation...");
 
     // Role Validation
     if (!Array.isArray(selectedRoles) || selectedRoles.length === 0) {
@@ -151,15 +151,15 @@ export async function POST(request: NextRequest) {
     // --- Reference Code Database Validation ---
     const referenceCodeToCheck = referenceCode?.trim() || null;
     if (referenceCodeToCheck) {
-        console.log("API: Validating reference code existence:", referenceCodeToCheck);
+        // console.log("API: Validating reference code existence:", referenceCodeToCheck);
         try {
             const refCheckQuery = `SELECT 1 FROM contacts WHERE requested_ref_code = $1 LIMIT 1;`;
             const refCheckResult = await query(refCheckQuery, [referenceCodeToCheck]);
             if (refCheckResult.rowCount === 0) {
-                console.log("API Info: Provided reference code not found.");
+                // console.log("API Info: Provided reference code not found.");
                 errors.referenceCode = 'Invalid reference code provided.';
             } else {
-                 console.log("API Info: Provided reference code is valid.");
+                 // console.log("API Info: Provided reference code is valid.");
             }
         } catch (dbError: unknown) {
             console.error("API Error: Database error during reference code check:", dbError);
@@ -178,17 +178,17 @@ export async function POST(request: NextRequest) {
             errors.general = (errors.general ? errors.general + " " : "") + "Could not verify request origin.";
         } else {
             ipHash = crypto.createHash('sha256').update(clientIp).digest('hex');
-            console.log("API: Generated IP Hash for bounty check:", ipHash);
+            // console.log("API: Generated IP Hash for bounty check:", ipHash);
             try {
                 const ipCheckQuery = `SELECT 1 FROM contacts WHERE ip_hash = $1 LIMIT 1;`;
                 const ipCheckResult = await query(ipCheckQuery, [ipHash]);
                 if (ipCheckResult && ipCheckResult.rowCount && ipCheckResult.rowCount > 0) {
-                    console.log("API Info: Duplicate bounty entry detected for this IP hash.");
+                    // console.log("API Info: Duplicate bounty entry detected for this IP hash.");
                     // Use a general error or a specific one if you want to expose this check failure
                     errors.general = (errors.general ? errors.general + " " : "") + "Duplicate bounty entry detected from this network.";
                     // OR target a specific field if preferred: errors.bountyAirdrop = "Duplicate entry detected.";
                 } else {
-                    console.log("API Info: No duplicate IP hash found for bounty.");
+                    // console.log("API Info: No duplicate IP hash found for bounty.");
                 }
             } catch (dbError: unknown) {
                 console.error("API Error: Database error during IP hash check:", dbError);
@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Database Interaction ---
-    console.log("API: Proceeding to database interaction...");
+    // console.log("API: Proceeding to database interaction...");
     try {
         // Duplicate Checks
         if (emailToCheck) {
@@ -292,7 +292,7 @@ export async function POST(request: NextRequest) {
             RETURNING id;
         `;
 
-        console.log("API: Executing insert query...");
+        // console.log("API: Executing insert query...");
         const result = await query(insertQuery, values);
 
         if (result.rowCount === 1) {

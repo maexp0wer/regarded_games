@@ -43,9 +43,9 @@ if (!process.env.POSTGRES_URL) {
   // For now, create a dummy pool that will fail on connection attempts.
   pool = new Pool();
 } else {
-  console.log("Initializing database connection pool...");
+  // console.log("Initializing database connection pool...");
   pool = new Pool(connectionOptions);
-  console.log("Database connection pool initialized.");
+  // console.log("Database connection pool initialized.");
 }
 
 // Listen for errors on idle clients
@@ -93,7 +93,7 @@ export const query = async <T extends QueryResultRow = QueryResultRow>(
  * Optional: Gracefully closes the connection pool.
  */
 export const closePool = async () => {
-    console.log("Closing database connection pool...");
+    // console.log("Closing database connection pool...");
     await pool.end();
-    console.log("Database connection pool closed.");
+    // console.log("Database connection pool closed.");
 };

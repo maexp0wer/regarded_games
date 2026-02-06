@@ -1,7 +1,22 @@
-[
+export const TreasuryAbi = [
   {
     "type": "constructor",
     "inputs": [
+      {
+        "name": "_usdc",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_aave",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_router",
+        "type": "address",
+        "internalType": "address"
+      },
       {
         "name": "_rtd",
         "type": "address",
@@ -12,27 +27,61 @@
   },
   {
     "type": "function",
-    "name": "checkpoints",
-    "inputs": [
+    "name": "aavePool",
+    "inputs": [],
+    "outputs": [
       {
         "name": "",
         "type": "address",
         "internalType": "address"
-      },
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "daoRecipient",
+    "inputs": [],
+    "outputs": [
       {
         "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "depositPrincipal",
+    "inputs": [
+      {
+        "name": "_amount",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "_forSeason",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getSeasonPoolSize",
+    "inputs": [
+      {
+        "name": "_season",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [
       {
-        "name": "blockNumber",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "value",
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -41,22 +90,10 @@
   },
   {
     "type": "function",
-    "name": "isApprovedAuction",
-    "inputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
+    "name": "harvestAndExecutePolicy",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -79,19 +116,13 @@
   },
   {
     "type": "function",
-    "name": "numCheckpoints",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
+    "name": "liquidityRecipient",
+    "inputs": [],
     "outputs": [
       {
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -111,35 +142,17 @@
   },
   {
     "type": "function",
-    "name": "registerCollateral",
+    "name": "payWinner",
     "inputs": [
       {
-        "name": "player",
+        "name": "_winner",
         "type": "address",
         "internalType": "address"
       },
       {
-        "name": "rtdAmount",
+        "name": "_amount",
         "type": "uint256",
         "internalType": "uint256"
-      },
-      {
-        "name": "season",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "releaseCollateral",
-    "inputs": [
-      {
-        "name": "player",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -154,26 +167,7 @@
   },
   {
     "type": "function",
-    "name": "requiredRtdStake",
-    "inputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "rtdToken",
+    "name": "rtd",
     "inputs": [],
     "outputs": [
       {
@@ -186,13 +180,42 @@
   },
   {
     "type": "function",
-    "name": "seasonLocks",
+    "name": "seasonPolicies",
     "inputs": [
       {
         "name": "",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "buybackBps",
+        "type": "uint256",
+        "internalType": "uint256"
       },
+      {
+        "name": "liquidityBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "reinvestBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "daoBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "seasonPrincipals",
+    "inputs": [
       {
         "name": "",
         "type": "address",
@@ -210,17 +233,25 @@
   },
   {
     "type": "function",
-    "name": "setAuctionApproval",
+    "name": "setDaoRecipient",
     "inputs": [
       {
-        "name": "_auction",
+        "name": "_newRecipient",
         "type": "address",
         "internalType": "address"
-      },
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setLiquidityRecipient",
+    "inputs": [
       {
-        "name": "_status",
-        "type": "bool",
-        "internalType": "bool"
+        "name": "_newRecipient",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -246,10 +277,30 @@
   },
   {
     "type": "function",
-    "name": "stake",
+    "name": "setSeasonPolicy",
     "inputs": [
       {
-        "name": "amount",
+        "name": "_season",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_buyback",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_liq",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_reinvest",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_dao",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -259,14 +310,21 @@
   },
   {
     "type": "function",
-    "name": "stakedBalances",
-    "inputs": [
+    "name": "swapRouter",
+    "inputs": [],
+    "outputs": [
       {
         "name": "",
         "type": "address",
         "internalType": "address"
       }
     ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "totalGlobalPrincipal",
+    "inputs": [],
     "outputs": [
       {
         "name": "",
@@ -291,87 +349,39 @@
   },
   {
     "type": "function",
-    "name": "unstake",
-    "inputs": [
-      {
-        "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "userActiveSeasons",
-    "inputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
+    "name": "usdc",
+    "inputs": [],
     "outputs": [
       {
         "name": "",
         "type": "address",
-        "internalType": "address"
+        "internalType": "contract IERC20"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "event",
-    "name": "CollateralRegistered",
+    "name": "DaoRecipientUpdated",
     "inputs": [
       {
-        "name": "user",
+        "name": "newRecipient",
         "type": "address",
         "indexed": true,
         "internalType": "address"
-      },
-      {
-        "name": "season",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
       }
     ],
     "anonymous": false
   },
   {
     "type": "event",
-    "name": "CollateralReleased",
+    "name": "LiquidityRecipientUpdated",
     "inputs": [
       {
-        "name": "user",
+        "name": "newRecipient",
         "type": "address",
         "indexed": true,
         "internalType": "address"
-      },
-      {
-        "name": "season",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -397,10 +407,10 @@
   },
   {
     "type": "event",
-    "name": "Staked",
+    "name": "PayoutExecuted",
     "inputs": [
       {
-        "name": "user",
+        "name": "winner",
         "type": "address",
         "indexed": true,
         "internalType": "address"
@@ -416,16 +426,96 @@
   },
   {
     "type": "event",
-    "name": "Unstaked",
+    "name": "PrincipalDeposited",
     "inputs": [
       {
-        "name": "user",
+        "name": "season",
         "type": "address",
         "indexed": true,
         "internalType": "address"
       },
       {
         "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SeasonPolicySet",
+    "inputs": [
+      {
+        "name": "season",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "buyback",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "liquidity",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "reinvest",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "dao",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "YieldHarvested",
+    "inputs": [
+      {
+        "name": "season",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "totalYield",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "buyback",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "liquidity",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "reinvest",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "daoShare",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -457,11 +547,6 @@
   },
   {
     "type": "error",
-    "name": "ReentrancyGuardReentrantCall",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "SafeERC20FailedOperation",
     "inputs": [
       {
@@ -471,4 +556,4 @@
       }
     ]
   }
-]
+] as const;

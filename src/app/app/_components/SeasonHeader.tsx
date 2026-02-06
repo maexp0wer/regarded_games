@@ -2,6 +2,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { formatUnits } from 'viem';
+import { useYieldTotals } from '@/hooks/useYieldTotals';
 
 // ============================================================================
 // 1. HELPER: COUNTDOWN HOOK
@@ -32,6 +34,7 @@ function useCountdown(targetTimestamp: number) {
 
 // Props Interface
 interface SeasonHeaderProps {
+    seasonAddress: string;
     seasonName: string;
     prizePool: number;
     playerCount: number;
@@ -47,6 +50,7 @@ interface SeasonHeaderProps {
 // SeasonHeader Component
 // ============================================================================
 export function SeasonHeader({ 
+    seasonAddress,
     seasonName, 
     prizePool, 
     playerCount, 
@@ -55,7 +59,7 @@ export function SeasonHeader({
     isPayout, 
     isVictoryPending, 
     tradingStart, 
-    seasonEnd 
+    seasonEnd
 }: SeasonHeaderProps) {
     
     const isAuction = currentPhase === "AUCTION";
@@ -66,6 +70,21 @@ export function SeasonHeader({
     // Determine target time: If Auction or Bootstrap, count to trading start. Else season end.
     const targetTime = (isAuction || isBootstrap) ? tradingStart : seasonEnd;
     const countdownText = useCountdown(targetTime);
+
+
+    const { data: yieldTotals } = useYieldTotals(seasonAddress);
+
+    // 2. Process Reinvestment Amount
+    const rawReinvest = BigInt(yieldTotals?.reinvest || "0");
+    const hasYield = isPayout && rawReinvest > 0n;
+
+    // 3. Format the Reinvest amount (USDC 6 decimals)
+    // We parse it to a float just for the locale string formatting
+    const reinvestFormatted = parseFloat(formatUnits(rawReinvest, 6))
+        .toLocaleString(undefined, { 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+        });
 
     return (
         <>
@@ -84,12 +103,32 @@ export function SeasonHeader({
                     </div>
                 </div>
 
-                <div className="flex flex-col items-center">
-                    <span className="h3-app mb-0.5 md:mb-1">Total Prize Pool</span>
-                    <span className="text-lg md:text-3xl font-black text-primary block leading-none">
-                        ${prizePool.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                 <div className="flex flex-col items-center">
+            
+            {/* Dynamic Header */}
+            <span className="h3-app mb-0.5 md:mb-1">
+                {hasYield ? "Total Prize Pool + Yield Bonus" : "Total Prize Pool"}
+            </span>
+            
+            {/* Value Row */}
+            <div className="flex flex-wrap justify-center items-center gap-x-2 font-black leading-none">
+                
+                {/* Standard Prize Pool (Primary Color) */}
+                <span className="text-primary text-lg md:text-3xl">
+                    ${prizePool.toLocaleString(undefined, { 
+                        minimumFractionDigits: 2, 
+                        maximumFractionDigits: 2 
+                    })}
+                </span>
+
+                {/* Reinvestment Bonus (Success Color) */}
+                {hasYield && (
+                    <span className="text-success whitespace-nowrap text-sm md:text-xl">
+                        +${reinvestFormatted}
                     </span>
-                </div>
+                )}
+            </div>
+        </div>
 
                 <div className="flex flex-col items-end">
                     <span className="h3-app mb-0.5 md:mb-1">Participants</span>

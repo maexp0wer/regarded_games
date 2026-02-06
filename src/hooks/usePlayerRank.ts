@@ -94,7 +94,7 @@ export function usePlayerRank(seasonAddress: string, userAddress: string | undef
       });
 
       const json = await res.json();
-      console.log("Ponder response:", json);
+      // console.log("Ponder response:", json);
 
       
       // CRITICAL: Extract the 'items' array.

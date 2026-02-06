@@ -1,5 +1,5 @@
 import { ponder } from "ponder:registry";
-import { seasons, playerSeasonStats } from "ponder:schema";
+import { seasons, playerSeasonStats, yieldEvents, protocolStats } from "ponder:schema";
 import { eq } from "ponder";
 import * as schema from "../ponder.schema";
 
@@ -309,5 +309,41 @@ ponder.on("GameSeason:PlayerSeasonStatsFinalized", async ({ event, context }) =>
     .onConflictDoUpdate(() => ({
       totalPotentialPayout: totalPotentialPayoutUSDC,
       fimBalance: fimBalances,
+    }));
+});
+
+ponder.on("Treasury:YieldHarvested", async ({ event, context }) => {
+  // 1. Destructure using the EXACT names from your ABI
+  const { season, totalYield, buyback, liquidity, reinvest, daoShare } = event.args;
+  
+  // 2. Format addresses and IDs
+  const seasonAddress = season.toLowerCase() as `0x${string}`;
+  const id = `${event.transaction.hash}:${event.log.logIndex}`;
+
+  console.log(`Indexing Yield Harvest: ${totalYield} USDC from ${seasonAddress}`);
+
+  // 3. Insert into the individual events table
+  await context.db.insert(yieldEvents).values({
+    id: id,
+    seasonAddress: seasonAddress,
+    totalYield: totalYield,
+    buybackAmt: buyback,
+    liquidityAmt: liquidity,
+    reinvestAmt: reinvest,
+    daoAmt: daoShare,
+    timestamp: event.block.timestamp,
+  });
+
+  // 4. Update Global Aggregates
+  await context.db
+    .insert(protocolStats)
+    .values({
+      id: "global",
+      totalYieldGenerated: totalYield,
+      totalBuybacks: buyback,
+    })
+    .onConflictDoUpdate((row) => ({
+      totalYieldGenerated: (row.totalYieldGenerated || 0n) + totalYield,
+      totalBuybacks: (row.totalBuybacks || 0n) + buyback,
     }));
 });
