@@ -117,11 +117,11 @@ function AuctionMaskInner({
   const { data: stakedBalances, refetch: refetchStaked } = useReadContract({ 
     address: stakingAddr, abi: StakingAbi, functionName: 'stakedBalances', args: [address] 
   });
-  const { data: requiredRtdStake, refetch: refetchRequired } = useReadContract({ 
-    address: stakingAddr, abi: StakingAbi, functionName: 'requiredRtdStake', args: [address]
+  const { data: requiredGiniStake, refetch: refetchRequired } = useReadContract({ 
+    address: stakingAddr, abi: StakingAbi, functionName: 'requiredGiniStake', args: [address]
   });
-  const { data: rtdPrice } = useReadContract({
-    address: stakingAddr, abi: StakingAbi, functionName: 'getRTDPrice'
+  const { data: GiniPrice } = useReadContract({
+    address: stakingAddr, abi: StakingAbi, functionName: 'getGINIPrice'
   });
   const { data: fimWallet, refetch: refetchFimWallet, isFetching: isFimFetching } = useReadContract({
     address: fimAddress as `0x${string}`, abi: ERC20Abi, functionName: 'balanceOf', args: [address], query: { refetchInterval: 5000 }
@@ -139,9 +139,9 @@ function AuctionMaskInner({
   // --- 2. Logic & Math ---
   const usdcToBuyBigInt = buyAmount ? parseUnits(buyAmount, 6) : 0n;
   const currentStaked = (stakedBalances as bigint) ?? 0n;
-  const currentLocked = (requiredRtdStake as bigint) ?? 0n;
+  const currentLocked = (requiredGiniStake as bigint) ?? 0n;
   const hasStakedAnything = currentStaked > 0n;
-  const currentPrice = (rtdPrice as bigint) ?? 1n;
+  const currentPrice = (giniPrice as bigint) ?? 1n;
   const currentFim = (fimWallet as bigint) ?? 0n;
   const currentUsdcInWallet = (usdcWallet as bigint) ?? 0n;
 
@@ -150,7 +150,7 @@ function AuctionMaskInner({
   // ***********************************************
 
   const totalEligibleFim = useMemo(() => {
-    if (!stakedBalances || !rtdPrice) return 0n;
+    if (!stakedBalances || !giniPrice) return 0n;
     const ratioBps = 1000n; 
     const maxUsdcValue = (currentStaked * 10000n * currentPrice) / (ratioBps * parseUnits("1", 30));
     return maxUsdcValue * parseUnits("1", 12);
@@ -271,7 +271,7 @@ function AuctionMaskInner({
           <Link href="/stake" className="block transform transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99]">
             <div className="p-4 bg-danger/10 border border-danger/20 rounded-xl text-center shadow-inner cursor-pointer">
               <p className="text-[10px] font-black uppercase text-danger">⚠️ No Collateral Staked</p>
-              <p className="text-[10px] text-text2 mt-1 uppercase tracking-tighter">Click here to stake RTD and unlock buying</p>
+              <p className="text-[10px] text-text2 mt-1 uppercase tracking-tighter">Click here to stake GINI and unlock buying</p>
             </div>
           </Link>
         )}
@@ -348,11 +348,11 @@ function AuctionMaskInner({
             <span className="font-black text-success tracking-tighter leading-none">{eligibleDisplay}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Staked RTD</span>
+            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Staked GINI</span>
             <span className="font-black text-text tracking-tighter leading-none">{stakedDisplay}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Locked RTD</span>
+            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Locked GINI</span>
             <span className="font-black text-danger tracking-tighter leading-none">{currentLocked > 0n ? lockedDisplay : "0"}</span>
           </div>
         </div>

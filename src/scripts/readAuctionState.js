@@ -1,6 +1,7 @@
 // scripts/readAuctionState.ts
 import { ethers } from "hardhat";
 
+
 async function main() {
   const AuctionAddress = "0xBA12646CC07ADBe43F8bD25D83FB628D29C8A762";
   

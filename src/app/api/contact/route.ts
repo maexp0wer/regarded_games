@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
         const result = await query(insertQuery, values);
 
         if (result.rowCount === 1) {
-            console.log("API: Form submitted successfully. ID:", result.rows[0].id);
+            //console.log("API: Form submitted successfully. ID:", result.rows[0].id);
             return NextResponse.json({ message: "Form submitted successfully!", id: result.rows[0].id }, { status: 201 });
         } else {
              console.error("API Error: Database insertion returned unexpected row count.", { rowCount: result.rowCount });

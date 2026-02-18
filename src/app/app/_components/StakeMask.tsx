@@ -28,26 +28,26 @@ export function Stake() {
   const [status, setStatus] = useState<WorkflowStep>('idle');
 
   const stakingAddr = coreAddresses.Staking as `0x${string}`;
-  const rtdAddr = coreAddresses.RTD as `0x${string}`;
+  const giniAddr = coreAddresses.GINI as `0x${string}`;
 
   // --- 1. Contract Reads ---
   const { data: stakedBalances, refetch: refetchStaked } = useReadContract({
     address: stakingAddr, abi: StakingAbi, functionName: 'stakedBalances', args: address ? [address] : undefined,
   });
-  const { data: requiredRtdStake, refetch: refetchRequired } = useReadContract({
-    address: stakingAddr, abi: StakingAbi, functionName: 'requiredRtdStake', args: address ? [address] : undefined,
+  const { data: requiredGiniStake, refetch: refetchRequired } = useReadContract({
+    address: stakingAddr, abi: StakingAbi, functionName: 'requiredginiStake', args: address ? [address] : undefined,
   });
   const { data: walletBalance, refetch: refetchWallet } = useReadContract({
-    address: rtdAddr, abi: ERC20Abi, functionName: 'balanceOf', args: address ? [address] : undefined,
+    address: giniAddr, abi: ERC20Abi, functionName: 'balanceOf', args: address ? [address] : undefined,
   });
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: rtdAddr, abi: ERC20Abi, functionName: 'allowance', args: address ? [address, stakingAddr] : undefined,
+    address: giniAddr, abi: ERC20Abi, functionName: 'allowance', args: address ? [address, stakingAddr] : undefined,
   });
 
   // --- 2. Logic & Math ---
   const amountBigInt = amount ? parseUnits(amount, 18) : 0n;
   const currentStaked = (stakedBalances as bigint) ?? 0n;
-  const currentLocked = (requiredRtdStake as bigint) ?? 0n;
+  const currentLocked = (requiredGiniStake as bigint) ?? 0n;
   const currentAllowance = (allowance as bigint) ?? 0n;
   const currentWallet = (walletBalance as bigint) ?? 0n;
 
@@ -80,13 +80,13 @@ export function Stake() {
       // --- BRANCH A: STAKING (Check Approval first) ---
       if (isStakeMode) {
         const liveAllowance = await publicClient.readContract({
-          address: rtdAddr, abi: ERC20Abi, functionName: 'allowance', args: [address, stakingAddr]
+          address: giniAddr, abi: ERC20Abi, functionName: 'allowance', args: [address, stakingAddr]
         }) as bigint;
 
         if (liveAllowance < amountBigInt) {
           setStatus('approving');
           const approveHash = await writeContractAsync({
-            address: rtdAddr, abi: ERC20Abi, functionName: 'approve', args: [stakingAddr, amountBigInt],
+            address: giniAddr, abi: ERC20Abi, functionName: 'approve', args: [stakingAddr, amountBigInt],
           });
           setStatus('mining_approval');
           await publicClient.waitForTransactionReceipt({ hash: approveHash });
@@ -146,7 +146,7 @@ export function Stake() {
   };
 
   const getButtonText = () => {
-    if (status === 'approving') return "Step 1/2: Approve RTD...";
+    if (status === 'approving') return "Step 1/2: Approve GINI...";
     if (status === 'mining_approval') return "Step 1/2: Confirming...";
     if (status === 'executing') return isStakeMode ? "Step 2/2: Sign Stake..." : "Sign Unstake...";
     if (status === 'mining_execution') return "Finalizing...";
@@ -160,7 +160,7 @@ export function Stake() {
     if (isStakeMode && currentWallet < amountBigInt) return "Insufficient Balance";
     if (!isStakeMode && withdrawable < amountBigInt) return "Amount Locked";
     
-    return isStakeMode ? "Stake RTD" : "Unstake RTD";
+    return isStakeMode ? "Stake GINI" : "Unstake GINI";
   };
 
   const isBusy = status !== 'idle' && status !== 'canceled' && status !== 'failed' && status !== 'success' && status !== 'no_gas';
@@ -172,7 +172,7 @@ export function Stake() {
     return (
       <div className="bg-card rounded-xl p-5 border border-border/10 shadow-sm transition-all text-center space-y-6 w-full max-w-lg">
           <h3 className="text-lg font-black uppercase text-text2 tracking-wider mt-4">Staking</h3>
-          <p className="text-sm text-text2 mb-4">Connect your wallet to stake RTD.</p>
+          <p className="text-sm text-text2 mb-4">Connect your wallet to stake GINI.</p>
           <div className="pt-2"><WalletButton /></div>
       </div>
     );
@@ -207,7 +207,7 @@ export function Stake() {
         {/* 4-Column Stats Grid (Replicating Auction Visuals) */}
         <div className="grid grid-cols-4 gap-2 text-left px-1">
           <div className="flex flex-col">
-            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Wallet RTD</span>
+            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Wallet GINI</span>
             <span className="text-lg font-black text-primary tracking-tighter leading-none">
               {Number(formatUnits(currentWallet, 18)).toLocaleString()}
             </span>

@@ -18,7 +18,7 @@ export const TreasuryAbi = [
         "internalType": "address"
       },
       {
-        "name": "_rtd",
+        "name": "_gini",
         "type": "address",
         "internalType": "address"
       }
@@ -167,7 +167,7 @@ export const TreasuryAbi = [
   },
   {
     "type": "function",
-    "name": "rtd",
+    "name": "gini",
     "inputs": [],
     "outputs": [
       {

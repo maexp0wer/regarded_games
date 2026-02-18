@@ -29,7 +29,7 @@ const blockingThemeScript = `(function() {
 })();`;
 
 export const metadata: Metadata = {
-  title: 'Ritardo Games',
+  title: 'Gini.gg',
   description: 'Economic Warfare - Fought on Chain',
 };
 
