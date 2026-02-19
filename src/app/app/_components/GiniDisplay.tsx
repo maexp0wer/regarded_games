@@ -2,7 +2,7 @@
 import React from 'react';
 
 // Icons (Moved from original GiniDashboard)
-import Ritardo from '@/components/icons/Ritardo.svg';
+import Regardo from '@/components/icons/Regardo.svg';
 import Carlo from '@/components/icons/Carlo.svg';
 
 // Props Interface
@@ -32,7 +32,7 @@ function AuctionGauge({ gCurrent, socTarget, capTarget }: { gCurrent: number, so
         <Carlo className="w-14 h-auto opacity-90" viewBox="0 0 600 800"/>
       </div>
       <div className="absolute bottom-4 -translate-x-1/2 flex flex-col items-center z-10" style={{ left: `${(capTarget / 10000) * 100}%` }}>
-        <Ritardo className="w-14 h-auto opacity-90" viewBox="0 0 600 800"/>
+        <Regardo className="w-14 h-auto opacity-90" viewBox="0 0 600 800"/>
       </div>
 
       {/* --- TARGETS (BOTTOM - SHORT LINES) --- */}
@@ -134,7 +134,7 @@ function TradingGauge({ gCurrent, gInitial, socTarget, capTarget, winningSide, p
            <Carlo className="w-14 h-auto opacity-90" viewBox="0 0 600 800"/>
         </div>
         <div className="absolute bottom-4 -translate-x-1/2 flex flex-col items-center z-10" style={{ left: `${getPosition(capTarget)}%` }}>
-           <Ritardo className="w-14 h-auto opacity-90" viewBox="0 0 600 800"/>
+           <Regardo className="w-14 h-auto opacity-90" viewBox="0 0 600 800"/>
         </div>
 
         {/* --- TARGETS (BOTTOM - SHORT LINES) --- */}

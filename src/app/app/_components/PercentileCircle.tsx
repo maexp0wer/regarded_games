@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import Ritardo from '@/components/icons/Ritardo.svg';
+import Regardo from '@/components/icons/Regardo.svg';
 import Carlo from '@/components/icons/Carlo.svg';
 
 
@@ -49,7 +49,7 @@ export const PercentileCircle: React.FC<PercentileCircleProps> = ({
       {showIcon && (
         <div className={`flex-shrink-0 flex items-center ${s.icon}`}>
           {isCapitalist ? (
-            <Ritardo className="w-full h-auto opacity-90" viewBox="0 0 600 800"/>
+            <Regardo className="w-full h-auto opacity-90" viewBox="0 0 600 800"/>
           ) : (
             <Carlo className="w-full h-auto opacity-90" viewBox="0 0 600 800"/>
           )}

@@ -120,50 +120,63 @@ function AuctionMaskInner({
   const { data: requiredGiniStake, refetch: refetchRequired } = useReadContract({ 
     address: stakingAddr, abi: StakingAbi, functionName: 'requiredGiniStake', args: [address]
   });
-  const { data: GiniPrice } = useReadContract({
-    address: stakingAddr, abi: StakingAbi, functionName: 'getGINIPrice'
+  const { data: giniPrice } = useReadContract({
+    address: stakingAddr, abi: StakingAbi, functionName: 'getGiniPrice'
   });
   const { data: fimWallet, refetch: refetchFimWallet, isFetching: isFimFetching } = useReadContract({
     address: fimAddress as `0x${string}`, abi: ERC20Abi, functionName: 'balanceOf', args: [address], query: { refetchInterval: 5000 }
   });
   const { data: usdcWallet, refetch: refetchUsdcWallet } = useReadContract({ 
-    address: usdcAddr, abi: ERC20Abi, functionName: 'balanceOf', args: [address] 
+    address: usdcAddr, abi: ERC20Abi, functionName: 'balanceOf', args: [address]
   });
-  const { data: usdcAllowance, refetch: refetchUsdcAllowance } = useReadContract({ 
+  const { data: usdcAllowance, refetch: refetchUsdcAllowance } = useReadContract({
     address: usdcAddr, abi: ERC20Abi, functionName: 'allowance', args: [address, auctionAddress as `0x${string}`], query: { staleTime: 0 } 
   });
   // Phase read logic is now in the parent, not here.
 
   const { writeContractAsync } = useWriteContract();
 
+  const isAuctionPhase = currentPhase === "AUCTION";
+
   // --- 2. Logic & Math ---
   const usdcToBuyBigInt = buyAmount ? parseUnits(buyAmount, 6) : 0n;
   const currentStaked = (stakedBalances as bigint) ?? 0n;
   const currentLocked = (requiredGiniStake as bigint) ?? 0n;
   const hasStakedAnything = currentStaked > 0n;
-  const currentPrice = (giniPrice as bigint) ?? 1n;
+  
   const currentFim = (fimWallet as bigint) ?? 0n;
   const currentUsdcInWallet = (usdcWallet as bigint) ?? 0n;
 
-  // ********** PHASE LOGIC (Using props) **********
-  const isAuctionPhase = currentPhase === "AUCTION";
-  // ***********************************************
-
   const totalEligibleFim = useMemo(() => {
-    if (!stakedBalances || !giniPrice) return 0n;
-    const ratioBps = 1000n; 
-    const maxUsdcValue = (currentStaked * 10000n * currentPrice) / (ratioBps * parseUnits("1", 30));
-    return maxUsdcValue * parseUnits("1", 12);
-  }, [currentStaked, currentPrice]);
+    if (!currentStaked) return 0n;
+    return currentStaked * 10n; 
+  }, [currentStaked]);
+
+  const remainingFimAllowance = totalEligibleFim > currentFim ? totalEligibleFim - currentFim : 0n;
+  const isMaxedOut = hasStakedAnything && remainingFimAllowance === 0n;
+
+  // NEW: Convert input (6 dec) to FIM scale (18 dec) to compare
+  const inputAsFim = usdcToBuyBigInt * 1000000000000n;
+  const isOverLimit = hasStakedAnything && inputAsFim > remainingFimAllowance && remainingFimAllowance > 0n;
 
   const handleMax = () => {
-    if (!totalEligibleFim) return;
-    const remainingFim = totalEligibleFim > currentFim ? totalEligibleFim - currentFim : 0n;
-    const requiredUsdc = remainingFim / parseUnits("1", 12);
-    const finalUsdc = requiredUsdc > currentUsdcInWallet ? currentUsdcInWallet : requiredUsdc;
+    // 1. How much FIM allowance do you have left? (18 decimals)
+    
+
+    // 2. Convert FIM allowance to USDC cost (6 decimals)
+    // Since Price is 1:1, we just shift decimals from 18 to 6 (divide by 10^12)
+    const usdcNeeded = remainingFimAllowance / 1000000000000n;
+
+    // 3. You can only buy the lesser of your allowance OR your wallet balance
+    const finalUsdc = usdcNeeded > currentUsdcInWallet 
+      ? currentUsdcInWallet 
+      : usdcNeeded;
+
+    // 4. Set the input string (formatUnits handles the 6 decimals for us)
     setBuyAmount(formatUnits(finalUsdc, 6));
   };
 
+  
   // --- 3. THE ORCHESTRATOR ---
   const handleStartFlow = async () => {
     // ... (handleStartFlow remains unchanged)
@@ -222,10 +235,13 @@ function AuctionMaskInner({
 
 
   // --- 4. UI Helpers ---
+  const remainingFimBigInt = totalEligibleFim > currentFim ? totalEligibleFim - currentFim : 0n;
+
   const fimDisplayValue = isFimFetching ? "..." : Number(formatUnits(currentFim, 18)).toLocaleString();
   const lockedDisplay = Number(formatUnits(currentLocked, 18)).toLocaleString(undefined, { maximumFractionDigits: 0 });
   const eligibleDisplay = Number(formatUnits(totalEligibleFim, 18)).toLocaleString(undefined, { maximumFractionDigits: 0 });
   const stakedDisplay = Number(formatUnits(currentStaked, 18)).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const additionalEligibleDisplay = Number(formatUnits(remainingFimBigInt, 18)).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
   const getProgressWidth = () => {
     switch (status) {
@@ -240,6 +256,7 @@ function AuctionMaskInner({
   };
 
   const getStatusText = () => {
+    // 1. Transaction status takes highest priority
     switch (status) {
       case 'approving': return "Step 1/2: Approve USDC...";
       case 'mining_approval': return "Step 1/2: Confirming...";
@@ -249,14 +266,26 @@ function AuctionMaskInner({
       case 'canceled': return "Canceled";
       case 'no_gas': return "Insufficient Gas";
       case 'failed': return "Transaction Failed";
-      default: return "Buy FIM";
     }
+
+    // 2. Limit checks
+    if (!hasStakedAnything) return "Stake GINI to unlock";
+    if (isMaxedOut) return "Stake GINI to buy FIM";
+    
+    // NEW: Handle over-limit input
+    if (isOverLimit) {
+      const moreFim = Number(formatUnits(remainingFimAllowance, 18)).toLocaleString(undefined, { maximumFractionDigits: 0 });
+      return `You can only buy ${moreFim} more FIM with your current GINI Stake`;
+    }
+
+    // 3. Default
+    return "Buy FIM";
   };
 
   const isBusy = status !== 'idle' && status !== 'canceled' && status !== 'failed' && status !== 'success' && status !== 'no_gas';
   const isSuccess = status === 'success';
   const isError = status === 'canceled' || status === 'failed' || status === 'no_gas';
-  const isButtonDisabled = isBusy || isSuccess || isError || !buyAmount || !hasStakedAnything;
+  const isButtonDisabled = isBusy || isSuccess || isError || !buyAmount || !hasStakedAnything || isMaxedOut || isOverLimit;
 
   return (
     <div className="bg-card rounded-xl p-5 shadow-sm transition-all space-y-6 w-full h-full">
@@ -292,11 +321,11 @@ function AuctionMaskInner({
           </div>
         ) : (
           <>
-            <div className={`bg-card2 rounded-xl px-4 py-3  ${!hasStakedAnything ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
+            <div className={`bg-card2 rounded-xl px-4 py-3  ${!hasStakedAnything || isMaxedOut ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
               <div className="flex justify-between items-end mb-2 px-1">
                 <label className="text-[9px] uppercase font-bold text-text2 tracking-widest">Buy FIM with USDC</label>
                 <span className="text-[9px] font-mono text-text2 uppercase tracking-tighter opacity-70">
-                    Wallet: {Number(formatUnits(currentUsdcInWallet, 6)).toLocaleString()}
+                    Wallet: {Number(formatUnits(currentUsdcInWallet, 6)).toLocaleString()} USDC
                 </span>
               </div>
               <div className="flex items-center">
@@ -342,10 +371,20 @@ function AuctionMaskInner({
           </>
         )}
 
-        <div className="grid grid-cols-3 gap-2 text-left px-1">
+        <div className="grid grid-cols-4 gap-2 text-left px-1">
           <div className="flex flex-col">
-            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Eligible FIM</span>
+            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Total Eligible FIM</span>
             <span className="font-black text-success tracking-tighter leading-none">{eligibleDisplay}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">
+              additional Eligible FIM
+            </span>
+            <span className={`font-black tracking-tighter leading-none transition-colors ${
+              remainingFimBigInt  > 0n ? 'text-success' : 'text-danger'
+            }`}>
+              {additionalEligibleDisplay}
+            </span>
           </div>
           <div className="flex flex-col">
             <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Staked GINI</span>

@@ -67,7 +67,7 @@ export const Logo = (props: SVGProps<SVGSVGElement>) => (
             y="323.83566"
             fill="var(--color-primary)"
           >
-            RITARDO
+            Regardo
           </tspan>
           <tspan
             x="193.93756"

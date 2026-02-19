@@ -10,7 +10,7 @@ import { usePayout } from '@/hooks/usePayout';
 
 
 // Icons
-import Ritardo from '@/components/icons/Ritardo.svg';
+import Regardo from '@/components/icons/Regardo.svg';
 import Carlo from '@/components/icons/Carlo.svg';
 
 interface PayoutMaskProps {
@@ -163,9 +163,13 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
             <div className="flex flex-col space-y-1.5 items-end text-right">
                 <span className="text-[10px] text-text2 font-black uppercase tracking-widest">Net Contribution</span>
                 <div className={`px-2 py-1 rounded-md text-sm font-mono font-bold inline-flex items-center gap-1 border ${
-                    userNetContrib >= 0 
+                    userNetContrib > 0 
                     ? 'bg-success/10 text-success border-success/20' 
-                    : 'bg-danger/10 text-danger border-danger/20'
+                    : userNetContrib < 0
+                    ? 'bg-danger/10 text-danger border-danger/20'
+                    : 'text-text2 border-border/20'
+
+                    
                 }`}>
                     {userNetContrib >= 0 ? '+' : ''}
                     {userNetContrib.toLocaleString(undefined, {maximumFractionDigits: 2})} 
@@ -212,9 +216,11 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
                     <div className="h-6 w-20 bg-white/5 animate-pulse rounded" />
                 ) : (
                     <div className={`px-2 py-1 rounded-md text-sm font-mono font-bold inline-flex items-center gap-1 border ${
-                        displayPnL >= 0 
+                        displayPnL > 0 
                         ? 'bg-success/10 text-success border-success/20' 
-                        : 'bg-danger/10 text-danger border-danger/20'
+                        : displayPnL < 0 
+                            ? 'bg-danger/10 text-danger border-danger/20' 
+                            : 'text-text2 border-border/20'
                     }`}>
                         {displayPnL >= 0 ? '+' : '-'} 
                         {Math.abs(displayPnL).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}

@@ -17,7 +17,7 @@ export const investorTypeOptions = [
 
 // Define property owner type options
 export const futurePlayerTypeOptions = [
-    { value: 'ritardo', label: 'Ritardo the Capitalist' },
+    { value: 'Regardo', label: 'Regardo the Capitalist' },
     { value: 'carlo', label: 'Carlo the Socialist' },
 ];
 

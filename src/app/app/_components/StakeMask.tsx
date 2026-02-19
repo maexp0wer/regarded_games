@@ -35,7 +35,7 @@ export function Stake() {
     address: stakingAddr, abi: StakingAbi, functionName: 'stakedBalances', args: address ? [address] : undefined,
   });
   const { data: requiredGiniStake, refetch: refetchRequired } = useReadContract({
-    address: stakingAddr, abi: StakingAbi, functionName: 'requiredginiStake', args: address ? [address] : undefined,
+    address: stakingAddr, abi: StakingAbi, functionName: 'requiredGiniStake', args: address ? [address] : undefined,
   });
   const { data: walletBalance, refetch: refetchWallet } = useReadContract({
     address: giniAddr, abi: ERC20Abi, functionName: 'balanceOf', args: address ? [address] : undefined,

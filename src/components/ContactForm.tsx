@@ -49,7 +49,7 @@ const ContactForm: React.FC = () => {
   const [ownReferenceCode, setOwnReferenceCode] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [investorType, setInvestorType] = useState<'individual' | 'institutional' | ''>('');
-  const [futurePlayerType, setfuturePlayerType] = useState<'carlo' | 'ritardo' | ''>('');
+  const [futurePlayerType, setfuturePlayerType] = useState<'carlo' | 'Regardo' | ''>('');
   const [contributorTypes, setContributorTypes] = useState<string[]>([]);
   const [otherContributorType, setOtherContributorType] = useState('');
   const [partnerSpecification, setPartnerSpecification] = useState('');
@@ -89,7 +89,7 @@ const ContactForm: React.FC = () => {
       setErrors(prev => ({...prev, investorType: undefined}));
   };
 
-  const handlefuturePlayerTypeClick = (type: 'ritardo' | 'carlo') => {
+  const handlefuturePlayerTypeClick = (type: 'Regardo' | 'carlo') => {
       setfuturePlayerType(type);
       setErrors(prev => ({...prev, futurePlayerType: undefined}));
   };
@@ -314,7 +314,7 @@ const ContactForm: React.FC = () => {
                       <div className="flex flex-wrap gap-2">
                          {futurePlayerTypeOptions.map(option => (
                               <button key={option.value} type="button"
-                                onClick={() => handlefuturePlayerTypeClick(option.value as 'ritardo' | 'carlo')}
+                                onClick={() => handlefuturePlayerTypeClick(option.value as 'Regardo' | 'carlo')}
                                 className={`${subButtonBaseClasses} ${futurePlayerType === option.value ? subButtonActiveClasses : subButtonInactiveClasses}`}
                                 aria-pressed={futurePlayerType === option.value} >
                                 {option.label}

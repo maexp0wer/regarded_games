@@ -10,7 +10,7 @@ import Card from '@/components/Card';
 import CardPlain from '@/components/CardPlain';
 import ContactForm from '@/components/ContactForm';
 import GenericModal from '@/components/GenericModal';
-import Ritardo from '@/components/icons/Ritardo.svg';
+import Regardo from '@/components/icons/Regardo.svg';
 import Carlo from '@/components/icons/Carlo.svg';
 import FIM1 from '@/components/icons/FIM1.svg';
 import { useDocNavigation } from '@/hooks/useDocNavigation';
@@ -28,9 +28,9 @@ export default function Home() {
   const { activeSection, isNavVisible, scrollToSection } = useScrollNavigation();
 
   // Modal
-  const [isRitardoModalOpen, setIsRitardoModalOpen] = useState(false);
-  const openRitardoModal = () => setIsRitardoModalOpen(true);
-  const closeRitardoModal = () => setIsRitardoModalOpen(false);
+  const [isRegardoModalOpen, setIsRegardoModalOpen] = useState(false);
+  const openRegardoModal = () => setIsRegardoModalOpen(true);
+  const closeRegardoModal = () => setIsRegardoModalOpen(false);
 
   const [isCarloModalOpen, setIsCarloModalOpen] = useState(false);
   const openCarloModal = () => setIsCarloModalOpen(true);
@@ -139,29 +139,29 @@ export default function Home() {
               <div className="grid md:grid-cols-2 gap-8">
                 
                 <div className="flex flex-col items-center text-center bg-card p-8 rounded-xl shadow-md max-h-screen">
-                  <Ritardo className="w-full h-auto max-h-70 transition-transform duration-200 ease-in-out hover:scale-110" viewBox="0 0 500 800" onClick={openRitardoModal}/>
-                  <h3 className="text-xl font-bold mt-8 m-3">Ritardo, the Capitalist</h3>
+                  <Regardo className="w-full h-auto max-h-70 transition-transform duration-200 ease-in-out hover:scale-110" viewBox="0 0 500 800" onClick={openRegardoModal}/>
+                  <h3 className="text-xl font-bold mt-8 m-3">Regardo, the Capitalist</h3>
                   <p className='text-sm'>Play the game of accumulation. Use your capital to concentrate power, outmaneuver rivals, and push the economy towards a state of perfect inequality. If you win, the Oligarchy - the select few controlling 50% of the supply - splits the entire prize pool. The rest get nothing.</p>
                 </div>
                 <GenericModal
-                  isOpen={isRitardoModalOpen}
-                  onClose={closeRitardoModal}
-                  title="Ritardo, the Capitalist"
+                  isOpen={isRegardoModalOpen}
+                  onClose={closeRegardoModal}
+                  title="Regardo, the Capitalist"
                 >
                   <div className="flex h-full flex-col items-center text-center text-text">
                     <div className="flex w-full flex-1 items-center justify-center min-h-0 p-2">
 
-                      <Ritardo
+                      <Regardo
                         className="h-auto w-auto max-w-full max-h-full md:max-h-70"
                         viewBox="0 0 500 800"
                       />
                     </div>
                     <div className="shrink-0">
                       <h3 className="mt-4 mb-2 text-2xl font-bold">
-                        Ritardo, the Capitalist
+                        Regardo, the Capitalist
                       </h3>
                       <p className="px-4 p-2 text-text/90">
-                        Operating from his mom&apos;s basement, Ritardo wields what he calls weaponized autism and his grandma&apos;s 401k. He sees the market as a live-action video game, where fundamentals are boomer magic and the only true indicator is meme-velocity. For Ritardo, the goal is to win big, or go home in a blaze of loss-porn glory.
+                        Operating from his mom&apos;s basement, Regardo wields what he calls weaponized autism and his grandma&apos;s 401k. He sees the market as a live-action video game, where fundamentals are boomer magic and the only true indicator is meme-velocity. For Regardo, the goal is to win big, or go home in a blaze of loss-porn glory.
                       </p>
                     </div>
                   </div>
@@ -246,7 +246,7 @@ export default function Home() {
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="Active Value Accrual"
-                description="The Prize Pool generates constant yield via blue-chip DeFi. The DAO controls this revenue, voting to execute deflationary buybacks, deepen liquidity, or supercharge future Jackpots. Ownership is designed to be productive, not passive."
+                description="The Prize Pool generates constant yield via blue-chip DeFi. The DAO controls this revenue, voting to execute deflationary buybacks, deepen liquidity, or supercharge the Prize Pool. Ownership is designed to be productive, not passive."
                 onButtonClick={() => navigateToDocs('intro#revenue-allocation')}
               />
               <Card
@@ -275,7 +275,7 @@ export default function Home() {
             <div className="grid md:grid-cols-2 gap-8 mb-8">
               {/* Card 1: Community & Social */}
         <CardPlain
-          icon={<Ritardo className='w-full h-full' viewBox='0 0 500 800'/>}
+          icon={<Regardo className='w-full h-full' viewBox='0 0 500 800'/>}
           title="Join the Community"
           description={
             <>
@@ -301,7 +301,7 @@ export default function Home() {
 
         {/* Card 2: Ecosystem Growth */}
         <CardPlain
-          icon={<Ritardo className='w-full h-full' viewBox='0 0 500 800'/>}
+          icon={<Regardo className='w-full h-full' viewBox='0 0 500 800'/>}
           title="Spread the Word"
           description={
             <>
@@ -329,7 +329,7 @@ export default function Home() {
 
         {/* Card 3: Testnet Performance */}
         <CardPlain
-          icon={<Ritardo className='w-full h-full' viewBox='0 0 500 800'/>}
+          icon={<Regardo className='w-full h-full' viewBox='0 0 500 800'/>}
           title="Dominate the Testnet"
           description={
             <>
@@ -355,7 +355,7 @@ export default function Home() {
 
         {/* Card 4: Protocol Security */}
         <CardPlain
-          icon={<Ritardo className='w-full h-full' viewBox='0 0 500 800'/>}
+          icon={<Regardo className='w-full h-full' viewBox='0 0 500 800'/>}
           title="Become a Guardian"
           description={
             <>
@@ -373,7 +373,7 @@ export default function Home() {
             }
           actions={
             <button 
-              onClick={() => window.open('https://github.com/maexp0wer/ritardo_games')}
+              onClick={() => window.open('https://github.com/maexp0wer/Regardo_games')}
               className="w-full lg:w-2/3 bg-primary hover:bg-primary2 text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
               Open GitHub
             </button>
