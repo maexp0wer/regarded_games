@@ -265,7 +265,7 @@ export function TradingMask({
                 address: spendingToken as `0x${string}`,
                 abi: erc20Abi,
                 functionName: 'approve',
-                args: [exchangeAddress as `0x${string}`, maxUint256]
+                args: [exchangeAddress as `0x${string}`, amountNeeded]
             });
             setWorkflowStatus('mining_approval');
             await publicClient.waitForTransactionReceipt({ hash });

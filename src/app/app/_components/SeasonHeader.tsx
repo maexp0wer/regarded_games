@@ -72,7 +72,7 @@ export function SeasonHeader({
     const countdownText = useCountdown(targetTime);
 
 
-    const { data: yieldTotals } = useYieldTotals(seasonAddress);
+    const { data: yieldTotals } = useYieldTotals(seasonAddress, currentPhase);
 
     // 2. Process Reinvestment Amount
     const rawReinvest = BigInt(yieldTotals?.reinvest || "0");

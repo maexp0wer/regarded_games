@@ -1,6 +1,8 @@
+// useYieldTotals.ts
 import { useState, useEffect } from 'react';
 
-export function useYieldTotals(seasonAddress: string | undefined) {
+// Add 'trigger' as a second argument (could be the phase string or a boolean)
+export function useYieldTotals(seasonAddress: string | undefined, trigger?: any) {
   const [data, setData] = useState({
     buyback: "0",
     liquidity: "0",
@@ -8,7 +10,6 @@ export function useYieldTotals(seasonAddress: string | undefined) {
     dao: "0"
   });
   
-  // Start loading only if we actually have an address to fetch
   const [loading, setLoading] = useState(!!seasonAddress);
 
   useEffect(() => {
@@ -17,28 +18,30 @@ export function useYieldTotals(seasonAddress: string | undefined) {
         return;
     }
 
-    setLoading(true); // Start loading
+    setLoading(true);
 
     async function fetchTotals() {
       try {
-        const res = await fetch(`/api/yield?address=${seasonAddress}`);
+        // Cache busting: Adding a timestamp helps ensure you don't get 
+        // a cached browser response for the API route
+        const res = await fetch(`/api/yield?address=${seasonAddress}&t=${Date.now()}`);
         if (!res.ok) throw new Error("API failed");
         
         const json = await res.json();
         
-        // Only update if we got valid numbers back
         if (json && typeof json.buyback === 'string') {
           setData(json);
         }
       } catch (err) {
         console.error("Yield fetch error:", err);
       } finally {
-        setLoading(false); // Stop loading regardless of success/failure
+        setLoading(false);
       }
     }
 
     fetchTotals();
-  }, [seasonAddress]);
+    // ADD 'trigger' HERE:
+  }, [seasonAddress, trigger]); 
 
   return { data, loading };
 }
