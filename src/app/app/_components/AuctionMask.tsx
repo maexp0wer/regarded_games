@@ -117,11 +117,11 @@ function AuctionMaskInner({
   const { data: stakedBalances, refetch: refetchStaked } = useReadContract({ 
     address: stakingAddr, abi: StakingAbi, functionName: 'stakedBalances', args: [address] 
   });
-  const { data: requiredGiniStake, refetch: refetchRequired } = useReadContract({ 
-    address: stakingAddr, abi: StakingAbi, functionName: 'requiredGiniStake', args: [address]
+  const { data: requiredRegardsStake, refetch: refetchRequired } = useReadContract({ 
+    address: stakingAddr, abi: StakingAbi, functionName: 'requiredRegardsStake', args: [address]
   });
-  const { data: giniPrice } = useReadContract({
-    address: stakingAddr, abi: StakingAbi, functionName: 'getGiniPrice'
+  const { data: regardsPrice } = useReadContract({
+    address: stakingAddr, abi: StakingAbi, functionName: 'getRegardsPrice'
   });
   const { data: fimWallet, refetch: refetchFimWallet, isFetching: isFimFetching } = useReadContract({
     address: fimAddress as `0x${string}`, abi: ERC20Abi, functionName: 'balanceOf', args: [address], query: { refetchInterval: 5000 }
@@ -141,7 +141,7 @@ function AuctionMaskInner({
   // --- 2. Logic & Math ---
   const usdcToBuyBigInt = buyAmount ? parseUnits(buyAmount, 6) : 0n;
   const currentStaked = (stakedBalances as bigint) ?? 0n;
-  const currentLocked = (requiredGiniStake as bigint) ?? 0n;
+  const currentLocked = (requiredRegardsStake as bigint) ?? 0n;
   const hasStakedAnything = currentStaked > 0n;
   
   const currentFim = (fimWallet as bigint) ?? 0n;
@@ -269,13 +269,13 @@ function AuctionMaskInner({
     }
 
     // 2. Limit checks
-    if (!hasStakedAnything) return "Stake GINI to unlock";
-    if (isMaxedOut) return "Stake GINI to buy FIM";
+    if (!hasStakedAnything) return "Stake REGARDS to unlock";
+    if (isMaxedOut) return "Stake REGARDS to buy FIM";
     
     // NEW: Handle over-limit input
     if (isOverLimit) {
       const moreFim = Number(formatUnits(remainingFimAllowance, 18)).toLocaleString(undefined, { maximumFractionDigits: 0 });
-      return `You can only buy ${moreFim} more FIM with your current GINI Stake`;
+      return `You can only buy ${moreFim} more FIM with your current REGARDS Stake`;
     }
 
     // 3. Default
@@ -300,7 +300,7 @@ function AuctionMaskInner({
           <Link href="/stake" className="block transform transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99]">
             <div className="p-4 bg-danger/10 border border-danger/20 rounded-xl text-center shadow-inner cursor-pointer">
               <p className="text-[10px] font-black uppercase text-danger">⚠️ No Collateral Staked</p>
-              <p className="text-[10px] text-text2 mt-1 uppercase tracking-tighter">Click here to stake GINI and unlock buying</p>
+              <p className="text-[10px] text-text2 mt-1 uppercase tracking-tighter">Click here to stake REGARDS and unlock buying</p>
             </div>
           </Link>
         )}
@@ -387,11 +387,11 @@ function AuctionMaskInner({
             </span>
           </div>
           <div className="flex flex-col">
-            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Staked GINI</span>
+            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Staked REGARDS</span>
             <span className="font-black text-text tracking-tighter leading-none">{stakedDisplay}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Locked GINI</span>
+            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Locked REGARDS</span>
             <span className="font-black text-danger tracking-tighter leading-none">{currentLocked > 0n ? lockedDisplay : "0"}</span>
           </div>
         </div>

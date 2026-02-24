@@ -9,6 +9,7 @@ import coreDeployment from '@/deployments/core.json';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
 import Link from 'next/link';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
+import { VictoryProgressBar } from './VictoryProgressBar';
 
 // --- ABI Definitions ---
 const GAME_CONTROLLER_SEASONS_ABI = [
@@ -192,7 +193,7 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
 
                 {/* 2. Prize Pool (Left-aligned content) */}
                 <div className="flex flex-col items-start text-left w-1/4">
-                    <span className="text-[9px] uppercase font-bold text-text2 tracking-widest mb-0.5">Prize Pool</span>
+                    <span className="h3-app mb-0.5">Prize Pool</span>
                     <span className="text-xl font-black text-primary tracking-tighter leading-none">
                         ${(giniData?.prizePool ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
@@ -200,7 +201,7 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
 
                 {/* 3. Participants (Left-aligned content) */}
                 <div className="flex flex-col items-start text-left w-1/4">
-                    <span className="h3-app">Participants</span>
+                    <span className="h3-app mb-0.5">Participants</span>
                     <span className="text-xl font-black text-text tracking-tighter leading-none">
                         {(giniData?.playerCount ?? 0).toLocaleString()}
                     </span>
@@ -208,10 +209,10 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
 
                 {/* 4. Status/Time (Left-aligned content) */}
                 <div className="flex flex-col items-start text-left w-1/4">
-                    <span className="text-[9px] uppercase font-bold text-text2 tracking-widest mb-0.5">
+                    <span className="h3-app sm:mb-0.5 mb-1.5 ">
                         {isBootstrap ? 'STATUS' : (isTrading ? 'SEASON ENDS' : 'TRADING STARTS')}
                     </span>
-                    <span className="text-sm font-bold text-text leading-tight">
+                    <span className="sm:text-sm text-xs  font-bold text-text leading-tight">
                          {isBootstrap ? 'ON HOLD' : statusTime}
                     </span>
                 </div>
@@ -222,40 +223,27 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
 <div className="grid grid-cols-4 gap-6">
     
     {/* 1. GINI / PROGRESS (Column 1) */}
-    <div className="flex flex-col justify-center gap-2">
-        <span className="h3-app">
-            Live Gini Position
-        </span>
-        <div className="flex flex-col gap-1">
-            <div className="flex flex-col">
-                {/* Top Line: Gini Value and BPS Label */}
-                <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-black font-mono text-text leading-none">
-                        {gCurrent.toString()}
-                    </span>
-                    <span className="text-sm text-text2 font-bold uppercase">BPS</span>
-                </div>
-                
-                {/* Bottom Line: Progress Percentage */}
-                {isTrading && winningSide !== 'none' && (
-                    <div className={`text-[11px] font-bold uppercase tracking-wider mt-1 ${winningSide === 'cap' ? 'text-info' : 'text-danger'}`}>
-                        {progressPercent.toFixed(1)}% {winningSide === 'cap' ? 'CAPitalist' : 'SOCialist'} Progress
-                    </div>
-                )}
-            </div>
-        </div>
-        {isVictoryPending && (
-            <p className="text-[10px] font-bold text-yellow-500 mt-1 uppercase tracking-wide">
-                ⚠️ Settlement Pending
-            </p>
-        )}
-    </div>
+    <div className="flex flex-col justify-top gap-4 mr-10">
+    <span className="h3-app">Victory Progress</span>
+    <VictoryProgressBar 
+        gini={gCurrent}
+        gInitial={gInitialRaw ? Number(gInitialRaw) : 5000}
+        victoryThresholdBps={season.config.victoryThresholdBps}
+        baseBeta={season.config.baseBeta}
+        phase={season.phase}
+    />
+    {isVictoryPending && (
+        <p className="text-[10px] font-bold text-yellow-500 mt-1 uppercase tracking-wide">
+            Settlement Pending
+        </p>
+    )}
+</div>
 
     {/* 2. FIXED POLICY (Column 2) */}
     <div className="flex flex-col gap-4 justify-center">
         {/* Comp. Multiplier */}
         <div className="flex flex-col items-start gap-1">
-            <span className="text-[9px] text-text2 uppercase tracking-widest leading-tight">Comp. Multiplier</span>
+            <span className="text-[9px] text-text2 uppercase tracking-widest leading-tight">Compensation Multiplier</span>
             <span className="text-sm font-bold text-primary text-left">
                 {(season.config.baseBeta / 10000 + Math.pow(1 - (gCurrent / 10000), 2)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })}x
             </span>
@@ -373,7 +361,7 @@ export function SeasonsList() {
 });
 
   if (isLoading) return (
-    <div className="w-full max-w-3xl p-12 text-center">
+    <div className="w-full max-w-5xl p-12 text-center">
         <span className="text-primary font-display uppercase tracking-widest animate-pulse">Scanning Seasons...</span>
     </div>
   );
@@ -383,7 +371,7 @@ export function SeasonsList() {
   const filtered = display.filter(s => showAll ? true : (s.phase !== 'PAYOUT' && s.phase !== 'ENDED'));
 
   return (
-    <div className="w-full max-w-4xl space-y-6">
+    <div className="w-full max-w-350 space-y-6">
       
       {/* List Header */}
       <div className="flex justify-between items-center px-2">

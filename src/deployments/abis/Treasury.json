@@ -18,7 +18,7 @@
         "internalType": "address"
       },
       {
-        "name": "_gini",
+        "name": "_reg",
         "type": "address",
         "internalType": "address"
       }
@@ -167,7 +167,7 @@
   },
   {
     "type": "function",
-    "name": "gini",
+    "name": "reg",
     "inputs": [],
     "outputs": [
       {

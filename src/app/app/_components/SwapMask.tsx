@@ -21,28 +21,28 @@ export function SwapMask() {
   const { writeContractAsync } = useWriteContract();
 
   const [amount, setAmount] = useState("");
-  const [isBuying, setIsBuying] = useState(true); // true = USDC->GINI, false = GINI->USDC
+  const [isBuying, setIsBuying] = useState(true); // true = USDC->REG, false = REG->USDC
   const [status, setStatus] = useState<WorkflowStep>('idle');
 
   // Configuration
   const ROUTER_ADDRESS = Mocks.Router as `0x${string}`;
   const usdcAddr = Core.USDC as `0x${string}`;
-  const giniAddr = Core.GINI as `0x${string}`;
+  const regAddr = Core.REG as `0x${string}`;
 
-  const tokenIn = isBuying ? usdcAddr : giniAddr;
-  const tokenOut = isBuying ? giniAddr : usdcAddr;
+  const tokenIn = isBuying ? usdcAddr : regAddr;
+  const tokenOut = isBuying ? regAddr : usdcAddr;
   const decimalsIn = isBuying ? 6 : 18;
   const decimalsOut = isBuying ? 18 : 6;
-  const symbolIn = isBuying ? 'USDC' : 'GINI';
-  const symbolOut = isBuying ? 'GINI' : 'USDC';
+  const symbolIn = isBuying ? 'USDC' : 'REG';
+  const symbolOut = isBuying ? 'REG' : 'USDC';
 
   // --- 1. Contract Reads ---
   // Read both balances always so switching is snappy
   const { data: usdcBalance, refetch: refetchUsdc } = useReadContract({
     address: usdcAddr, abi: erc20Abi, functionName: 'balanceOf', args: address ? [address] : undefined,
   });
-  const { data: giniBalance, refetch: refetchGini } = useReadContract({
-    address: giniAddr, abi: erc20Abi, functionName: 'balanceOf', args: address ? [address] : undefined,
+  const { data: regBalance, refetch: refetchReg } = useReadContract({
+    address: regAddr, abi: erc20Abi, functionName: 'balanceOf', args: address ? [address] : undefined,
   });
   
   // Read allowance for the CURRENT input token
@@ -53,10 +53,10 @@ export function SwapMask() {
   // --- 2. Logic & Math ---
   const amountBigInt = amount ? parseUnits(amount, decimalsIn) : 0n;
   const currentUsdc = (usdcBalance as bigint) ?? 0n;
-  const currentGini = (giniBalance as bigint) ?? 0n;
-  const walletBalanceIn = isBuying ? currentUsdc : currentGini;
+  const currentReg = (regBalance as bigint) ?? 0n;
+  const walletBalanceIn = isBuying ? currentUsdc : currentReg;
   
-  // Mock Quote Calculation (1 USDC = 1 GINI scaled)
+  // Mock Quote Calculation (1 USDC = 1 REG scaled)
   const estimatedOutputBigInt = useMemo(() => {
     if (amountBigInt === 0n) return 0n;
     if (isBuying) return amountBigInt * 1000000000000n; // 1e6 -> 1e18
@@ -69,7 +69,7 @@ export function SwapMask() {
 
   const resetData = () => {
     refetchUsdc();
-    refetchGini();
+    refetchReg();
     refetchAllowance();
   };
 
@@ -198,7 +198,7 @@ export function SwapMask() {
               ${isBuying ? 'bg-primary text-card' : 'text-text2 hover:text-text hover:bg-white/5'}`}
             disabled={isBusy}
           >
-            Buy GINI
+            Buy REG
           </button>
           <button 
             onClick={() => { if(!isBusy) { setIsBuying(false); setAmount(""); } }}
@@ -206,7 +206,7 @@ export function SwapMask() {
               ${!isBuying ? 'bg-primary text-card' : 'text-text2 hover:text-text hover:bg-white/5'}`}
             disabled={isBusy}
           >
-            Sell GINI
+            Sell REG
           </button>
         </div>
 
@@ -223,9 +223,9 @@ export function SwapMask() {
              <span className="text-lg font-black text-primary tracking-tighter leading-none">1:1</span>
           </div>
           <div className="flex flex-col text-right">
-            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Gini Bal</span>
+            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Reg Bal</span>
             <span className="text-lg font-black text-text tracking-tighter leading-none">
-              {Number(formatUnits(currentGini, 18)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              {Number(formatUnits(currentReg, 18)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </span>
           </div>
         </div>

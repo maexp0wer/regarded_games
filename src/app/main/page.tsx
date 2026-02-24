@@ -68,7 +68,7 @@ export default function Home() {
   return (
     <div className={`flex font-display ${darkMode ? 'dark bg-bg' : 'bg-bg'}`}>
       <Head>
-        <title>Gini.gg</title>
+        <title>Regarded Games</title>
         <link rel="icon" href="/logo.png" />
         <meta name="viewport" content="width=device-width, initial-scale=1"></meta>
       </Head>
@@ -215,13 +215,13 @@ export default function Home() {
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="OUTPLAY THE MARKET"
-                description="For 3 Months, trade $FIM to impact the live Gini Coefficient, which measures wealth inequality. Choose your trades wisely and coordinate with your peers—who you trade with is as important as the price."
+                description="For 3 Months, trade $FIM to impact the live Reg Coefficient, which measures wealth inequality. Choose your trades wisely and coordinate with your peers—who you trade with is as important as the price."
                 onButtonClick={() => navigateToDocs('intro#phase-3-victory-payouts')}
               />
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="ENFORCE YOUR IDEOLOGY"
-                description="It’s a race. The first faction to shift the Gini Coefficient by 25% captures the Treasury. The winner dictates the payout rules; the loser pays the price."
+                description="It’s a race. The first faction to shift the Reg Coefficient by 25% captures the Treasury. The winner dictates the payout rules; the loser pays the price."
                 onButtonClick={() => navigateToDocs('intro#phase-3-victory-and-payouts')}
               />
             </div>
@@ -232,7 +232,7 @@ export default function Home() {
           <section id="sectionGame" className="py-16 mx-auto">
             <h2 className="text-3xl font-bold mb-8 text-center">Own the Game.</h2>
             <div className="mx-auto">
-              <p className='mb-10'>The modern financial market is a game rigged against the individual. Gini.gg is built on a different foundation. It is a self-sustaining ecosystem owned and operated by its players, using the power of decentralization to create a fairer and more transparent world than the one it simulates.</p>
+              <p className='mb-10'>The modern financial market is a game rigged against the individual. Regarded Games is built on a different foundation. It is a self-sustaining ecosystem owned and operated by its players, using the power of decentralization to create a fairer and more transparent world than the one it simulates.</p>
               
               
               </div>
@@ -240,7 +240,7 @@ export default function Home() {
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="True Player Ownership"
-                description="No central company. No rigged outcomes. Gini.gg is a DAO owned entirely by its players. From balancing the game to managing the Treasury, every decision is voted on by $GINI holders. The community holds the power, permanently."
+                description="No central company. No rigged outcomes. Regarded Games is a DAO owned entirely by its players. From balancing the game to managing the Treasury, every decision is voted on by $REG holders. The community holds the power, permanently."
                 onButtonClick={() => navigateToDocs('intro#5-governance')}
               />
               <Card
@@ -252,7 +252,7 @@ export default function Home() {
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="A New Framework for Collaboration"
-                description="Crypto should be a tool for coordination, not just a casino. Gini.gg is a live laboratory dedicated to this foundational purpose. By playing, you aren't just competing—you are participating in a grand experiment on the future of human organization."
+                description="Crypto should be a tool for coordination, not just a casino. Regarded Games is a live laboratory dedicated to this foundational purpose. By playing, you aren't just competing—you are participating in a grand experiment on the future of human organization."
                 onButtonClick={() => navigateToDocs('mission')}
               />
               
@@ -271,7 +271,7 @@ export default function Home() {
           <section id="sectionGenesisProgram" className="py-16 mx-auto">
 
             <h2 className="text-3xl font-bold mb-8 text-center">Join the Genesis Program</h2>
-            <h2 className="text-xl font-bold mb-8 text-center">Gini.gg is a community-owned DAO. We&apos;re reserving a significant portion of the initial $GINI supply for our founding players. Your Contribution Score determines your share. Here&apos;s your quest board:</h2>
+            <h2 className="text-xl font-bold mb-8 text-center">Regarded Games is a community-owned DAO. We&apos;re reserving a significant portion of the initial $REG supply for our founding players. Your Contribution Score determines your share. Here&apos;s your quest board:</h2>
             <div className="grid md:grid-cols-2 gap-8 mb-8">
               {/* Card 1: Community & Social */}
         <CardPlain
