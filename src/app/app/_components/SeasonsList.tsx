@@ -226,6 +226,7 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
     <div className="flex flex-col justify-top gap-4 mr-10">
     <span className="h3-app">Victory Progress</span>
     <VictoryProgressBar 
+        seasonAddress={season.season}
         gini={gCurrent}
         gInitial={gInitialRaw ? Number(gInitialRaw) : 5000}
         victoryThresholdBps={season.config.victoryThresholdBps}

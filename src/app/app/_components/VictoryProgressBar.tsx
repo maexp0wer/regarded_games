@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import { useReadContract } from 'wagmi';
+import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 
 interface VictoryProgressBarProps {
+  seasonAddress: string; // Required to fetch official settlement data
   gini: number;
   gInitial: number;
   victoryThresholdBps: number;
@@ -12,6 +15,7 @@ interface VictoryProgressBarProps {
 }
 
 export function VictoryProgressBar({ 
+  seasonAddress,
   gini, 
   gInitial, 
   victoryThresholdBps, 
@@ -20,13 +24,39 @@ export function VictoryProgressBar({
   hideLabels = false 
 }: VictoryProgressBarProps) {
   
-  // Define active states where the bar should be visible
-  const isTrading = phase === 'TRADING';
-  const isPayout = phase === 'PAYOUT';
+  // --- 1. FETCH OFFICIAL SETTLED DATA ---
+  const { data: finalProgressBps } = useReadContract({
+    address: seasonAddress as `0x${string}`,
+    abi: GameSeasonAbi as any,
+    functionName: 'finalProgressBps',
+    query: { enabled: !!seasonAddress }
+  });
+
+  const { data: isOligarchyWin } = useReadContract({
+    address: seasonAddress as `0x${string}`,
+    abi: GameSeasonAbi as any,
+    functionName: 'isOligarchyWin',
+    query: { enabled: !!seasonAddress }
+  });
 
   const progress = useMemo(() => {
-    // Only calculate if we have valid data and are in an active phase
-    if (!gInitial || (!isTrading && !isPayout)) return { prog: 0, side: 'none' };
+    // --- 2. PAYOUT PHASE OVERRIDE ---
+    // If the season is over and we have contract data, use it.
+    if (phase === 'PAYOUT' && finalProgressBps !== undefined) {
+        const bps = Number(finalProgressBps);
+        
+        // If the contract says 0 BPS, it's a tie
+        if (bps === 0) return { prog: 0, side: 'none' };
+
+        return { 
+          prog: bps / 100, 
+          side: isOligarchyWin ? 'cap' : 'soc' 
+        };
+    }
+
+    // --- 3. LIVE TRADING MATH (Fallback) ---
+    // This runs during TRADING, or while PAYOUT data is still loading
+    if (!gInitial) return { prog: 0, side: 'none' };
 
     const gCurr = gini;
     const gInit = gInitial;
@@ -58,10 +88,9 @@ export function VictoryProgressBar({
       prog: Math.min(Math.max(prog, 0), 100), 
       side 
     };
-  }, [gini, gInitial, victoryThresholdBps, baseBeta, isTrading, isPayout]);
+  }, [gini, gInitial, victoryThresholdBps, baseBeta, phase, finalProgressBps, isOligarchyWin]);
 
-  // Fallback UI: Only show this for AUCTION, BOOTSTRAP, or other non-active phases
-  // We explicitly exclude PAYOUT from this check
+  // Handle Non-Active Phases
   if (phase !== 'TRADING' && phase !== 'PAYOUT') {
     return (
       <div className="h-[42px] flex items-center justify-center border border-dashed border-border/10 rounded-lg bg-card2/20">
@@ -72,15 +101,12 @@ export function VictoryProgressBar({
     );
   }
 
-  // Label Logic
   const isTie = progress.prog === 0;
   const sideLabel = progress.side === 'cap' ? 'Capitalist' : 'Socialist';
-  const suffix = isPayout ? 'Win' : 'Progress';
+  const suffix = phase === 'PAYOUT' ? 'Win' : 'Progress';
 
   return (
     <div className="flex flex-col gap-3 w-full items-start text-left">
-      
-      {/* PERCENTAGE TEXT */}
       {!hideLabels && (
         <span className={`text-[10px] font-bold uppercase tracking-wider leading-none 
           ${isTie ? 'text-text2/40' : (progress.side === 'cap' ? 'text-info' : 'text-danger')}`}
@@ -93,7 +119,6 @@ export function VictoryProgressBar({
         </span>
       )}
       
-      {/* PROGRESS BAR */}
       <div className="w-full h-1.5 bg-card2 rounded-full overflow-hidden border border-border/5">
         <div 
           className={`h-full transition-all duration-1000 ease-out 

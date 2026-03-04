@@ -2,7 +2,7 @@ import React from 'react';
 import { isAddress } from 'viem';
 import { notFound } from 'next/navigation';
 import { PlayerActiveSeasons } from '../../_components/PlayerActiveSeasons';
-import { PlayerHoldings } from '../../_components/PlayerHoldings';
+import { PlayerProfile } from '../../_components/PlayerProfile';
 import { ClaimableAlerts } from '../../_components/ClaimableAlerts'; // Add this
 
 
@@ -37,7 +37,7 @@ export default async function UserDashboardPage({
 
           {/* Right Column (1/3): Player Stats/Profile */}
           <div className="w-full lg:col-span-1 min-w-0">
-            <PlayerHoldings profileAddress={address as `0x${string}`} />
+            <PlayerProfile profileAddress={address as `0x${string}`} />
           </div>
 
         </div>

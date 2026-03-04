@@ -1,0 +1,96 @@
+import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
+
+/**
+ * Robust fetch for the profile. 
+ * Note: On the server, app.localhost might not resolve. 
+ * We use 127.0.0.1 to ensure it hits the local dev server.
+ */
+async function getPlayerProfile(address: string) {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_MAIN_DOMAIN;
+    const res = await fetch(`${baseUrl}/api/profile?address=${address.toLowerCase()}`, { 
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (!res.ok) {
+      console.error(`Profile API returned ${res.status} for ${address}`);
+      return null;
+    }
+    
+    return await res.json();
+  } catch (e) {
+    console.error("SSO DB Fetch Error:", e);
+    return null;
+  }
+}
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const sso = searchParams.get('sso');
+  const sig = searchParams.get('sig');
+
+  if (!sso || !sig) return new NextResponse("Missing SSO", { status: 400 });
+
+  const SECRET = process.env.DISCOURSE_SSO_SECRET || '91ZEewZ0XnTu&aqr';
+
+  // 1. Signature Check
+  const hmac = crypto.createHmac('sha256', SECRET);
+  const calculatedSig = hmac.update(sso).digest('hex');
+  if (calculatedSig !== sig) return new NextResponse("Sig Mismatch", { status: 403 });
+
+  // 2. Identify Wallet from cookie
+  const walletAddress = req.cookies.get('current_wallet')?.value?.toLowerCase();
+  if (!walletAddress) return NextResponse.redirect(new URL('/?login_required', req.url));
+
+  // 3. Admin Check
+  const ADMIN_WALLET = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266".toLowerCase();
+  const isSystemAdmin = walletAddress === ADMIN_WALLET;
+
+  // 4. Fetch the profile (This is where the magic happens)
+  const profileData = await getPlayerProfile(walletAddress);
+  
+  // --- REPLICATING YOUR PlayerProfile.tsx LOGIC ---
+  const dbName = profileData?.name || '';
+  const dbImageUrl = profileData?.image_url || '';
+
+  // Display Name: Custom name OR "Regarded Anon"
+  const displayName = dbName.trim() !== "" ? dbName : "Regarded Anon";
+
+  // Avatar Seed: Use Name if exists, otherwise Wallet Address
+  const seed = dbName.trim() !== "" ? dbName : walletAddress;
+  
+  // Final Avatar URL: User URL OR DiceBear
+  const finalAvatarUrl = dbImageUrl.trim() !== "" 
+    ? dbImageUrl 
+    : `https://api.dicebear.com/9.x/bottts/svg?seed=${encodeURIComponent(seed)}`;
+  // ------------------------------------------------
+
+  console.log(`SSO Syncing: ${walletAddress} | Name: ${displayName}`);
+
+  // 5. Decode Nonce
+  const payloadRaw = Buffer.from(sso, 'base64').toString();
+  const nonce = new URLSearchParams(payloadRaw).get('nonce');
+
+  // 6. Build Return Payload
+  const returnParams = new URLSearchParams({
+    nonce: nonce!,
+    external_id: walletAddress,
+    email: `${walletAddress}@regarded.local`,
+    username: walletAddress, // Always full address for uniqueness
+    name: displayName,       // Custom Name or Regarded Anon
+    avatar_url: finalAvatarUrl,
+    avatar_force_update: "true",
+    require_activation: "false",
+    admin: isSystemAdmin ? "true" : "false",
+    moderator: isSystemAdmin ? "true" : "false",
+    groups: isSystemAdmin ? "admins" : "",
+  });
+
+  const returnPayload = Buffer.from(returnParams.toString()).toString('base64');
+  const returnHmac = crypto.createHmac('sha256', SECRET);
+  const returnSig = returnHmac.update(returnPayload).digest('hex');
+
+  return NextResponse.redirect(`http://community.localhost/session/sso_login?sso=${returnPayload}&sig=${returnSig}`);
+}

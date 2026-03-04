@@ -278,6 +278,7 @@ export default function SeasonDetailPage() {
 
             <div className="lg:col-span-2 h-full">
               <GiniDisplay 
+                seasonAddress={seasonAddress}
                 gCurrent={gCurrent} 
                 gInitial={gInitial}
                 socTargetBps={socTargetBps} 
@@ -358,6 +359,7 @@ export default function SeasonDetailPage() {
               {/* 2. Gini Display: Change the width class based on hasOrders */}
               <div className={`h-full ${hasOrders ? "lg:col-span-2" : "lg:col-span-3"}`}>
                 <GiniDisplay 
+                  seasonAddress={seasonAddress}
                   gCurrent={gCurrent} 
                   gInitial={gInitial}
                   socTargetBps={socTargetBps} 
@@ -409,6 +411,7 @@ export default function SeasonDetailPage() {
         />
     
         <GiniDisplay 
+            seasonAddress={seasonAddress}
             gCurrent={gCurrent} 
             gInitial={gInitial} 
             socTargetBps={socTargetBps} 

@@ -25,6 +25,9 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
   // 2. Tracks if a transaction has been sent but not yet confirmed/indexed.
   const [transactionSent, setTransactionSent] = useState(false);
 
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+
+
   // Write Hook
   const { writeContract, data: hash, isPending: isWritePending, reset } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
@@ -96,6 +99,16 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
   
   // Eligibility logic (User can claim if payout > 0)
   const canClaim = payout > 0;
+
+  // Success Message Effect (3s toast)
+  
+    useEffect(() => {
+    if (isSuccess) {
+        setShowSuccessToast(true);
+        const timer = setTimeout(() => setShowSuccessToast(false), 3000);
+        return () => clearTimeout(timer);
+    }
+    }, [isSuccess]);
 
   // --- EFFECT: HANDLE TRANSACTION LIFECYCLE ---
   useEffect(() => {
@@ -179,7 +192,9 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
   const isButtonDisabled = isWritePending || isConfirming || !canClaim || hasClaimed;
 
   return (
+    
     <div className="bg-card rounded-xl p-6 h-full flex flex-col shadow-sm animate-in fade-in">
+        
       
       {/* HEADER - (Unchanged) */}
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 mb-6">
@@ -241,7 +256,7 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
             {canClaim && !hasClaimed ? (
                 <div className="flex flex-col space-y-1.5">
                     <span className="text-[10px] text-primary font-black uppercase tracking-widest">Claimable Now</span>
-                    {calcLoading || isWritePending ? (
+                    {calcLoading ? (
                         <div className="h-6 w-24 bg-white/5 animate-pulse rounded" />
                     ) : (
                         <span className="text-lg font-mono font-bold text-text leading-none">
@@ -253,7 +268,7 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
             ) : (
                 <div className="flex flex-col space-y-1.5">
                     <span className="text-[10px] text-primary font-black uppercase tracking-widest">Total Claimed</span>
-                    {calcLoading || isWritePending ? (
+                    {calcLoading ? (
                         <div className="h-6 w-24 bg-white/5 animate-pulse rounded" />
                     ) : (
                         <span className="text-lg font-mono font-bold text-text leading-none">
@@ -267,7 +282,7 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
             {/* 4. Season PnL (Pill Style + USDC Included) */}
             <div className="flex flex-col space-y-1.5 items-end text-right">
                 <span className="text-[10px] text-text2 font-black uppercase tracking-widest">Season PnL</span>
-                {calcLoading || isWritePending ? (
+                {calcLoading ? (
                     <div className="h-6 w-20 bg-white/5 animate-pulse rounded" />
                 ) : (
                     <div className={`px-2 py-1 rounded-md text-sm font-mono font-bold inline-flex items-center gap-1 border ${
@@ -290,33 +305,30 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
 
       {/* ACTION AREA */}
       <div className="mt-auto space-y-3">
-        {canClaim ? (
-            /* READY STATE: User has funds to claim */
-            <>
-                {/* The button is the ONLY action needed if funds are available */}
-                <button
-                    onClick={handleClaim}
-                    disabled={isButtonDisabled}
-                    className={`w-full btn-primary py-4 shadow-lg shadow-primary/20 ${isButtonDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}
-                >
-                    {isWritePending || isConfirming ? "Confirming on Chain..." : "Claim Payout"}
-                </button>
-            </>
-        ) : !hasClaimed ? (
-            /* TERMINAL STATES: No funds available to claim (and hasn't successfully claimed before) */
-            <div className="p-6 bg-white/2 rounded-lg border border-white/5 border-dashed text-center flex flex-col items-center justify-center opacity-70">
-              <span className="text-xl mb-2 grayscale">🏁</span>
-              <h4 className="text-xs font-bold text-text uppercase tracking-widest">Ineligible</h4>
-              <p className="text-[10px] text-text2 mt-1">
-                You did not participate in this season
-              </p>
+        {showSuccessToast ? (
+            /* SUCCESS STATE: Shows for 3 seconds, hiding the button immediately */
+            <div className="btn-success animate-pulse">
+            Payout Claimed Successfully
             </div>
-        ) : (
-             /* CASE: hasClaimed is TRUE, but canClaim is FALSE (payout is 0). 
-                Since 'Total Claimed' is shown above, we show nothing here. */
-             null
-        )}
-      </div>
+        ) : canClaim ? (
+            /* READY STATE */
+            <button
+            onClick={handleClaim}
+            disabled={isButtonDisabled}
+            className={`w-full btn-primary py-4 shadow-lg shadow-primary/20 ${isButtonDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}
+            >
+            {isWritePending || isConfirming ? "Confirming on Chain..." : "Claim Payout"}
+            </button>
+        ) : !hasClaimed ? (
+            /* TERMINAL STATE: Ineligible */
+            <div className="p-6 bg-white/2 rounded-lg border border-white/5 border-dashed text-center flex flex-col items-center justify-center opacity-70">
+            <span className="text-xl mb-2 grayscale">🏁</span>
+            <h4 className="text-xs font-bold text-text uppercase tracking-widest">Ineligible</h4>
+            <p className="text-[10px] text-text2 mt-1">You did not participate in this season</p>
+            </div>
+        ) : null}
+        </div>
+      
     </div>
   );
 }

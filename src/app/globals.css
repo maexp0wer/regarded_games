@@ -65,17 +65,32 @@
 
 
 .btn-primary {
-    @apply px-6 py-3 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.03];
-    @apply bg-primary hover:bg-primary2 text-bg border border-none;
+    @apply px-6 py-3 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02];
+    @apply bg-primary hover:bg-primary2 text-bg;
+  }
 
-    .dark & {
-      @apply border-none;
-    }
+.btn-primary-waiting {
+    @apply px-6 py-3 rounded-lg text-lg font-medium;
+    @apply bg-primary/70 text-card;
+  }
+
+.btn-success {
+    /* Layout & Typography - Matching your button style */
+    @apply w-full py-4 rounded-lg text-center font-display font-medium text-lg;
+    
+    /* Colors & Border */
+    @apply bg-success/10 border border-success/30 text-success;
+    
+    /* Shadow */
+    @apply shadow-lg shadow-success/10;
+    
+    /* Ensure it behaves like a block element in button spots */
+    @apply flex items-center justify-center;
   }
 
 
 .btn-secondary {
-    @apply px-6 py-3 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.03];
+    @apply px-6 py-3 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02];
     @apply bg-card2 hover:bg-card3 text-text border border-card3;
 
     .dark & {

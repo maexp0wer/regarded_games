@@ -1,12 +1,16 @@
-// GiniDisplay.tsx
-import React from 'react';
+'use client';
 
-// Icons (Moved from original GiniDashboard)
+import React from 'react';
+import { useReadContract } from 'wagmi';
+import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
+
+// Icons
 import Regardo from '@/components/icons/Regardo.svg';
 import Carlo from '@/components/icons/Carlo.svg';
 
 // Props Interface
 interface GiniDisplayProps {
+    seasonAddress: string; // Added to fetch official settlement data
     gCurrent: number;
     gInitial: number;
     socTargetBps: number;
@@ -19,15 +23,14 @@ interface GiniDisplayProps {
 }
 
 // ============================================================================
-// 2. SUB-COMPONENT: AUCTION GAUGE (0-100%) (Moved from original)
+// 1. SUB-COMPONENT: AUCTION GAUGE (0-100%)
 // ============================================================================
 function AuctionGauge({ gCurrent, socTarget, capTarget }: { gCurrent: number, socTarget: number, capTarget: number }) {
   const gNorm = gCurrent / 10000;
   
   return (
     <div className="relative w-full h-2 bg-card2 rounded-full">
-      
-      {/* --- ICONS (TOP) --- */}
+      {/* ICONS (TOP) */}
       <div className="absolute bottom-4 -translate-x-1/2 flex flex-col items-center z-10" style={{ left: `${(socTarget / 10000) * 100}%` }}>
         <Carlo className="w-14 h-auto opacity-90" viewBox="0 0 600 800"/>
       </div>
@@ -35,7 +38,7 @@ function AuctionGauge({ gCurrent, socTarget, capTarget }: { gCurrent: number, so
         <Regardo className="w-14 h-auto opacity-90" viewBox="0 0 600 800"/>
       </div>
 
-      {/* --- TARGETS (BOTTOM - SHORT LINES) --- */}
+      {/* TARGETS (BOTTOM) */}
       <div className="absolute top-2 -translate-x-1/2 flex flex-col items-center z-10" style={{ left: `${(socTarget / 10000) * 100}%` }}>
         <div className="w-0.5 h-3 bg-danger/20 mb-1"></div>
         <span className="text-lg font-black text-danger font-mono leading-none">{socTarget.toFixed(0)}</span>
@@ -48,7 +51,7 @@ function AuctionGauge({ gCurrent, socTarget, capTarget }: { gCurrent: number, so
         <span className="text-[9px] uppercase font-bold text-info/50 tracking-widest mt-0.5">Target</span>
       </div>
 
-      {/* --- CURRENT GINI (BOTTOM - LONG LINE) --- */}
+      {/* CURRENT GINI */}
       <div 
         className="absolute top-2 -translate-x-1/2 flex flex-col items-center transition-all duration-700 ease-out z-40"
         style={{ left: `${gNorm * 100}%` }}
@@ -64,7 +67,6 @@ function AuctionGauge({ gCurrent, socTarget, capTarget }: { gCurrent: number, so
         </div>
       </div>
 
-      {/* Dots */}
       <div className="absolute inset-0 flex items-center">
         <div className="absolute w-3 h-3 rounded-full z-20 -translate-x-1/2 shadow-lg transition-all duration-700 bg-primary" style={{ left: `${gNorm * 100}%` }} />
         <div className="absolute w-2 h-2 bg-danger rounded-full z-20 -translate-x-1/2" style={{ left: `${(socTarget / 10000) * 100}%` }} />
@@ -74,13 +76,10 @@ function AuctionGauge({ gCurrent, socTarget, capTarget }: { gCurrent: number, so
   );
 }
 
-
 // ============================================================================
-// 3. SUB-COMPONENT: TRADING / PAYOUT GAUGE (Zoomed) (Moved from original)
+// 2. SUB-COMPONENT: TRADING / PAYOUT GAUGE (Zoomed)
 // ============================================================================
 function TradingGauge({ gCurrent, gInitial, socTarget, capTarget, winningSide, progress, phase }: any) {
-  
-  // Dynamic Scale
   const viewMin = Math.max(0, socTarget - 500);
   const viewMax = Math.min(10000, capTarget + 500);
   const viewSpan = viewMax - viewMin;
@@ -99,37 +98,20 @@ function TradingGauge({ gCurrent, gInitial, socTarget, capTarget, winningSide, p
         <h2 className="h2-app">
            {isFinal ? "Final Gini Position" : "Live Gini Position"}
         </h2>
-
       </div>
 
       <div className="relative w-full h-2 bg-card2 rounded-full my-16">
-        
-        {/* --- INITIAL MARKER (BOTTOM LABEL) --- */}
-      <div 
-          className="absolute -translate-x-1/2 flex flex-col items-center z-20" 
-          style={{ 
-              left: `${getPosition(gInitial)}%`, 
-              top: 'calc(50% + 8px)' // Starts exactly below the center-track dot
-          }}
-      >
-          {/* Short Vertical Line (Tick) pointing up to the dot */}
-          <div className="w-0.5 h-2 bg-text2/30 mb-1"></div>
+        {/* INITIAL MARKER */}
+        <div 
+            className="absolute -translate-x-1/2 flex flex-col items-center z-20" 
+            style={{ left: `${getPosition(gInitial)}%`, top: 'calc(50% + 8px)' }}
+        >
+            <div className="w-0.5 h-2 bg-text2/30 mb-1"></div>
+            <span className="text-xs font-black text-text2/50 font-mono leading-none">{gInitial.toLocaleString()}</span>
+            <span className="text-[8px] uppercase font-bold text-text2/30 tracking-widest mt-0.5">Initial</span>
+        </div>
 
-          {/* The Mono Number (Slightly smaller: text-base) */}
-          <span className="text-xs font-black text-text2/50 font-mono leading-none">
-              {gInitial.toLocaleString()}
-          </span>
-
-          {/* Subtitle (Slightly smaller: text-[8px]) */}
-          <span className="text-[8px] uppercase font-bold text-text2/30 tracking-widest mt-0.5">
-              Initial
-          </span>
-      </div>
-
-      
-        
-
-        {/* --- ICONS (TOP) --- */}
+        {/* ICONS */}
         <div className="absolute bottom-4 -translate-x-1/2 flex flex-col items-center z-10" style={{ left: `${getPosition(socTarget)}%` }}>
            <Carlo className="w-14 h-auto opacity-90" viewBox="0 0 600 800"/>
         </div>
@@ -137,18 +119,16 @@ function TradingGauge({ gCurrent, gInitial, socTarget, capTarget, winningSide, p
            <Regardo className="w-14 h-auto opacity-90" viewBox="0 0 600 800"/>
         </div>
 
-        {/* --- TARGETS (BOTTOM - SHORT LINES) --- */}
+        {/* TARGETS */}
         <div className="absolute top-2 -translate-x-1/2 flex flex-col items-center z-10" style={{ left: `${getPosition(socTarget)}%` }}>
             <div className="w-0.5 h-3 bg-danger/20 mb-1"></div>
             <span className="text-lg font-black text-danger font-mono leading-none">{socTarget.toFixed(0)}</span>
-            
             <div className="flex flex-col items-center gap-1 mt-0.5">
                 <span className="text-[9px] uppercase font-bold text-danger/50 tracking-widest">Target</span>
                 {winningSide === 'soc' && (
                   <span className={`text-[9px] font-bold text-card bg-danger px-1.5 py-0.5 rounded whitespace-nowrap shadow-sm ${isFinal ? '' : 'animate-pulse'}`}>
                     {progress.toFixed(1)}% Progress
                   </span>
- 
                 )}
             </div>
         </div>
@@ -156,7 +136,6 @@ function TradingGauge({ gCurrent, gInitial, socTarget, capTarget, winningSide, p
         <div className="absolute top-2 -translate-x-1/2 flex flex-col items-center z-10" style={{ left: `${getPosition(capTarget)}%` }}>
             <div className="w-0.5 h-3 bg-info/20 mb-1"></div>
             <span className="text-lg font-black text-info font-mono leading-none">{capTarget.toFixed(0)}</span>
-            
             <div className="flex flex-col items-center gap-1 mt-0.5">
                 <span className="text-[9px] uppercase font-bold text-info/50 tracking-widest">Target</span>
                 {winningSide === 'cap' && (
@@ -167,13 +146,12 @@ function TradingGauge({ gCurrent, gInitial, socTarget, capTarget, winningSide, p
             </div>
         </div>
 
-        {/* --- CURRENT GINI (BOTTOM - LONG LINE) --- */}
+        {/* CURRENT GINI */}
         <div 
           className="absolute top-2 -translate-x-1/2 flex flex-col items-center transition-all duration-700 ease-out z-40"
           style={{ left: `${getPosition(gCurrent)}%` }}
         >
           <div className="w-0.5 h-18 bg-primary mb-2"></div>
-          
           <div className="bg-card px-2 py-1 rounded-lg flex flex-col items-center">
               <span className="text-3xl font-black font-mono leading-none tracking-tighter text-primary">
                   {gCurrent.toLocaleString()}
@@ -189,19 +167,18 @@ function TradingGauge({ gCurrent, gInitial, socTarget, capTarget, winningSide, p
             <div className={`absolute w-3 h-3 rounded-full z-20 -translate-x-1/2 transition-all duration-700 bg-primary ${isFinal ? '' : 'animate-pulse'}`} style={{ left: `${getPosition(gCurrent)}%` }} />
             <div className="absolute w-2 h-2 bg-danger rounded-full z-20 -translate-x-1/2" style={{ left: `${getPosition(socTarget)}%` }} />
             <div className="absolute w-2 h-2 bg-info rounded-full z-20 -translate-x-1/2" style={{ left: `${getPosition(capTarget)}%` }} />
-            <div className="absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-text2/30 rounded-full z-10 -translate-x-1/2"style={{ left: `${getPosition(gInitial)}%` }}
-      />
+            <div className="absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-text2/30 rounded-full z-10 -translate-x-1/2" style={{ left: `${getPosition(gInitial)}%` }} />
         </div>
       </div>
     </>
   );
 }
 
-
 // ============================================================================
-// GiniDisplay Component
+// GiniDisplay Main Component
 // ============================================================================
 export function GiniDisplay({
+    seasonAddress,
     gCurrent,
     gInitial,
     socTargetBps,
@@ -212,8 +189,35 @@ export function GiniDisplay({
     isAuction,
     isBootstrap,
 }: GiniDisplayProps) {
+
+    // --- OFFICIAL SETTLED DATA READS ---
+    const { data: finalProgressBps } = useReadContract({
+        address: seasonAddress as `0x${string}`,
+        abi: GameSeasonAbi as any,
+        functionName: 'finalProgressBps',
+        query: { enabled: !!seasonAddress }
+    });
+
+    const { data: isOligarchyWin } = useReadContract({
+        address: seasonAddress as `0x${string}`,
+        abi: GameSeasonAbi as any,
+        functionName: 'isOligarchyWin',
+        query: { enabled: !!seasonAddress }
+    });
+
+    // Determine derived official values
+    const isPayout = currentPhase === 'PAYOUT';
     
-    // Original component part 3
+    // 1. Determine official percentage (Sync with PayoutMask)
+    const officialProgress = (isPayout && finalProgressBps !== undefined)
+        ? Number(finalProgressBps) / 100
+        : progressPercent;
+
+    // 2. Determine official winning side
+    const officialSide = (isPayout && isOligarchyWin !== undefined)
+        ? (isOligarchyWin ? 'cap' : 'soc')
+        : winningSide;
+
     return (
         <div className="lg:col-span-2 bg-card rounded-2xl p-8 relative overflow-hidden flex flex-col justify-center min-h-70 h-full">
             {(isAuction || isBootstrap) ? (
@@ -233,8 +237,8 @@ export function GiniDisplay({
                     gInitial={gInitial} 
                     socTarget={socTargetBps} 
                     capTarget={capTargetBps} 
-                    winningSide={winningSide}
-                    progress={progressPercent}
+                    winningSide={officialSide}   // Updated to officialSide
+                    progress={officialProgress} // Updated to officialProgress
                     phase={currentPhase} 
                 />
             )}

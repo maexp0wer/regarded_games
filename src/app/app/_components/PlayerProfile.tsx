@@ -12,11 +12,11 @@ import coreAddresses from '@/deployments/core.json';
 const ERC20Abi = ERC20AbiRaw as any;
 const StakingAbi = StakingAbiRaw as any;
 
-interface PlayerHoldingsProps {
+interface PlayerProfileProps {
   profileAddress: `0x${string}`;
 }
 
-export function PlayerHoldings({ profileAddress }: PlayerHoldingsProps) {
+export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
   const { address: connectedAddress } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const isOwner = connectedAddress?.toLowerCase() === profileAddress.toLowerCase();
@@ -167,7 +167,7 @@ export function PlayerHoldings({ profileAddress }: PlayerHoldingsProps) {
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2 group">
                 <h2 className="text-2xl font-black text-text break-all whitespace-normal">
-                  {profile.name || "Anon Regard"}
+                  {profile.name || "Regarded Anon"}
                   </h2>
                   {isOwner && (
                     <button 
