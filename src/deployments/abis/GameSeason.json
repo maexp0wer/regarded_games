@@ -420,19 +420,6 @@
   },
   {
     "type": "function",
-    "name": "giniAccumulator",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "isActive",
     "inputs": [],
     "outputs": [
@@ -595,6 +582,19 @@
   {
     "type": "function",
     "name": "processedCount",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "regAccumulator",
     "inputs": [],
     "outputs": [
       {

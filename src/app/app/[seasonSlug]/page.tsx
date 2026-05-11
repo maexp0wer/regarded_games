@@ -9,6 +9,7 @@ import { useAccount } from 'wagmi';
 import { useSeasonGini, useSeasonById } from '@/hooks/useSeasonGini';
 import { Order } from '@/hooks/useOrderBook'; // Import Order type
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
+import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
 
 // PRESENTATIONAL COMPONENTS
 import { SeasonHeader } from '../_components/SeasonHeader';
@@ -22,7 +23,9 @@ import { TradingMask } from '../_components/TradingMask';
 import { OpenOrders } from '../_components/OpenOrders';
 import { useOpenOrders } from '@/hooks/useOpenOrders';
 import { PayoutMask } from '../_components/PayoutMask';
-import PlayerRankDisplay from '../_components/PlayerRankDisplay'; // Path to the UPDATED PlayerRankDisplay
+import PlayerRankDisplay from '../_components/PlayerRankDisplay';
+import { FactionDiscussionBoard } from '../_components/FactionDiscussionBoard';
+import { FactionChat } from '../_components/FactionChat';
 
 // ============================================================================
 // PAGE COMPONENT: SeasonDetailPage
@@ -42,10 +45,10 @@ export default function SeasonDetailPage() {
   const { data: metadata, isLoading: isMetaLoading } = useSeasonById(seasonSlug);
   const { address: userAddress } = useAccount();
   
-  const seasonAddress = metadata?.address || '0x0';
-  const auctionAddress = metadata?.auctionAddress || '0x0';
-  const exchangeAddress = metadata?.exchangeAddress || '0x0';
-  const fimAddress = metadata?.fimAddress || '0x0';
+  const seasonAddress = metadata?.address as `0x${string}` | undefined;
+const auctionAddress = metadata?.auctionAddress as `0x${string}` | undefined;
+const exchangeAddress = metadata?.exchangeAddress as `0x${string}` | undefined;
+const fimAddress = metadata?.fimAddress as `0x${string}` | undefined;
 
   // --- 2. TRADING STATE (Lifted from Dashboard) ---
   const [isBuy, setIsBuy] = useState(true);
@@ -99,7 +102,7 @@ export default function SeasonDetailPage() {
   });
 
   const { data: phase, isLoading: isPhaseLoading } = useReadContract({
-    address: seasonAddress as `0x${string}`,
+    address: seasonAddress,
     abi: GameSeasonAbi as any,
     functionName: 'getPhase',
     query: { enabled: !!seasonAddress, refetchInterval: 3000 }
@@ -111,6 +114,35 @@ export default function SeasonDetailPage() {
   } = useOpenOrders(seasonAddress, userAddress);
 
   const hasOrders = myOrders && myOrders.length > 0;
+
+  const { data: percentilesMap, isLoading: isFactionLoading } = useBatchPlayerPercentiles(
+    seasonAddress, 
+    userAddress ? [userAddress] :[]
+  );
+
+  // Extract the single user's data from the map
+  const factionData = userAddress ? percentilesMap?.[userAddress.toLowerCase()] : undefined;
+
+  // THE "JIT" PULSE FOR PASSIVE THRESHOLD SHIFTS
+  useEffect(() => {
+    // If they aren't connected or don't have faction data, do nothing.
+    if (!userAddress || !factionData) return;
+
+    // We ping the sync route. 
+    // - If nothing changed, the backend cache catches it and does 0 API calls.
+    // - If the threshold shifted past them, the backend updates Discourse instantly!
+    fetch('/api/discourse/sync-faction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            walletAddress: userAddress,
+            seasonAddress: seasonAddress,
+            fimAddress: fimAddress,
+            seasonSlug: seasonSlug
+        })
+    }).catch(e => console.error("JIT Sync Failed:", e));
+
+  },[userAddress, factionData?.isCapitalist]);
 
   // --- 5. Phase Change Effect ---
   useEffect(() => {
@@ -234,9 +266,14 @@ export default function SeasonDetailPage() {
     );
   }
 
-  if (!metadata || !seasonAddress) return (
-    <div className="min-h-screen p-24 text-text text-center">Blockchain Data Unavailable</div>
-  );
+  // 1. Uncomment and update this safety catch!
+  if (!seasonAddress || !exchangeAddress || !fimAddress || !auctionAddress) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-text text-center">
+        Blockchain Data Unavailable
+      </div>
+    );
+  }
 
 
   // --- F. Render (Conditional Layout) ---
@@ -317,6 +354,7 @@ export default function SeasonDetailPage() {
             {/* 1/3 Width: TradingMask (With State Passed Down) */}
             <div className="lg:col-span-1 h-full"> 
               <TradingMask
+                seasonSlug={seasonSlug}
                 seasonAddress={seasonAddress}
                 exchangeAddress={exchangeAddress}
                 fimAddress={fimAddress}
@@ -388,6 +426,27 @@ export default function SeasonDetailPage() {
                 seasonAddress={seasonAddress}
               />
             </div>
+
+            {/* ROW 5 - WAR ROOM (Only visible if they have a faction */}
+            {factionData && (
+              <>
+                {/* 2/3 Width: Discussion Board */}
+                <div className="lg:col-span-2 h-[600px] mt-4">
+                  <FactionDiscussionBoard 
+                    seasonSlug={seasonSlug} 
+                    isCapitalist={factionData.isCapitalist} 
+                  />
+                </div>
+                
+                {/* 1/3 Width: Live Chat */}
+                <div className="lg:col-span-1 h-[600px] mt-4">
+                  <FactionChat 
+                    seasonSlug={seasonSlug} 
+                    isCapitalist={factionData.isCapitalist} 
+                  />
+                </div>
+              </>
+            )}
           </>
         )}
 
@@ -436,6 +495,8 @@ export default function SeasonDetailPage() {
     </div>
 </div>
 )}
+
+
 
       </div>
 

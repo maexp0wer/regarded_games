@@ -11,7 +11,7 @@ export async function POST(req: Request) {
 
     // 1. Validate Inputs
     if (!seasonAddress || !userAddress || massThreshold === undefined) {
-      return NextResponse.json(null, { status: 400 });
+      return NextResponse.json({ error: 'Missing required fields: seasonAddress, userAddress, massThreshold' }, { status: 400 });
     }
 
     const sAddr = seasonAddress.toLowerCase();
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     const userRes = await pool.query(userQuery, [sAddr, uAddr]);
 
     if (userRes.rowCount === 0) {
-      return NextResponse.json(null); // User not in season
+      return NextResponse.json({ error: 'Player not found in season' }, { status: 404 });
     }
 
     const row = userRes.rows[0];
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     
     if (balanceValue === undefined) {
       console.error("Percentile API Error: Column 'fim_balance' not found in result.");
-      return NextResponse.json(null, { status: 500 });
+      return NextResponse.json({ error: 'Database schema mismatch: fim_balance column not found' }, { status: 500 });
     }
 
     const rawUserBalance = BigInt(balanceValue);
@@ -87,6 +87,6 @@ export async function POST(req: Request) {
   } catch (error: any) {
     // Keep this error log for monitoring production issues
     console.error("Percentile API Error:", error.message);
-    return NextResponse.json(null, { status: 500 });
+    return NextResponse.json({ error: error.message ?? 'Internal server error' }, { status: 500 });
   }
 }

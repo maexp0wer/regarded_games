@@ -29,6 +29,23 @@ export const WalletButton = () => {
               style: { opacity: 0, pointerEvents: 'none', userSelect: 'none' },
             })}
           >
+
+            {/* INVISIBLE DISCOURSE SSO AUTO-LOGIN                       */}
+            {connected && process.env.NEXT_PUBLIC_DISCOURSE_URL && (
+              <iframe
+                src={`${process.env.NEXT_PUBLIC_DISCOURSE_URL}/session/sso`}
+                title="Discourse Background Auth"
+                style={{
+                  width: 0,
+                  height: 0,
+                  border: 'none',
+                  position: 'absolute',
+                  visibility: 'hidden',
+                }}
+                aria-hidden="true"
+              />
+            )}
+            
             {(() => {
               if (!connected) {
                 return (

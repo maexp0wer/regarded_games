@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  reactStrictMode: false,
+  reactStrictMode: true,
 
   // 1. Keep your Turbopack rules (for dev)
   turbopack: {
@@ -50,7 +50,6 @@ const nextConfig: NextConfig = {
     return config;
   },
 
-  // ... rest of your config (headers, etc.)
 };
 
 export default nextConfig;

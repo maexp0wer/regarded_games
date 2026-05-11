@@ -125,6 +125,26 @@ ponder.on("Auction:FimPurchased", async ({ event, context }) => {
         fimAmount: fimMinted,
         timestamp: event.block.timestamp,
     });
+
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://127.0.0.1:3000";
+    
+    try {
+        // Run asynchronously so it doesn't block the indexer
+        fetch(`${appUrl}/api/discourse/create-player`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                walletAddress: buyer,
+                seasonId: Number(season.seasonId)
+            })
+        }).catch(e => console.error(`[Indexer] Discourse API fetch failed:`, e));
+        
+        console.log(`[Indexer] Provisioning Discourse Account for Buyer: ${buyer}`);
+    } catch (e) {
+        console.error(`[Indexer] Failed to trigger player creation:`, e);
+    }
+
 });
 
 // 3. Track Net Contribution (Wealth shift via EVENT)
@@ -203,15 +223,17 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
   // 1. Destructure all required event arguments
   const { id, buyer, seller, fimAmount, usdcPrice } = event.args; 
   
-  // 2. Find seasonAddress (Dependency)
-  const season = await context.db.sql
+  // 2. Find the season array from DB
+  const seasonResult = await context.db.sql
     .select()
     .from(schema.seasons)
     .where(eq(schema.seasons.exchangeAddress, event.log.address))
     .limit(1);
     
-  if (!season[0]) return;
-  const seasonAddress = season[0].address;
+  // Extract the single object from the array!
+  if (!seasonResult[0]) return;
+  const currentSeason = seasonResult[0];
+  const seasonAddress = currentSeason.address;
 
   // Recreate the primary key used in insert
   const uniqueId = `${seasonAddress}-${id}`;
@@ -241,6 +263,28 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
     timestamp: event.block.timestamp,
     txHash: event.transaction.hash,
   });
+
+  // 7. ==========================================
+  // NEW: TRIGGER DISCOURSE SYNC ON TRADE
+  // ==========================================
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://127.0.0.1:3000";
+  try {
+      // Fire-and-forget fetch to Next.js API
+      fetch(`${appUrl}/api/discourse/sync-faction`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+              addresses: [buyer, seller], // Both buyer and seller balances changed!
+              seasonAddress: currentSeason.address,
+              fimAddress: currentSeason.fimAddress,
+              seasonSlug: `season_${currentSeason.seasonId}`
+          })
+      }).catch(e => console.error(`[Indexer] Discourse sync error:`, e));
+      
+      console.log(`[Indexer] 🔄 Faction Sync Triggered for Trade: ${buyer} & ${seller}`);
+  } catch (e) {
+      console.error(`[Indexer] ❌ Failed to trigger faction sync:`, e);
+  }
 });
 
 // 3. Order Cancelled
@@ -347,3 +391,38 @@ ponder.on("Treasury:YieldHarvested", async ({ event, context }) => {
       totalBuybacks: (row.totalBuybacks || 0n) + buyback,
     }));
 });
+
+
+ponder.on("GameSeason:StateChanged", async ({ event, context }) => {
+  const newState = event.args.newState;
+  const seasonAddress = event.log.address.toLowerCase();
+
+  // Assuming State.BOOTSTRAP is 0 in your Enum (Adjust if it's different!)
+  if (newState === 0) { 
+    console.log(`[Indexer] Season ${seasonAddress} entered BOOTSTRAP.`);
+
+    const season = await context.db.find(schema.seasons, { address: seasonAddress as `0x${string}` });
+    const seasonId = season?.seasonId || 1n;
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://127.0.0.1:3000";
+
+    try {
+      await fetch(`${appUrl}/api/discourse/init-season`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-discourse-admin-token": process.env.DISCOURSE_INIT_SECRET || "",
+        },
+        body: JSON.stringify({
+          seasonAddress: seasonAddress,
+          seasonId: Number(seasonId)
+        })
+      });
+      console.log(`[Indexer] Discourse Init Triggered Successfully.`);
+    } catch (e) {
+      console.error(`[Indexer] Failed to trigger Discourse Init:`, e);
+    }
+    
+  }
+});
+

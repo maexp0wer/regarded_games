@@ -1,107 +1,156 @@
-// hooks/useFactionPercentile.ts (New file or modify existing)
+// hooks/useFactionPercentile.ts
 
 'use client';
 
 import { useQuery } from "@tanstack/react-query";
-import { useReadContract } from 'wagmi';
 import { formatUnits } from "viem";
-import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
+import { fetchAllPonderItems } from '@/lib/ponder';
 
-const PONDER_URL = "http://127.0.0.1:42069/graphql";
+const PONDER_URL = process.env.NEXT_PUBLIC_PONDER_URL || "http://127.0.0.1:42069/graphql";
 
 export interface FactionData {
-  factionPercentile: number; // 0% (edge) to 100% (equilibrium center)
+  factionPercentile: number;
   isCapitalist: boolean;
   totalInFaction: number;
   factionRank: number;
 }
 
 export function useFactionPercentile(seasonAddress: string | undefined, userAddress: string | undefined) {
-  const { data: massThresholdRaw } = useReadContract({
-    address: seasonAddress as `0x${string}`,
-    abi: GameSeasonAbi,
-    functionName: 'massThresholdBalance', 
-    query: { enabled: !!seasonAddress }
-  });
-  
-  const massThreshold = massThresholdRaw ? Number(formatUnits(massThresholdRaw as bigint, 18)) : 0;
   
   return useQuery<FactionData | null>({
-    queryKey: ["playerFactionStanding", seasonAddress, userAddress, massThreshold],
+    // Cleaned up queryKey: No longer depends on the stale contract threshold
+    queryKey: ["playerFactionStanding", seasonAddress, userAddress],
+    
+    // Starts fetching immediately once we have the addresses
+    enabled: !!seasonAddress && !!userAddress,
+    
     queryFn: async () => {
       if (!userAddress || !seasonAddress) return null;
 
       const sAddr = seasonAddress.toLowerCase();
       const uAddr = userAddress.toLowerCase();
 
-      // IMPORTANT: Using plural 'playerSeasonStatss' because of composite primary key
-      const query = `
-        query GetStanding($season: String!, $player: String!) {
-          userStats: playerSeasonStatss(
-            where: { seasonAddress: $season, playerAddress: $player }
-          ) {
-            items { fimBalance }
-          }
-          allPlayers: playerSeasonStatss(
+      const playersQuery = `
+        query GetPlayers($season: String!, $after: String, $limit: Int!) {
+          playerSeasonStatss(
             where: { seasonAddress: $season },
-            orderBy: "fimBalance",
-            orderDirection: "asc",
-            limit: 1000
+            limit: $limit,
+            after: $after
           ) {
             items { playerAddress, fimBalance }
+            pageInfo { endCursor, hasNextPage }
+          }
+        }
+      `;
+
+      const ordersQuery = `
+        query GetOrders($season: String!, $after: String, $limit: Int!) {
+          orderss(
+            where: { seasonAddress: $season, active: true, isBuy: false },
+            limit: $limit,
+            after: $after
+          ) {
+            items { maker, remainingAmount }
+            pageInfo { endCursor, hasNextPage }
           }
         }
       `;
 
       try {
-        const response = await fetch(PONDER_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query, variables: { season: sAddr, player: uAddr } }),
-        });
+        const [playersData, openOrdersData] = await Promise.all([
+          fetchAllPonderItems<{ playerAddress: string; fimBalance: string }>(
+            PONDER_URL, playersQuery, { season: sAddr }, (d) => d.playerSeasonStatss
+          ),
+          fetchAllPonderItems<{ maker: string; remainingAmount: string }>(
+            PONDER_URL, ordersQuery, { season: sAddr }, (d) => d.orderss
+          ),
+        ]);
 
-        const result = await response.json();
-        const userItem = result?.data?.userStats?.items?.[0];
-        const allItems = result?.data?.allPlayers?.items || [];
+        if (playersData.length === 0) return null;
 
-        if (!userItem || allItems.length === 0) return null;
+        // --- 1. CALCULATE EFFECTIVE BALANCES (Raw Balance + Locked in Orders) ---
+        const playerBalances = new Map<string, bigint>();
 
-        const userBalance = Number(formatUnits(BigInt(userItem.fimBalance), 18));
-        const isCapitalist = userBalance > massThreshold;
-
-        // Group into faction
-        const factionMembers = allItems
-            .map((p: any) => ({
-                address: p.playerAddress.toLowerCase(),
-                balance: Number(formatUnits(BigInt(p.fimBalance), 18))
-            }))
-            .filter((p: any) => isCapitalist ? p.balance > massThreshold : p.balance <= massThreshold);
-
-        const indexInFaction = factionMembers.findIndex((p: any) => p.address === uAddr);
-        const safeIndex = indexInFaction === -1 ? 0 : indexInFaction;
-
-        let factionPercentileValue: number;
-
-        if (factionMembers.length === 1) {
-            // If the player is the only member, set percentile to 100%
-            factionPercentileValue = 100;
-        } else {
-            // 0% = Poorest in Faction, 100% = Richest in Faction
-            factionPercentileValue = (safeIndex / (factionMembers.length - 1)) * 100;
+        for (const p of playersData) {
+          playerBalances.set(p.playerAddress.toLowerCase(), BigInt(p.fimBalance));
         }
 
+        for (const o of openOrdersData) {
+          const maker = o.maker.toLowerCase();
+          const lockedFim = BigInt(o.remainingAmount);
+          const currentBal = playerBalances.get(maker) || 0n;
+          playerBalances.set(maker, currentBal + lockedFim);
+        }
+
+        const economy = Array.from(playerBalances.entries()).map(([address, bal]) => ({
+          address,
+          balanceRaw: bal,
+          balanceNum: Number(formatUnits(bal, 18))
+        }));
+
+        // --- 2. CALCULATE LIVE MASS THRESHOLD OFF-CHAIN ---
+        economy.sort((a, b) => (a.balanceRaw < b.balanceRaw ? -1 : a.balanceRaw > b.balanceRaw ? 1 : 0));
+
+        const totalSupply = economy.reduce((sum, p) => sum + p.balanceRaw, 0n);
+        const halfSupply = totalSupply / 2n;
+
+        let accumulatedSupply = 0n;
+        let liveMassThresholdRaw = 0n;
+
+        for (const p of economy) {
+          accumulatedSupply += p.balanceRaw;
+          if (accumulatedSupply <= halfSupply) {
+            liveMassThresholdRaw = p.balanceRaw;
+          } else {
+            break;
+          }
+        }
+
+        const liveThresholdNum = Number(formatUnits(liveMassThresholdRaw, 18));
+
+        // --- 3. DETERMINE USER STATE & FACTIONS ---
+        const user = economy.find(p => p.address === uAddr);
+        const userBalanceNum = user ? user.balanceNum : 0;
+        
+        const isCapitalist = userBalanceNum > liveThresholdNum; 
+
+        const capitalists = economy.filter(p => p.balanceNum > liveThresholdNum);
+        const socialists = economy.filter(p => p.balanceNum <= liveThresholdNum);
+
+        capitalists.sort((a, b) => b.balanceNum - a.balanceNum);
+        socialists.sort((a, b) => b.balanceNum - a.balanceNum);
+
+        const maxCapBalance = capitalists.length > 0 ? capitalists[0].balanceNum : liveThresholdNum;
+        const minSocBalance = socialists.length > 0 ? socialists[socialists.length - 1].balanceNum : 0;
+
+        // --- 4. CALCULATE DISTANCE-BASED PERCENTILES ---
+        let percentile = 0;
+
+        if (isCapitalist) {
+          const range = maxCapBalance - liveThresholdNum;
+          percentile = range > 0 ? ((userBalanceNum - liveThresholdNum) / range) * 100 : 100;
+        } else {
+          const range = liveThresholdNum - minSocBalance;
+          percentile = range > 0 ? ((liveThresholdNum - userBalanceNum) / range) * 100 : 100;
+        }
+
+        percentile = Math.max(0, Math.min(100, percentile));
+
+        const factionMembers = isCapitalist ? capitalists : socialists;
+        const rankIndex = factionMembers.findIndex(p => p.address === uAddr);
+
         return {
-          factionPercentile: factionPercentileValue,
+          factionPercentile: percentile,
           isCapitalist,
           totalInFaction: factionMembers.length,
-          factionRank: factionMembers.length - safeIndex
+          factionRank: rankIndex === -1 ? 0 : rankIndex + 1
         };
+
       } catch (e) {
         console.error("Faction Hook Error:", e);
         return null;
       }
     },
-    enabled: !!seasonAddress && !!userAddress, 
-    refetchInterval: 10000, 
+    refetchInterval: 5000, 
   });
 }

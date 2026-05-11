@@ -1,8 +1,9 @@
 'use client';
 
 import { useQuery } from "@tanstack/react-query";
+import { fetchAllPonderItems } from '@/lib/ponder';
 
-const PONDER_URL = "http://127.0.0.1:42069/graphql";
+const PONDER_URL = process.env.NEXT_PUBLIC_PONDER_URL || "http://127.0.0.1:42069/graphql";
 
 export interface Order {
   id: string;
@@ -25,51 +26,52 @@ export function useOrderBook(seasonAddress: string | undefined) {
 
       const addr = seasonAddress.toLowerCase();
 
-      // Combined Query: Orders + Player Stats (for balances)
-      const query = `
-        query GetOrderBookAndPlayers($season: String!) {
+      const ordersQuery = `
+        query GetOrders($season: String!, $after: String, $limit: Int!) {
           orderss(
             where: { seasonAddress: $season, active: true },
             orderBy: "price",
             orderDirection: "asc",
-            limit: 1000
+            limit: $limit,
+            after: $after
           ) {
-            items { 
-              id, maker, isBuy, price, remainingAmount, active, orderId, seasonAddress
-            }
+            items { id, maker, isBuy, price, remainingAmount, active, orderId, seasonAddress }
+            pageInfo { endCursor, hasNextPage }
           }
-          playerSeasonStatss(where: { seasonAddress: $season }) {
-            items {
-              playerAddress
-              fimBalance
-            }
+        }
+      `;
+
+      const playersQuery = `
+        query GetPlayers($season: String!, $after: String, $limit: Int!) {
+          playerSeasonStatss(
+            where: { seasonAddress: $season },
+            limit: $limit,
+            after: $after
+          ) {
+            items { playerAddress, fimBalance }
+            pageInfo { endCursor, hasNextPage }
           }
         }
       `;
 
       try {
-        const response = await fetch(PONDER_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            query, 
-            variables: { season: addr } 
-          }),
-        });
-
-        const res = await response.json();
-        
-        const orders = res.data?.orderss?.items || [];
-        const players = res.data?.playerSeasonStatss?.items || [];
+        const [orders, players] = await Promise.all([
+          fetchAllPonderItems<{ id: string; maker: string; isBuy: boolean; price: string; remainingAmount: string; active: boolean; orderId: string; seasonAddress: string }>(
+            PONDER_URL, ordersQuery, { season: addr }, (d) => d.orderss
+          ),
+          fetchAllPonderItems<{ playerAddress: string; fimBalance: string }>(
+            PONDER_URL, playersQuery, { season: addr }, (d) => d.playerSeasonStatss
+          ),
+        ]);
 
         // Create a quick lookup map for balances: address -> balance
         const balanceMap = new Map<string, number>();
-        players.forEach((p: any) => {
+        players.forEach((p) => {
             const bal = Number(BigInt(p.fimBalance)) / 1e18;
             balanceMap.set(p.playerAddress.toLowerCase(), bal);
         });
 
-        const format = (o: any): Order => ({
+        const format = (o: typeof orders[number]): Order => ({
           id: o.id,
           orderId: BigInt(o.orderId),
           seasonAddress: o.seasonAddress,
@@ -83,8 +85,8 @@ export function useOrderBook(seasonAddress: string | undefined) {
           makerBalance: balanceMap.get(o.maker.toLowerCase()) || 0 
         });
 
-        const bids = orders.filter((o: any) => o.isBuy).map(format).sort((a: any, b: any) => b.price - a.price);
-        const asks = orders.filter((o: any) => !o.isBuy).map(format).sort((a: any, b: any) => a.price - b.price);
+        const bids = orders.filter((o) => o.isBuy).map(format).sort((a, b) => b.price - a.price);
+        const asks = orders.filter((o) => !o.isBuy).map(format).sort((a, b) => a.price - b.price);
 
         return { bids, asks };
       } catch (e) {

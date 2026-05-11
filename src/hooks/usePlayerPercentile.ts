@@ -47,11 +47,8 @@ export function usePlayerPercentile(seasonAddress: string | undefined, userAddre
         });
 
         if (!response.ok) return null;
-        
-        const data = await response.json();
-        if (!data) return null;
 
-        return data as PercentileData;
+        return await response.json() as PercentileData;
       } catch (e) {
         console.error("Percentile Hook Error:", e);
         return null;

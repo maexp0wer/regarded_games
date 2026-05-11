@@ -14,9 +14,76 @@ import Regardo from '@/components/icons/Regardo.svg';
 import Carlo from '@/components/icons/Carlo.svg';
 import FIM1 from '@/components/icons/FIM1.svg';
 import { useDocNavigation } from '@/hooks/useDocNavigation';
+import NestedPieChart from '@/components/NestedPieChart';
+
+const tableData = [
+  {
+    parentName: " ",        // Tier 1
+    parentPercentage: 75,
+    parentColor: "var(--color-card2)",
+    parentExplanation: "75% of the initial $RGD supply is directly controlled by you, the DAO members.",
+    name: "DAO Treasury Reserve",        // Tier 2
+    percentage: 40,
+    color: "var(--color-primary)",
+    explanation: "Long-Term Capital. Controlled entirely by governance for future growth, acquisitions, or diversification. Subject to a 5-year linear unlock.",
+    subChildren: [              // Tier 3
+    ]
+  },
+  {
+    parentName: " ",        // Tier 1
+    parentPercentage: 75,
+    parentColor: "var(--color-card3)",
+    name: "Growth & Ecosystem",         // Tier 2
+    percentage: 20,
+    color: "var(--color-primary2)",
+    explanation: "Funds Active Incentives and marketing. Released based on DAO-approved milestones.",
+    subChildren: [               // Tier 3
+      { name: "Merkl Rewards", percentage: 5, color: "var(--color-primary)" },
+      { name: "User Acquisition", percentage: 15, color: "var(--color-primary2)" }
+    ]
+  },
+  {
+    parentName: " ",        // Tier 1
+    parentPercentage: 75,
+    parentColor: "var(--color-card3)",
+    name: "Market Formation",         // Tier 2
+    percentage: 15,
+    color: "var(--color-primary3)",
+    explanation: "Distributed to early community participants and used to provide initial exchange liquidity to ensure Day 1 market stability.",
+    subChildren: [               // Tier 3
+      { name: "Genesis Program", percentage: 3, color: "var(--color-primary)" },
+      { name: "Capital Auction", percentage: 6, color: "var(--color-primary2)" },
+      { name: "Liquidity Pool", percentage: 6, color: "var(--color-primary3)" },
+    ]
+  },
+  {
+    parentName: "  ",        // Tier 1
+    parentPercentage: 25,
+    parentColor: "var(--color-card3)",
+    parentExplanation: "only 25% of the initial $RGD supply is not directly controlled by you, but distributed to the non-profit DAO LLC and vested among the founding Team for longterm alignment.",
+    name: "Operational Reserve",         // Tier 2
+    percentage: 10,
+    color: "var(--color-secondary)",
+    explanation: "Allocated to the non-profit Regarded DAO LLC to cover real-world costs (legal compliance, audits, hosting). Managed via multi-sig with strict spending rules.",
+    subChildren: [               // Tier 3
+    ]
+  },
+  {
+    parentName: "  ",        // Tier 1
+    parentPercentage: 25,
+    parentColor: "var(--color-card3)",
+    name: "Team",         // Tier 2
+    percentage: 15,
+    color: "var(--color-secondary2)",
+    explanation: "Incentivizes the founding team. Subject to a 4-year vesting schedule with a 12-month cliff.",
+    subChildren: [
+    ]
+  },
+];
 
 
 import ScrollNav from '@/components/ScrollNav'; // Import the new component
+import { Expletus_Sans } from 'next/font/google';
 
 export default function Home() {
   // Dark Mode State
@@ -41,17 +108,13 @@ export default function Home() {
   // Navigation Links
   const navLinks = [
     { id: 'sectionHero', label: 'Choose your Hero' },
-    { id: 'sectionPlay', label: 'Play' },
-    { id: 'sectionGame', label: 'Own the Game' },
-    { id: 'sectionGenesisProgram', label: 'Genesis Program' }
+    { id: 'sectionPlay', label: 'Play the Game' },
+    { id: 'sectionOwnMarket', label: 'Own the Market' },
+    { id: 'sectionDistribution', label: 'Distribution of Power' },
+    { id: 'sectionCampaign', label: 'Campaign Sequence' },
+    { id: 'sectionSecureStake', label: 'Secure Your Stake' }
   ];
 
-
-
-  
-
-
-  
 
 // The function from the previous answer
   const scrollToId = (id: string) => {
@@ -98,15 +161,15 @@ export default function Home() {
             
             <div className="text-center max-w-4xl px-4">
               <h1 className="text-4xl md:text-6xl font-bold mb-2 text-primary">
-                Economic Warfare.
+                Class Warfare
               </h1>
               <h1 className="text-4xl md:text-6xl font-bold mb-6 text-primary">
-                Fought On-Chain. 
+                The Game 
               </h1>
               <h2 className="text-xl md:text-2xl mb-8">
-                A perfect-information strategy game where Capital battles Coordination for real-money stakes.
+                The unrigged alternative market: a perfect-information strategy game where Capital fights Coordination for the spoils.
               </h2>
-              
+
               <div className="flex flex-col sm:flex-row justify-center gap-4">
                 <button 
                   onClick={() => scrollToSection('sectionHero')}
@@ -121,10 +184,11 @@ export default function Home() {
                 </button>
 
                 <button 
-                  onClick={() => scrollToSection('sectionGenesisProgram')}
+                  onClick={() => scrollToSection('sectionSecureStake')}
                   className="btn-primary">
-                  Join the Game
+                  Secure Your Stake
                 </button>
+
               </div>
             </div>
           </section>
@@ -133,7 +197,7 @@ export default function Home() {
 
           {/* Choose your Hero */}
           <section id="sectionHero" className="py-16 mx-auto">
-            <h2 className="text-4xl font-bold mb-12 text-center">Choose Your Hero</h2>
+            <h2 className="text-3xl font-bold mb-12 text-center">Choose Your Hero</h2>
             <div className="mx-auto">
               
               <div className="grid md:grid-cols-2 gap-8">
@@ -203,7 +267,7 @@ export default function Home() {
 
           {/* How it Works */}
           <section id="sectionPlay" className="py-16 mx-auto ">
-            <h2 className="text-3xl font-semibold mb-12 text-center">Play</h2>
+            <h2 className="text-3xl font-semibold mb-12 text-center">Play the Game</h2>
             <div className="grid md:grid-cols-3 gap-8"> 
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
@@ -215,13 +279,13 @@ export default function Home() {
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="OUTPLAY THE MARKET"
-                description="For 3 Months, trade $FIM to impact the live Reg Coefficient, which measures wealth inequality. Choose your trades wisely and coordinate with your peers—who you trade with is as important as the price."
+                description="During the Trading Phase, trade $FIM to impact the live Gini Coefficient, a measure of wealth inequality. Choose your trades wisely and coordinate with your peers—who you trade with is as important as the price."
                 onButtonClick={() => navigateToDocs('intro#phase-3-victory-payouts')}
               />
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="ENFORCE YOUR IDEOLOGY"
-                description="It’s a race. The first faction to shift the Reg Coefficient by 25% captures the Treasury. The winner dictates the payout rules; the loser pays the price."
+                description="It’s a race. The first faction to shift the Gini Coefficient by 25% captures the Treasury. The winner dictates the payout rules; the loser pays the price."
                 onButtonClick={() => navigateToDocs('intro#phase-3-victory-and-payouts')}
               />
             </div>
@@ -229,30 +293,30 @@ export default function Home() {
 
 
           {/* More Than a Game */}
-          <section id="sectionGame" className="py-16 mx-auto">
-            <h2 className="text-3xl font-bold mb-8 text-center">Own the Game.</h2>
+          <section id="sectionOwnMarket" className="py-16 mx-auto">
+            <h2 className="text-3xl font-bold mb-8 text-center">Own the Market</h2>
             <div className="mx-auto">
-              <p className='mb-10'>The modern financial market is a game rigged against the individual. Regarded Games is built on a different foundation. It is a self-sustaining ecosystem owned and operated by its players, using the power of decentralization to create a fairer and more transparent world than the one it simulates.</p>
+              <p className='mb-10'>Traditional markets are rigged against the individual. Regarded Games is the antidote. We’ve built an unmanipulated, player-owned arena that strips away the insider advantage. The fog of war is lifted; your only weapon is your strategy.</p>
               
               
               </div>
               <div className="grid md:grid-cols-3 gap-8"> 
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
-                title="True Player Ownership"
-                description="No central company. No rigged outcomes. Regarded Games is a DAO owned entirely by its players. From balancing the game to managing the Treasury, every decision is voted on by $REG holders. The community holds the power, permanently."
+                title="Sovereign Player Ownership"
+                description="No central company. No rigged outcomes. Regarded Games is a DAO owned entirely by you. Through $RGD, holders dictate the rules, manage the treasury, and control the arena. The players hold the power."
                 onButtonClick={() => navigateToDocs('intro#5-governance')}
               />
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="Active Value Accrual"
-                description="The Prize Pool generates constant yield via blue-chip DeFi. The DAO controls this revenue, voting to execute deflationary buybacks, deepen liquidity, or supercharge the Prize Pool. Ownership is designed to be productive, not passive."
+                description="The Prize Pool generates yield via blue-chip DeFi. $RGD holders direct this revenue: executing deflationary buybacks, deepening liquidity, or compounding future spoils. Ownership is designed to be productive, not passive."
                 onButtonClick={() => navigateToDocs('intro#revenue-allocation')}
               />
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
-                title="A New Framework for Collaboration"
-                description="Crypto should be a tool for coordination, not just a casino. Regarded Games is a live laboratory dedicated to this foundational purpose. By playing, you aren't just competing—you are participating in a grand experiment on the future of human organization."
+                title="Beyond the Casino"
+                description="Move past the speculative noise. Regarded Games provides a transparent arena where collective action is a strategic weapon. By playing, you are joining a grand experiment to redefine how humanity organizes itself."
                 onButtonClick={() => navigateToDocs('mission')}
               />
               
@@ -267,11 +331,29 @@ export default function Home() {
           </div>
           </section>
 
-          {/* Genesis Programm */}
-          <section id="sectionGenesisProgram" className="py-16 mx-auto">
 
-            <h2 className="text-3xl font-bold mb-8 text-center">Join the Genesis Program</h2>
-            <h2 className="text-xl font-bold mb-8 text-center">Regarded Games is a community-owned DAO. We&apos;re reserving a significant portion of the initial $REG supply for our founding players. Your Contribution Score determines your share. Here&apos;s your quest board:</h2>
+          {/* Distribution of Power */}
+          <section id="sectionDistribution" className="py-16 mx-auto">
+            <h2 className="text-3xl font-bold mb-12 text-center">Distribution of Power</h2>
+            <div className="mx-auto">
+              <NestedPieChart data={tableData} />
+
+          </div>
+          </section>
+
+          {/* Distribution of Power */}
+          <section id="sectionCampaign" className="py-16 mx-auto">
+            <h2 className="text-3xl font-bold mb-12 text-center">Campaign Sequence</h2>
+            <div className="mx-auto">
+
+          </div>
+          </section>
+
+          {/* Secure Your Stake */}
+          <section id="sectionSecureStake" className="py-16 mx-auto">
+
+            <h2 className="text-3xl font-bold mb-8 text-center">Secure Your Stake</h2>
+            <h2 className="text-xl font-bold mb-8 text-center">Regarded Games is a community-owned DAO. We&apos;re reserving a significant portion of the initial $RGD supply for our founding players. Your Contribution Score determines your share. Here&apos;s your quest board:</h2>
             <div className="grid md:grid-cols-2 gap-8 mb-8">
               {/* Card 1: Community & Social */}
         <CardPlain

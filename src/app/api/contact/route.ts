@@ -168,27 +168,20 @@ export async function POST(request: NextRequest) {
         }
     }
 
-    // --- IP Hash Duplicate Check (only if bounty is selected) ---
-    
+    // --- IP Hash Duplicate Check (only if bounty is selected, skipped on local dev) ---
+    const isLocal = process.env.NEXT_PUBLIC_ENVIRONMENT === 'local';
     let ipHash: string | null = null;
-    if (bountyAirdrop) {
+    if (bountyAirdrop && !isLocal) {
         if (!clientIp) {
             console.warn("API Warning: Could not determine client IP for bounty check.");
-            // Decide whether to block or allow. Blocking is safer for uniqueness.
             errors.general = (errors.general ? errors.general + " " : "") + "Could not verify request origin.";
         } else {
             ipHash = crypto.createHash('sha256').update(clientIp).digest('hex');
-            // console.log("API: Generated IP Hash for bounty check:", ipHash);
             try {
                 const ipCheckQuery = `SELECT 1 FROM contacts WHERE ip_hash = $1 LIMIT 1;`;
                 const ipCheckResult = await query(ipCheckQuery, [ipHash]);
                 if (ipCheckResult && ipCheckResult.rowCount && ipCheckResult.rowCount > 0) {
-                    // console.log("API Info: Duplicate bounty entry detected for this IP hash.");
-                    // Use a general error or a specific one if you want to expose this check failure
                     errors.general = (errors.general ? errors.general + " " : "") + "Duplicate bounty entry detected from this network.";
-                    // OR target a specific field if preferred: errors.bountyAirdrop = "Duplicate entry detected.";
-                } else {
-                    // console.log("API Info: No duplicate IP hash found for bounty.");
                 }
             } catch (dbError: unknown) {
                 console.error("API Error: Database error during IP hash check:", dbError);
@@ -261,12 +254,8 @@ export async function POST(request: NextRequest) {
         // Ensure ownReferenceCode is only saved if bountyAirdrop was checked (frontend doesn't send if unchecked)
         const finalOwnReferenceCode = bountyAirdrop ? (ownReferenceCode?.trim() || null) : null;
 
-        // const finalIpHash = bountyAirdrop ? ipHash : null;   // UNCOMMENT IN PRODUCTION
-        //const finalIpHash = null;
-        
+        const finalIpHash = (!isLocal && bountyAirdrop) ? ipHash : null;
 
-
-        // Prepare values array (11 elements)
         const values = [
             finalName,                      // $1
             emailToCheck,                   // $2
@@ -279,16 +268,15 @@ export async function POST(request: NextRequest) {
             finalMessage,                   // $9
             finalReferenceCode,             // $10
             finalOwnReferenceCode,          // $11
-            //finalIpHash                     // $12 <-- New value
+            finalIpHash,                    // $12 — null on local, sha256(ip) on testnet/prod
         ];
 
-        // Prepare INSERT query (11 columns, 11 placeholders) ADD ip_hash $12 IN PRODUCTION FOR IP HASH
         const insertQuery = `
             INSERT INTO contacts (
                 name, email, wallet_address, investment_amount, property_amount,
                 newsletter, bounty_airdrop, who_are_you, message,
-                reference_code, requested_ref_code
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) -- New placeholder
+                reference_code, requested_ref_code, ip_hash
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             RETURNING id;
         `;
 
@@ -327,9 +315,8 @@ export async function POST(request: NextRequest) {
                     field = 'Desired Reference Code';
                     fieldKey = 'ownReferenceCode'; 
                 }
-                else if (error.constraint === 'contacts_ip_hash_key' || error.detail?.includes('(ip_hash)')) {   //UNCOMMENT  IN PRODUCTION
-                    field = 'Bounty Entry'; fieldKey = 'general'; // Send general error for this
-                    //message = 'A bounty entry from this network location already exists.'; 
+                else if (error.constraint === 'contacts_ip_hash_key' || error.detail?.includes('(ip_hash)')) {
+                    field = 'Bounty Entry'; fieldKey = 'general';
                 }
             
    

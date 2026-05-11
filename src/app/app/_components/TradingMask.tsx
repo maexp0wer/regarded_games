@@ -1,16 +1,17 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useAccount, useWriteContract, useReadContract, usePublicClient } from 'wagmi';
+import { useAccount, useReadContract } from 'wagmi';
 import { parseUnits, formatUnits, erc20Abi, maxUint256 } from 'viem';
-import { useQueryClient } from '@tanstack/react-query';
-import ExchangeAbi from '@/deployments/abis/Exchange.json';
 import { Order } from '@/hooks/useOrderBook';
 import Core from '@/deployments/core.json';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
+import { useTradeExecution, ExecutionPayload } from '@/hooks/useTradeExecution';
 import { PercentileCircle } from './PercentileCircle';
+import { GroupedOrder, OrderQueueItem } from './OrderQueueItem';
 
 interface TradingMaskProps {
+  seasonSlug: string;
   seasonAddress: string;
   exchangeAddress: string;
   fimAddress: string;
@@ -26,32 +27,17 @@ interface TradingMaskProps {
   onReorderOrders: (newOrders: Order[]) => void;
 }
 
-type WorkflowStep = 'idle' | 'approving' | 'mining_approval' | 'executing' | 'mining_execute' | 'success' | 'canceled' | 'failed';
-
-// Helper interface for local grouping
-interface GroupedOrder extends Order {
-  ids: string[];
-  orders: Order[];
-  unitPrice: string;
-}
-
-export function TradingMask({ 
-  seasonAddress, exchangeAddress, fimAddress, isBuy, setIsBuy, isMaker, setIsMaker, 
+export function TradingMask({
+  seasonSlug, seasonAddress, exchangeAddress, fimAddress, isBuy, setIsBuy, isMaker, setIsMaker,
   targetAmount, setTargetAmount, selectedOrders, onRemoveOrder, onMoveOrder, onReorderOrders
 }: TradingMaskProps) {
-  
-  const { address, isConnected } = useAccount();
-  const publicClient = usePublicClient();
-  const queryClient = useQueryClient();
 
-  const [price, setPrice] = useState(""); 
+  const { address, isConnected } = useAccount();
+
+  const [price, setPrice] = useState("");
   const [isPricePerFim, setIsPricePerFim] = useState(false);
-  const [workflowStatus, setWorkflowStatus] = useState<WorkflowStep>('idle');
-  
-  // Drag state now tracks the GROUP index, not the raw order index
   const [draggedGroupIdx, setDraggedGroupIdx] = useState<number | null>(null);
 
-  const { writeContractAsync } = useWriteContract();
   const spendingToken = isBuy ? Core.USDC : fimAddress;
   const spendingSymbol = isBuy ? "USDC" : "FIM";
 
@@ -72,10 +58,9 @@ export function TradingMask({
     query: { enabled: !!address, refetchInterval: 5000 }
   });
 
-  
+
   // --- 2. CALCULATIONS ---
-  
-  // NEW: Group Consecutive Orders Logic
+
   const groupedQueue = useMemo(() => {
     const groups: GroupedOrder[] = [];
     if (selectedOrders.length === 0) return groups;
@@ -84,24 +69,21 @@ export function TradingMask({
 
     selectedOrders.forEach((order) => {
         const unitPrice = (order.amount > 0 ? order.price / order.amount : 0).toFixed(4);
-        
-        // If matches previous maker AND price, merge
+
         if (current && current.maker === order.maker && current.unitPrice === unitPrice) {
             current.amount += order.amount;
             current.price += order.price;
             current.ids.push(order.id);
             current.orders.push(order);
         } else {
-            // Push finished group
             if (current) groups.push(current);
-            // Start new group
             current = {
-                ...order, // Inherit base props
+                ...order,
                 unitPrice,
                 ids: [order.id],
                 orders: [order],
-                amount: order.amount, // Reset sum
-                price: order.price    // Reset sum
+                amount: order.amount,
+                price: order.price
             };
         }
     });
@@ -110,46 +92,14 @@ export function TradingMask({
   }, [selectedOrders]);
 
 
-  const queueMakers = useMemo(() => 
-    Array.from(new Set(groupedQueue.map(g => g.maker?.toLowerCase()).filter(Boolean))), 
+  const queueMakers = useMemo(() =>
+    Array.from(new Set(groupedQueue.map(g => g.maker?.toLowerCase()).filter(Boolean))),
     [groupedQueue]
   );
 
-  // Added isFetched to detect when the API call is actually done
-  const { 
-    data: percentileMap, 
-    isLoading: isPercentileLoading, 
-    isFetched 
-  } = useBatchPlayerPercentiles(seasonAddress, queueMakers);
+  const { data: percentileMap } = useBatchPlayerPercentiles(seasonAddress, queueMakers);
 
-  // Helper to render Identity (Icon vs Address)
-  const renderMakerIdentity = (maker: string) => {
-    const mAddr = maker.toLowerCase();
-    const stats = percentileMap?.[mAddr];
-
-    if (isPercentileLoading && !isFetched) {
-      return <span className="text-[8px] bg-card2 px-1.5 py-0.5 rounded text-text2 animate-pulse">Loading...</span>;
-    }
-
-    if (stats) {
-      return (
-        <PercentileCircle 
-          percentage={stats.factionPercentile} 
-          isCapitalist={stats.isCapitalist} 
-          size="xl"
-        />
-      );
-    }
-
-    // Fallback: Show address if player not found in stats DB
-    return (
-      <span className="text-[8px] bg-card2 px-1.5 py-0.5 rounded text-text2">
-        {maker.slice(0, 6)}...{maker.slice(-4)}
-      </span>
-    );
-  };
-
-  const executionPayload = useMemo(() => {
+  const executionPayload = useMemo<ExecutionPayload>(() => {
     if (isMaker) return { ids: [], amounts: [], totalCostRaw: 0n, totalFimRaw: 0n };
     const targetAmountRaw = targetAmount ? parseUnits(targetAmount, 18) : maxUint256;
     let remainingToFill = targetAmountRaw;
@@ -193,135 +143,68 @@ export function TradingMask({
 
   const isSelfFill = useMemo(() => {
     if (!address || isMaker) return false;
-    // Check if ANY selected order belongs to the connected wallet
     return selectedOrders.some(o => o.maker.toLowerCase() === address.toLowerCase());
   }, [selectedOrders, address, isMaker]);
-
-  const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: spendingToken as `0x${string}`,
-    abi: erc20Abi,
-    functionName: 'allowance',
-    args: [address as `0x${string}`, exchangeAddress as `0x${string}`],
-  });
 
   // --- 3. DYNAMIC FORMATTER FOR COST ---
   const formatDynamicUsdc = (rawUsdc: bigint) => {
     const value = Number(formatUnits(rawUsdc, 6));
     if (value === 0 && rawUsdc > 0n) return "< 0.000001";
     const decimals = value > 0 && value < 1 ? 6 : 2;
-    return value.toLocaleString(undefined, { 
-      minimumFractionDigits: decimals, 
-      maximumFractionDigits: decimals 
+    return value.toLocaleString(undefined, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
     });
   };
 
   // --- 4. ACTIONS ---
-  
-  // Remove entire group
+
   const handleRemoveGroup = (group: GroupedOrder) => {
     group.ids.forEach(id => onRemoveOrder(id));
   };
 
-  // Move entire group (up/down buttons)
   const handleMoveGroupButton = (groupIdx: number, direction: -1 | 1) => {
     const newGroups = [...groupedQueue];
     const [movedGroup] = newGroups.splice(groupIdx, 1);
     newGroups.splice(groupIdx + direction, 0, movedGroup);
-    
-    // Flatten back to orders for parent state
     const flattened = newGroups.flatMap(g => g.orders);
     onReorderOrders(flattened);
   };
 
-  // Drag and Drop for Groups
   const handleGroupDragOver = (e: React.DragEvent, overGroupIdx: number) => {
     e.preventDefault();
     if (draggedGroupIdx === null || draggedGroupIdx === overGroupIdx) return;
-    
+
     const newGroups = [...groupedQueue];
     const [movedGroup] = newGroups.splice(draggedGroupIdx, 1);
     newGroups.splice(overGroupIdx, 0, movedGroup);
-    
+
     setDraggedGroupIdx(overGroupIdx);
-    
-    // Flatten and update parent
+
     const flattened = newGroups.flatMap(g => g.orders);
     onReorderOrders(flattened);
   };
 
-  const handleStartFlow = async () => {
-    if (!publicClient || !address) return;
-    try {
-        const liveAllowance = await publicClient.readContract({
-            address: spendingToken as `0x${string}`,
-            abi: erc20Abi,
-            functionName: 'allowance',
-            args: [address, exchangeAddress as `0x${string}`]
-        }) as bigint;
+  // --- 5. TRADE EXECUTION HOOK ---
+  const { workflowStatus, handleStartFlow, getStatusText, isBusy } = useTradeExecution({
+    isMaker, isBuy, targetAmount, makerTotalUsdcRaw, executionPayload,
+    spendingToken: spendingToken as `0x${string}`,
+    spendingSymbol,
+    exchangeAddress: exchangeAddress as `0x${string}`,
+    amountNeeded,
+    selectedOrders,
+    onRemoveOrder,
+    setTargetAmount,
+    setPrice,
+  });
 
-        if (liveAllowance < amountNeeded) {
-            setWorkflowStatus('approving');
-            const hash = await writeContractAsync({
-                address: spendingToken as `0x${string}`,
-                abi: erc20Abi,
-                functionName: 'approve',
-                args: [exchangeAddress as `0x${string}`, amountNeeded]
-            });
-            setWorkflowStatus('mining_approval');
-            await publicClient.waitForTransactionReceipt({ hash });
-            await refetchAllowance();
-        }
-
-        setWorkflowStatus('executing');
-        const txHash = isMaker 
-            ? await writeContractAsync({
-                address: exchangeAddress as `0x${string}`,
-                abi: ExchangeAbi as any,
-                functionName: 'createOrder',
-                args: [isBuy, parseUnits(targetAmount, 18), makerTotalUsdcRaw]
-              })
-            : await writeContractAsync({
-                address: exchangeAddress as `0x${string}`,
-                abi: ExchangeAbi as any,
-                functionName: 'fillBatch',
-                args: [executionPayload.ids, executionPayload.amounts]
-              });
-
-        setWorkflowStatus('mining_execute');
-        await publicClient.waitForTransactionReceipt({ hash: txHash });
-        setWorkflowStatus('success');
-        
-        setTimeout(() => {
-            if (!isMaker) selectedOrders.forEach(o => onRemoveOrder(o.id));
-            setTargetAmount("");
-            setPrice("");
-            setWorkflowStatus('idle');
-            queryClient.invalidateQueries();
-        }, 2000);
-    } catch (err: any) {
-        setWorkflowStatus(err.shortMessage?.includes("rejected") ? 'canceled' : 'failed');
-        setTimeout(() => setWorkflowStatus('idle'), 2000);
-    }
-  };
-
-  const getStatusText = () => {
-    if (workflowStatus === 'idle') return isMaker ? (isBuy ? "Create Buy Order" : "Create Sell Order") : "Fill Selected Orders";
-    const texts: Record<WorkflowStep, string> = { 
-        approving: `Step 1/2: Approve ${spendingSymbol}`, mining_approval: "Confirming Approval...", 
-        executing: "Step 2/2: Sign Transaction", mining_execute: "Finalizing...",
-        success: "Success!", canceled: "Canceled", failed: "Failed", idle: ""
-    };
-    return texts[workflowStatus];
-  };
-
-  const isBusy = workflowStatus !== 'idle' && !['success', 'canceled', 'failed'].includes(workflowStatus);
   const isButtonDisabled = isBusy || workflowStatus === 'success' || (isMaker ? (!targetAmount || !price) : selectedOrders.length === 0) || isSelfFill;
   const inputClass = "bg-transparent border-none p-0 w-full text-2xl font-mono font-black text-text outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+  const userMakers = useMemo(() => (address ? [address.toLowerCase()] : []), [address]);
+  const { data: userStatsMap, isFetched: userStatsFetched } = useBatchPlayerPercentiles(seasonAddress, userMakers);
 
   if (!isConnected) return <div className="p-6 bg-card rounded-xl border border-border/10 text-center text-text2 text-sm">Please Connect Wallet</div>;
 
-  const userMakers = useMemo(() => (address ? [address.toLowerCase()] : []), [address]);
-  const { data: userStatsMap, isFetched: userStatsFetched } = useBatchPlayerPercentiles(seasonAddress, userMakers);
   const userStats = address ? userStatsMap?.[address.toLowerCase()] : undefined;
 
   return (
@@ -339,12 +222,12 @@ export function TradingMask({
 
     {/* Stats Section */}
     <div className="flex flex-col text-left">
-        
+
         <div className="flex items-center h-full">
             {userStats ? (
-                <PercentileCircle 
-                    percentage={userStats.factionPercentile} 
-                    isCapitalist={userStats.isCapitalist} 
+                <PercentileCircle
+                    percentage={userStats.factionPercentile}
+                    isCapitalist={userStats.isCapitalist}
                     size="lg"
                 />
             ) : (
@@ -364,10 +247,10 @@ export function TradingMask({
             const isLocked = !isMaker && selectedOrders.length > 0;
             return (
               <>
-                <button 
+                <button
                   disabled={isLocked}
-                  onClick={() => setIsBuy(true)} 
-                  className={`flex-1 py-2 text-[10px] font-black uppercase rounded-2xl transition-all 
+                  onClick={() => setIsBuy(true)}
+                  className={`flex-1 py-2 text-[10px] font-black uppercase rounded-2xl transition-all
                     ${isBuy ? 'bg-success text-card' : 'text-text2 hover:text-text hover:bg-text/10'}
                     ${isLocked ? 'cursor-not-allowed' : ''}
                     ${isLocked && !isBuy ? 'opacity-30' : ''}
@@ -375,10 +258,10 @@ export function TradingMask({
                 >
                   Buy
                 </button>
-                <button 
+                <button
                   disabled={isLocked}
-                  onClick={() => setIsBuy(false)} 
-                  className={`flex-1 py-2 text-[10px] font-black uppercase rounded-2xl transition-all 
+                  onClick={() => setIsBuy(false)}
+                  className={`flex-1 py-2 text-[10px] font-black uppercase rounded-2xl transition-all
                     ${!isBuy ? 'bg-danger text-card' : 'text-text2 hover:text-text hover:bg-text/10'}
                     ${isLocked ? 'cursor-not-allowed' : ''}
                     ${isLocked && isBuy ? 'opacity-30' : ''}
@@ -392,29 +275,29 @@ export function TradingMask({
       </div>
 
       <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
-        
+
         {/* INPUT 1: AMOUNT */}
         <div className="bg-card2 rounded-xl flex items-stretch overflow-hidden">
           <div className="flex-1 pl-4 py-3 pr-2">
             <label className="h4-app block mb-1">Amount (FIM)</label>
-            <input 
-              type="number" 
-              value={targetAmount} 
-              onChange={(e) => setTargetAmount(e.target.value)} 
-              className={`${inputClass} w-full`} 
-              placeholder={isMaker ? "0.00" : "MAX"} 
+            <input
+              type="number"
+              value={targetAmount}
+              onChange={(e) => setTargetAmount(e.target.value)}
+              className={`${inputClass} w-full`}
+              placeholder={isMaker ? "0.00" : "MAX"}
             />
           </div>
           <div className="w-18 flex flex-col shrink-0 border-l border-border/10">
-            <button 
-              onClick={() => setIsMaker(false)} 
+            <button
+              onClick={() => setIsMaker(false)}
               className={`flex-1 text-[10px] font-black uppercase transition-all flex items-center justify-center
                 ${!isMaker ? 'bg-primary text-card' : 'bg-card2 text-text2 hover:text-text hover:bg-text/10'}`}
             >
               Taker
             </button>
-            <button 
-              onClick={() => setIsMaker(true)} 
+            <button
+              onClick={() => setIsMaker(true)}
               className={`flex-1 text-[10px] font-black uppercase transition-all flex items-center justify-center
                 ${isMaker ? 'bg-primary text-card' : 'bg-card2 text-text2 hover:text-text hover:bg-text/10'}`}
             >
@@ -431,24 +314,24 @@ export function TradingMask({
                 <label className="h4-app block mb-1">
                     {isPricePerFim ? "Price / 1 FIM (USDC)" : "Total Order (USDC)"}
                 </label>
-                <input 
-                  type="number" 
-                  value={price} 
-                  onChange={(e) => setPrice(e.target.value)} 
-                  className={`${inputClass} w-full`} 
-                  placeholder="0.00" 
+                <input
+                  type="number"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  className={`${inputClass} w-full`}
+                  placeholder="0.00"
                 />
               </div>
               <div className="w-18 flex flex-col shrink-0 border-l border-border/10">
-                <button 
-                  onClick={() => setIsPricePerFim(false)} 
+                <button
+                  onClick={() => setIsPricePerFim(false)}
                   className={`flex-1 text-[10px] font-black uppercase transition-all flex items-center justify-center
                     ${!isPricePerFim ? 'bg-text/70 text-card' : 'bg-card2 text-text2 hover:text-text hover:bg-text/10'}`}
                 >
                   Total
                 </button>
-                <button 
-                  onClick={() => setIsPricePerFim(true)} 
+                <button
+                  onClick={() => setIsPricePerFim(true)}
                   className={`flex-1 text-[10px] font-black uppercase transition-all flex items-center justify-center
                     ${isPricePerFim ? 'bg-text/70 text-card' : 'bg-card2 text-text2 hover:text-text hover:bg-text/10'}`}
                 >
@@ -468,69 +351,23 @@ export function TradingMask({
               </div>
             ) : (
               groupedQueue.map((group, groupIdx) => {
-                const limit = Number(targetAmount) || Infinity;
                 const filledBefore = groupedQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
-                const localFill = Math.max(0, Math.min(group.amount, limit - filledBefore));
-                
-                // Lookup percentile data
-                const stats = percentileMap?.[group.maker?.toLowerCase()];
-
                 return (
-                  <div 
-                    key={group.ids[0]} 
-                    draggable 
-                    onDragStart={() => setDraggedGroupIdx(groupIdx)} 
-                    onDragOver={(e) => handleGroupDragOver(e, groupIdx)} 
+                  <OrderQueueItem
+                    key={group.ids[0]}
+                    group={group}
+                    groupIdx={groupIdx}
+                    groupCount={groupedQueue.length}
+                    draggedGroupIdx={draggedGroupIdx}
+                    targetAmount={targetAmount}
+                    filledBefore={filledBefore}
+                    stats={percentileMap?.[group.maker?.toLowerCase()]}
+                    onMoveGroup={handleMoveGroupButton}
+                    onRemoveGroup={handleRemoveGroup}
+                    onDragStart={setDraggedGroupIdx}
+                    onDragOver={handleGroupDragOver}
                     onDragEnd={() => setDraggedGroupIdx(null)}
-                    className={`bg-card2 p-3 rounded-lg border flex justify-between items-center cursor-grab active:cursor-grabbing transition-all
-                        ${draggedGroupIdx === groupIdx ? 'opacity-40 border-text ring-1 ring-primary/20' : 'border-none shadow-sm'}
-                        ${localFill === 0 ? 'grayscale opacity-40' : 'opacity-100'}
-                    `}>
-                    <div className="flex items-center gap-3">
-                      <div className="text-text text-[10px]">☰</div>
-                      <div className="flex flex-col text-left">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[11px] font-bold ${group.isBuy ? 'text-success' : 'text-danger'}`}>
-                            ${parseFloat(group.unitPrice).toFixed(4)}
-                          </span>
-                          
-                          
-                        </div>
-                        <span className="text-[11px] text-text2 font-bold uppercase mt-0.5">
-                          Fill: {localFill.toLocaleString()} / {group.amount.toLocaleString()} FIM
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* REPLACED ADDRESS WITH PERCENTILE COMPONENT */}
-                          {stats ? (
-                            <PercentileCircle 
-                              percentage={stats.factionPercentile} 
-                              isCapitalist={stats.isCapitalist} 
-                              size="md"
-                            />
-                          ) : (
-                            <span className="text-[8px] bg-card2 px-1.5 py-0.5 rounded text-text2 animate-pulse">
-                              Loading...
-                            </span>
-                          )}
-                    <div className="flex items-center gap-1">
-                      <button 
-                        onClick={() => handleMoveGroupButton(groupIdx, -1)} 
-                        disabled={groupIdx === 0} 
-                        className="bg-text/50 p-1 px-2 rounded text-bg text-[8px] hover:bg-primary hover:text-bg transition-colors"
-                      >▲</button>
-                      <button 
-                        onClick={() => handleMoveGroupButton(groupIdx, 1)} 
-                        disabled={groupIdx === groupedQueue.length - 1} 
-                        className="bg-text/50 p-1 px-2 rounded text-bg text-[8px] hover:bg-primary hover:text-bg transition-colors"
-                      >▼</button>
-                      <button 
-                        onClick={() => handleRemoveGroup(group)} 
-                        className="text-text2 hover:text-primary ml-1 p-1"
-                      >×</button>
-                    </div>
-                  </div>
+                  />
                 );
               })
             )}
@@ -576,8 +413,8 @@ export function TradingMask({
             )}
             <button disabled={isButtonDisabled} onClick={handleStartFlow}
                 className={`relative w-full py-4 font-black text-[10px] uppercase tracking-widest z-10 flex items-center justify-center gap-2 transition-all
-                    ${isButtonDisabled && workflowStatus === 'idle' ? 'bg-card2 text-text2' : 'text-card'} 
-                    ${isBusy ? 'text-text' : ''} 
+                    ${isButtonDisabled && workflowStatus === 'idle' ? 'bg-card2 text-text2' : 'text-card'}
+                    ${isBusy ? 'text-text' : ''}
                     ${workflowStatus === 'idle' && !isButtonDisabled ? 'bg-primary hover:brightness-110 shadow-primary/20 shadow-lg' : ''}
                     ${workflowStatus === 'success' ? 'bg-success' : ''}
                     ${['failed', 'canceled'].includes(workflowStatus) ? 'bg-danger' : ''}
@@ -587,7 +424,7 @@ export function TradingMask({
             </button>
         </div>
       </div>
-     </div> 
+     </div>
     </div>
   );
 }
