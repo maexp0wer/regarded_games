@@ -1,236 +1,645 @@
 
-@import url("https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap");
 @import "tailwindcss";
 
+/* ================================================================
+   FONTS — loaded via next/font in layout.tsx
+   --font-display  →  Bricolage Grotesque  (hero numbers, big text)
+   --font-sans     →  Space Grotesk        (all UI / body text)
+   --font-mono     →  JetBrains Mono       (every numeric value & label)
+   ================================================================ */
+
 @theme {
-    /* Light theme colors */
-    --color-primary: #CC4713;
-    --color-primary2: #e95217;
-    --color-primary3: #faeab5;
-    --color-secondary: #8a4ad1;
-    --color-secondary2: #dcc2fa;
-    --color-success: #5dae0e;
-    --color-info: #3b66d1;
-    --color-warning: #e0a800;
-    --color-danger: #d63384;
-    --color-bg: #f9f9f7;
-    --color-card: #ffffff;
-    --color-card2: #f0efe9;
-    --color-card3: #e6e4dc;
-    --color-text: #2e2e2a;
-    --color-text2: #5c5c57;
-    --color-border: #dbd9d1;
+  /* ── LIGHT palette (default) ────────────────────────────────── */
+  --color-primary:    #c98a00;
+  --color-primary2:   #f5b800;
+  --color-primary3:   #fdf3d3;
+  --color-secondary:  #2d5eaa;
+  --color-secondary2: #4d9fff;
+  --color-success:    #2d8c30;
+  --color-success2:   #3aad3e;
+  --color-info:       #2d5eaa;
+  --color-warning:    #c98a00;
+  --color-danger:     #d4215f;
 
-    --font-display: "Exo 2", "sans-serif";
-    
+  --color-bg:          #f9f7f4;
+  --color-card:        #ffffff;
+  --color-card2:       #f5f2ed;
+  --color-card3:       #f0ede8;
+  --color-text:        #1a1814;
+  --color-text2:       #7a7268;
+  --color-border:      #e0dbd2;
+  --color-border-bright: #ccc7be;
+  --color-muted:       #7a7268;
+  --color-muted2:      #a09890;
 
+  /* semantic aliases kept for convenience */
+  --color-gold:        #c98a00;
+  --color-gold-soft:   #f5b800;
+  --color-pink:        #d4215f;
+  --color-pink-soft:   #e8447e;
+  --color-blue:        #2d5eaa;
+  --color-blue-soft:   #4d9fff;
+  --color-green:       #2d8c30;
+  --color-red:         #bb2222;
+
+  /* ── TYPOGRAPHY ─────────────────────────────────────────────── */
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-sans:    "Space Grotesk",       system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono",      ui-monospace, monospace;
 }
-    /* Dark theme colors */
-    .dark {
-      --color-primary: #ebc35aff;
-      --color-primary2: #dea91cff;
-      --color-primary3: #b48913ff;
-      --color-secondary: #9b5aeb;
-      --color-secondary2: #b887f2;
-      --color-success: #AAeb5a;
-      --color-success2: #20c997;
-      --color-info: #5a83eb;
-      --color-warning: #ffca3a;
-      --color-danger: #EB5AAA;
-      --color-bg: #121212ff;
-      --color-card: #242421ff;
-      --color-card2: #363632ff;
-      --color-card3: #43433dff;
-      --color-text: #ebe7e0ff;
-      --color-text2: #d7d0c1ff;
-      --color-border: #d5d1df;
-  }
 
-  
-  .main {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: fit-content;
-    max-width: 90vw; /* Prevents edge touching on small screens */
-    box-sizing: border-box;
-  }
+/* ── DARK palette override ─────────────────────────────────────── */
+.dark {
+  --color-primary:    #f5b800;
+  --color-primary2:   #ffd34a;
+  --color-primary3:   #1a1305;
+  --color-secondary:  #4d9fff;
+  --color-secondary2: #8cc0ff;
+  --color-success:    #6bcb6e;
+  --color-success2:   #2d8c30;
+  --color-info:       #4d9fff;
+  --color-warning:    #f5b800;
+  --color-danger:     #ff3d8a;
 
-  html {
-    background-color: var(--color-bg) !important;  /*Or any bright color */
-    scroll-behavior: smooth;
-  }
+  --color-bg:          #0b0a09;
+  --color-card:        #15120f;
+  --color-card2:       #1b1814;
+  --color-card3:       #110f0d;
+  --color-text:        #f4ede0;
+  --color-text2:       #8a8378;
+  --color-border:      #2a2520;
+  --color-border-bright: #3a342d;
+  --color-muted:       #8a8378;
+  --color-muted2:      #5a534a;
 
+  --color-gold:        #f5b800;
+  --color-gold-soft:   #ffd34a;
+  --color-pink:        #ff3d8a;
+  --color-pink-soft:   #ff7ab0;
+  --color-blue:        #4d9fff;
+  --color-blue-soft:   #8cc0ff;
+  --color-green:       #6bcb6e;
+  --color-red:         #ff5454;
+}
+
+/* ── BASE ──────────────────────────────────────────────────────── */
+html {
+  background-color: var(--color-bg);
+  scroll-behavior: smooth;
+}
+
+html, body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01", "cv11";
+}
+
+.dark body {
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(245, 184, 0, 0.04), transparent 60%),
+    radial-gradient(900px 500px at -10% 120%, rgba(255, 61, 138, 0.03), transparent 60%),
+    var(--color-bg);
+  min-height: 100vh;
+}
+
+/* ── CENTERED HERO LAYOUT (non-app pages) ──────────────────────── */
+.main {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: fit-content;
+  max-width: 90vw;
+  box-sizing: border-box;
+}
+
+/* ================================================================
+   BUTTONS
+   ================================================================ */
 
 .btn-primary {
-    @apply px-6 py-3 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02];
-    @apply bg-primary hover:bg-primary2 text-bg;
-  }
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 8px;
+  border: none;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background: linear-gradient(180deg, var(--color-gold-soft), var(--color-gold));
+  color: #1a1305;
+  box-shadow: 0 8px 24px -10px rgba(245, 184, 0, 0.45);
+  transition: filter 0.15s, transform 0.1s;
+}
+.btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.btn-primary:active:not(:disabled) { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-primary-waiting {
-    @apply px-6 py-3 rounded-lg text-lg font-medium;
-    @apply bg-primary/70 text-card;
-  }
-
-.btn-success {
-    /* Layout & Typography - Matching your button style */
-    @apply w-full py-4 rounded-lg text-center font-display font-medium text-lg;
-    
-    /* Colors & Border */
-    @apply bg-success/10 border border-success/30 text-success;
-    
-    /* Shadow */
-    @apply shadow-lg shadow-success/10;
-    
-    /* Ensure it behaves like a block element in button spots */
-    @apply flex items-center justify-center;
-  }
-
-
-.btn-secondary {
-    @apply px-6 py-3 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02];
-    @apply bg-card2 hover:bg-card3 text-text border border-card3;
-
-    .dark & {
-      @apply border-none;
-    }
-  }
-
-.btn-three {
-    @apply px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-[1.03];
-    @apply bg-card2 hover:bg-card3 text-text border border-card3;
-
-    .dark & {
-      @apply border-none;
-    }
-  }
-
-
-
-  .h2-app{
-    @apply text-[11px] md:text-xs uppercase font-bold text-text2 tracking-widest;
-  }
-    .h3-app{
-    @apply text-[9px] md:text-[10px] uppercase font-bold text-text2 tracking-widest;
-  }
-    .h4-app{
-    @apply text-[8px] md:text-[9px] uppercase font-bold text-text2 tracking-widest;
-  }
-
-  .card-app {
-    @apply bg-card rounded-2xl p-6 shadow-sm space-y-3 h-full;
-  }
-  .cardline-app {
-    @apply border-b border-border/50 pb-2;
-  }
- 
-
-
-  /* Custom Scrollbar Styling */
-.custom-scrollbar {
-  /* For Firefox */
-  scrollbar-width: thin;
-  /* Use your existing theme variables! */
-  scrollbar-color: var(--color-primary) var(--color-card2);
-
-  /* For Chrome, Safari, and other WebKit-based browsers */
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    /* Use your existing theme variables! */
-    background-color: var(--color-card2);
-    border-radius: 10px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    /* Use your existing theme variables! */
-    background-color: var(--color-primary);
-    border-radius: 10px;
-    border: 2px solid var(--color-card2); /* Creates a nice padding effect */
-  }
-
-  &::-webkit-scrollbar-thumb:hover {
-    /* Use your existing theme variables! */
-    background-color: var(--color-primary2);
-  }
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 8px;
+  border: none;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, var(--color-gold-soft), var(--color-gold));
+  color: #1a1305;
+  opacity: 0.6;
+  cursor: wait;
 }
 
-/* --- Custom Docs Typography --- */
+.btn-success {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 8px;
+  border: none;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background: linear-gradient(180deg, rgba(107, 203, 110, 0.85), var(--color-green));
+  color: #0a1e0b;
+  box-shadow: 0 8px 24px -10px rgba(107, 203, 110, 0.35);
+  transition: filter 0.15s, transform 0.1s;
+}
+.btn-success:hover:not(:disabled) { filter: brightness(1.08); }
+.btn-success:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* 1. Main Page Title (The H1 from meta.title) */
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 8px;
+  border: none;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background: linear-gradient(180deg, var(--color-pink-soft), var(--color-pink));
+  color: #1a0510;
+  box-shadow: 0 8px 24px -10px rgba(255, 61, 138, 0.35);
+  transition: filter 0.15s, transform 0.1s;
+}
+.btn-danger:hover:not(:disabled) { filter: brightness(1.08); }
+.btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text2);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-secondary:hover { color: var(--color-text); border-color: var(--color-border-bright); }
+.btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-three {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: var(--color-card2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text2);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-three:hover { color: var(--color-text); border-color: var(--color-border-bright); }
+
+/* ================================================================
+   CARD & LAYOUT
+   ================================================================ */
+
+.card-app {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 24px;
+}
+
+.cardline-app {
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 8px;
+}
+
+/* ================================================================
+   TYPOGRAPHY UTILITIES
+   ================================================================ */
+
+/* Section label — mono micro-caps, muted */
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-label .tick {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-gold);
+}
+
+/* Backwards-compat aliases */
+.h2-app { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text2); }
+.h3-app { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text2); }
+.h4-app { font-family: var(--font-mono); font-size: 9px;  font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text2); }
+
+/* ================================================================
+   STATUS PILLS
+   ================================================================ */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.pill-live {
+  background: rgba(107, 203, 110, 0.08);
+  color: var(--color-green);
+  border: 1px solid rgba(107, 203, 110, 0.25);
+}
+.dark .pill-live {
+  background: rgba(107, 203, 110, 0.08);
+  border-color: rgba(107, 203, 110, 0.25);
+}
+.pill-live .pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-green);
+  box-shadow: 0 0 8px var(--color-green);
+  animation: pill-pulse 2s ease-in-out infinite;
+}
+@keyframes pill-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ================================================================
+   SEGMENTED CONTROLS
+   ================================================================ */
+
+.seg {
+  display: inline-flex;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.seg-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 6px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.seg-btn:hover { color: var(--color-text); }
+.seg-btn.active {
+  background: var(--color-card2);
+  color: var(--color-text);
+  box-shadow: 0 1px 0 var(--color-border-bright);
+}
+.seg-btn.active-buy  { color: var(--color-green) !important; }
+.seg-btn.active-sell { color: var(--color-pink)  !important; }
+
+/* ================================================================
+   CHIPS (quick-amount selectors)
+   ================================================================ */
+
+.chip {
+  background: var(--color-card2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chip:hover { color: var(--color-text); border-color: var(--color-border-bright); }
+.chip.active {
+  color: var(--color-gold);
+  border-color: rgba(245, 184, 0, 0.4);
+  background: rgba(245, 184, 0, 0.08);
+}
+.dark .chip.active {
+  border-color: rgba(245, 184, 0, 0.4);
+  background: rgba(245, 184, 0, 0.08);
+}
+
+/* ================================================================
+   COUNTDOWN CELLS
+   ================================================================ */
+
+.cd-cell {
+  background: var(--color-card2);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 12px 8px;
+  text-align: center;
+}
+.cd-num {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+.cd-cell.danger .cd-num { color: var(--color-gold); }
+.cd-unit {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text2);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ================================================================
+   ACTIVITY ROW — Bloomberg ticker
+   ================================================================ */
+
+.activity-row {
+  display: grid;
+  grid-template-columns: 60px 1fr 40px auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 20px;
+  border-bottom: 1px dashed var(--color-border);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.activity-row:last-child { border-bottom: none; }
+.activity-row .ar-time { color: var(--color-text2); }
+.activity-row .ar-addr { color: var(--color-text); }
+.activity-row .ar-pill {
+  font-size: 10px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  justify-self: center;
+  min-width: 44px;
+}
+.activity-row .ar-pill.buy  { background: rgba(107, 203, 110, 0.1); color: var(--color-green); }
+.activity-row .ar-pill.sell { background: rgba(255,  61, 138, 0.1); color: var(--color-pink);  }
+.activity-row .ar-amt { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.activity-row .ar-amt.positive { color: var(--color-green); }
+.activity-row .ar-amt.negative { color: var(--color-pink); }
+
+/* ================================================================
+   KV ROW — key / value pairs
+   ================================================================ */
+
+.kv-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.kv-key {
+  color: var(--color-text2);
+  font-size: 13px;
+  font-family: var(--font-sans);
+}
+.kv-val {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+}
+.kv-val.gold { color: var(--color-gold); }
+.kv-val.pink { color: var(--color-pink); }
+.kv-val.blue { color: var(--color-blue); }
+.kv-val.green { color: var(--color-green); }
+
+/* ================================================================
+   DISTRIBUTION BARS
+   ================================================================ */
+
+.dist-bar-wrap {
+  height: 4px;
+  background: var(--color-card2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.dist-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease-out;
+}
+
+/* ================================================================
+   STAT GRID (2-col with separator borders)
+   ================================================================ */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: var(--color-border);
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+.stat-cell {
+  background: var(--color-card);
+  padding: 12px 16px;
+}
+.dark .stat-cell { background: var(--color-card2); }
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text2);
+  margin-bottom: 6px;
+}
+.stat-value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+.stat-value.gold  { color: var(--color-gold); }
+.stat-value.green { color: var(--color-green); }
+.stat-value.pink  { color: var(--color-pink); }
+.stat-value.blue  { color: var(--color-blue); }
+.stat-sub {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text2);
+  margin-left: 4px;
+}
+.stat-sub.pink { color: var(--color-pink); }
+
+/* ================================================================
+   GINI MARKER (on the gauge bar)
+   ================================================================ */
+
+.gini-marker {
+  position: absolute;
+  top: -10px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+.gini-knob {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 3px solid var(--color-bg);
+}
+.gini-knob.gold {
+  width: 28px;
+  height: 28px;
+  background: var(--color-gold);
+  box-shadow: 0 0 0 1px var(--color-gold), 0 0 30px rgba(245, 184, 0, 0.7);
+}
+.gini-knob.pink {
+  background: var(--color-pink);
+  box-shadow: 0 0 0 1px var(--color-pink), 0 0 20px rgba(255, 61, 138, 0.5);
+}
+.gini-knob.blue {
+  background: var(--color-blue);
+  box-shadow: 0 0 0 1px var(--color-blue), 0 0 20px rgba(77, 159, 255, 0.5);
+}
+.gini-stem {
+  width: 2px;
+  height: 28px;
+  opacity: 0.4;
+}
+.gini-stem.pink { background: var(--color-pink); }
+.gini-stem.blue { background: var(--color-blue); }
+.gini-stem.gold { background: var(--color-gold); }
+
+/* ================================================================
+   CUSTOM SCROLLBAR
+   ================================================================ */
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-muted2) var(--color-card2);
+}
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--color-card2);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-muted2);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text2);
+}
+
+/* ================================================================
+   ANIMATIONS
+   ================================================================ */
+
+@keyframes subtle-pulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.05); }
+}
+
+/* ================================================================
+   DOCS / PROSE TYPOGRAPHY
+   ================================================================ */
+
 .prose .doc-title {
   @apply text-3xl md:text-3xl tracking-tight mb-8 text-text;
 }
-
-/* Optional: If you want hashtags (# Heading) inside the MDX to also be primary */
 .prose h1 {
   @apply text-3xl border-b border-card pb-2 mb-6 mt-10 text-text;
 }
-
-/* 2. Headings inside the MDX content (#, ##, ###) */
-.prose h1, 
-.prose h2, 
-.prose h3, 
-.prose h4 {
-  @apply font-bold tracking-tight scroll-mt-24; 
-  /* scroll-mt-24 ensures the header isn't hidden behind the sticky header when linked */
-   @apply scroll-mt-24; 
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  @apply font-bold tracking-tight scroll-mt-24;
 }
-
-.prose h1 {
-  @apply text-2xl border-b text-primary border-card pb-2 mb-6 mt-10;
-}
-
-.prose h2 {
-  @apply text-xl text-text mt-12 mb-4;
-}
-
-.prose h3 {
-  @apply text-xl mt-8 mb-3;
-}
-
-/* 3. Regular Paragraph Content */
-.prose p, .prose li {
-  @apply text-base leading-7 text-text/90 mb-4;
-}
-
-.prose strong {
-  @apply text-primary font-semibold;
-}
-
-.prose code {
-  @apply bg-card text-primary px-1.5 py-0.5 rounded text-sm font-normal;
-}
-
-.prose pre {
-  @apply bg-card2 border border-card rounded-lg p-4 overflow-x-auto;
-}
-
-/* 4. Links in content */
-.prose a {
-  @apply text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary transition-all;
-}
-
-/* --- TABLE STYLING FIX --- */
-/* Target the table inside the prose container */
-.prose table {
-  @apply w-full table-auto text-left border-collapse; /* Full width and collapse borders */
-}
-
-.prose th, 
-.prose td {
-  @apply border border-card p-4 align-top; /* Use your border color and add padding */
-}
-
-.prose th {
-  @apply bg-card text-text font-semibold; /* Style header row */
-}
-
-.prose tr:nth-child(2n) {
-  /* Optional: Light zebra striping for readability */
-  @apply bg-card/50; 
-}
+.prose h1 { @apply text-2xl border-b text-primary border-card pb-2 mb-6 mt-10; }
+.prose h2 { @apply text-xl text-text mt-12 mb-4; }
+.prose h3 { @apply text-xl mt-8 mb-3; }
+.prose p, .prose li { @apply text-base leading-7 text-text/90 mb-4; }
+.prose strong { @apply text-primary font-semibold; }
+.prose code { @apply bg-card text-primary px-1.5 py-0.5 rounded text-sm font-normal; }
+.prose pre { @apply bg-card2 border border-card rounded-lg p-4 overflow-x-auto; }
+.prose a { @apply text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary transition-all; }
+.prose table { @apply w-full table-auto text-left border-collapse; }
+.prose th, .prose td { @apply border border-card p-4 align-top; }
+.prose th { @apply bg-card text-text font-semibold; }
+.prose tr:nth-child(2n) { @apply bg-card/50; }
