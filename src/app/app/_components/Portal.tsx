@@ -20,7 +20,7 @@ export const PortalTooltip = ({ children, text, isVisible }: { children: React.R
       {children}
       {isVisible && typeof document !== 'undefined' && createPortal(
         <div 
-          className="fixed z-[9999] pointer-events-none -translate-x-1/2 -translate-y-full px-2 py-1 bg-black/95 border border-white/20 rounded text-[10px] text-white whitespace-nowrap shadow-2xl animate-in fade-in zoom-in duration-150"
+          className="fixed z-9999 pointer-events-none -translate-x-1/2 -translate-y-full px-2 py-1 bg-black/95 border border-white/20 rounded text-[10px] text-white whitespace-nowrap shadow-2xl animate-in fade-in zoom-in duration-150"
           style={{ top: coords.top, left: coords.left }}
         >
           {text}

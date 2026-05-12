@@ -98,7 +98,21 @@ const fimAddress = metadata?.fimAddress as `0x${string}` | undefined;
     address: seasonAddress as `0x${string}`,
     abi: GameSeasonAbi as any,
     functionName: 'g_initial',
-    query: { enabled: !!seasonAddress } 
+    query: { enabled: !!seasonAddress }
+  });
+
+  const { data: finalProgressBpsRaw } = useReadContract({
+    address: seasonAddress as `0x${string}`,
+    abi: GameSeasonAbi as any,
+    functionName: 'finalProgressBps',
+    query: { enabled: !!seasonAddress }
+  });
+
+  const { data: isOligarchyWinRaw } = useReadContract({
+    address: seasonAddress as `0x${string}`,
+    abi: GameSeasonAbi as any,
+    functionName: 'isOligarchyWin',
+    query: { enabled: !!seasonAddress }
   });
 
   const { data: phase, isLoading: isPhaseLoading } = useReadContract({
@@ -170,6 +184,7 @@ const fimAddress = metadata?.fimAddress as `0x${string}` | undefined;
     const currentPhase = phase as string;
     const isAuction = currentPhase === "AUCTION" || currentPhase === "BOOTSTRAP";
     const isTradingPhase = currentPhase === "TRADING";
+    const isPayoutPhase = currentPhase === "PAYOUT" || currentPhase === "DISTRIBUTION";
 
     const r = rawConfig as any;
     const getVal = (key: string, index: number) => r[key] !== undefined ? r[key] : r[index];
@@ -195,7 +210,21 @@ const fimAddress = metadata?.fimAddress as `0x${string}` | undefined;
 
     if (isAuction) {
         gCurrVal = playerCount === 0 ? 5000 : rawGini;
-        gInitVal = gCurrVal; 
+        gInitVal = gCurrVal;
+    } else if (isPayoutPhase && finalProgressBpsRaw !== undefined && isOligarchyWinRaw !== undefined) {
+        // Derive final Gini from settled contract state — identical for all users, never changes with claims.
+        // Formula: gFinal = gInitial ± (target − gInitial) × (finalProgressBps / 10000)
+        gInitVal = rawGInit;
+        const gI = gInitVal / 10000;
+        const V2 = cfg.victoryThresholdBps / 10000;
+        const rawBeta2 = cfg.baseBeta / 10000;
+        const M2 = rawBeta2 + Math.pow(1 - gI, 2);
+        const capT = (gI + V2 * (1 - gI)) * 10000;
+        const socT = (gI * (1 - (M2 > 0 ? V2 / M2 : 0))) * 10000;
+        const finalProg = Number(finalProgressBpsRaw) / 10000;
+        gCurrVal = isOligarchyWinRaw
+            ? Math.round(gInitVal + (capT - gInitVal) * finalProg)
+            : Math.round(gInitVal - (gInitVal - socT) * finalProg);
     } else {
         gInitVal = rawGInit;
         gCurrVal = rawGini;
@@ -243,7 +272,7 @@ const fimAddress = metadata?.fimAddress as `0x${string}` | undefined;
         winningSide: side,
         isVictoryPending: victoryConditionMet
     };
-  }, [giniData, rawConfig, gInitialRaw, phase]);
+  }, [giniData, rawConfig, gInitialRaw, phase, finalProgressBpsRaw, isOligarchyWinRaw]);
 
   // --- D. UI State ---
   const currentPhase = phase as string;
