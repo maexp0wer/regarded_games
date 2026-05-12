@@ -155,142 +155,105 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
     const isPayout = season.phase === 'PAYOUT' || season.phase === 'ENDED';
     const isTrading = season.phase === 'TRADING';
 
-    const phaseColor = isBootstrap ? 'text-danger' : isPayout ? 'text-info' : 'text-success';
-    const phaseBg = isBootstrap ? 'bg-danger' : isPayout ? 'bg-info' : 'bg-success';
-    
-    const statusText = isBootstrap ? 'On Hold' : isPayout ? 'Concluded' : (isTrading ? 'Ends' : 'Starts');
-    const statusTime = isBootstrap ? formatDate(season.tradingStartTime) : (isTrading ? formatDate(season.seasonEndTime) : formatDate(season.tradingStartTime));
+    const phaseLabel = isBootstrap ? 'On Hold' : isPayout ? 'Concluded' : season.phase.charAt(0) + season.phase.slice(1).toLowerCase();
+    const phaseColor = isBootstrap ? 'var(--color-gold)' : isPayout ? 'var(--color-blue)' : 'var(--color-green)';
+    const phaseDotGlow = isBootstrap ? '0 0 8px var(--color-gold)' : isPayout ? '0 0 8px var(--color-blue)' : '0 0 8px var(--color-green)';
 
-    const economicItems = [
-        { label: "Buyback", value: season.config.buybackBps },
-        { label: "Liquidity", value: season.config.liquidityBps },
-        { label: "Prize Pool Bonus", value: season.config.reinvestBps },
-        { label: "DAO Treasury", value: season.config.daoBps },
-    ].filter(item => item.value > 0);
+    const statusTime = isBootstrap ? formatDate(season.tradingStartTime) : (isTrading ? formatDate(season.seasonEndTime) : formatDate(season.tradingStartTime));
+    const statusLabel = isBootstrap ? 'On Hold' : isTrading ? 'Ends' : isPayout ? 'Concluded' : 'Trading Starts';
 
     if (!season.config) return null;
 
+    const num = String(seasonNumber).padStart(2, '0');
+
     return (
-        <div className="flex flex-col gap-4 w-full mx-auto"> 
-      <Link href={`/${slug}`} className="block group transition-all duration-300 hover:scale-[1.01]">
-        <div className="bg-card rounded-xl p-5 shadow-sm border border-transparent group-hover:border-border/30 transition-colors">
-            
-            {/* --- HEADER (Flex Layout for Max Spread, Left Justified Content) --- */}
-            <div className="flex justify-between items-center gap-4 mb-4 border-b border-border/40 pb-4">
-                
-                {/* 1. Title & Phase (Left-most, explicit width to manage shrinkage) */}
-                <div className="flex flex-col items-start gap-1 w-1/4 min-w-min">
-                    <span className="font-bold text-lg font-display uppercase tracking-tight text-text text-left">
-                        Season {seasonNumber}
-                    </span>
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-card2 rounded-full">
-                        <div className={`w-1.5 h-1.5 rounded-full ${phaseBg} animate-pulse`} />
-                        <span className={`text-[9px] font-black ${phaseColor} tracking-widest uppercase`}>
-                            {season.phase}
-                        </span>
+        <Link href={`/${slug}`} className="block group">
+          <div
+            className="card-app transition-all group-hover:border-border-bright"
+            style={{ borderColor: 'var(--color-border)' }}
+          >
+            <div className="flex items-start gap-6">
+              {/* Big season number */}
+              <div className="shrink-0 hidden sm:block">
+                <p
+                  className="font-display font-extrabold leading-none tracking-[-0.04em]"
+                  style={{ fontSize: 'clamp(48px, 6vw, 72px)', color: 'var(--color-text)' }}
+                >
+                  S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)' }}>{num}</em>
+                </p>
+              </div>
+
+              {/* Main content */}
+              <div className="flex-1 min-w-0 flex flex-col gap-4">
+                {/* Header row */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <div
+                    className="pill border"
+                    style={{ color: phaseColor, borderColor: phaseColor + '33', background: phaseColor + '10' }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: phaseColor, boxShadow: phaseDotGlow }} />
+                    {phaseLabel}
+                  </div>
+                  {isVictoryPending && (
+                    <div className="pill border" style={{ color: 'var(--color-gold)', borderColor: 'rgba(245,184,0,0.3)', background: 'rgba(245,184,0,0.08)' }}>
+                      Settlement Pending
                     </div>
+                  )}
                 </div>
 
-                {/* 2. Prize Pool (Left-aligned content) */}
-                <div className="flex flex-col items-start text-left w-1/4">
-                    <span className="h3-app mb-0.5">Prize Pool</span>
-                    <span className="text-xl font-black text-primary tracking-tighter leading-none">
-                        ${(giniData?.prizePool ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {/* Stats grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="section-label mb-1">Prize Pool</p>
+                    <span className="font-mono font-bold text-[18px]" style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}>
+                      ${(giniData?.prizePool ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
+                  </div>
+                  <div>
+                    <p className="section-label mb-1">Participants</p>
+                    <span className="font-mono font-bold text-[18px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {(giniData?.playerCount ?? 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="section-label mb-1">Multiplier</p>
+                    <span className="font-mono font-bold text-[18px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {(season.config.baseBeta / 10000 + Math.pow(1 - (gCurrent / 10000), 2)).toFixed(2)}×
+                    </span>
+                  </div>
+                  <div>
+                    <p className="section-label mb-1">{statusLabel}</p>
+                    <span className="font-mono font-semibold text-[13px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {isBootstrap || isPayout ? '—' : statusTime}
+                    </span>
+                  </div>
                 </div>
 
-                {/* 3. Participants (Left-aligned content) */}
-                <div className="flex flex-col items-start text-left w-1/4">
-                    <span className="h3-app mb-0.5">Participants</span>
-                    <span className="text-xl font-black text-text tracking-tighter leading-none">
-                        {(giniData?.playerCount ?? 0).toLocaleString()}
-                    </span>
+                {/* Progress bar */}
+                <div>
+                  <p className="section-label mb-2">Victory Progress</p>
+                  <VictoryProgressBar
+                    seasonAddress={season.season}
+                    gini={gCurrent}
+                    gInitial={gInitialRaw ? Number(gInitialRaw) : 5000}
+                    victoryThresholdBps={season.config.victoryThresholdBps}
+                    baseBeta={season.config.baseBeta}
+                    phase={season.phase}
+                  />
                 </div>
+              </div>
 
-                {/* 4. Status/Time (Left-aligned content) */}
-                <div className="flex flex-col items-start text-left w-1/4">
-                    <span className="h3-app sm:mb-0.5 mb-1.5 ">
-                        {isBootstrap ? 'STATUS' : (isTrading ? 'SEASON ENDS' : 'TRADING STARTS')}
-                    </span>
-                    <span className="sm:text-sm text-xs  font-bold text-text leading-tight">
-                         {isBootstrap ? 'ON HOLD' : statusTime}
-                    </span>
-                </div>
-
+              {/* Arrow */}
+              <svg
+                className="w-5 h-5 shrink-0 self-center transition-transform group-hover:translate-x-1"
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                style={{ color: 'var(--color-text2)', opacity: 0.4 }}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </div>
-
-            {/* --- BODY (Now 4 Columns) --- */}
-<div className="grid grid-cols-4 gap-6">
-    
-    {/* 1. GINI / PROGRESS (Column 1) */}
-    <div className="flex flex-col justify-top gap-4 mr-10">
-    <span className="h3-app">Victory Progress</span>
-    <VictoryProgressBar 
-        seasonAddress={season.season}
-        gini={gCurrent}
-        gInitial={gInitialRaw ? Number(gInitialRaw) : 5000}
-        victoryThresholdBps={season.config.victoryThresholdBps}
-        baseBeta={season.config.baseBeta}
-        phase={season.phase}
-    />
-    {isVictoryPending && (
-        <p className="text-[10px] font-bold text-yellow-500 mt-1 uppercase tracking-wide">
-            Settlement Pending
-        </p>
-    )}
-</div>
-
-    {/* 2. FIXED POLICY (Column 2) */}
-    <div className="flex flex-col gap-4 justify-center">
-        {/* Comp. Multiplier */}
-        <div className="flex flex-col items-start gap-1">
-            <span className="text-[9px] text-text2 uppercase tracking-widest leading-tight">Compensation Multiplier</span>
-            <span className="text-sm font-bold text-primary text-left">
-                {(season.config.baseBeta / 10000 + Math.pow(1 - (gCurrent / 10000), 2)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })}x
-            </span>
-        </div>
-
-        {/* Victory Threshold */}
-        <div className="flex flex-col items-start gap-1">
-            <span className="text-[9px] text-text2 uppercase tracking-widest leading-tight">Victory Threshold</span>
-            <span className="text-sm font-bold text-text text-left">
-                {season.config.victoryThresholdBps / 100}%
-            </span>
-        </div>
-    </div>
-
-    {/* 3. DYNAMIC POLICY A (Column 3) */}
-    <div className="flex flex-col gap-4 justify-center">
-        {economicItems.slice(0, 2).map((item) => (
-            <div key={item.label} className="flex flex-col items-start gap-1">
-                <span className="text-[9px] text-text2 uppercase tracking-widest leading-tight">
-                    {item.label}
-                </span>
-                <span className="text-sm font-bold text-text text-left">
-                    {(item.value / 100)}%
-                </span>
-            </div>
-        ))}
-    </div>
-
-    {/* 4. DYNAMIC POLICY B (Column 4) */}
-    <div className="flex flex-col gap-4 justify-center">
-        {economicItems.slice(2, 4).map((item) => (
-            <div key={item.label} className="flex flex-col items-start gap-1">
-                <span className="text-[9px] text-text2 uppercase tracking-widest leading-tight">
-                    {item.label}
-                </span>
-                <span className="text-sm font-bold text-text text-left">
-                    {(item.value / 100)}%
-                </span>
-            </div>
-        ))}
-    </div>
-
-</div>
-        </div>
-      </Link>
-        </div>
+          </div>
+        </Link>
     );
 }
 
@@ -362,43 +325,41 @@ export function SeasonsList() {
 });
 
   if (isLoading) return (
-    <div className="w-full max-w-5xl p-12 text-center">
-        <span className="text-primary font-display uppercase tracking-widest animate-pulse">Scanning Seasons...</span>
+    <div className="w-full p-12 text-center">
+      <span className="section-label animate-pulse">Scanning Seasons…</span>
     </div>
   );
 
   const display = [...(seasonsData || [])].reverse();
-  
   const filtered = display.filter(s => showAll ? true : (s.phase !== 'PAYOUT' && s.phase !== 'ENDED'));
 
   return (
-    <div className="w-full max-w-350 space-y-6">
-      
-      {/* List Header */}
-      <div className="flex justify-between items-center px-2">
-        <h2 className="text-xl font-bold font-display uppercase text-text">
-            {showAll ? 'All Seasons' : 'Active Seasons'}
+    <div className="w-full flex flex-col gap-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="font-display font-extrabold text-[28px] tracking-[-0.02em] text-text">
+          {showAll ? 'All Seasons' : 'Active Seasons'}
         </h2>
-        
-        <button onClick={() => setShowAll(!showAll)} className="btn-three py-2 px-4 text-sm">
+        <button
+          onClick={() => setShowAll(!showAll)}
+          className="btn-secondary px-4 py-2 text-[11px]"
+        >
           {showAll ? 'Show Active' : 'Show All'}
         </button>
       </div>
 
-      {/* List */}
-      <div className="space-y-4">
+      {/* Cards */}
+      <div className="flex flex-col gap-4">
         {filtered.map((s) => (
-            <SeasonCard 
-                key={s.season} 
-                season={s} 
-                totalCount={display.length} 
-                index={s.id} 
-            />
+          <SeasonCard key={s.season} season={s} totalCount={display.length} index={s.id} />
         ))}
         {filtered.length === 0 && (
-            <div className="p-8 text-center bg-card rounded-xl border-border text-text2 text-sm">
-                No active seasons found.
-            </div>
+          <div
+            className="card-app text-center py-16"
+            style={{ borderColor: 'var(--color-border)' }}
+          >
+            <p className="section-label opacity-40">No active seasons found</p>
+          </div>
         )}
       </div>
     </div>

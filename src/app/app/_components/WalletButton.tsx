@@ -29,32 +29,25 @@ export const WalletButton = () => {
               style: { opacity: 0, pointerEvents: 'none', userSelect: 'none' },
             })}
           >
-
-            {/* INVISIBLE DISCOURSE SSO AUTO-LOGIN                       */}
+            {/* Invisible Discourse SSO auto-login */}
             {connected && process.env.NEXT_PUBLIC_DISCOURSE_URL && (
               <iframe
                 src={`${process.env.NEXT_PUBLIC_DISCOURSE_URL}/session/sso`}
                 title="Discourse Background Auth"
-                style={{
-                  width: 0,
-                  height: 0,
-                  border: 'none',
-                  position: 'absolute',
-                  visibility: 'hidden',
-                }}
+                style={{ width: 0, height: 0, border: 'none', position: 'absolute', visibility: 'hidden' }}
                 aria-hidden="true"
               />
             )}
-            
+
             {(() => {
               if (!connected) {
                 return (
                   <button
                     onClick={openConnectModal}
                     type="button"
-                    className="px-6 py-2 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98] bg-primary hover:bg-primary2 text-bg shadow-md"
+                    className="btn-primary w-auto! py-2! px-5! text-[13px]!"
                   >
-                    Connect Wallet
+                    Connect
                   </button>
                 );
               }
@@ -64,7 +57,7 @@ export const WalletButton = () => {
                   <button
                     onClick={openChainModal}
                     type="button"
-                    className="bg-danger text-text font-bold py-2 px-4 rounded-xl shadow-lg transition-all"
+                    className="flex items-center gap-2 rounded-full px-4 py-2 font-mono text-xs font-semibold text-red bg-card border border-red/30 transition-all hover:border-red/60"
                   >
                     Wrong Network
                   </button>
@@ -72,12 +65,12 @@ export const WalletButton = () => {
               }
 
               return (
-                <div className="flex items-center gap-3">
-                  {/* Chain Button */}
+                <div className="flex items-center gap-2">
+                  {/* Chain chip */}
                   <button
                     onClick={openChainModal}
                     type="button"
-                    className="hidden md:flex items-center gap-2 bg-card2 hover:bg-card3 text-text py-2 px-4 rounded-xl transition-all"
+                    className="hidden md:flex items-center gap-2 rounded-full px-3 py-1.5 bg-card border border-border transition-all hover:border-border-bright"
                   >
                     {chain.hasIcon && (
                       <div className="w-4 h-4 rounded-full overflow-hidden" style={{ background: chain.iconBackground }}>
@@ -92,20 +85,22 @@ export const WalletButton = () => {
                         )}
                       </div>
                     )}
-                    <span className="text-sm font-semibold">{chain.name}</span>
+                    <span className="font-mono text-[11px] font-semibold text-text2">{chain.name}</span>
                   </button>
 
-                  {/* Account Button */}
+                  {/* Wallet address chip */}
                   <button
                     onClick={openAccountModal}
                     type="button"
-                    // text-textMain inherits --color-text: #2e2e2a
-                    className="flex items-center gap-2 bg-card text-text font-bold py-2 px-4 rounded-xl transition-all hover:bg-card2 shadow-sm"
+                    className="flex items-center gap-2 rounded-full px-4 py-2 bg-card border border-border transition-all hover:border-border-bright"
                   >
-                    <span className="text-sm">
+                    <span
+                      className="w-2 h-2 rounded-full bg-green shrink-0"
+                      style={{ boxShadow: '0 0 0 3px rgba(107,203,110,0.15)' }}
+                    />
+                    <span className="font-mono text-[12px] font-semibold text-text">
                       {account.displayName}
                     </span>
-                    {/* ETH balance display logic removed from here */}
                   </button>
                 </div>
               );

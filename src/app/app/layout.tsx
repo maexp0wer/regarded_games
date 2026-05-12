@@ -2,8 +2,7 @@
 
 import { useTheme } from '@/context/ThemeContext';
 import { Navbar } from './_components/Navbar';
-import { DiscourseHandshake } from './_components/DiscourseHandshake'; // Import here
-
+import { DiscourseHandshake } from './_components/DiscourseHandshake';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { darkMode } = useTheme();
@@ -11,11 +10,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={darkMode ? 'dark' : ''}>
       <div className="min-h-screen bg-bg transition-colors duration-300">
-        {/* Silent SSO Handshake */}
-        <DiscourseHandshake /> 
-        
+        <DiscourseHandshake />
         <Navbar />
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto max-w-360 px-6 pb-16">
           {children}
         </div>
       </div>

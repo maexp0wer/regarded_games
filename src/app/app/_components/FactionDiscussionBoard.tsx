@@ -1,4 +1,3 @@
-// components/FactionDiscussionBoard.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -16,99 +15,138 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist }: FactionDisc
   const fetchDirectives = async () => {
     setLoading(true);
     setError(null);
-    
-    // Your URL: /c/season-1/s1-socialist-strategy/7
-    // So the category slug must be: "season-1/s1-socialist-strategy"
-    const seasonNum = seasonSlug.match(/\d+/)?.[0] || "1";
-    
-    const categorySlug = isCapitalist 
-      ? `season-${seasonNum}/s${seasonNum}-capitalist-strategy` 
+    const seasonNum = seasonSlug.match(/\d+/)?.[0] || '1';
+    const categorySlug = isCapitalist
+      ? `season-${seasonNum}/s${seasonNum}-capitalist-strategy`
       : `season-${seasonNum}/s${seasonNum}-socialist-strategy`;
 
     try {
-      // Fetching from the corrected path
       const res = await fetch(`${process.env.NEXT_PUBLIC_DISCOURSE_URL}/c/${categorySlug}.json`, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' },
-        credentials: 'include'
+        method: 'GET', headers: { Accept: 'application/json' }, credentials: 'include',
       });
-      
       if (!res.ok) {
-        if (res.status === 403 || res.status === 404) throw new Error("AUTH_PENDING");
-        throw new Error("Failed to decrypt directives.");
+        if (res.status === 403 || res.status === 404) throw new Error('AUTH_PENDING');
+        throw new Error('Failed to decrypt directives.');
       }
-      
       const data = await res.json();
-      setTopics(data.topic_list?.topics ||[]);
+      setTopics(data.topic_list?.topics || []);
     } catch (e: any) {
-      setError(e.message === "AUTH_PENDING" ? "Authentication pending. Establishing clearance..." : e.message);
+      setError(e.message === 'AUTH_PENDING' ? 'Authentication pending. Establishing clearance…' : e.message);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchDirectives();
-  },[seasonSlug, isCapitalist]);
+  useEffect(() => { fetchDirectives(); }, [seasonSlug, isCapitalist]);
+
+  const factionColor = isCapitalist ? 'var(--color-blue)' : 'var(--color-pink)';
+  const factionLabel = isCapitalist ? 'THE BOURGEOISIE' : 'THE PROLETARIAT';
+  const pillBg       = isCapitalist ? 'rgba(77,159,255,0.12)' : 'rgba(255,61,138,0.12)';
 
   return (
-    <div className="flex flex-col h-full bg-card rounded-2xl border border-border/10 overflow-hidden">
-      <div className="p-4 border-b border-border/10 bg-card2 flex justify-between items-center">
-        <h3 className="font-black uppercase text-xs tracking-widest text-text">Strategic Directives</h3>
-        <span className={`text-[9px] px-2 py-0.5 rounded uppercase font-bold tracking-wider ${isCapitalist ? 'bg-danger/20 text-danger' : 'bg-success/20 text-success'}`}>
-          {isCapitalist ? 'Oligarch Access' : 'Proletariat Access'}
+    <div
+      className="flex flex-col h-full overflow-hidden"
+      style={{
+        background: 'var(--color-card)',
+        border: '1px solid var(--color-border-bright)',
+        borderRadius: 20,
+      }}
+    >
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-5 py-3 shrink-0"
+        style={{ background: 'var(--color-card2)', borderBottom: '1px solid var(--color-border)' }}
+      >
+        <span
+          className="font-display font-extrabold uppercase tracking-tight"
+          style={{ fontSize: 14, color: factionColor }}
+        >
+          {factionLabel}
+        </span>
+        <span
+          className="font-mono text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full"
+          style={{ color: factionColor, background: pillBg }}
+        >
+          {isCapitalist ? 'Bourgeois Access' : 'Proletariat Access'}
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+      {/* Topics */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-2">
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => <div key={i} className="h-20 bg-card2 animate-pulse rounded-xl border border-border/5" />)}
-          </div>
+          [1, 2, 3].map(i => (
+            <div
+              key={i}
+              className="h-20 rounded-xl animate-pulse"
+              style={{ background: 'var(--color-card2)', border: '1px solid var(--color-border)' }}
+            />
+          ))
         ) : error ? (
-          <div className="text-center py-10 flex flex-col items-center justify-center">
-            <span className="text-danger text-xs mb-3">{error}</span>
-            {error.includes("Authentication") && (
-                <button onClick={fetchDirectives} className="px-4 py-1.5 bg-primary text-bg text-[10px] uppercase font-bold rounded hover:brightness-110">
-                    Retry Connection
-                </button>
+          <div className="flex flex-col items-center justify-center py-10 gap-3">
+            <p className="font-mono text-[11px] text-center" style={{ color: 'var(--color-red)' }}>{error}</p>
+            {error.includes('Authentication') && (
+              <button
+                onClick={fetchDirectives}
+                className="btn-primary px-4 py-2 text-[10px]"
+              >
+                Retry Connection
+              </button>
             )}
           </div>
         ) : topics.length === 0 ? (
-          <div className="text-center py-10 text-text2 text-sm">No active directives found.</div>
+          <div className="flex items-center justify-center py-10">
+            <p className="section-label opacity-30">No active directives found</p>
+          </div>
         ) : (
           topics.map((topic: any) => (
-            <a 
-              key={topic.id} 
+            <a
+              key={topic.id}
               href={`${process.env.NEXT_PUBLIC_DISCOURSE_URL}/t/${topic.slug}/${topic.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="block p-4 bg-card2 hover:bg-card2/80 rounded-xl border border-border/5 transition-all group hover:border-primary/30"
+              className="block p-4 rounded-xl transition-all group"
+              style={{
+                background: 'var(--color-card2)',
+                border: '1px solid var(--color-border)',
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = factionColor + '66'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-border)'; }}
             >
-              <div className="text-[9px] text-primary mb-1.5 font-bold uppercase tracking-widest opacity-80">
+              <p className="font-mono text-[9px] font-bold uppercase tracking-widest mb-1.5" style={{ color: factionColor, opacity: 0.7 }}>
                 Op-ID: {topic.id}
-              </div>
-              <div className="font-bold text-text text-sm group-hover:text-primary transition-colors leading-snug">
+              </p>
+              <p className="font-sans font-semibold text-[13px] text-text leading-snug mb-3">
                 {topic.title}
-              </div>
-              <div className="flex justify-between items-center mt-3 text-[10px] text-text2 font-bold uppercase">
-                <span>Cmdr: {topic.last_poster_username}</span>
-                <span className="bg-card px-2 py-0.5 rounded">{topic.posts_count - 1} Replies</span>
+              </p>
+              <div className="flex justify-between items-center">
+                <span className="font-mono text-[10px] text-text2 uppercase tracking-wide">Cmdr: {topic.last_poster_username}</span>
+                <span
+                  className="font-mono text-[9px] font-bold px-2 py-0.5 rounded"
+                  style={{ background: 'var(--color-card)', color: 'var(--color-text2)' }}
+                >
+                  {topic.posts_count - 1} replies
+                </span>
               </div>
             </a>
           ))
         )}
       </div>
-      
-      {/* Post New Directive Button */}
-      <div className="p-4 border-t border-border/10 bg-card2">
-        <a 
-            href={`${process.env.NEXT_PUBLIC_DISCOURSE_URL}/new-topic`} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="w-full flex items-center justify-center py-3 bg-text/5 hover:bg-text/10 text-text text-[10px] font-black uppercase tracking-widest rounded-xl transition-all"
+
+      {/* Footer */}
+      <div
+        className="px-4 py-3 shrink-0"
+        style={{ background: 'var(--color-card2)', borderTop: '1px solid var(--color-border)' }}
+      >
+        <a
+          href={`${process.env.NEXT_PUBLIC_DISCOURSE_URL}/new-topic`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center justify-center py-2.5 rounded-xl font-mono font-bold text-[10px] uppercase tracking-widest transition-all"
+          style={{ background: 'var(--color-card)', color: 'var(--color-text2)', border: '1px solid var(--color-border)' }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = factionColor; (e.currentTarget as HTMLElement).style.borderColor = factionColor + '66'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--color-text2)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-border)'; }}
         >
-            + Draft New Directive
+          + Draft New Directive
         </a>
       </div>
     </div>

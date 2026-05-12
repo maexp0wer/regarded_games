@@ -23,8 +23,8 @@ export default async function UserDashboardPage({
   }
 
   return (
-    <div className="min-h-screen bg-bg flex flex-col items-center overflow-x-hidden">
-      <main className="w-full max-w-7xl px-6 py-6">
+    <div className="w-full">
+      <main className="py-8 w-full">
         
         {/* Mobile: flex-col-reverse puts Holdings on TOP. Desktop: grid resets it. */}
         <div className="flex flex-col-reverse lg:grid lg:grid-cols-3 gap-12 items-start">

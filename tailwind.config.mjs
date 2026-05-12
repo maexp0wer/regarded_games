@@ -16,6 +16,7 @@ const config = {
       },
       animation: {
         'subtle-pulse': 'subtle-pulse 2.5s ease-in-out infinite',
+        'pill-pulse': 'pill-pulse 2s ease-in-out infinite',
       },
     },
   },

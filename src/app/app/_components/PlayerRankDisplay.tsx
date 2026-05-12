@@ -1,49 +1,33 @@
 'use client';
 
 import React from 'react';
-import { usePlayerRank } from '@/hooks/usePlayerRank'; 
-import { usePlayerPercentile } from '@/hooks/usePlayerPercentile'; 
+import { usePlayerRank } from '@/hooks/usePlayerRank';
+import { usePlayerPercentile } from '@/hooks/usePlayerPercentile';
 
 interface PlayerRankDisplayProps {
   seasonAddress: string;
   userAddress: string | undefined;
 }
 
-const PlayerRankDisplay: React.FC<PlayerRankDisplayProps> = ({
-  seasonAddress,
-  userAddress,
-}) => {
-  // 1. Fetch PnL Rank Data
-  const {
-    rank,
-    totalPlayers,
-    efficiencyRank,
-    efficiencyPercent,
-    loading: rankLoading,
-  } = usePlayerRank(seasonAddress, userAddress);
+const PlayerRankDisplay: React.FC<PlayerRankDisplayProps> = ({ seasonAddress, userAddress }) => {
+  const { rank, totalPlayers, efficiencyRank, efficiencyPercent, loading: rankLoading } =
+    usePlayerRank(seasonAddress, userAddress);
+  const { data: percentileData, isLoading: percentileLoading } =
+    usePlayerPercentile(seasonAddress, userAddress);
 
-  // 2. Fetch Faction Percentile Data
-  const {
-    data: percentileData,
-    isLoading: percentileLoading,
-  } = usePlayerPercentile(seasonAddress, userAddress);
-  
   const loading = rankLoading || percentileLoading;
 
-  // --- PRE-CALCULATIONS ---
   const totalPercent = totalPlayers > 1 ? ((rank - 1) / (totalPlayers - 1)) * 100 : 0;
   const relativePercent = efficiencyPercent;
 
   let pointerPos = 50;
   let displayFactionPercent = 0;
-  let factionName = "";
-  let factionColor = "text-white";
-  let factionData = undefined;
+  let factionName = '';
+  let factionColor = 'var(--color-text2)';
 
   if (percentileData) {
-    factionName = percentileData.isCapitalist ? "Capitalist" : "Socialist";
-    factionColor = percentileData.isCapitalist ? "text-blue-400" : "text-red-500";
-
+    factionName = percentileData.isCapitalist ? 'Bourgeoisie' : 'Proletariat';
+    factionColor = percentileData.isCapitalist ? 'var(--color-blue)' : 'var(--color-pink)';
     if (percentileData.isCapitalist) {
       displayFactionPercent = percentileData.factionPercentile;
       pointerPos = 50 + (percentileData.factionPercentile / 2);
@@ -51,133 +35,131 @@ const PlayerRankDisplay: React.FC<PlayerRankDisplayProps> = ({
       displayFactionPercent = 100 - percentileData.factionPercentile;
       pointerPos = (percentileData.factionPercentile / 2);
     }
-    factionData = { pointerPos, isCapitalist: percentileData.isCapitalist };
   }
-  // --- END PRE-CALCULATIONS ---
 
   if (loading) {
     return (
-      <div className="space-y-4 mb-8">
-        <div className="h-6 w-full bg-white/5 animate-pulse rounded" /> 
-        <div className="h-12 w-full bg-white/5 animate-pulse rounded" /> 
-        <div className="h-8 w-full bg-white/5 animate-pulse rounded" />
-        <div className="h-8 w-full bg-white/5 animate-pulse rounded" />
+      <div className="card-app flex flex-col gap-6" style={{ borderColor: 'var(--color-border-bright)' }}>
+        {[1, 2, 3].map(i => (
+          <div key={i} className="space-y-2">
+            <div className="h-3 w-24 rounded animate-pulse" style={{ background: 'var(--color-border)' }} />
+            <div className="h-2 w-full rounded-full animate-pulse" style={{ background: 'var(--color-border)' }} />
+          </div>
+        ))}
       </div>
     );
   }
 
-  if (!userAddress || rank === -1 || totalPlayers < 1 || !percentileData) {
-    return null;
-  }
+  if (!userAddress || rank === -1 || totalPlayers < 1 || !percentileData) return null;
 
-  // Unified Marker Appearance (White/Bordered)
-  const markerStyleClasses = "w-3 h-3 rounded-full border-2 border-white shadow-[0_0_10px_rgba(255,255,255,0.4)] bg-white";
-
+  const knobStyle: React.CSSProperties = {
+    width: 16, height: 16, borderRadius: '50%',
+    background: 'var(--color-card)', border: '2px solid white',
+    boxShadow: '0 0 10px rgba(255,255,255,0.3)',
+  };
 
   return (
+    <div
+      className="card-app flex flex-col gap-8 pb-10"
+      style={{ borderColor: 'var(--color-border-bright)' }}
+    >
+      <p
+        className="section-label pb-3"
+        style={{ borderBottom: '1px solid var(--color-border)' }}
+      >
+        Your Season Stats
+      </p>
 
-      <div className="bg-card rounded-lg space-y-8 p-6 pb-10">
-        <h3 className="h3-app cardline-app">Your Season Stats</h3>
-        
-        {/* 1. BIPOLAR BAR (Gradient Fill: Red to Blue) */}
-        <div className="space-y-2">
-            <div className="flex items-center justify-between">
-                {/* Modified Header: Factions */}
-                <span className="text-[10px] font-bold uppercase tracking-widest text-danger">Socialist</span>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-info">Capitalist</span>
-            </div>
-            <div className="relative h-3 bg-card2 rounded-full overflow-visible"> 
-                
-                {/* Static Gradient Fill */}
-                <div className="absolute inset-0 w-full h-full rounded-full overflow-hidden">
-                     <div className="w-full h-full bg-linear-to-r from-danger to-info opacity-80" />
-                </div>
-                
-                {/* VERTICAL CENTER LINE */}
-                <div className="absolute top-0 bottom-0 left-1/2 w-px bg-white/50 z-10" />
-                
-                {/* Marker Position */}
-                <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 transition-all duration-1000 ease-out" style={{ left: `${pointerPos}%` }}>
-                    
-                    {/* The Dot */}
-                    <div className={`${markerStyleClasses}`} />
-
-                    {/* Percentage + Faction Name Below */}
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                        <span className="text-[10px] font-black text-white drop-shadow-md uppercase">
-                            {displayFactionPercent.toFixed(1)}% {factionName}
-                        </span>
-                    </div>
-                </div>
-            </div>
+      {/* 1. Faction bar (pink → blue) */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-pink)' }}>Proletariat</span>
+          <span className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-blue)' }}>Bourgeoisie</span>
         </div>
-        
-        {/* 2. ABSOLUTE PNL RANK BAR (Solid Primary Fill) */}
-        <div className="space-y-2">
-            <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-text2">Absolute PnL</span>
-                <span className="text-[12px] font-black text-text">#{rank} <span className="text-text2 font-bold">of {totalPlayers}</span></span>
+        <div className="relative rounded-full overflow-visible" style={{ height: 6, background: 'var(--color-card2)' }}>
+          <div
+            className="absolute inset-0 rounded-full overflow-hidden"
+            style={{ background: 'linear-gradient(90deg, var(--color-pink), var(--color-blue))', opacity: 0.7 }}
+          />
+          <div className="absolute top-0 bottom-0 left-1/2 w-px opacity-40" style={{ background: 'white' }} />
+          <div
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 transition-all duration-1000"
+            style={{ left: `${pointerPos}%` }}
+          >
+            <div style={knobStyle} />
+            <div className="absolute top-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
+              <span className="font-mono text-[10px] font-bold" style={{ color: factionColor }}>
+                {displayFactionPercent.toFixed(1)}% {factionName}
+              </span>
             </div>
-            <div className="relative h-3 bg-card2 rounded-full overflow-visible">
-                
-                {/* Fill Container */}
-                <div className="absolute inset-0 w-full h-full rounded-full overflow-hidden">
-                    <div 
-                        className="absolute inset-y-0 left-0 bg-linear-to-r from-primary/50 to-primary transition-all duration-700 ease-out" 
-                        style={{ width: `${100 - totalPercent}%` }}
-                    />
-                </div>
-                
-                {/* Marker Position */}
-                <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 transition-all duration-700 ease-out" style={{ left: `${100 - totalPercent}%` }}>
-                    
-                    {/* The Dot */}
-                    <div className={`${markerStyleClasses}`} />
-
-                    {/* Top % Below */}
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                        <span className="text-[10px] font-black text-white drop-shadow-md">
-                            Top {totalPercent < 1 ? '<1' : totalPercent.toFixed(1)}%
-                        </span>
-                    </div>
-                </div>
-            </div>
+          </div>
         </div>
-
-        {/* 3. RELATIVE PNL RANK BAR (Gradient Fill) */}
-        <div className="space-y-2">
-            <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-text2">Relative PnL</span>
-                <span className="text-[12px] font-black text-text">#{efficiencyRank} <span className="text-text2 font-bold">of {totalPlayers}</span></span>
-            </div>
-            <div className="relative h-3 bg-card2 rounded-full overflow-visible">
-                
-                {/* Fill Container */}
-                <div className="absolute inset-0 w-full h-full rounded-full overflow-hidden">
-                    <div 
-                        className="absolute inset-y-0 left-0 bg-linear-to-r from-primary/50 to-primary transition-all duration-700 ease-out" 
-                        style={{ width: `${100 - relativePercent}%` }}
-                    />
-                </div>
-                
-                {/* Marker Position */}
-                <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 transition-all duration-700 ease-out" style={{ left: `${100 - relativePercent}%` }}>
-                    
-                    {/* The Dot */}
-                    <div className={`${markerStyleClasses}`} />
-
-                    {/* Top % Below */}
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                        <span className="text-[10px] font-black text-white drop-shadow-md">
-                            Top {relativePercent < 1 ? '<1' : relativePercent.toFixed(1)}%
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
       </div>
 
+      {/* 2. Absolute PnL rank */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="section-label">Absolute PnL</span>
+          <span className="font-mono text-[12px] font-bold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            #{rank} <span className="text-text2 font-normal">of {totalPlayers}</span>
+          </span>
+        </div>
+        <div className="relative rounded-full overflow-visible" style={{ height: 6, background: 'var(--color-card2)' }}>
+          <div className="absolute inset-0 rounded-full overflow-hidden">
+            <div
+              className="absolute inset-y-0 left-0 transition-all duration-700"
+              style={{
+                width: `${100 - totalPercent}%`,
+                background: 'linear-gradient(90deg, rgba(245,184,0,0.4), var(--color-gold))',
+              }}
+            />
+          </div>
+          <div
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 transition-all duration-700"
+            style={{ left: `${100 - totalPercent}%` }}
+          >
+            <div style={{ ...knobStyle, borderColor: 'var(--color-gold)', boxShadow: '0 0 10px rgba(245,184,0,0.5)' }} />
+            <div className="absolute top-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
+              <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-gold)' }}>
+                Top {totalPercent < 1 ? '<1' : totalPercent.toFixed(1)}%
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Relative PnL rank */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="section-label">Relative PnL</span>
+          <span className="font-mono text-[12px] font-bold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            #{efficiencyRank} <span className="text-text2 font-normal">of {totalPlayers}</span>
+          </span>
+        </div>
+        <div className="relative rounded-full overflow-visible" style={{ height: 6, background: 'var(--color-card2)' }}>
+          <div className="absolute inset-0 rounded-full overflow-hidden">
+            <div
+              className="absolute inset-y-0 left-0 transition-all duration-700"
+              style={{
+                width: `${100 - relativePercent}%`,
+                background: 'linear-gradient(90deg, rgba(245,184,0,0.4), var(--color-gold))',
+              }}
+            />
+          </div>
+          <div
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 transition-all duration-700"
+            style={{ left: `${100 - relativePercent}%` }}
+          >
+            <div style={{ ...knobStyle, borderColor: 'var(--color-gold)', boxShadow: '0 0 10px rgba(245,184,0,0.5)' }} />
+            <div className="absolute top-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
+              <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-gold)' }}>
+                Top {relativePercent < 1 ? '<1' : relativePercent.toFixed(1)}%
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
