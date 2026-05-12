@@ -79,22 +79,12 @@ ponder.on("FIM:Transfer", async ({ event, context }) => {
   } 
   
   // --- SCENARIO C: STANDARD TRANSFER (P2P) ---
+  // FIM is now transfer-restricted to the Exchange contract, so wallet-to-wallet
+  // sends revert. If one ever fires here it indicates a contract regression.
   else {
-    // Decrease Sender
-    await context.db
-      .insert(playerSeasonStats)
-      .values({ seasonAddress: season.address, playerAddress: from, fimBalance: -value, netContribution: 0n })
-      .onConflictDoUpdate((row) => ({
-        fimBalance: row.fimBalance - value,
-      }));
-
-    // Increase Recipient
-    await context.db
-      .insert(playerSeasonStats)
-      .values({ seasonAddress: season.address, playerAddress: to, fimBalance: value, netContribution: 0n })
-      .onConflictDoUpdate((row) => ({
-        fimBalance: row.fimBalance + value,
-      }));
+    console.warn(
+      `[Indexer] ⚠️ Unexpected P2P FIM transfer: ${from} -> ${to} (${value}) — FIM should only move via Exchange.`
+    );
   }
 });
 

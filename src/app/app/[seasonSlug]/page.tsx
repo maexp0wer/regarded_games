@@ -249,7 +249,7 @@ const fimAddress = metadata?.fimAddress as `0x${string}` | undefined;
   const currentPhase = phase as string;
   const isAuctionOrBootstrap = currentPhase === "AUCTION" || currentPhase === "BOOTSTRAP";
   const isTrading = currentPhase === "TRADING";
-  const isPayout = currentPhase === "PAYOUT";
+  const isPayout = currentPhase === "PAYOUT" || currentPhase === "DISTRIBUTION";
   
   const tradingStart = (config?.createdAt || 0) + (config?.auctionDuration || 0);
   const seasonEnd = (config?.createdAt || 0) + (config?.auctionDuration || 0) + (config?.gameDuration || 0);

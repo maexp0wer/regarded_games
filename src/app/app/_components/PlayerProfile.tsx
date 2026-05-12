@@ -45,7 +45,7 @@ export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
 
   // --- (Keep existing contract reads and useEffect for fetching) ---
   const stakingAddr = coreAddresses.Staking as `0x${string}`;
-  const regAddr = coreAddresses.REG as `0x${string}`;
+  const rgdAddr = coreAddresses.RGD as `0x${string}`;
 
   const { data: stakedBalances } = useReadContract({
     address: stakingAddr, abi: StakingAbi, functionName: 'stakedBalances', args: [profileAddress],
@@ -54,7 +54,7 @@ export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
     address: stakingAddr, abi: StakingAbi, functionName: 'requiredRegStake', args: [profileAddress],
   });
   const { data: walletBalance } = useReadContract({
-    address: regAddr, abi: ERC20Abi, functionName: 'balanceOf', args: [profileAddress],
+    address: rgdAddr, abi: ERC20Abi, functionName: 'balanceOf', args: [profileAddress],
   });
 
   const currentStaked = (stakedBalances as bigint) ?? 0n;

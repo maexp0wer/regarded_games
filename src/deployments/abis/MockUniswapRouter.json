@@ -75,7 +75,7 @@
   },
   {
     "type": "function",
-    "name": "reg",
+    "name": "rgd",
     "inputs": [],
     "outputs": [
       {
@@ -109,7 +109,7 @@
         "internalType": "address"
       },
       {
-        "name": "_reg",
+        "name": "_rgd",
         "type": "address",
         "internalType": "address"
       }

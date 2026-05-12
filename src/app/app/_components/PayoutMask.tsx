@@ -228,11 +228,19 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
         <div className="p-4 grid grid-cols-2 gap-y-6 gap-x-4">
             
             <div className="flex flex-col space-y-1.5">
-                <span className="text-[10px] text-text2 font-black uppercase tracking-widest">Your Holdings</span>
-                <span className="text-lg font-mono font-bold text-text leading-none">
-                    {userFim.toLocaleString(undefined, {maximumFractionDigits: 2})} 
-                    <span className="ml-1.5 text-[10px] text-text2 uppercase font-sans">Fim</span>
+                <span className="text-[10px] text-text2 font-black uppercase tracking-widest">
+                    {hasClaimed ? "FIM Burned on Claim" : "Your Holdings"}
                 </span>
+                {hasClaimed ? (
+                    <span className="text-lg font-mono font-bold text-text2 leading-none italic">
+                        Settled
+                    </span>
+                ) : (
+                    <span className="text-lg font-mono font-bold text-text leading-none">
+                        {userFim.toLocaleString(undefined, {maximumFractionDigits: 2})}
+                        <span className="ml-1.5 text-[10px] text-text2 uppercase font-sans">Fim</span>
+                    </span>
+                )}
             </div>
 
             <div className="flex flex-col space-y-1.5 items-end text-right">

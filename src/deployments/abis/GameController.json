@@ -16,9 +16,27 @@
         "name": "_staking",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "_factory",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "factory",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -186,6 +204,11 @@
       },
       {
         "name": "_collateralRatioBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_bondAmount",
         "type": "uint256",
         "internalType": "uint256"
       }
