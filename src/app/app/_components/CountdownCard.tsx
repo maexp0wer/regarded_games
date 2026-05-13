@@ -52,19 +52,26 @@ export function CountdownCard({
 
   const labelText = isAuction ? 'Auction Ends In' : 'Season Ends In';
 
-  const winnerLabel = winningSide === 'cap' ? 'Bourgeoisie' : winningSide === 'soc' ? 'Proletariat' : null;
-  const winnerColor = winningSide === 'cap' ? 'var(--color-blue)' : 'var(--color-pink)';
-  const isPartialWin = isPayout && progressPercent < 99.5;
+  const winnerLabel = winningSide === 'cap' ? 'Bourgeoisie' : winningSide === 'soc' ? 'Proletariat' : 'Tie';
+  const winnerColor = winningSide === 'cap' ? 'var(--color-blue)' : winningSide === 'soc' ? 'var(--color-pink)' : 'var(--color-text2)';  
 
   const factionGradientRgba = winningSide === 'cap'
     ? 'rgba(77, 159, 255, 0.07)'
-    : 'rgba(255, 61, 138, 0.07)';
+    : winningSide === 'soc'
+    ? 'rgba(255, 61, 138, 0.07)'
+    : 'rgba(128, 128, 128, 0.07)';
   const factionTextShadow = winningSide === 'cap'
     ? '0 0 40px rgba(77, 159, 255, 0.25)'
-    : '0 0 40px rgba(255, 61, 138, 0.25)';
-  const topLabelText = isPartialWin
-    ? `Partial Winner (${Math.round(progressPercent * 10) / 10}%)`
-    : 'Winner';
+    : winningSide === 'soc'
+    ? '0 0 40px rgba(255, 61, 138, 0.25)'
+    : 'none';
+
+    const topLabelText = isPayout && progressPercent > 0 && progressPercent < 100 
+    ? `Partial Winner (${Math.round(progressPercent * 10) / 10}%)` 
+    : progressPercent > 0 
+    ? 'Winner' 
+    : 'Season concluded';
+
 
   return (
     <div
@@ -75,7 +82,6 @@ export function CountdownCard({
       } : {}}
     >
       {isPayout ? (
-        winnerLabel ? (
           <>
             <div className="relative section-label justify-center">
               <span className="tick" style={{ background: winnerColor }} />
@@ -93,11 +99,7 @@ export function CountdownCard({
             </p>
             <div />
           </>
-        ) : (
-          <div className="flex items-center justify-center h-full">
-            <p className="font-display font-extrabold text-3xl text-text m-0">Concluded</p>
-          </div>
-        )
+        
       ) : (
         <>
           <div className="section-label">
