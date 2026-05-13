@@ -10,6 +10,7 @@ import { useSeasonGini } from '@/hooks/useSeasonGini';
 import Link from 'next/link';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { VictoryProgressBar } from './VictoryProgressBar';
+import { SeasonPhasePills } from './SeasonPhasePills';
 
 // --- ABI Definitions ---
 const GAME_CONTROLLER_SEASONS_ABI = [
@@ -152,14 +153,8 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
 
     // 3. UI/Style Definitions
     const isBootstrap = season.phase === 'BOOTSTRAP';
-    const isPayout = season.phase === 'PAYOUT' || season.phase === 'ENDED';
     const isTrading = season.phase === 'TRADING';
     const isAuction = season.phase === 'AUCTION';
-
-    const phaseLabel = (isBootstrap || isVictoryPending) ? 'On Hold' : isPayout ? 'Payout' : season.phase.charAt(0) + season.phase.slice(1).toLowerCase();
-    const subPhaseLabel = isBootstrap ? 'Bootstrap' : isVictoryPending ? 'Settlement' : null;
-    const phaseColor = (isBootstrap || isVictoryPending) ? 'var(--color-danger)' : isAuction ? 'var(--color-gold)' : isPayout ? 'var(--color-blue)' : 'var(--color-green)';
-    const phaseDotGlow = (isBootstrap || isVictoryPending) ? '0 0 8px var(--color-danger)' : isAuction ? '0 0 8px var(--color-gold)' : isPayout ? '0 0 8px var(--color-blue)' : '0 0 8px var(--color-green)';
 
     const showTimeStat = isTrading || isBootstrap || isAuction;
     const statusLabel = isTrading ? 'Ends' : 'Trading Starts';
@@ -184,21 +179,11 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
                 >
                   S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
                 </p>
-                <div className="flex flex-col gap-1.5">
-                  <div
-                    className="pill border"
-                    style={{ color: phaseColor, borderColor: phaseColor + '33', background: phaseColor + '10' }}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: phaseColor, boxShadow: phaseDotGlow }} />
-                    {phaseLabel}
-                  </div>
-                  {subPhaseLabel && (
-                    <div className="pill border" style={{ color: 'var(--color-gold)', borderColor: 'rgba(245,184,0,0.3)', background: 'rgba(245,184,0,0.08)' }}>
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'var(--color-gold)', boxShadow: '0 0 8px var(--color-gold)' }} />
-                      {subPhaseLabel}
-                    </div>
-                  )}
-                </div>
+                <SeasonPhasePills 
+                  phase={season.phase} 
+                  isVictoryPending={isVictoryPending} 
+                  className="flex flex-col gap-1.5" 
+                />
               </div>
 
               {/* Main content */}
@@ -211,19 +196,11 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
                   >
                     S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
                   </p>
-                  <div
-                    className="pill border"
-                    style={{ color: phaseColor, borderColor: phaseColor + '33', background: phaseColor + '10' }}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: phaseColor, boxShadow: phaseDotGlow }} />
-                    {phaseLabel}
-                  </div>
-                  {subPhaseLabel && (
-                    <div className="pill border" style={{ color: 'var(--color-gold)', borderColor: 'rgba(245,184,0,0.3)', background: 'rgba(245,184,0,0.08)' }}>
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'var(--color-gold)', boxShadow: '0 0 8px var(--color-gold)' }} />
-                      {subPhaseLabel}
-                    </div>
-                  )}
+                  <SeasonPhasePills 
+                    phase={season.phase} 
+                    isVictoryPending={isVictoryPending} 
+                    className="flex items-center flex-wrap gap-2" 
+                  />
                 </div>
 
                 {/* Stats grid */}
@@ -257,17 +234,21 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
                 </div>
 
                 {/* Progress bar */}
-                <div>
-                  <p className="section-label mb-2">Victory Progress</p>
-                  <VictoryProgressBar
-                    seasonAddress={season.season}
-                    gini={gCurrent}
-                    gInitial={gInitialRaw ? Number(gInitialRaw) : 5000}
-                    victoryThresholdBps={season.config.victoryThresholdBps}
-                    baseBeta={season.config.baseBeta}
-                    phase={season.phase}
-                  />
-                </div>
+                <>
+                {!(isBootstrap  || isAuction) &&(
+                  <div>
+                    <p className="section-label mb-2">Victory Progress</p>
+                    <VictoryProgressBar
+                      seasonAddress={season.season}
+                      gini={gCurrent}
+                      gInitial={gInitialRaw ? Number(gInitialRaw) : 5000}
+                      victoryThresholdBps={season.config.victoryThresholdBps}
+                      baseBeta={season.config.baseBeta}
+                      phase={season.phase}
+                    />
+                  </div>
+                )}
+              </>
               </div>
 
               {/* Arrow */}

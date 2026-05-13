@@ -208,7 +208,7 @@ function SeasonHoldingRow({ pos, playerAddress }: { pos: any, playerAddress: str
   </div>
 
   {/* 3. VICTORY PROGRESS BAR - FLUID (flex-1) */}
-  <div className="flex-1 min-w-0 md:max-w-[240px]">
+  <div className="flex-1 min-w-0 md:max-w-240px">
     {(isTrading || isConcluded) && gInitialRaw !== undefined ? (
       <div className="scale-90 origin-left">
         <VictoryProgressBar

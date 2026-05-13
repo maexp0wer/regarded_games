@@ -92,10 +92,11 @@ export function VictoryProgressBar({
 
   // Handle Non-Active Phases
   if (phase !== 'TRADING' && phase !== 'PAYOUT') {
+    if (phase === 'AUCTION' || phase === 'BOOTSTRAP') return null;
     return (
       <div className="h-[42px] flex items-center justify-center border border-dashed border-border/10 rounded-lg bg-card2/20">
         <span className="text-[9px] font-black text-text2/40 uppercase tracking-[0.2em]">
-          {phase === 'AUCTION' || phase === 'BOOTSTRAP' ? 'Market Opening Soon' : 'Season Settled'}
+          Season Settled
         </span>
       </div>
     );

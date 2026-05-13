@@ -1,46 +1,29 @@
 'use client';
 
 import React from 'react';
+// Import the component we created earlier (adjust path as needed)
+import { SeasonPhasePills } from './SeasonPhasePills'; 
 
 interface SeasonHeaderProps {
   seasonName: string;
   playerCount: number;
   currentPhase: string | null;
-  isBootstrap: boolean;
-  isPayout: boolean;
+  // These two might now be redundant since SeasonPhasePills checks the string directly,
+  // but keeping them optional ensures we don't break parent components.
+  isBootstrap?: boolean; 
+  isPayout?: boolean;
+  // Added for the new SeasonPhasePills component
+  isVictoryPending?: boolean; 
 }
 
 export function SeasonHeader({
   seasonName,
   playerCount,
   currentPhase,
-  isBootstrap,
-  isPayout,
+  isVictoryPending = false,
 }: SeasonHeaderProps) {
-  const isAuction = currentPhase === 'AUCTION';
-  const showBootstrapWarning = isBootstrap && !isAuction;
-
-  const phaseLabel = (() => {
-    if (showBootstrapWarning) return 'Bootstrap';
-    if (isPayout) return 'Payout';
-    if (isAuction) return 'Auction';
-    if (currentPhase === 'TRADING') return 'Trading';
-    return currentPhase ?? 'Unknown';
-  })();
-
   /* Season slug → display number: "season_1" → "1", fallback "–" */
   const num = seasonName.match(/\d+/)?.[0] ?? '–';
-
-  const dotColor =
-    showBootstrapWarning || isAuction ? 'bg-warning' : isPayout ? 'bg-blue' : 'bg-green';
-  const dotGlow =
-    showBootstrapWarning || isAuction
-      ? '0 0 8px var(--color-warning)'
-      : isPayout
-      ? '0 0 8px var(--color-blue)'
-      : '0 0 8px var(--color-green)';
-  const phaseTextColor =
-    showBootstrapWarning || isAuction ? 'text-warning' : isPayout ? 'text-blue' : 'text-green';
 
   return (
     <div
@@ -52,7 +35,7 @@ export function SeasonHeader({
     >
       {/* Big season number */}
       <p
-        className="font-display font-extrabold leading-[0.85] tracking-[-0.04em] text-text m-0"
+        className="font-display font-extrabold leading-[0.85] tracking-[-0.04em] text-text"
         style={{ fontSize: 'clamp(48px, 8vw, 84px)' }}
       >
         S
@@ -63,7 +46,7 @@ export function SeasonHeader({
 
       {/* Bottom meta strip */}
       <div
-        className="flex flex-wrap gap-x-6 gap-y-2 font-mono text-[12px] uppercase tracking-[0.04em]"
+        className="flex flex-wrap gap-x-6 gap-y-2 font-mono text-[12px] uppercase tracking-[0.04em] -mb-2"
         style={{ color: 'var(--color-muted)' }}
       >
         <div>
@@ -72,17 +55,11 @@ export function SeasonHeader({
             {playerCount.toLocaleString()}
           </b>
         </div>
+        
         <div>
           Phase
-          <div className="flex items-center gap-1.5 mt-1">
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${dotColor} animate-[pill-pulse_2s_ease-in-out_infinite] shrink-0`}
-              style={{ boxShadow: dotGlow }}
-            />
-            <b className={`font-mono text-[16px] font-semibold normal-case tracking-normal ${phaseTextColor}`}>
-              {phaseLabel}
-            </b>
-          </div>
+          {/* Replaced the manual dots and text with the universal component */}
+          <SeasonPhasePills phase={currentPhase ?? 'UNKNOWN'} isVictoryPending={isVictoryPending} className="flex items-center flex-wrap gap-2 mt-1" />
         </div>
       </div>
     </div>

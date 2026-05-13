@@ -57,7 +57,7 @@ export const ArrowLeft = (props: SVGProps<SVGSVGElement>) => (
 
 
 export const Logo = (props: SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 163.7693 44.762379" xmlns="http://www.w3.org/2000/svg" {...props}>
+  <svg viewBox="0 0 170 44" xmlns="http://www.w3.org/2000/svg" {...props}>
     <g transform="translate(-18.890893,-98.131631)">
       <g transform="matrix(0.26458333,0,0,0.26458333,2.1376452,39.638359)">
         <text

@@ -267,8 +267,8 @@ function AuctionMaskInner({
             {/* Widget header */}
             <div className="flex items-center justify-between">
               <span className="section-label">Buy FIM with USDC</span>
-              <span className="font-mono text-[11px] text-text2">
-                Wallet · <span className="text-text font-semibold">{Number(formatUnits(currentUsdcInWallet, 6)).toLocaleString()} USDC</span>
+              <span className="font-mono text-[11px] text-text2 ml-2">
+                WALLET · <span className="text-text font-semibold">{Number(formatUnits(currentUsdcInWallet, 6)).toLocaleString()} USDC</span>
               </span>
             </div>
 

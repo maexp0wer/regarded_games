@@ -271,8 +271,8 @@ export function TradingMask({
         <div className="flex flex-col flex-1 p-4 gap-2">
           <div className="flex items-center justify-between">
             <span className="section-label">{isBuy ? 'Buy FIM with USDC' : 'Sell FIM for USDC'}</span>
-            <span className="font-mono text-[11px] text-text2">
-              Wallet · <span className="text-text font-semibold">{walletBalanceDisplay}</span>
+            <span className="font-mono text-[11px] text-text2 ml-2">
+              WALLET · <span className="text-text font-semibold">{walletBalanceDisplay}</span>
             </span>
           </div>
           <input

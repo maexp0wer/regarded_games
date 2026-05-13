@@ -7,6 +7,7 @@ import { SunIcon, MoonIcon, PopoutIcon } from '@/components/icons/svg';
 import { WalletButton } from './WalletButton';
 import { useState, MouseEvent } from 'react';
 import { useAccount } from 'wagmi';
+import { Logo } from '@/components/icons/svg';
 
 export function Navbar() {
   const { address } = useAccount();
@@ -37,26 +38,8 @@ export function Navbar() {
             style={{ textDecoration: 'none' }}
           >
             {/* Gold mark */}
-            <div
-              className="flex items-center justify-center w-8 h-8 rounded-[9px] font-mono text-[14px] font-bold shrink-0"
-              style={{
-                background: 'linear-gradient(135deg, var(--color-gold-soft), var(--color-gold))',
-                color: '#1a1305',
-                boxShadow: '0 6px 20px -8px rgba(245,184,0,0.6)',
-              }}
-            >
-              R
-            </div>
-            {/* Wordmark */}
-            <div className="flex items-center gap-1.5">
-              <span
-                className="font-display font-extrabold text-[18px] tracking-[-0.01em] text-text leading-none"
-              >
-                REGARDED GAMES
-              </span>
-              <span className="font-mono text-[10px] font-medium text-text2 uppercase tracking-[0.04em] mt-0.5 hidden sm:block">
-                v0.4
-              </span>
+            <div className='text-primary flex justify-center items-center '>
+              <Logo className='w-40 text-white'/>
             </div>
           </Link>
 
