@@ -31,26 +31,6 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
   const { payout, pnl: livePnL, userFim, userNetContrib, realizedPayout, loading: calcLoading, refetch: refetchPayout } =
     usePayout(seasonAddress, address);
 
-  const finalProgressValue: bigint = (finalProgressBps as unknown as bigint) ?? 0n;
-  const HUNDRED_PERCENT_BPS = 10000n;
-
-  let winDisplay: { side: string; color: string; text: string; pct: number };
-  if (finalProgressValue === 0n) {
-    winDisplay = { side: 'Faction TIE', color: 'var(--color-gold)', text: '', pct: 0 };
-  } else if (finalProgressValue < HUNDRED_PERCENT_BPS) {
-    winDisplay = {
-      side: isOligarchyWin ? 'Bourgeoisie' : 'Proletariat',
-      color: isOligarchyWin ? 'var(--color-blue)' : 'var(--color-pink)',
-      text: 'Partial Victory', pct: Number(finalProgressValue) / 100,
-    };
-  } else {
-    winDisplay = {
-      side: isOligarchyWin ? 'Bourgeoisie' : 'Proletariat',
-      color: isOligarchyWin ? 'var(--color-blue)' : 'var(--color-pink)',
-      text: 'Victory', pct: 100,
-    };
-  }
-
   const canClaim = payout > 0;
 
   useEffect(() => {
@@ -113,19 +93,7 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
         style={{ borderBottom: '1px solid var(--color-border)' }}
       >
         <p className="section-label">Payout</p>
-        <div className="flex items-center gap-2">
-          <span
-            className="font-display font-bold uppercase text-[13px]"
-            style={{ color: winDisplay.color }}
-          >
-            {winDisplay.side}
-          </span>
-          {winDisplay.text && (
-            <span className="font-mono text-[10px] text-text2 uppercase tracking-widest">
-              {winDisplay.text} {winDisplay.pct > 0 && `· ${winDisplay.pct.toFixed(1)}%`}
-            </span>
-          )}
-        </div>
+        
       </div>
 
       {/* ── Stats 2×2 grid ── */}
@@ -177,7 +145,7 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
             <div className="h-5 w-20 rounded animate-pulse" style={{ background: 'var(--color-border)' }} />
           ) : (
             <span className="font-mono font-semibold text-[15px]" style={{ color: pnlColor, fontVariantNumeric: 'tabular-nums' }}>
-              {pnlPositive ? '+' : ''}{Math.abs(displayPnL).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {pnlPositive ? '+' : '-'}{Math.abs(displayPnL).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               <span className="ml-1 text-[10px] text-text2">USDC</span>
             </span>
           )}

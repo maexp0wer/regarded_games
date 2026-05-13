@@ -102,7 +102,7 @@ export function VictoryProgressBar({
   }
 
   const isTie = progress.prog === 0;
-  const sideLabel = progress.side === 'cap' ? 'Bourgeoisie' : 'Proletariat';
+  const sideLabel = progress.side === 'cap' ? 'Bourgeois' : 'Proletarian';
   const suffix = phase === 'PAYOUT' ? 'Win' : 'Progress';
 
   return (

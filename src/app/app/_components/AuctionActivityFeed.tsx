@@ -63,10 +63,7 @@ export function AuctionActivityFeed({ seasonAddress }: { seasonAddress: string }
           <span className="section-label w-15">Time</span>
           <span className="section-label">Address</span>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="section-label">Type</span>
-          <span className="section-label w-20 text-right">Amount</span>
-        </div>
+        <span className="section-label w-20 text-right">Amount</span>
       </div>
 
       {/* Rows */}
@@ -84,28 +81,20 @@ export function AuctionActivityFeed({ seasonAddress }: { seasonAddress: string }
             >
               {/* Left: time + address */}
               <div className="flex items-center gap-4 min-w-0">
-                <span className="font-mono text-[12px] text-text2 shrink-0 w-15" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                <span className="font-mono text-[11px] text-text2 shrink-0 w-15" style={{ fontVariantNumeric: 'tabular-nums' }}>
                   {fmt(Number(mint.timestamp))}
                 </span>
-                <span className="font-mono text-[12px] text-text truncate">
+                <span className="font-mono text-[11px] text-text truncate">
                   {mint.playerAddress.slice(0, 6)}…{mint.playerAddress.slice(-4)}
                 </span>
               </div>
-              {/* Right: type + amount */}
-              <div className="flex items-center gap-3 shrink-0">
-                <span
-                  className="font-mono text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded"
-                  style={{ color: 'var(--color-green)', background: 'rgba(107,203,110,0.1)' }}
-                >
-                  BUY
-                </span>
-                <span
-                  className="font-mono text-[12px] font-semibold w-20 text-right"
-                  style={{ color: 'var(--color-green)', fontVariantNumeric: 'tabular-nums' }}
-                >
-                  +{Number(formatUnits(mint.fimAmount, 18)).toLocaleString()} FIM
-                </span>
-              </div>
+              {/* Right: amount */}
+              <span
+                className="font-mono text-[11px] font-semibold w-20 text-right shrink-0"
+                style={{ color: 'var(--color-green)', fontVariantNumeric: 'tabular-nums' }}
+              >
+                +{Number(formatUnits(mint.fimAmount, 18)).toLocaleString()} FIM
+              </span>
             </div>
           ))
         )}

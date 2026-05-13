@@ -42,8 +42,9 @@
   --color-green:       #2d8c30;
   --color-red:         #bb2222;
 
-  /* ── TYPOGRAPHY ─────────────────────────────────────────────── */
-  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+  /* ── TYPOGRAPHY ───────────────────────────────────────────────
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif; */
+  --font-display: "Exo 2", system-ui, sans-serif;
   --font-sans:    "Space Grotesk",       system-ui, sans-serif;
   --font-mono:    "JetBrains Mono",      ui-monospace, monospace;
 }
@@ -405,7 +406,7 @@ html, body {
 .cd-num {
   font-family: var(--font-mono);
   font-weight: 600;
-  font-size: 32px;
+  font-size: clamp(16px, 2.2vw, 32px);
   line-height: 1;
   letter-spacing: -0.02em;
   color: var(--color-text);
@@ -552,7 +553,7 @@ html, body {
 
 .gini-marker {
   position: absolute;
-  top: -10px;
+  top: -9px; /* centers 24px faction dots on 6px track (−9 + 12 = 3 = track center) */
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
@@ -569,15 +570,15 @@ html, body {
   width: 28px;
   height: 28px;
   background: var(--color-gold);
-  box-shadow: 0 0 0 1px var(--color-gold), 0 0 30px rgba(245, 184, 0, 0.7);
+  box-shadow: 0 0 0 1px var(--color-gold), 0 0 5px rgba(245, 184, 0, 0.08);
 }
 .gini-knob.pink {
   background: var(--color-pink);
-  box-shadow: 0 0 0 1px var(--color-pink), 0 0 20px rgba(255, 61, 138, 0.5);
+  box-shadow: 0 0 0 1px var(--color-pink), 0 0 200px rgba(255, 61, 139, 0.05);
 }
 .gini-knob.blue {
   background: var(--color-blue);
-  box-shadow: 0 0 0 1px var(--color-blue), 0 0 20px rgba(77, 159, 255, 0.5);
+  box-shadow: 0 0 0 1px var(--color-blue), 0 0 200px rgba(77, 159, 255, 0.05);
 }
 .gini-stem {
   width: 2px;

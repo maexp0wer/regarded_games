@@ -99,7 +99,7 @@ const PlayerRankDisplay: React.FC<PlayerRankDisplayProps> = ({ seasonAddress, us
       {/* 2. Absolute PnL rank */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="section-label">Absolute PnL</span>
+          <span className="section-label">Absolute PnL Rank</span>
           <span className="font-mono text-[12px] font-bold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
             #{rank} <span className="text-text2 font-normal">of {totalPlayers}</span>
           </span>
@@ -129,9 +129,9 @@ const PlayerRankDisplay: React.FC<PlayerRankDisplayProps> = ({ seasonAddress, us
       </div>
 
       {/* 3. Relative PnL rank */}
-      <div className="space-y-2">
+      <div className="space-y-2 pb-5">
         <div className="flex items-center justify-between">
-          <span className="section-label">Relative PnL</span>
+          <span className="section-label">Relative PnL Rank</span>
           <span className="font-mono text-[12px] font-bold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
             #{efficiencyRank} <span className="text-text2 font-normal">of {totalPlayers}</span>
           </span>

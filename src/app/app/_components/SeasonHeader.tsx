@@ -31,18 +31,16 @@ export function SeasonHeader({
   /* Season slug → display number: "season_1" → "1", fallback "–" */
   const num = seasonName.match(/\d+/)?.[0] ?? '–';
 
-  const pillColor = showBootstrapWarning
-    ? 'text-warning border-warning/30 bg-warning/8'
-    : isPayout
-    ? 'text-blue border-blue/30 bg-blue/8'
-    : 'text-green border-green/30 bg-green/8';
-
-  const dotColor = showBootstrapWarning ? 'bg-warning' : isPayout ? 'bg-blue' : 'bg-green';
-  const dotGlow = showBootstrapWarning
-    ? '0 0 8px var(--color-warning)'
-    : isPayout
-    ? '0 0 8px var(--color-blue)'
-    : '0 0 8px var(--color-green)';
+  const dotColor =
+    showBootstrapWarning || isAuction ? 'bg-warning' : isPayout ? 'bg-blue' : 'bg-green';
+  const dotGlow =
+    showBootstrapWarning || isAuction
+      ? '0 0 8px var(--color-warning)'
+      : isPayout
+      ? '0 0 8px var(--color-blue)'
+      : '0 0 8px var(--color-green)';
+  const phaseTextColor =
+    showBootstrapWarning || isAuction ? 'text-warning' : isPayout ? 'text-blue' : 'text-green';
 
   return (
     <div
@@ -65,7 +63,7 @@ export function SeasonHeader({
 
       {/* Bottom meta strip */}
       <div
-        className="flex gap-6 font-mono text-[12px] uppercase tracking-[0.04em]"
+        className="flex flex-wrap gap-x-6 gap-y-2 font-mono text-[12px] uppercase tracking-[0.04em]"
         style={{ color: 'var(--color-muted)' }}
       >
         <div>
@@ -74,12 +72,17 @@ export function SeasonHeader({
             {playerCount.toLocaleString()}
           </b>
         </div>
-        <div className={`pill border ${pillColor}`}>
-          <span
-            className={`w-1.5 h-1.5 rounded-full ${dotColor} animate-[pill-pulse_2s_ease-in-out_infinite]`}
-            style={{ boxShadow: dotGlow }}
-          />
-          {phaseLabel}
+        <div>
+          Phase
+          <div className="flex items-center gap-1.5 mt-1">
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${dotColor} animate-[pill-pulse_2s_ease-in-out_infinite] shrink-0`}
+              style={{ boxShadow: dotGlow }}
+            />
+            <b className={`font-mono text-[16px] font-semibold normal-case tracking-normal ${phaseTextColor}`}>
+              {phaseLabel}
+            </b>
+          </div>
         </div>
       </div>
     </div>

@@ -154,13 +154,16 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
     const isBootstrap = season.phase === 'BOOTSTRAP';
     const isPayout = season.phase === 'PAYOUT' || season.phase === 'ENDED';
     const isTrading = season.phase === 'TRADING';
+    const isAuction = season.phase === 'AUCTION';
 
-    const phaseLabel = isBootstrap ? 'On Hold' : isPayout ? 'Concluded' : season.phase.charAt(0) + season.phase.slice(1).toLowerCase();
-    const phaseColor = isBootstrap ? 'var(--color-gold)' : isPayout ? 'var(--color-blue)' : 'var(--color-green)';
-    const phaseDotGlow = isBootstrap ? '0 0 8px var(--color-gold)' : isPayout ? '0 0 8px var(--color-blue)' : '0 0 8px var(--color-green)';
+    const phaseLabel = (isBootstrap || isVictoryPending) ? 'On Hold' : isPayout ? 'Payout' : season.phase.charAt(0) + season.phase.slice(1).toLowerCase();
+    const subPhaseLabel = isBootstrap ? 'Bootstrap' : isVictoryPending ? 'Settlement' : null;
+    const phaseColor = (isBootstrap || isVictoryPending) ? 'var(--color-danger)' : isAuction ? 'var(--color-gold)' : isPayout ? 'var(--color-blue)' : 'var(--color-green)';
+    const phaseDotGlow = (isBootstrap || isVictoryPending) ? '0 0 8px var(--color-danger)' : isAuction ? '0 0 8px var(--color-gold)' : isPayout ? '0 0 8px var(--color-blue)' : '0 0 8px var(--color-green)';
 
-    const statusTime = isBootstrap ? formatDate(season.tradingStartTime) : (isTrading ? formatDate(season.seasonEndTime) : formatDate(season.tradingStartTime));
-    const statusLabel = isBootstrap ? 'On Hold' : isTrading ? 'Ends' : isPayout ? 'Concluded' : 'Trading Starts';
+    const showTimeStat = isTrading || isBootstrap || isAuction;
+    const statusLabel = isTrading ? 'Ends' : 'Trading Starts';
+    const statusTime = (isVictoryPending || isBootstrap) ? 'SHORTLY' : isTrading ? formatDate(season.seasonEndTime) : formatDate(season.tradingStartTime);
 
     if (!season.config) return null;
 
@@ -173,20 +176,15 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
             style={{ borderColor: 'var(--color-border)' }}
           >
             <div className="flex items-start gap-6">
-              {/* Big season number */}
-              <div className="shrink-0 hidden sm:block">
+              {/* Left column: big season number + pills (desktop) */}
+              <div className="shrink-0 hidden sm:flex sm:flex-col sm:items-start sm:gap-2">
                 <p
                   className="font-display font-extrabold leading-none tracking-[-0.04em]"
                   style={{ fontSize: 'clamp(48px, 6vw, 72px)', color: 'var(--color-text)' }}
                 >
-                  S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)' }}>{num}</em>
+                  S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
                 </p>
-              </div>
-
-              {/* Main content */}
-              <div className="flex-1 min-w-0 flex flex-col gap-4">
-                {/* Header row */}
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-col gap-1.5">
                   <div
                     className="pill border"
                     style={{ color: phaseColor, borderColor: phaseColor + '33', background: phaseColor + '10' }}
@@ -194,9 +192,36 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
                     <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: phaseColor, boxShadow: phaseDotGlow }} />
                     {phaseLabel}
                   </div>
-                  {isVictoryPending && (
+                  {subPhaseLabel && (
                     <div className="pill border" style={{ color: 'var(--color-gold)', borderColor: 'rgba(245,184,0,0.3)', background: 'rgba(245,184,0,0.08)' }}>
-                      Settlement Pending
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'var(--color-gold)', boxShadow: '0 0 8px var(--color-gold)' }} />
+                      {subPhaseLabel}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Main content */}
+              <div className="flex-1 min-w-0 flex flex-col gap-4">
+                {/* Mobile header: small season number + pills */}
+                <div className="flex sm:hidden items-center flex-wrap gap-2">
+                  <p
+                    className="font-display font-extrabold leading-none tracking-[-0.04em]"
+                    style={{ fontSize: '24px', color: 'var(--color-text)' }}
+                  >
+                    S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
+                  </p>
+                  <div
+                    className="pill border"
+                    style={{ color: phaseColor, borderColor: phaseColor + '33', background: phaseColor + '10' }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: phaseColor, boxShadow: phaseDotGlow }} />
+                    {phaseLabel}
+                  </div>
+                  {subPhaseLabel && (
+                    <div className="pill border" style={{ color: 'var(--color-gold)', borderColor: 'rgba(245,184,0,0.3)', background: 'rgba(245,184,0,0.08)' }}>
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'var(--color-gold)', boxShadow: '0 0 8px var(--color-gold)' }} />
+                      {subPhaseLabel}
                     </div>
                   )}
                 </div>
@@ -221,12 +246,14 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
                       {(season.config.baseBeta / 10000 + Math.pow(1 - (gCurrent / 10000), 2)).toFixed(2)}×
                     </span>
                   </div>
-                  <div>
-                    <p className="section-label mb-1">{statusLabel}</p>
-                    <span className="font-mono font-semibold text-[13px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                      {isBootstrap || isPayout ? '—' : statusTime}
-                    </span>
-                  </div>
+                  {showTimeStat && (
+                    <div>
+                      <p className="section-label mb-1">{statusLabel}</p>
+                      <span className="font-mono font-semibold text-[13px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {statusTime}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Progress bar */}

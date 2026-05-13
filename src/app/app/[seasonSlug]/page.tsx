@@ -75,24 +75,18 @@ function PrizePoolCard({
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+  const prizePoolWithYield = prizePool + (hasYield ? parseFloat(formatUnits(rawReinvest, 6)) : 0);
 
   return (
     <div
       className="card-app relative flex flex-col justify-between text-center overflow-hidden"
       style={{
         background:
-          'radial-gradient(400px 200px at 50% 100%, rgba(245,184,0,0.08), transparent 60%), linear-gradient(180deg, var(--color-card2), var(--color-card))',
+          'radial-gradient(400px 200px at 50% 100%, rgba(245,184,0,0.05), transparent 60%), linear-gradient(180deg, var(--color-card2), var(--color-card))',
         borderColor: 'var(--color-border-bright)',
       }}
     >
-      {/* grid-line watermark */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-50"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(90deg, rgba(245,184,0,0.04) 0 1px, transparent 1px 40px)',
-        }}
-      />
+      
 
       {/* label */}
       <div className="relative section-label justify-center">
@@ -104,7 +98,7 @@ function PrizePoolCard({
       <p
         className="relative font-display font-extrabold leading-none tracking-[-0.04em] text-gold m-0"
         style={{
-          fontSize: 'clamp(40px, 7vw, 84px)',
+          fontSize: 'clamp(30px, 4vw, 84px)',
           textShadow: '0 0 40px rgba(245,184,0,0.25)',
           fontVariantNumeric: 'tabular-nums',
         }}
@@ -119,14 +113,14 @@ function PrizePoolCard({
         >
           $
         </span>
-        {prizePool.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        {prizePoolWithYield.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </p>
 
       {/* yield bonus */}
       {hasYield ? (
         <p className="relative font-mono text-[12px] text-text2 m-0">
           Yield Bonus{' '}
-          <b className="text-green ml-1 font-semibold">+${reinvestFormatted}</b>
+          <b className="text-green ml-1 font-semibold">${reinvestFormatted}</b>
         </p>
       ) : (
         <div />
@@ -145,6 +139,8 @@ function CountdownCard({
   isBootstrap,
   isPayout,
   isVictoryPending,
+  winningSide,
+  progressPercent,
 }: {
   tradingStart: number;
   seasonEnd: number;
@@ -152,65 +148,107 @@ function CountdownCard({
   isBootstrap: boolean;
   isPayout: boolean;
   isVictoryPending: boolean;
+  winningSide: 'cap' | 'soc' | 'none';
+  progressPercent: number;
 }) {
   const showBootstrapWarning = isBootstrap && !isAuction;
   const targetTime = isAuction || isBootstrap ? tradingStart : seasonEnd;
   const { days, hours, minutes, seconds } = useCountdown(targetTime);
 
-  const labelText = isAuction
-    ? 'Auction Ends In'
-    : isPayout
-    ? 'Season'
-    : 'Season Ends In';
+  const labelText = isAuction ? 'Auction Ends In' : 'Season Ends In';
+
+  const winnerLabel = winningSide === 'cap' ? 'Bourgeoisie' : winningSide === 'soc' ? 'Proletariat' : null;
+  const winnerColor = winningSide === 'cap' ? 'var(--color-blue)' : 'var(--color-pink)';
+  const isPartialWin = isPayout && progressPercent < 99.5;
+
+  const factionGradientRgba = winningSide === 'cap'
+    ? 'rgba(77, 159, 255, 0.07)'
+    : 'rgba(255, 61, 138, 0.07)';
+  const factionTextShadow = winningSide === 'cap'
+    ? '0 0 40px rgba(77, 159, 255, 0.25)'
+    : '0 0 40px rgba(255, 61, 138, 0.25)';
+  const topLabelText = isPartialWin
+    ? `Partial Winner (${Math.round(progressPercent * 10) / 10}%)`
+    : 'Winner';
 
   return (
-    <div className="card-app flex flex-col justify-between gap-4">
-      <div className="section-label">
-        <span className="tick" style={{ background: 'var(--color-pink)' }} />
-        {labelText}
-      </div>
-
+    <div
+      className="card-app relative flex flex-col overflow-hidden text-center justify-between"
+      style={isPayout && winnerLabel ? {
+        background: `radial-gradient(400px 200px at 50% 100%, ${factionGradientRgba}, transparent 60%), linear-gradient(180deg, var(--color-card2), var(--color-card))`,
+        borderColor: 'var(--color-border-bright)',
+      } : {}}
+    >
       {isPayout ? (
-        <div className="flex flex-col items-start gap-1">
-          <p className="font-display font-extrabold text-3xl text-text m-0">Concluded</p>
-        </div>
-      ) : showBootstrapWarning ? (
-        <div className="flex flex-col gap-1">
-          <p className="font-mono text-[11px] uppercase tracking-widest text-warning font-semibold m-0">
-            Season On Hold
-          </p>
-          <p className="font-sans text-xs text-text2 leading-snug m-0">
-            Trading paused during Gini verification.
-          </p>
-        </div>
-      ) : isVictoryPending ? (
-        <div className="flex flex-col gap-1">
-          <p className="font-mono text-[11px] uppercase tracking-widest text-gold font-semibold m-0">
-            Settlement Pending
-          </p>
-          <p className="font-sans text-xs text-text2 leading-snug m-0">
-            Victory condition met. Preparing Payout Phase.
-          </p>
-        </div>
+        winnerLabel ? (
+          <>
+            <div className="relative section-label justify-center">
+              <span className="tick" style={{ background: winnerColor }} />
+              {topLabelText}
+            </div>
+            <p
+              className="relative font-display font-extrabold leading-none tracking-[-0.04em] m-0"
+              style={{
+                fontSize: 'clamp(30px, 4vw, 84px)',
+                color: winnerColor,
+                textShadow: factionTextShadow,
+              }}
+            >
+              {winnerLabel}
+            </p>
+            <div />
+          </>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p className="font-display font-extrabold text-3xl text-text m-0">Concluded</p>
+          </div>
+        )
       ) : (
-        <div className="grid grid-cols-4 gap-2">
-          <div className="cd-cell">
-            <div className="cd-num">{pad(days)}</div>
-            <div className="cd-unit">Days</div>
+        <>
+          <div className="section-label">
+            <span className="tick" style={{ background: 'var(--color-pink)' }} />
+            {labelText}
           </div>
-          <div className="cd-cell">
-            <div className="cd-num">{pad(hours)}</div>
-            <div className="cd-unit">Hrs</div>
-          </div>
-          <div className="cd-cell">
-            <div className="cd-num">{pad(minutes)}</div>
-            <div className="cd-unit">Min</div>
-          </div>
-          <div className="cd-cell danger">
-            <div className="cd-num">{pad(seconds)}</div>
-            <div className="cd-unit">Sec</div>
-          </div>
-        </div>
+
+          {showBootstrapWarning ? (
+            <div className="flex flex-col gap-1">
+              <p className="font-mono text-[11px] uppercase tracking-widest text-warning font-semibold m-0">
+                Season On Hold
+              </p>
+              <p className="font-sans text-xs text-text2 leading-snug m-0">
+                Trading paused during Gini verification.
+              </p>
+            </div>
+          ) : isVictoryPending ? (
+            <div className="flex flex-col gap-1">
+              <p className="font-mono text-[11px] uppercase tracking-widest text-gold font-semibold m-0">
+                Settlement Pending
+              </p>
+              <p className="font-sans text-xs text-text2 leading-snug m-0">
+                Victory condition met. Preparing Payout Phase.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-2">
+              <div className="cd-cell">
+                <div className="cd-num">{pad(days)}</div>
+                <div className="cd-unit">Days</div>
+              </div>
+              <div className="cd-cell">
+                <div className="cd-num">{pad(hours)}</div>
+                <div className="cd-unit">Hrs</div>
+              </div>
+              <div className="cd-cell">
+                <div className="cd-num">{pad(minutes)}</div>
+                <div className="cd-unit">Min</div>
+              </div>
+              <div className="cd-cell danger">
+                <div className="cd-num">{pad(seconds)}</div>
+                <div className="cd-unit">Sec</div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -462,6 +500,8 @@ export default function SeasonDetailPage() {
     isBootstrap: isAuctionOrBootstrap,
     isPayout,
     isVictoryPending,
+    winningSide,
+    progressPercent,
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -515,9 +555,9 @@ export default function SeasonDetailPage() {
           </div>
 
           {/* Bottom row: activity | season details */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <AuctionActivityFeed seasonAddress={seasonAddress} />
-            <div className="lg:col-span-2">
+            <div className="xl:col-span-2">
               <SeasonDetails
                 tradingStart={tradingStart}
                 seasonEnd={seasonEnd}
@@ -589,9 +629,9 @@ export default function SeasonDetailPage() {
           </div>
 
           {/* Activity feed | season details */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <TradingActivityFeed seasonAddress={seasonAddress} />
-            <div className="lg:col-span-2">
+            <div className="xl:col-span-2">
               <SeasonDetails
                 tradingStart={tradingStart}
                 seasonEnd={seasonEnd}
@@ -671,3 +711,4 @@ export default function SeasonDetailPage() {
     </main>
   );
 }
+3

@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 
 import { WalletButton } from './WalletButton';
+import PercentSlider from '@/components/PercentSlider';
 
 import ERC20Abi from '@/deployments/abis/MockUSDC.json';
 import StakingAbi from '@/deployments/abis/Staking.json';
@@ -103,8 +104,8 @@ function AuctionMaskInner({
   const usdcAddr    = (coreAddresses as any).USDC    as `0x${string}`;
 
   // --- Contract reads ---
-  const { data: stakedBalances,      refetch: refetchStaked }       = useReadContract({ address: stakingAddr, abi: StakingAbi, functionName: 'stakedBalances',      args: [address] });
-  const { data: requiredRegardsStake, refetch: refetchRequired }     = useReadContract({ address: stakingAddr, abi: StakingAbi, functionName: 'requiredRegardsStake', args: [address] });
+  const { data: stakedBalances,      refetch: refetchStaked }   = useReadContract({ address: stakingAddr, abi: StakingAbi, functionName: 'stakedBalances',  args: [address] });
+  const { data: requiredRegStake,    refetch: refetchRequired } = useReadContract({ address: stakingAddr, abi: StakingAbi, functionName: 'requiredRegStake', args: [address] });
   const { data: fimWallet, refetch: refetchFimWallet, isFetching: isFimFetching } = useReadContract({ address: fimAddress as `0x${string}`, abi: ERC20Abi, functionName: 'balanceOf', args: [address], query: { refetchInterval: 5000 } });
   const { data: usdcWallet,  refetch: refetchUsdcWallet }            = useReadContract({ address: usdcAddr,    abi: ERC20Abi, functionName: 'balanceOf', args: [address] });
   const { data: usdcAllowance, refetch: refetchUsdcAllowance }       = useReadContract({ address: usdcAddr,    abi: ERC20Abi, functionName: 'allowance', args: [address, auctionAddress as `0x${string}`], query: { staleTime: 0 } });
@@ -115,8 +116,8 @@ function AuctionMaskInner({
 
   // --- Math ---
   const usdcToBuyBigInt   = buyAmount ? parseUnits(buyAmount, 6) : 0n;
-  const currentStaked     = (stakedBalances       as bigint) ?? 0n;
-  const currentLocked     = (requiredRegardsStake as bigint) ?? 0n;
+  const currentStaked     = (stakedBalances   as bigint) ?? 0n;
+  const currentLocked     = (requiredRegStake as bigint) ?? 0n;
   const hasStakedAnything = currentStaked > 0n;
   const currentFim              = (fimWallet   as bigint) ?? 0n;
   const currentUsdcInWallet     = (usdcWallet  as bigint) ?? 0n;
@@ -131,8 +132,12 @@ function AuctionMaskInner({
     return usdcNeeded > currentUsdcInWallet ? currentUsdcInWallet : usdcNeeded;
   }, [remainingFimAllowance, currentUsdcInWallet]);
 
-  const handleMax = () => setBuyAmount(formatUnits(maxUsdc, 6));
-  const handlePct = (pct: number) => setBuyAmount(formatUnits((maxUsdc * BigInt(pct)) / 100n, 6));
+  const sliderPct = useMemo(() => {
+    if (!buyAmount || maxUsdc === 0n) return 0;
+    return Math.min(100, Math.round(Number((usdcToBuyBigInt * 100n) / maxUsdc)));
+  }, [buyAmount, usdcToBuyBigInt, maxUsdc]);
+
+  const handleSliderChange = (pct: number) => setBuyAmount(formatUnits((maxUsdc * BigInt(pct)) / 100n, 6));
 
   // --- Transaction orchestrator ---
   const handleStartFlow = async () => {
@@ -257,7 +262,7 @@ function AuctionMaskInner({
           {/* ── Buy widget ── */}
           <div
             className={`rounded-xl p-4 flex flex-col gap-3 transition-opacity ${widgetDisabled ? 'opacity-40 pointer-events-none' : ''}`}
-            style={{ background: 'var(--color-card2)', border: '1px solid var(--color-border)' }}
+            style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
           >
             {/* Widget header */}
             <div className="flex items-center justify-between">
@@ -278,15 +283,8 @@ function AuctionMaskInner({
               disabled={isBusy || isSuccess || isError}
             />
 
-            {/* % chips */}
-            <div className="flex gap-2">
-              {([25, 50, 75] as const).map((pct) => (
-                <button key={pct} onClick={() => handlePct(pct)} className="chip" disabled={isBusy || isSuccess || isError}>
-                  {pct}%
-                </button>
-              ))}
-              <button onClick={handleMax} className="chip" disabled={isBusy || isSuccess || isError}>MAX</button>
-            </div>
+            {/* % slider */}
+            <PercentSlider value={sliderPct} onChange={handleSliderChange} disabled={isBusy || isSuccess || isError} />
           </div>
 
           {/* ── CTA button ── */}
@@ -320,27 +318,29 @@ function AuctionMaskInner({
         className="grid grid-cols-2 gap-0 rounded-xl overflow-hidden mt-auto"
         style={{ border: '1px solid var(--color-border)' }}
       >
-        {[
-          { label: 'Total Eligible FIM',   value: eligibleDisplay,            color: 'var(--color-gold)' },
-          { label: 'REGARDS Staked',       value: stakedDisplay,              color: 'var(--color-text)' },
-          { label: 'Remaining FIM',        value: additionalEligibleDisplay,  color: remainingFimAllowance > 0n ? 'var(--color-green)' : 'var(--color-red)' },
-          { label: 'REGARDS Locked',       value: currentLocked > 0n ? lockedDisplay : '0', color: currentLocked > 0n ? 'var(--color-red)' : 'var(--color-text2)' },
-        ].map(({ label, value, color }, i) => (
-          <div
-            key={label}
-            className="flex flex-col gap-1 p-3"
-            style={{
-              background: 'var(--color-card2)',
-              borderRight:  i % 2 === 0 ? '1px solid var(--color-border)' : undefined,
-              borderBottom: i < 2        ? '1px solid var(--color-border)' : undefined,
-            }}
-          >
-            <span className="section-label">{label}</span>
-            <span className="font-mono font-semibold text-sm" style={{ color, fontVariantNumeric: 'tabular-nums' }}>
-              {value}
-            </span>
-          </div>
-        ))}
+        {/* Eligible FIM Remaining (Total) */}
+        <div
+          className="flex flex-col gap-1 p-3"
+          style={{ background: 'var(--color-card2)', borderRight: '1px solid var(--color-border)' }}
+        >
+          <span className="section-label">Eligible FIM REMAINING (TOTAL)</span>
+          <span className="font-mono font-semibold text-sm" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ color: 'var(--color-primary)' }}>{additionalEligibleDisplay}</span>
+            <span className="text-text2 font-normal text-xs ml-1">({eligibleDisplay})</span>
+          </span>
+        </div>
+
+        {/* REGARDS Locked (Staked) */}
+        <div
+          className="flex flex-col gap-1 p-3"
+          style={{ background: 'var(--color-card2)' }}
+        >
+          <span className="section-label">REGARDS LOCKED (STAKED)</span>
+          <span className="font-mono font-semibold text-sm" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ color: currentLocked > 0n ? 'var(--color-red)' : 'var(--color-text2)' }}>{currentLocked > 0n ? lockedDisplay : '0'}</span>
+            <span className="text-text2 font-normal text-xs ml-1">({stakedDisplay})</span>
+          </span>
+        </div>
       </div>
     </div>
   );

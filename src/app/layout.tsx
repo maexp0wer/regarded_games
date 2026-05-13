@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Bricolage_Grotesque, Space_Grotesk, JetBrains_Mono } from 'next/font/google';
+import { Space_Grotesk, JetBrains_Mono, Exo_2 } from 'next/font/google';
 import { headers } from 'next/headers';
 import { cookieToInitialState } from 'wagmi';
 import { config } from '@/config/wagmi';
@@ -8,10 +8,9 @@ import { Providers } from '@/components/Providers';
 import './globals.css';
 import '@rainbow-me/rainbowkit/styles.css';
 
-const bricolage = Bricolage_Grotesque({
+const exo2 = Exo_2({
   subsets: ['latin'],
-  weight: ['600', '700', '800'],
-  variable: '--font-display',
+  variable: '--font-display', // This is what overrides your CSS!
   display: 'swap',
 });
 
@@ -56,7 +55,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${bricolage.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
+      <body className={`${exo2.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
         <script dangerouslySetInnerHTML={{ __html: blockingThemeScript }} />
 
         <Providers initialState={initialState}>

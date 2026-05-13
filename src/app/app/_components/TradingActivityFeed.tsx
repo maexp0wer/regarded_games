@@ -48,10 +48,7 @@ export function TradingActivityFeed({ seasonAddress }: { seasonAddress: string }
           <span className="section-label w-15">Time</span>
           <span className="section-label">Participants</span>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="section-label">Side</span>
-          <span className="section-label w-20 text-right">Amount</span>
-        </div>
+        <span className="section-label w-20 text-right">Amount</span>
       </div>
 
       {/* Rows */}
@@ -77,7 +74,7 @@ export function TradingActivityFeed({ seasonAddress }: { seasonAddress: string }
               >
                 {/* Left: time + participants */}
                 <div className="flex items-center gap-4 min-w-0">
-                  <span className="font-mono text-[12px] text-text2 shrink-0 w-15" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  <span className="font-mono text-[11px] text-text2 shrink-0 w-15" style={{ fontVariantNumeric: 'tabular-nums' }}>
                     {fmt(trade.timestamp)}
                   </span>
                   <div className="flex items-center gap-2 shrink-0">
@@ -95,21 +92,13 @@ export function TradingActivityFeed({ seasonAddress }: { seasonAddress: string }
                   </div>
                 </div>
 
-                {/* Right: side + amount */}
-                <div className="flex items-center gap-3 shrink-0">
-                  <span
-                    className="font-mono text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded"
-                    style={{ color: 'var(--color-green)', background: 'rgba(107,203,110,0.1)' }}
-                  >
-                    TRADE
-                  </span>
-                  <span
-                    className="font-mono text-[12px] font-semibold w-20 text-right"
-                    style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}
-                  >
-                    {trade.amount.toLocaleString()} FIM
-                  </span>
-                </div>
+                {/* Right: amount */}
+                <span
+                  className="font-mono text-[11px] font-semibold w-20 text-right shrink-0"
+                  style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}
+                >
+                  {trade.amount.toLocaleString()} FIM
+                </span>
               </div>
             );
           })

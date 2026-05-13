@@ -15,6 +15,7 @@ import Carlo from '@/components/icons/Carlo.svg';
 import FIM1 from '@/components/icons/FIM1.svg';
 import { useDocNavigation } from '@/hooks/useDocNavigation';
 import NestedPieChart from '@/components/NestedPieChart';
+import { CyclingSubheading } from '@/components/CyclingSubheading';
 
 const tableData = [
   {
@@ -167,7 +168,7 @@ export default function Home() {
                 The Game 
               </h1>
               <h2 className="text-xl md:text-2xl mb-8">
-                The unrigged alternative market: a perfect-information strategy game where Capital fights Coordination for the spoils.
+                <CyclingSubheading />
               </h2>
 
               <div className="flex flex-col sm:flex-row justify-center gap-4">

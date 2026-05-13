@@ -108,7 +108,7 @@ export function useTradeExecution({
   };
 
   const getStatusText = () => {
-    if (workflowStatus === 'idle') return isMaker ? (isBuy ? "Create Buy Order" : "Create Sell Order") : "Fill Selected Orders";
+    if (workflowStatus === 'idle') return isBuy ? 'Buy FIM →' : 'Sell FIM →';
     const texts: Record<WorkflowStep, string> = {
       approving: `Step 1/2: Approve ${spendingSymbol}`, mining_approval: "Confirming Approval...",
       executing: "Step 2/2: Sign Transaction", mining_execute: "Finalizing...",

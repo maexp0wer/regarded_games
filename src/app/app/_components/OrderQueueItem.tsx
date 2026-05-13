@@ -71,16 +71,20 @@ export function OrderQueueItem({
       )}
 
       <div className="flex items-center gap-1">
-        <button
-          onClick={() => onMoveGroup(groupIdx, -1)}
-          disabled={groupIdx === 0}
-          className="bg-text/50 p-1 px-2 rounded text-bg text-[8px] hover:bg-primary hover:text-bg transition-colors"
-        >▲</button>
-        <button
-          onClick={() => onMoveGroup(groupIdx, 1)}
-          disabled={groupIdx === groupCount - 1}
-          className="bg-text/50 p-1 px-2 rounded text-bg text-[8px] hover:bg-primary hover:text-bg transition-colors"
-        >▼</button>
+        {groupCount > 1 && (
+          <>
+            <button
+              onClick={() => onMoveGroup(groupIdx, -1)}
+              disabled={groupIdx === 0}
+              className="bg-text/50 p-1 px-2 rounded text-bg text-[8px] hover:bg-primary hover:text-bg transition-colors"
+            >▲</button>
+            <button
+              onClick={() => onMoveGroup(groupIdx, 1)}
+              disabled={groupIdx === groupCount - 1}
+              className="bg-text/50 p-1 px-2 rounded text-bg text-[8px] hover:bg-primary hover:text-bg transition-colors"
+            >▼</button>
+          </>
+        )}
         <button
           onClick={() => onRemoveGroup(group)}
           className="text-text2 hover:text-primary ml-1 p-1"

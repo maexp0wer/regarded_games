@@ -4,7 +4,12 @@
       "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\" -Force | Select-Object Name, @{Name=\"Type\"; Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} | Format-Table -AutoSize)",
       "PowerShell(Get-ChildItem -Path 'c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\src\\\\deployments\\\\abis\\\\' | ForEach-Object { \"$\\($_.Name\\) $\\($_.LastWriteTime\\)\" })",
       "PowerShell(npx tsc --noEmit 2>&1)",
-      "Bash(curl -s -X POST http://127.0.0.1:42069/graphql -H \"Content-Type: application/json\" -d '{\"query\":\"{ seasonss { items { address seasonId fimAddress exchangeAddress auctionAddress } totalCount } }\"}')"
+      "Bash(curl -s -X POST http://127.0.0.1:42069/graphql -H \"Content-Type: application/json\" -d '{\"query\":\"{ seasonss { items { address seasonId fimAddress exchangeAddress auctionAddress } totalCount } }\"}')",
+      "PowerShell(Get-ChildItem 'C:\\\\Users\\\\info\\\\.claude\\\\projects\\\\c--Users-info-Documents-Work-ritardo-games\\\\design-extract\\\\regarded-games\\\\project' -Recurse -File | ForEach-Object { Write-Host $_.FullName; Write-Host \"Size: $\\($_.Length\\)\" })",
+      "Bash(git checkout *)",
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
