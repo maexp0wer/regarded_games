@@ -3,7 +3,6 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useReadContract, useAccount } from 'wagmi';
-import { formatUnits } from 'viem';
 
 // Hooks / ABIs
 import { useSeasonGini, useSeasonById } from '@/hooks/useSeasonGini';
@@ -11,7 +10,7 @@ import { Order } from '@/hooks/useOrderBook';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
 import { useOpenOrders } from '@/hooks/useOpenOrders';
-import { useYieldTotals } from '@/hooks/useYieldTotals';
+import { usePayout } from '@/hooks/usePayout'; // <-- Added usePayout hook
 
 // Components
 import { SeasonHeader } from '../_components/SeasonHeader';
@@ -29,7 +28,6 @@ import { FactionDiscussionBoard } from '../_components/FactionDiscussionBoard';
 import { FactionChat } from '../_components/FactionChat';
 import { CountdownCard } from '../_components/CountdownCard';
 import { PrizePoolCard } from '../_components/PrizePoolCard';
-
 
 export default function SeasonDetailPage() {
   const { seasonSlug } = useParams() as { seasonSlug: string };
@@ -107,9 +105,13 @@ export default function SeasonDetailPage() {
 
   const { data: percentilesMap } = useBatchPlayerPercentiles(
     seasonAddress,
-    userAddress ? [userAddress] : []
+    userAddress ? [userAddress] :[]
   );
   const factionData = userAddress ? percentilesMap?.[userAddress.toLowerCase()] : undefined;
+
+  // Determine if the claim action button is needed for this user
+  const { payout, realizedPayout } = usePayout(seasonAddress, userAddress);
+  const isPayoutActionable = !!userAddress && payout > 0 && realizedPayout === 0;
 
   // JIT faction sync
   useEffect(() => {
@@ -380,7 +382,7 @@ export default function SeasonDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {hasOrders && (
               <OpenOrders
-                orders={myOrders || []}
+                orders={myOrders ||[]}
                 exchangeAddress={exchangeAddress}
                 onRefresh={refetchOpenOrders}
               />
@@ -447,20 +449,40 @@ export default function SeasonDetailPage() {
                 seasonAddress={seasonAddress}
                 userAddress={userAddress || ''}
               />
-              <GiniDisplay
-                seasonAddress={seasonAddress}
-                gCurrent={gCurrent}
-                gInitial={gInitial}
-                socTargetBps={socTargetBps}
-                capTargetBps={capTargetBps}
-                winningSide={winningSide}
-                progressPercent={progressPercent}
-                currentPhase={currentPhase}
-                isAuction={false}
-                isBootstrap={false}
-              />
+              
+              {/* If actionable, stack Gini strictly in the right column */}
+              {isPayoutActionable && (
+                <GiniDisplay
+                  seasonAddress={seasonAddress}
+                  gCurrent={gCurrent}
+                  gInitial={gInitial}
+                  socTargetBps={socTargetBps}
+                  capTargetBps={capTargetBps}
+                  winningSide={winningSide}
+                  progressPercent={progressPercent}
+                  currentPhase={currentPhase}
+                  isAuction={false}
+                  isBootstrap={false}
+                />
+              )}
             </div>
           </div>
+
+          {/* Once settled (or ineligible), break out to full width */}
+          {!isPayoutActionable && (
+            <GiniDisplay
+              seasonAddress={seasonAddress}
+              gCurrent={gCurrent}
+              gInitial={gInitial}
+              socTargetBps={socTargetBps}
+              capTargetBps={capTargetBps}
+              winningSide={winningSide}
+              progressPercent={progressPercent}
+              currentPhase={currentPhase}
+              isAuction={false}
+              isBootstrap={false}
+            />
+          )}
 
           <SeasonDetails
             tradingStart={tradingStart}
@@ -484,4 +506,3 @@ export default function SeasonDetailPage() {
     </main>
   );
 }
-3
