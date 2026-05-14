@@ -50,7 +50,7 @@ export function CountdownCard({
   const targetTime = isAuction || isBootstrap ? tradingStart : seasonEnd;
   const { days, hours, minutes, seconds } = useCountdown(targetTime);
 
-  const labelText = isAuction ? 'Auction Ends In' : 'Season Ends In';
+  const labelText = isAuction ? 'Auction Ends In' : isBootstrap || isVictoryPending ? 'On Hold' : 'Season Ends In';
 
   const winnerLabel = winningSide === 'cap' ? 'Bourgeoisie' : winningSide === 'soc' ? 'Proletariat' : 'Tie';
   const winnerColor = winningSide === 'cap' ? 'var(--color-blue)' : winningSide === 'soc' ? 'var(--color-pink)' : 'var(--color-text2)';  
@@ -108,23 +108,51 @@ export function CountdownCard({
           </div>
 
           {showBootstrapWarning ? (
-            <div className="flex flex-col gap-1">
-              <p className="font-mono text-[11px] uppercase tracking-widest text-warning font-semibold m-0">
-                Season On Hold
-              </p>
-              <p className="font-sans text-xs text-text2 leading-snug m-0">
-                Trading paused during Gini verification.
-              </p>
-            </div>
-          ) : isVictoryPending ? (
-            <div className="flex flex-col gap-1">
-              <p className="font-mono text-[11px] uppercase tracking-widest text-gold font-semibold m-0">
-                Settlement Pending
-              </p>
-              <p className="font-sans text-xs text-text2 leading-snug m-0">
-                Victory condition met. Preparing Payout Phase.
-              </p>
-            </div>
+          <div 
+            className="flex flex-col items-center justify-center h-full gap-1"
+            style={{
+              background: `radial-gradient(400px 200px at 50% 100%, ${factionGradientRgba}, transparent 60%), linear-gradient(180deg, var(--color-card2), var(--color-card))`,
+              borderColor: 'var(--color-border-bright)',
+            }}
+          >
+            <p
+              className="font-display font-extrabold m-0"
+              style={{
+                color: 'var(--color-pink)',
+                fontSize: 'clamp(20px, 2.5vw, 40px)',
+                lineHeight: '1',
+                textShadow: factionTextShadow,
+              }}
+            >
+              Bootstrapping
+            </p>
+            <p className="font-sans text-xs text-text2 leading-snug m-0">
+              Trading paused during Gini calculation.
+            </p>
+          </div>
+        ) : isVictoryPending ? (
+          <div 
+            className="flex flex-col items-center justify-center h-full gap-1"
+            style={{
+              background: `radial-gradient(400px 200px at 50% 100%, ${factionGradientRgba}, transparent 60%), linear-gradient(180deg, var(--color-card2), var(--color-card))`,
+              borderColor: 'var(--color-border-bright)',
+            }}
+          >
+            <p
+              className="font-display font-extrabold m-0"
+              style={{
+                color: 'var(--color-pink)',
+                fontSize: 'clamp(20px, 2.5vw, 40px)',
+                lineHeight: '1',
+                textShadow: factionTextShadow,
+              }}
+            >
+              Settlement Pending
+            </p>
+            <p className="font-sans text-xs text-text2 leading-snug m-0">
+              Victory condition met. Preparing Payout Phase.
+            </p>
+          </div>
           ) : (
             <div className="grid grid-cols-4 gap-2">
               <div className="cd-cell">
