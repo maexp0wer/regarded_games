@@ -105,7 +105,8 @@ export default function SeasonDetailPage() {
 
   const { data: percentilesMap } = useBatchPlayerPercentiles(
     seasonAddress,
-    userAddress ? [userAddress] :[]
+    userAddress ? [userAddress] : [],
+    exchangeAddress
   );
   const factionData = userAddress ? percentilesMap?.[userAddress.toLowerCase()] : undefined;
 

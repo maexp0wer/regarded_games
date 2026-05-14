@@ -18,8 +18,9 @@ export interface PercentileData {
 }
 
 export function useBatchPlayerPercentiles(
-  seasonAddress: string | undefined,  // <-- Allow undefined
-  userAddresses: string[]
+  seasonAddress: string | undefined,
+  userAddresses: string[],
+  exchangeAddress?: string
 ) {
   // 1. Get Threshold from Contract 
   // (We keep this to preserve exact hook timing and enabled states for dependent components!)
@@ -98,6 +99,14 @@ export function useBatchPlayerPercentiles(
           const lockedFim = BigInt(o.remainingAmount);
           const currentBal = playerBalances.get(maker) || 0n;
           playerBalances.set(maker, currentBal + lockedFim);
+        }
+
+        // The Exchange contract accumulates FIM from sell-order locks and appears
+        // in playerSeasonStats as a phantom player. Its balance equals exactly the
+        // locked FIM we already added back to makers above — remove it to avoid
+        // double-counting in the economy / faction threshold calculation.
+        if (exchangeAddress) {
+          playerBalances.delete(exchangeAddress.toLowerCase());
         }
 
         const economy = Array.from(playerBalances.entries()).map(([address, bal]) => ({

@@ -36,8 +36,8 @@ export const PercentileCircle: React.FC<PercentileCircleProps> = ({
 }) => {
   const s = sizeMap[size];
   
-  const colorClass = isCapitalist ? "stroke-info" : "stroke-danger";
-  const bgClass = isCapitalist ? "stroke-info/20" : "stroke-danger/20";
+  const colorClass = isCapitalist ? "stroke-blue" : "stroke-pink";
+  const bgClass = isCapitalist ? "stroke-blue/20" : "stroke-pink/20";
   
   const radius = 15.9155; // Circumference = 100
   const dashArray = `${percentage} ${100 - percentage}`;

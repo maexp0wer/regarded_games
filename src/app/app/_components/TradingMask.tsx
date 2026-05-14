@@ -81,7 +81,7 @@ export function TradingMask({
     Array.from(new Set(groupedQueue.map(g => g.maker?.toLowerCase()).filter(Boolean))),
     [groupedQueue]
   );
-  const { data: percentileMap } = useBatchPlayerPercentiles(seasonAddress, queueMakers);
+  const { data: percentileMap } = useBatchPlayerPercentiles(seasonAddress, queueMakers, exchangeAddress);
 
   // --- Execution payload ---
   const executionPayload = useMemo<ExecutionPayload>(() => {
@@ -177,7 +177,7 @@ export function TradingMask({
     || isSelfFill;
 
   const userMakers = useMemo(() => (address ? [address.toLowerCase()] : []), [address]);
-  const { data: userStatsMap, isFetched: userStatsFetched } = useBatchPlayerPercentiles(seasonAddress, userMakers);
+  const { data: userStatsMap, isFetched: userStatsFetched } = useBatchPlayerPercentiles(seasonAddress, userMakers, exchangeAddress);
   const userStats = address ? userStatsMap?.[address.toLowerCase()] : undefined;
 
   const isQueueLocked = !isMaker && selectedOrders.length > 0;
