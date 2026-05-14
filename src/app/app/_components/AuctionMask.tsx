@@ -216,7 +216,7 @@ function AuctionMaskInner({
       <div>
         <p className="section-label mb-1">FIM Balance</p>
         <div
-          className="font-display font-extrabold leading-none text-display-auction"
+          className="font-display font-extrabold leading-none text-display-trading"
           style={{
             color: 'var(--color-gold)',
             textShadow: '0 0 40px var(--color-gold-a25)',
@@ -274,7 +274,7 @@ function AuctionMaskInner({
             <input
               type="number"
               placeholder="0.00"
-              className="text-input-lg bg-transparent border-none p-0 w-full font-mono font-bold text-text outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="text-input bg-transparent border-none p-0 w-full font-mono font-bold text-text outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               value={buyAmount}
               onChange={(e) => setBuyAmount(e.target.value)}
               disabled={isBusy || isSuccess || isError}

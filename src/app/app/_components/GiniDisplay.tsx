@@ -103,7 +103,7 @@ export function GiniDisplay({
       }}
     >
       {/* ── Header ── */}
-      <div className="font-mono text-[11px] font-semibold tracking-widest uppercase text-text2 mb-4">
+      <div className="section-label font-mono font-semibold tracking-widest uppercase text-text2 mb-4">
         Gini BPS · Coefficient of Inequality
       </div>
 

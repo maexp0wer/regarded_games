@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useChainId, usePublicClient, useReadContracts, useReadContract } from 'wagmi'; 
 import { Address, formatUnits, erc20Abi } from 'viem';
 import { useQuery } from '@tanstack/react-query';
@@ -16,6 +16,7 @@ import { usePayout } from '@/hooks/usePayout';
 // Shared Components
 import { PercentileCircle } from './PercentileCircle';
 import { VictoryProgressBar } from './VictoryProgressBar';
+import { SeasonPhasePills } from './SeasonPhasePills'; 
 
 const CONTROLLER_ABI = [
   {
@@ -40,6 +41,9 @@ export function PlayerActiveSeasons({ playerAddress }: PlayerActiveSeasonsProps)
   const chainId = useChainId();
   const publicClient = usePublicClient();
   const [showAll, setShowAll] = useState(false);
+  
+  // Track dynamically valid positions after checking payouts
+  const [validPositions, setValidPositions] = useState<Record<string, boolean>>({});
 
   const controllerAddress = useMemo(() => {
     const chainMap: Record<number, string> = { 8453: 'Controller', 84532: 'Controller', 31337: 'Controller' };
@@ -93,44 +97,71 @@ export function PlayerActiveSeasons({ playerAddress }: PlayerActiveSeasonsProps)
   const activePositions = useMemo(() => {
     if (!registry || !balanceResults) return [];
     
-    const mapped = registry.map((s, idx) => ({
+    return registry.map((s, idx) => ({
       ...s,
       balance: (balanceResults[idx]?.result as bigint) || 0n
-    })).filter(pos => pos.balance > 0n);
+    })).filter(pos => {
+      if (pos.phase === 'BOOTSTRAP' || pos.phase === 'AUCTION' || pos.phase === 'TRADING') {
+        return pos.balance > 0n;
+      }
+      return true;
+    });
+  }, [registry, balanceResults]);
 
-    // Apply Filter logic: Default to hiding concluded seasons
-    if (showAll) return mapped;
-    return mapped.filter(s => s.phase !== 'PAYOUT' && s.phase !== 'ENDED');
-  }, [registry, balanceResults, showAll]);
+  const handleValidation = useCallback((season: string, isValid: boolean) => {
+    setValidPositions(prev => {
+      if (prev[season] === isValid) return prev;
+      return { ...prev, [season]: isValid };
+    });
+  }, []);
 
-  if (isScanning || isCheckingBalances) return (
-    <div className="p-12 text-center animate-pulse">
-      <span className="text-gold font-display uppercase tracking-widest text-[10px]">Syncing Player Dossier...</span>
+  const displayedCount = Object.values(validPositions).filter(Boolean).length;
+  const isSyncing = isScanning || isCheckingBalances;
+
+  if (isSyncing) return (
+    <div className="w-full p-12 text-center">
+      <span className="section-label animate-pulse">Syncing Player Dossier…</span>
     </div>
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between px-2 mb-2">
+    <div className="w-full flex flex-col gap-6">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-            <h2 className="text-xl font-bold font-display uppercase text-text">Active Seasons</h2>
-            <button onClick={() => setShowAll(!showAll)} className="btn-three py-2 px-4 text-xs">
-                {showAll ? 'Show Active' : 'Show All'}
-            </button>
+            <h2 className="font-display font-extrabold text-[28px] tracking-[-0.02em] text-text">
+              Active Seasons
+            </h2>
+            {displayedCount > 0 && (
+                <span className="section-label px-2 py-1 bg-card2 rounded-md hidden sm:block">
+                    {displayedCount} Positions
+                </span>
+            )}
         </div>
-        <span className="text-[10px] font-black text-text2 uppercase tracking-widest">
-            {activePositions.length} Positions
-        </span>
+        <button
+          onClick={() => setShowAll(!showAll)}
+          className="btn-secondary px-4 py-2 text-[11px]"
+        >
+          {showAll ? 'Show Active' : 'Show All'}
+        </button>
       </div>
 
-      <div className="grid gap-3">
-        {activePositions.length === 0 ? (
-          <div className="bg-card rounded-xl p-12 text-center border border-border/10">
-            <span className="text-text2 text-sm italic opacity-40 uppercase font-bold tracking-widest">No Holdings Found</span>
+      <div className="flex flex-col gap-4">
+        {activePositions.length === 0 || (!isSyncing && displayedCount === 0 && Object.keys(validPositions).length > 0) ? (
+          <div
+            className="card-app text-center py-16"
+            style={{ borderColor: 'var(--color-border)' }}
+          >
+            <p className="section-label opacity-40">No holdings found</p>
           </div>
         ) : (
           activePositions.reverse().map((pos) => (
-            <SeasonHoldingRow key={pos.season} pos={pos} playerAddress={playerAddress} />
+            <SeasonHoldingRow 
+              key={pos.season} 
+              pos={pos} 
+              playerAddress={playerAddress} 
+              showAll={showAll}
+              onValidation={handleValidation}
+            />
           ))
         )}
       </div>
@@ -138,31 +169,31 @@ export function PlayerActiveSeasons({ playerAddress }: PlayerActiveSeasonsProps)
   );
 }
 
-/**
- * HELPER COMPONENT: Handles the USDC payout/claimed logic for concluded seasons
- */
-function PayoutValueDisplay({ seasonAddress, playerAddress }: { seasonAddress: string, playerAddress: string }) {
-    const { payout, realizedPayout, loading } = usePayout(seasonAddress, playerAddress as Address);
+// ============================================================================
+// ROW WRAPPER
+// ============================================================================
+function SeasonHoldingRow({ pos, playerAddress, showAll, onValidation }: any) {
+  const { payout, pnl, realizedPayout, loading: payoutLoading } = usePayout(pos.season, playerAddress as Address);
 
-    if (loading) return <div className="h-6 w-20 bg-card2 animate-pulse rounded" />;
+  const isParticipant = pos.balance > 0n || payout > 0 || realizedPayout > 0;
+  const matchesFilter = showAll ? true : (pos.phase !== 'PAYOUT' && pos.phase !== 'ENDED');
+  const shouldRender = isParticipant && matchesFilter;
 
-    const isClaimable = payout > 0;
-    const value = isClaimable ? payout : realizedPayout;
+  useEffect(() => {
+    if (pos.balance > 0n || !payoutLoading) {
+      onValidation(pos.season, shouldRender);
+    }
+  }, [pos.balance, payoutLoading, shouldRender, pos.season, onValidation]);
 
-    return (
-        <div className="flex flex-col items-start">
-            <span className={`text-[9px] uppercase font-bold tracking-widest mb-0.5 ${isClaimable ? 'text-gold' : 'text-text2'}`}>
-                {isClaimable ? 'Claimable' : 'Claimed'}
-            </span>
-            <span className={`text-xl font-black tracking-tighter leading-none ${isClaimable ? 'text-gold' : 'text-text'}`}>
-                ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                <span className="text-[10px] opacity-40 ml-1 font-sans font-bold">USDC</span>
-            </span>
-        </div>
-    );
+  if (!shouldRender) return null;
+
+  return <SeasonHoldingRowContent pos={pos} playerAddress={playerAddress} payoutData={{ payout, pnl, realizedPayout }} />;
 }
 
-function SeasonHoldingRow({ pos, playerAddress }: { pos: any, playerAddress: string }) {
+// ============================================================================
+// ROW CONTENT
+// ============================================================================
+function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: any) {
   const { data: giniData } = useSeasonGini(pos.season);
   const { data: statsMap } = useBatchPlayerPercentiles(pos.season, [playerAddress.toLowerCase()]);
   const playerStats = statsMap?.[playerAddress.toLowerCase()];
@@ -174,87 +205,183 @@ function SeasonHoldingRow({ pos, playerAddress }: { pos: any, playerAddress: str
     query: { enabled: pos.phase === 'TRADING' || pos.phase === 'PAYOUT' || pos.phase === 'ENDED' }
   });
 
+  // Calculate victory pending status perfectly mirroring the general SeasonCard
+  const { isVictoryPending } = useMemo(() => {
+      if (!pos.config) return { isVictoryPending: false };
+
+      const rawGini = giniData?.gini || 0;
+      const playerCount = giniData?.playerCount || 0;
+      
+      const isAuctionPhase = pos.phase === 'AUCTION' || pos.phase === 'BOOTSTRAP';
+      const gCurrVal = (isAuctionPhase && playerCount === 0) ? 5000 : rawGini;
+      
+      const rawGInit = gInitialRaw ? Number(gInitialRaw) : 0;
+      const gInitVal = isAuctionPhase ? gCurrVal : rawGInit;
+
+      const gI_Norm = gInitVal / 10000;
+      const V = (pos.config.victoryThresholdBps || 2500) / 10000;
+      const rawBeta = (pos.config.baseBeta || 14000) / 10000;
+      const M = rawBeta + Math.pow(1 - gI_Norm, 2);
+
+      const capTargetNorm = gI_Norm + (V * (1 - gI_Norm));
+      const socTerm = M > 0 ? (V / M) : 0;
+      const socTargetNorm = gI_Norm * (1 - socTerm);
+
+      const capTarget = capTargetNorm * 10000;
+      const socTarget = socTargetNorm * 10000;
+
+      const victoryPending = (pos.phase === 'TRADING') && (gCurrVal >= capTarget || gCurrVal <= socTarget);
+
+      return { isVictoryPending: victoryPending };
+  }, [giniData, pos, gInitialRaw]);
+
   const isAuction = pos.phase === 'AUCTION' || pos.phase === 'BOOTSTRAP';
-  const isTrading = pos.phase === 'TRADING';
   const isConcluded = pos.phase === 'PAYOUT' || pos.phase === 'ENDED';
-  
-  const phaseColor = isAuction ? 'text-pink' : isConcluded ? 'text-blue' : 'text-green';
-  const phaseBg = isAuction ? 'bg-pink' : isConcluded ? 'bg-blue' : 'bg-green';
+  const num = String(pos.id).padStart(2, '0');
+
+  // Payout parsing logic
+  const { payout, pnl, realizedPayout } = payoutData;
+  const canClaim = payout > 0;
+  const claimableAmount = canClaim ? payout : realizedPayout;
+  const claimLabel = canClaim ? 'Claimable' : 'Total Claimed';
 
   return (
     <Link href={`/season_${pos.id}`} className="block group">
-      <div className="bg-card rounded-xl p-5 shadow-sm border border-transparent hover:border-border/30 transition-all overflow-hidden">
-<div className="flex flex-col md:flex-row md:items-center justify-between gap-y-4 md:gap-x-4 w-full min-w-0">
-  
-  {/* 1. SEASON & PHASE - Compact fixed width */}
-  <div className="flex flex-col items-start gap-1 md:w-28 shrink-0">
-    <span className="font-bold text-lg font-display uppercase tracking-tight text-text leading-none">
-      Season {pos.id}
-    </span>
-    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-card2 rounded-full">
-      <div className={`w-1.5 h-1.5 rounded-full ${phaseBg} animate-pulse`} />
-      <span className={`text-[9px] font-black ${phaseColor} tracking-widest uppercase`}>
-        {pos.phase}
-      </span>
-    </div>
-  </div>
+      <div
+        className="card-app transition-all group-hover:border-border-bright"
+        style={{ borderColor: 'var(--color-border)' }}
+      >
+        <div className="flex items-start gap-6">
+          
+          {/* Left column: big season number + pills (desktop) */}
+          <div className="shrink-0 hidden sm:flex sm:flex-col sm:items-start sm:gap-2">
+            <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-display-season">
+              S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
+            </p>
+            <SeasonPhasePills 
+              phase={pos.phase} 
+              isVictoryPending={isVictoryPending} 
+              className="flex flex-col gap-1.5" 
+            />
+          </div>
 
-  {/* 2. PRIZE POOL - Compact fixed width */}
-  <div className="flex flex-col items-start md:w-24 shrink-0">
-    <span className="text-[9px] uppercase font-bold text-text2 tracking-widest mb-0.5">Prize Pool</span>
-    <span className="text-xl font-black text-text tracking-tighter leading-none">
-      ${(giniData?.prizePool ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-    </span>
-  </div>
+          {/* Main content */}
+          <div className="flex-1 min-w-0 flex flex-col gap-4">
+            {/* Mobile header: small season number + pills */}
+            <div className="flex sm:hidden items-center flex-wrap gap-2">
+              <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-season-mobile">
+                S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
+              </p>
+              <SeasonPhasePills 
+                phase={pos.phase} 
+                isVictoryPending={isVictoryPending} 
+                className="flex items-center flex-wrap gap-2" 
+              />
+            </div>
 
-  {/* 3. VICTORY PROGRESS BAR - FLUID (flex-1) */}
-  <div className="flex-1 min-w-0 md:max-w-240px">
-    {(isTrading || isConcluded) && gInitialRaw !== undefined ? (
-      <div className="scale-90 origin-left">
-        <VictoryProgressBar
-            seasonAddress={pos.season} 
-            gini={giniData?.gini || 0}
-            gInitial={Number(gInitialRaw)}
-            victoryThresholdBps={pos.config.victoryThresholdBps}
-            baseBeta={pos.config.baseBeta}
-            phase={pos.phase}
-        />
-      </div>
-    ) : (
-        <div className="h-8 flex items-center justify-center border border-dashed border-border/10 rounded-lg bg-card2/20">
-            <span className="text-[8px] font-black text-text2/30 uppercase tracking-widest">
-                {isAuction ? 'Auction' : 'Settled'}
-            </span>
+            {/* Stats grid dynamically rendering based on concluded vs active */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {isConcluded ? (
+                <>
+                  {/* 1. Claimable / Claimed amount (Gold state prioritized) */}
+                  <div>
+                    <p className="section-label mb-1">{claimLabel}</p>
+                    <span className="font-mono font-bold text-[18px]" style={{ color: canClaim ? 'var(--color-gold)' : 'var(--color-text)', fontVariantNumeric: 'tabular-nums' }}>
+                      ${claimableAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <span className="text-[12px] opacity-40 ml-1 font-sans font-bold">USDC</span>
+                    </span>
+                  </div>
+
+                  {/* 2. Prize Pool (Neutral) */}
+                  <div>
+                    <p className="section-label mb-1">Prize Pool</p>
+                    <span className="font-mono font-bold text-[18px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      ${(giniData?.prizePool ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+
+                  {/* 3. Season PnL */}
+                  <div>
+                    <p className="section-label mb-1">Season PnL</p>
+                    <span className="font-mono font-bold text-[18px]" style={{ color: pnl > 0 ? 'var(--color-green)' : pnl < 0 ? 'var(--color-red)' : 'var(--color-text2)', fontVariantNumeric: 'tabular-nums' }}>
+                      {pnl > 0 ? '+' : pnl < 0 ? '-' : ''}${Math.abs(pnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <span className="text-[12px] opacity-40 ml-1 font-sans font-bold">USDC</span>
+                    </span>
+                  </div>
+
+                  {/* 4. Your result (Circle) */}
+                  {playerStats && (
+                    <div>
+                        <p className="section-label mb-1">Your result</p>
+                        <div className="mt-1">
+                            <PercentileCircle 
+                                percentage={playerStats.factionPercentile} 
+                                isCapitalist={playerStats.isCapitalist} 
+                                size="md"
+                            />
+                        </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* 1. Holdings (Gold prioritized) */}
+                  <div>
+                    <p className="section-label mb-1">Holdings</p>
+                    <span className="font-mono font-bold text-[18px]" style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}>
+                      {Number(formatUnits(pos.balance, 18)).toLocaleString()}
+                    </span>
+                  </div>
+                  
+                  {/* 2. Prize Pool (Neutral) */}
+                  <div>
+                    <p className="section-label mb-1">Prize Pool</p>
+                    <span className="font-mono font-bold text-[18px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      ${(giniData?.prizePool ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+
+                  {/* 3. Your Standing (Circle) */}
+                  {playerStats && (
+                    <div>
+                        <p className="section-label mb-1">Your Standing</p>
+                        <div className="mt-1">
+                            <PercentileCircle 
+                                percentage={playerStats.factionPercentile} 
+                                isCapitalist={playerStats.isCapitalist} 
+                                size="md"
+                            />
+                        </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Progress bar wrapped with same general structure */}
+            {!isAuction && gInitialRaw !== undefined && (
+              <div>
+                <p className="section-label mb-2">Victory Progress</p>
+                <VictoryProgressBar
+                    seasonAddress={pos.season} 
+                    gini={giniData?.gini || 0}
+                    gInitial={Number(gInitialRaw)}
+                    victoryThresholdBps={pos.config.victoryThresholdBps}
+                    baseBeta={pos.config.baseBeta}
+                    phase={pos.phase}
+                />
+              </div>
+            )}
+          </div>
+
+          <svg
+            className="w-5 h-5 shrink-0 self-center transition-transform group-hover:translate-x-1"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            style={{ color: 'var(--color-text2)', opacity: 0.4 }}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
         </div>
-    )}
-  </div>
-
-  {/* 4. HOLDINGS - Compact fixed width */}
-  <div className="flex flex-col items-start md:w-24 shrink-0">
-    <span className="text-[9px] uppercase font-bold text-text2 tracking-widest mb-0.5">Holdings</span>
-    <span className="text-xl font-black text-gold tracking-tighter leading-none truncate w-full">
-      {Number(formatUnits(pos.balance, 18)).toLocaleString()}
-    </span>
-  </div>
-
-  {/* 5. PERCENTILE CIRCLE - Right aligned */}
-  <div className="flex justify-end items-center md:w-16 shrink-0">
-    {isTrading && playerStats ? (
-        <PercentileCircle 
-            percentage={playerStats.factionPercentile} 
-            isCapitalist={playerStats.isCapitalist} 
-            size="md"
-        />
-    ) : null}
-  </div>
-
-  {/* Desktop Chevron */}
-  <div className="hidden lg:block shrink-0">
-    <svg className="w-4 h-4 text-text2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-    </svg>
-  </div>
-</div>
       </div>
     </Link>
   );

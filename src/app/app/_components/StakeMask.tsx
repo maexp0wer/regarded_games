@@ -6,6 +6,7 @@ import { parseUnits, formatUnits } from 'viem';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { WalletButton } from './WalletButton';
+import PercentSlider from '@/components/PercentSlider';
 
 // ABIs
 import ERC20AbiRaw from '@/deployments/abis/MockUSDC.json'; 
@@ -58,9 +59,24 @@ export function Stake() {
     ? (currentWallet >= amountBigInt && amountBigInt > 0n)
     : (withdrawable >= amountBigInt && amountBigInt > 0n);
 
+  const maxForSlider = isStakeMode ? currentWallet : withdrawable;
+
   const handleMax = () => {
-    const maxVal = isStakeMode ? currentWallet : withdrawable;
-    setAmount(formatUnits(maxVal, 18));
+    setAmount(formatUnits(maxForSlider, 18));
+  };
+
+  // --- Slider Logic ---
+  const sliderPct = useMemo(() => {
+    if (!amount || maxForSlider === 0n) return 0;
+    try {
+      const raw = parseUnits(amount, 18);
+      return Math.min(100, Math.max(0, Math.round(Number((raw * 100n) / maxForSlider))));
+    } catch { return 0; }
+  }, [amount, maxForSlider]);
+
+  const handleSliderChange = (pct: number) => {
+    if (maxForSlider === 0n) return;
+    setAmount(formatUnits((maxForSlider * BigInt(pct)) / 100n, 18));
   };
 
   const resetData = () => {
@@ -68,8 +84,6 @@ export function Stake() {
     refetchRequired();
     refetchWallet();
     refetchAllowance();
-    // Optional: Invalidate generic queries if needed
-    // queryClient.invalidateQueries({ queryKey: ["stakingData"] });
   };
 
   // --- 3. THE ORCHESTRATOR ---
@@ -77,7 +91,6 @@ export function Stake() {
     if (!publicClient || !address || !amountBigInt) return;
 
     try {
-      // --- BRANCH A: STAKING (Check Approval first) ---
       if (isStakeMode) {
         const liveAllowance = await publicClient.readContract({
           address: rgdAddr, abi: ERC20Abi, functionName: 'allowance', args: [address, stakingAddr]
@@ -94,7 +107,6 @@ export function Stake() {
         }
       }
 
-      // --- BRANCH B: EXECUTION (Stake or Unstake) ---
       setStatus('executing');
       
       const functionName = isStakeMode ? 'stake' : 'unstake';
@@ -105,7 +117,6 @@ export function Stake() {
       setStatus('mining_execution');
       await publicClient.waitForTransactionReceipt({ hash: actionHash });
 
-      // --- SUCCESS ---
       setStatus('success');
       resetData();
 
@@ -138,7 +149,7 @@ export function Stake() {
       case 'idle': return '0%';
       case 'approving': return '15%';
       case 'mining_approval': return '40%';
-      case 'executing': return isStakeMode ? '60%' : '50%'; // Unstake starts here, so give it 50%
+      case 'executing': return isStakeMode ? '60%' : '50%';
       case 'mining_execution': return '85%';
       case 'success': return '100%';
       default: return '0%';
@@ -155,7 +166,6 @@ export function Stake() {
     if (status === 'no_gas') return "Insufficient Gas";
     if (status === 'failed') return "Transaction Failed";
 
-    // Idle States
     if (!amount || amountBigInt === 0n) return isStakeMode ? "Stake" : "Unstake";
     if (isStakeMode && currentWallet < amountBigInt) return "Insufficient Balance";
     if (!isStakeMode && withdrawable < amountBigInt) return "Amount Locked";
@@ -168,127 +178,157 @@ export function Stake() {
   const isError = status === 'canceled' || status === 'failed' || status === 'no_gas';
   const isButtonDisabled = isBusy || isSuccess || isError || !amount || !canPerformAction;
 
+  // Shared Design Constants
+  const inputBase = 'bg-transparent border-none p-0 w-full font-mono font-bold text-text outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none';
+  const activeStyle = { background: 'var(--color-gold-a15)', color: 'var(--color-gold)', boxShadow: '0 1px 4px #00000033' };
+  const segInactive = { color: 'var(--color-text2)', background: 'transparent' };
+
+  const ctaBtnStyle = isBusy || (status !== 'idle' && !isError && !isSuccess)
+    ? {}
+    : isButtonDisabled && !isSuccess && !isError
+    ? { background: 'var(--color-card2)', color: 'var(--color-text2)', cursor: 'not-allowed' }
+    : isError
+    ? { background: 'var(--color-pink)', color: 'var(--color-bg)', cursor: 'not-allowed' }
+    : isSuccess
+    ? { background: 'var(--color-green)', color: 'var(--color-bg)', cursor: 'not-allowed' }
+    : { background: 'var(--color-gold)', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-gold-a50)' };
+
+
   if (!isConnected) {
     return (
-      <div className="bg-card rounded-xl p-5 border border-border/10 shadow-sm transition-all text-center space-y-6 w-full max-w-lg">
-          <h3 className="text-lg font-black uppercase text-text2 tracking-wider mt-4">Staking</h3>
-          <p className="text-sm text-text2 mb-4">Connect your wallet to stake RGD.</p>
-          <div className="pt-2"><WalletButton /></div>
+      <div 
+        className="card-app flex flex-col items-center justify-center gap-4 w-full max-w-lg py-12"
+        style={{ borderColor: 'var(--color-border-bright)' }}
+      >
+        <p className="font-mono text-sm text-text2">Please connect wallet to stake</p>
+        <WalletButton />
       </div>
     );
   }
 
   return (
-    <div className="bg-card rounded-xl p-5 border border-border/10 shadow-sm transition-all space-y-6 w-full max-w-lg">
-      
-      {/* HEADER: Mode Toggle & Stats */}
-      <div className="space-y-5 border-b border-border/40 pb-5 mb-5">
-        
-        {/* Toggle */}
-        <div className="bg-card2 rounded-lg flex overflow-hidden border border-border/20 h-10">
-          <button 
-            onClick={() => { if(!isBusy) { setMode('stake'); setAmount(""); } }}
-            className={`flex-1 text-[9px] font-black uppercase tracking-widest transition-all 
-              ${isStakeMode ? 'bg-gold text-card' : 'text-text2 hover:text-text hover:bg-white/5'}`}
-            disabled={isBusy}
-          >
-            Stake
-          </button>
-          <button 
-            onClick={() => { if(!isBusy) { setMode('unstake'); setAmount(""); } }}
-            className={`flex-1 text-[9px] font-black uppercase tracking-widest transition-all 
-              ${!isStakeMode ? 'bg-gold text-card' : 'text-text2 hover:text-text hover:bg-white/5'}`}
-            disabled={isBusy}
-          >
-            Unstake
-          </button>
-        </div>
-
-        {/* 4-Column Stats Grid (Replicating Auction Visuals) */}
-        <div className="grid grid-cols-4 gap-2 text-left px-1">
-          <div className="flex flex-col">
-            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Wallet RGD</span>
-            <span className="text-lg font-black text-gold tracking-tighter leading-none">
+    <div 
+      className="card-app flex flex-col gap-4 w-full max-w-lg"
+      style={{ borderColor: 'var(--color-border-bright)' }}
+    >
+      {/* ── Balances Header ── */}
+      <div className="flex flex-col pb-2">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="section-label mb-1">Wallet Balance</p>
+            <div 
+              className="font-display font-extrabold leading-none text-display-swap"
+              style={{
+                color: 'var(--color-gold)',
+                textShadow: '0 0 40px var(--color-gold-a25)',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
               {Number(formatUnits(currentWallet, 18)).toLocaleString()}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Staked</span>
-            <span className="text-lg font-black text-text tracking-tighter leading-none">
-              {Number(formatUnits(currentStaked, 18)).toLocaleString()}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Locked</span>
-            <span className="text-lg font-black text-pink tracking-tighter leading-none">
-              {currentLocked > 0n ? Number(formatUnits(currentLocked, 18)).toFixed(2) : "0.00"}
-            </span>
-          </div>
-          <div className="flex flex-col text-right">
-            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Available</span>
-            <span className="text-lg font-black text-green tracking-tighter leading-none">
-              {Number(formatUnits(withdrawable, 18)).toLocaleString()}
-            </span>
+              <span className="font-mono font-medium text-text2 ml-2 text-currency-label">RGD</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="space-y-4 pt-2">
-        
-        {/* INPUT BOX */}
-        <div className="bg-card2 rounded-xl p-4 border border-border/10">
-          <div className="flex justify-between items-end mb-2 px-1">
-            <label className="text-[9px] uppercase font-bold text-text2 tracking-widest">
-              {isStakeMode ? "Stake Amount" : "Unstake Amount"}
-            </label>
-            <span className="text-[9px] font-mono text-text2 uppercase tracking-tighter opacity-70">
-              {isStakeMode 
-                ? `Max: ${Number(formatUnits(currentWallet, 18)).toLocaleString()}`
-                : `Max: ${Number(formatUnits(withdrawable, 18)).toLocaleString()}`
-              }
+      {/* ── Mode seg control ── */}
+      <div className="seg" style={{ width: '100%' }}>
+        <button
+          disabled={isBusy}
+          onClick={() => { setMode('stake'); setAmount(""); }}
+          className="seg-btn"
+          style={{ ...(isStakeMode ? activeStyle : segInactive), flex: 1, textAlign: 'center' }}
+        >
+          Stake
+        </button>
+        <button
+          disabled={isBusy}
+          onClick={() => { setMode('unstake'); setAmount(""); }}
+          className="seg-btn"
+          style={{ ...(!isStakeMode ? activeStyle : segInactive), flex: 1, textAlign: 'center' }}
+        >
+          Unstake
+        </button>
+      </div>
+
+      {/* ── Amount input ── */}
+      <div
+        className="rounded-xl flex overflow-hidden"
+        style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
+      >
+        {/* Input area */}
+        <div className="flex flex-col flex-1 p-4 gap-2">
+          <div className="flex items-center justify-between">
+            <span className="section-label">{isStakeMode ? 'Stake Amount' : 'Unstake Amount'}</span>
+            <span className="font-mono text-[11px] text-text2 ml-2">
+              MAX · <span className="text-text font-semibold">
+                {isStakeMode 
+                  ? Number(formatUnits(currentWallet, 18)).toLocaleString()
+                  : Number(formatUnits(withdrawable, 18)).toLocaleString()
+                }
+              </span>
             </span>
           </div>
-          <div className="flex items-center">
-            <input 
-              type="number" placeholder="0.00"
-              className="bg-transparent border-none p-0 w-full text-3xl font-mono font-black text-text outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              value={amount} 
-              onChange={(e) => setAmount(e.target.value)}
-              disabled={isBusy || isSuccess || isError}
-            />
-            <button 
-                onClick={handleMax} 
-                className="text-[9px] font-black bg-gold/10 text-gold px-3 py-1.5 rounded-lg hover:bg-gold/20 transition-all ml-4"
-                disabled={isBusy || isSuccess || isError}
-            >MAX</button>
-          </div>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className={`${inputBase} text-input`}
+            placeholder="0.00"
+            disabled={isBusy || isSuccess || isError}
+          />
+          <PercentSlider 
+            value={sliderPct} 
+            onChange={handleSliderChange} 
+            disabled={isBusy || isSuccess || isError} 
+          />
         </div>
+        {/* Vertical Max button — right side */}
+        
+      </div>
 
-        {/* SMART BUTTON WITH PROGRESS BAR */}
-        <div className="relative w-full rounded-xl overflow-hidden shadow-lg transition-all active:scale-[0.99]">
-            {status !== 'idle' && !isError && (
-                <div 
-                    className={`absolute top-0 left-0 h-full transition-all duration-500 ease-out ${isSuccess ? 'bg-green' : 'bg-gold/30'}`}
-                    style={{ width: getProgressWidth() }}
-                />
-            )}
-            
-            <button 
-                className={`relative w-full py-4 font-black text-[10px] uppercase tracking-widest z-10 flex items-center justify-center gap-2 transition-all duration-200
-                    ${isButtonDisabled && !isBusy && !isSuccess && !isError ? 'bg-bg text-text2 cursor-not-allowed shadow-none' : ''}
-                    ${isBusy ? 'cursor-not-allowed text-text' : ''}
-                    ${isSuccess ? 'cursor-not-allowed text-card shadow-lg' : ''}
-                    ${isError ? 'bg-pink text-card cursor-not-allowed shadow-lg' : ''}
-                    ${status === 'idle' && !isButtonDisabled ? 'bg-gold text-card hover:brightness-110 shadow-lg' : ''}
-                    ${status !== 'idle' && !isSuccess && !isError ? 'text-text' : ''}
-                `}
-                disabled={isButtonDisabled} 
-                onClick={handleStartFlow}
-            >
-                {isBusy && <div className="w-3 h-3 border-2 border-text border-t-transparent rounded-full animate-spin" />}
-                {getButtonText()}
-            </button>
+      {/* ── Sub-stats ── */}
+      <div className="grid grid-cols-3 gap-2 pt-2 mt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
+        <div className="text-left">
+          <p className="section-label mb-1">Staked</p>
+          <span className="font-mono font-bold text-summary-value text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {Number(formatUnits(currentStaked, 18)).toLocaleString()}
+          </span>
         </div>
+        <div className="text-left">
+          <p className="section-label mb-1">Locked</p>
+          <span className="font-mono font-bold text-summary-value text-red" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {currentLocked > 0n ? Number(formatUnits(currentLocked, 18)).toFixed(2) : "0.00"}
+          </span>
+        </div>
+        <div className="text-left">
+          <p className="section-label mb-1">Available</p>
+          <span className="font-mono font-bold text-summary-value text-green" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {Number(formatUnits(withdrawable, 18)).toLocaleString()}
+          </span>
+        </div>
+      </div>
+
+      {/* ── CTA Button ── */}
+      <div className="mt-2 relative rounded-xl overflow-hidden">
+        {status !== 'idle' && !isError && (
+          <div
+            className="absolute inset-y-0 left-0 transition-all duration-500"
+            style={{
+              width: getProgressWidth(),
+              background: status === 'success' ? 'var(--color-green)' : 'rgba(245,184,0,0.3)',
+            }}
+          />
+        )}
+        <button
+          disabled={isButtonDisabled}
+          onClick={handleStartFlow}
+          className="relative z-10 w-full py-4 font-display font-bold text-[15px] uppercase tracking-wide flex items-center justify-center gap-2 transition-all rounded-xl"
+          style={ctaBtnStyle}
+        >
+          {isBusy && <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />}
+          {getButtonText()}
+        </button>
       </div>
     </div>
   );

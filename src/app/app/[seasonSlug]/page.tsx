@@ -289,6 +289,7 @@ export default function SeasonDetailPage() {
           ═══════════════════════════════════════════ */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <SeasonHeader
+          seasonAddress={seasonAddress}
           seasonName={formattedName}
           playerCount={giniData?.playerCount || 0}
           currentPhase={currentPhase}

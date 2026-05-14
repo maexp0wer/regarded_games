@@ -64,7 +64,7 @@ export function TradingMask({
     if (!selectedOrders.length) return groups;
     let current: GroupedOrder | null = null;
     selectedOrders.forEach((order) => {
-      const unitPrice = (order.amount > 0 ? order.price / order.amount : 0).toFixed(4);
+      const unitPrice = order.pricePerFim.toFixed(4);
       if (current && current.maker === order.maker && current.unitPrice === unitPrice) {
         current.amount += order.amount; current.price += order.price;
         current.ids.push(order.id); current.orders.push(order);
@@ -94,7 +94,7 @@ export function TradingMask({
       if (remaining <= 0n) break;
       const take = remaining > order.rawAmount ? order.rawAmount : remaining;
       ids.push(BigInt(order.orderId.toString())); amounts.push(take);
-      totalCostUsdcRaw += (take * order.rawPrice) / order.rawAmount;
+      totalCostUsdcRaw += (take * order.rawPrice) / order.rawInitialAmount;
       totalFimFilledRaw += take; remaining -= take;
     }
     return { ids, amounts, totalCostRaw: totalCostUsdcRaw, totalFimRaw: totalFimFilledRaw };
@@ -210,11 +210,11 @@ export function TradingMask({
       style={{ borderColor: 'var(--color-border-bright)' }}
     >
       {/* ── Wallet balances row ── */}
-      <div className="flex items-start justify-between pb-4">
+      <div className="flex items-start justify-between">
         <div>
           <p className="section-label mb-1">FIM Balance</p>
           <div
-            className="font-display font-extrabold leading-none text-display-trading"
+            className="font-display font-extrabold leading-none text-display-trading mr-4"
             style={{
               color: 'var(--color-gold)',
               textShadow: '0 0 40px var(--color-gold-a25)',
@@ -226,15 +226,16 @@ export function TradingMask({
           </div>
         </div>
         {userStats ? (
-          <div className="flex flex-col items-end shrink-0">
-            <p className="section-label mb-1">
-              CURRENT RANK:{' '}
+          <div className="flex flex-col items-start min-w-0">
+            <span className="section-label mb-1">
+              RANK:
               <span style={{ color: userStats.isCapitalist ? 'var(--color-blue)' : 'var(--color-pink)' }}>
                 {userStats.isCapitalist ? 'CAPITALIST' : 'SOCIALIST'}
               </span>
-            </p>
-            <div className="md:hidden"><PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="md" /></div>
-            <div className="hidden md:block"><PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="lg" /></div>
+            </span>
+            
+            <div className="xl:hidden"><PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="md" /></div>
+            <div className="hidden xl:block"><PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="lg" /></div>
           </div>
         ) : (
           <span className="section-label">{userStatsFetched ? 'No Rank Yet' : 'Loading…'}</span>
@@ -269,16 +270,16 @@ export function TradingMask({
         {/* Input area */}
         <div className="flex flex-col flex-1 p-4 gap-2">
           <div className="flex items-center justify-between">
-            <span className="section-label">{isBuy ? 'Buy FIM with USDC' : 'Sell FIM for USDC'}</span>
-            <span className="font-mono text-[11px] text-text2 ml-2">
-              WALLET · <span className="text-text font-semibold">{walletBalanceDisplay}</span>
+            <span className="mask-label">{isBuy ? 'Buy FIM with USDC' : 'Sell FIM for USDC'}</span>
+            <span className="ml-2 mask-label">
+              WALLET<span className="text-text font-semibold">{walletBalanceDisplay}</span>
             </span>
           </div>
           <input
             type="number"
             value={targetAmount}
             onChange={(e) => setTargetAmount(e.target.value)}
-            className={`${inputBase} text-input-md`}
+            className={`${inputBase} text-input`}
             placeholder={isMaker ? '0.00' : 'MAX'}
           />
           <PercentSlider value={sliderPct} onChange={handleSliderChange} disabled={isBusy} />
@@ -314,7 +315,7 @@ export function TradingMask({
         >
           {/* Input area */}
           <div className="flex flex-col flex-1 p-4 gap-1">
-            <span className="section-label">{isPricePerFim ? 'Price per FIM (USDC)' : 'Total Order (USDC)'}</span>
+            <span className="mask-label">{isPricePerFim ? 'Price per FIM (USDC)' : 'Total Order (USDC)'}</span>
             <input
               type="number"
               value={price}
@@ -414,8 +415,7 @@ export function TradingMask({
 
         {isSelfFill && (
           <div
-            className="rounded-xl px-4 py-2.5 flex items-center gap-2"
-            className="surface-pink-warn"
+            className="rounded-xl px-4 py-2.5 flex items-center gap-2 surface-pink-warn"
           >
             <span className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-pink)' }}>
               Cannot fill own order

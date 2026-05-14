@@ -13,9 +13,11 @@ export interface Order {
   isBuy: boolean;
   price: number;
   amount: number;
+  pricePerFim: number;
   rawPrice: bigint;
   rawAmount: bigint;
-  makerBalance: number; // <--- NEW FIELD
+  rawInitialAmount: bigint;
+  makerBalance: number;
 }
 
 export function useOrderBook(seasonAddress: string | undefined) {
@@ -35,7 +37,7 @@ export function useOrderBook(seasonAddress: string | undefined) {
             limit: $limit,
             after: $after
           ) {
-            items { id, maker, isBuy, price, remainingAmount, active, orderId, seasonAddress }
+            items { id, maker, isBuy, price, initialAmount, remainingAmount, active, orderId, seasonAddress }
             pageInfo { endCursor, hasNextPage }
           }
         }
@@ -56,7 +58,7 @@ export function useOrderBook(seasonAddress: string | undefined) {
 
       try {
         const [orders, players] = await Promise.all([
-          fetchAllPonderItems<{ id: string; maker: string; isBuy: boolean; price: string; remainingAmount: string; active: boolean; orderId: string; seasonAddress: string }>(
+          fetchAllPonderItems<{ id: string; maker: string; isBuy: boolean; price: string; initialAmount: string; remainingAmount: string; active: boolean; orderId: string; seasonAddress: string }>(
             PONDER_URL, ordersQuery, { season: addr }, (d) => d.orderss
           ),
           fetchAllPonderItems<{ playerAddress: string; fimBalance: string }>(
@@ -71,19 +73,28 @@ export function useOrderBook(seasonAddress: string | undefined) {
             balanceMap.set(p.playerAddress.toLowerCase(), bal);
         });
 
-        const format = (o: typeof orders[number]): Order => ({
-          id: o.id,
-          orderId: BigInt(o.orderId),
-          seasonAddress: o.seasonAddress,
-          maker: o.maker,
-          isBuy: o.isBuy,
-          price: Number(BigInt(o.price)) / 1_000_000, 
-          amount: Number(BigInt(o.remainingAmount)) / 1e18,
-          rawPrice: BigInt(o.price),
-          rawAmount: BigInt(o.remainingAmount),
-          // Lookup balance, default to 0
-          makerBalance: balanceMap.get(o.maker.toLowerCase()) || 0 
-        });
+        const format = (o: typeof orders[number]): Order => {
+          const rawPrice = BigInt(o.price);
+          const rawInitialAmount = BigInt(o.initialAmount);
+          const rawAmount = BigInt(o.remainingAmount);
+          const pricePerFim = rawInitialAmount > 0n
+            ? (Number(rawPrice) / 1_000_000) / (Number(rawInitialAmount) / 1e18)
+            : 0;
+          return {
+            id: o.id,
+            orderId: BigInt(o.orderId),
+            seasonAddress: o.seasonAddress,
+            maker: o.maker,
+            isBuy: o.isBuy,
+            price: Number(rawPrice) / 1_000_000,
+            amount: Number(rawAmount) / 1e18,
+            pricePerFim,
+            rawPrice,
+            rawAmount,
+            rawInitialAmount,
+            makerBalance: balanceMap.get(o.maker.toLowerCase()) || 0,
+          };
+        };
 
         const bids = orders.filter((o) => o.isBuy).map(format).sort((a, b) => b.price - a.price);
         const asks = orders.filter((o) => !o.isBuy).map(format).sort((a, b) => a.price - b.price);

@@ -289,8 +289,8 @@ html, body {
 /* Section label — mono micro-caps, muted */
 .section-label {
   font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
+  @apply text-[10px] lg:text-[11px];
+  font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-text2);
@@ -306,6 +306,18 @@ html, body {
   background: var(--color-gold);
 }
 
+.mask-label {
+  font-family: var(--font-mono);
+  @apply text-[8px] lg:text-[9px];
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* Backwards-compat aliases */
 .h2-app { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text2); }
 .h3-app { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text2); }
@@ -316,14 +328,12 @@ html, body {
 .text-display-season  { @apply text-5xl lg:text-6xl xl:text-7xl; }
 .text-display-prize   { @apply text-4xl xl:text-7xl lg:text-5xl}
 .text-display-counter { @apply text-xl md:text-2xl xl:text-4xl; }
-.text-display-trading { @apply text-2xl md:text-4xl xl:text-5xl; }
-.text-display-auction { @apply text-4xl lg:text-5xl; }
+.text-display-trading { @apply text-3xl md:text-4xl xl:text-5xl; }
+.text-display-swap    { @apply text-2xl xl:text-4xl; }
+.text-summary-value   { @apply text-base md:text-lg xl:text-2xl; }
+.text-input           { @apply text-2xl md:text-3xl xl:text-4xl; }
 
-/* ── COMPONENT FONT SIZES — centralized from inline styles ───────── */
-.text-currency-label { font-size: 14px; }
-.text-input-lg       { font-size: 32px; }
-.text-input-md       { font-size: 28px; }
-.text-summary-value  { font-size: 22px; }
+.text-currency-label { @apply text-sm md:text-lg xl:text-xl; }
 .text-summary-sub    { font-size: 18px; }
 .text-toggle-label   { font-size: 10px; }
 .text-faction-header { font-size: 14px; }

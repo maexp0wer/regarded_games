@@ -36,7 +36,7 @@ export function OrderBook({
     const aggregateByMaker = (orders: Order[]): AggregatedOrder[] => {
       const map = new Map<string, AggregatedOrder>();
       orders.forEach((o) => {
-        const unitPrice = (o.amount > 0 ? o.price / o.amount : 0).toFixed(4);
+        const unitPrice = o.pricePerFim.toFixed(4);
         const key = `${o.maker}-${unitPrice}`;
         if (map.has(key)) {
           const ex = map.get(key)!;
@@ -51,7 +51,7 @@ export function OrderBook({
     const aggregatedBids = aggregateByMaker(bidsRaw);
     const aggregatedAsks = aggregateByMaker(asksRaw);
     const levels: Record<string, { asks: AggregatedOrder[]; bids: AggregatedOrder[] }> = {};
-    const getPriceKey = (o: Order) => (o.amount > 0 ? o.price / o.amount : 0).toFixed(4);
+    const getPriceKey = (o: Order) => o.pricePerFim.toFixed(4);
 
     aggregatedAsks.forEach((o) => {
       const k = getPriceKey(o);
@@ -162,7 +162,7 @@ export function OrderBook({
                         {row.ask.amount.toLocaleString()}
                       </span>
                       <span className="font-mono text-[10px] text-text2 text-right pr-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        ${row.ask.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        ${(row.ask.pricePerFim * row.ask.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </span>
                       <span className="font-mono font-semibold text-[11px] text-right pr-3" style={{ color: 'var(--color-green)', fontVariantNumeric: 'tabular-nums' }}>
                         ${parseFloat(row.price).toFixed(4)}
@@ -188,7 +188,7 @@ export function OrderBook({
                         ${parseFloat(row.price).toFixed(4)}
                       </span>
                       <span className="font-mono text-[10px] text-text2 pl-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        ${row.bid.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        ${(row.bid.pricePerFim * row.bid.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </span>
                       <span className="font-mono text-[11px] text-text pl-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
                         {row.bid.amount.toLocaleString()}

@@ -70,7 +70,7 @@ export function TradingActivityFeed({ seasonAddress }: { seasonAddress: string }
               <div
                 key={trade.id}
                 className="flex items-center justify-between px-5 py-2.5 gap-3 transition-colors hover:bg-card2/50"
-                style={{ borderBottom: '1px solid var(--color-dark-a50)' }}
+                style={{ borderTop: '1px solid var(--color-dark-a50)' }}
               >
                 {/* Left: time + participants */}
                 <div className="flex items-center gap-4 min-w-0">

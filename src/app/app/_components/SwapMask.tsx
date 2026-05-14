@@ -5,6 +5,7 @@ import { useAccount, useReadContract, useWriteContract, usePublicClient } from '
 import { parseUnits, formatUnits, erc20Abi } from 'viem';
 
 import { WalletButton } from './WalletButton';
+import PercentSlider from '@/components/PercentSlider';
 
 // ABIs & Addresses
 import MockRouterAbiRaw from '@/deployments/abis/MockUniswapRouter.json';
@@ -65,6 +66,20 @@ export function SwapMask() {
 
   const handleMax = () => {
     setAmount(formatUnits(walletBalanceIn, decimalsIn));
+  };
+
+  // --- Slider Logic ---
+  const sliderPct = useMemo(() => {
+    if (!amount || walletBalanceIn === 0n) return 0;
+    try {
+      const raw = parseUnits(amount, decimalsIn);
+      return Math.min(100, Math.max(0, Math.round(Number((raw * 100n) / walletBalanceIn))));
+    } catch { return 0; }
+  }, [amount, walletBalanceIn, decimalsIn]);
+
+  const handleSliderChange = (pct: number) => {
+    if (walletBalanceIn === 0n) return;
+    setAmount(formatUnits((walletBalanceIn * BigInt(pct)) / 100n, decimalsIn));
   };
 
   const resetData = () => {
@@ -174,124 +189,184 @@ export function SwapMask() {
   const isError = status === 'canceled' || status === 'failed' || status === 'no_gas';
   const isButtonDisabled = isBusy || isSuccess || isError || !amount || walletBalanceIn < amountBigInt || amountBigInt === 0n;
 
+  // Shared Design Constants
+  const inputBase = 'bg-transparent border-none p-0 w-full font-mono font-bold text-text outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none';
+  
+  const buyActive  = { background: 'var(--color-green-a15)', color: 'var(--color-green)', boxShadow: '0 1px 4px #00000033' };
+  const sellActive = { background: 'var(--color-pink-a15)',  color: 'var(--color-pink)',  boxShadow: '0 1px 4px #00000033' };
+  const segInactive = { color: 'var(--color-text2)', background: 'transparent' };
+
+  const ctaBtnStyle = isBusy || (status !== 'idle' && !isError && !isSuccess)
+    ? {}
+    : isButtonDisabled && !isSuccess && !isError
+    ? { background: 'var(--color-card2)', color: 'var(--color-text2)', cursor: 'not-allowed' }
+    : isError
+    ? { background: 'var(--color-pink)', color: 'var(--color-bg)', cursor: 'not-allowed' }
+    : isSuccess
+    ? { background: 'var(--color-green)', color: 'var(--color-bg)', cursor: 'not-allowed' }
+    : isBuying
+    ? { background: 'linear-gradient(135deg, #6bcb6e, #4daa50)', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-green-a50)' }
+    : { background: 'linear-gradient(135deg, #ff7ab0, #ff3d8a)', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-pink-a50)' };
+
+
   if (!isConnected) {
     return (
-      <div className="bg-card rounded-xl p-5 border border-border/10 shadow-sm transition-all text-center space-y-6 w-full max-w-sm mx-auto">
-          <h3 className="text-lg font-black uppercase text-text2 tracking-wider mt-4">Swap Interface</h3>
-          <p className="text-sm text-text2 mb-4">Connect wallet to trade tokens.</p>
-          <div className="pt-2"><WalletButton /></div>
+      <div 
+        className="card-app flex flex-col items-center justify-center gap-4 w-full max-w-lg py-12"
+        style={{ borderColor: 'var(--color-border-bright)' }}
+      >
+        <p className="font-mono text-sm text-text2">Please connect wallet to trade tokens</p>
+        <WalletButton />
       </div>
     );
   }
 
   return (
-    <div className="bg-card rounded-xl p-5 border border-border/10 shadow-sm transition-all space-y-6 w-full max-w-sm mx-auto">
-      
-      {/* HEADER: Mode Toggle & Stats */}
-      <div className="space-y-5 border-b border-border/40 pb-5 mb-5">
-        
-        {/* Toggle */}
-        <div className="bg-card2 rounded-lg flex overflow-hidden border border-border/20 h-10">
-          <button 
-            onClick={() => { if(!isBusy) { setIsBuying(true); setAmount(""); } }}
-            className={`flex-1 text-[9px] font-black uppercase tracking-widest transition-all 
-              ${isBuying ? 'bg-gold text-card' : 'text-text2 hover:text-text hover:bg-white/5'}`}
-            disabled={isBusy}
-          >
-            Buy RGD
-          </button>
-          <button
-            onClick={() => { if(!isBusy) { setIsBuying(false); setAmount(""); } }}
-            className={`flex-1 text-[9px] font-black uppercase tracking-widest transition-all
-              ${!isBuying ? 'bg-gold text-card' : 'text-text2 hover:text-text hover:bg-white/5'}`}
-            disabled={isBusy}
-          >
-            Sell RGD
-          </button>
-        </div>
-
-        {/* 3-Column Stats Grid */}
-        <div className="grid grid-cols-3 gap-2 text-left px-1">
-          <div className="flex flex-col">
-            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">USDC Bal</span>
-            <span className="text-lg font-black text-text tracking-tighter leading-none">
-              {Number(formatUnits(currentUsdc, 6)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-            </span>
+    <div 
+      className="card-app flex flex-col gap-4 w-full max-w-lg"
+      style={{ borderColor: 'var(--color-border-bright)' }}
+    >
+      {/* ── Balances Header ── */}
+      <div className="flex flex-col pb-2">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="section-label mb-1">USDC Balance</p>
+            <div 
+              className="font-display font-extrabold leading-none text-display-swap"
+              style={{
+                color: 'var(--color-gold)',
+                textShadow: '0 0 40px var(--color-gold-a25)',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {Number(formatUnits(currentUsdc, 6)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              <span className="font-mono font-medium text-text2 ml-2 text-currency-label">USDC</span>
+            </div>
           </div>
-          <div className="flex flex-col text-center">
-             <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Rate</span>
-             <span className="text-lg font-black text-gold tracking-tighter leading-none">1:1</span>
-          </div>
-          <div className="flex flex-col text-right">
-            <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">RGD Bal</span>
-            <span className="text-lg font-black text-text tracking-tighter leading-none">
-              {Number(formatUnits(currentRgd, 18)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-            </span>
+          <div className="text-right">
+            <p className="section-label mb-1">RGD Balance</p>
+            <div 
+              className="font-display font-extrabold leading-none text-display-swap"
+              style={{
+                color: 'var(--color-gold)',
+                textShadow: '0 0 40px var(--color-gold-a25)',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {Number(formatUnits(currentRgd, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              <span className="font-mono font-medium text-text2 ml-2 text-currency-label">RGD</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="space-y-4 pt-2">
-        
-        {/* INPUT BOX */}
-        <div className="bg-card2 rounded-xl p-4 border border-border/10">
-          <div className="flex justify-between items-end mb-2 px-1">
-            <label className="text-[9px] uppercase font-bold text-text2 tracking-widest">
-              Pay {symbolIn}
-            </label>
-            <span className="text-[9px] font-mono text-text2 uppercase tracking-tighter opacity-70">
-              Max: {Number(formatUnits(walletBalanceIn, decimalsIn)).toLocaleString()}
+      {/* ── Mode seg control ── */}
+      <div className="seg" style={{ width: '100%' }}>
+        <button
+          disabled={isBusy}
+          onClick={() => { setIsBuying(true); setAmount(""); }}
+          className="seg-btn"
+          style={{ ...(isBuying ? buyActive : segInactive), flex: 1, textAlign: 'center' }}
+        >
+          Buy RGD
+        </button>
+        <button
+          disabled={isBusy}
+          onClick={() => { setIsBuying(false); setAmount(""); }}
+          className="seg-btn"
+          style={{ ...(!isBuying ? sellActive : segInactive), flex: 1, textAlign: 'center' }}
+        >
+          Sell RGD
+        </button>
+      </div>
+
+      {/* ── Amount input ── */}
+      <div
+        className="rounded-xl flex overflow-hidden"
+        style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
+      >
+        {/* Input area */}
+        <div className="flex flex-col flex-1 p-4 gap-2">
+          <div className="flex items-center justify-between">
+            <span className="section-label">Pay {symbolIn}</span>
+            <span className="font-mono text-[11px] text-text2 ml-2">
+              MAX · <span className="text-text font-semibold">
+                {Number(formatUnits(walletBalanceIn, decimalsIn)).toLocaleString()}
+              </span>
             </span>
           </div>
-          <div className="flex items-center">
-            <input 
-              type="number" placeholder="0.00"
-              className="bg-transparent border-none p-0 w-full text-3xl font-mono font-black text-text outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              value={amount} 
-              onChange={(e) => setAmount(e.target.value)}
-              disabled={isBusy || isSuccess || isError}
-            />
-            <button 
-                onClick={handleMax} 
-                className="text-[9px] font-black bg-gold/10 text-gold px-3 py-1.5 rounded-lg hover:bg-gold/20 transition-all ml-4"
-                disabled={isBusy || isSuccess || isError}
-            >MAX</button>
-          </div>
-          
-          {/* Estimated Output Subtext */}
-          <div className="flex justify-between items-center mt-3 pt-3 border-t border-border/5">
-             <span className="text-[9px] uppercase font-bold text-text2 tracking-widest">Receive {symbolOut}</span>
-             <span className="text-sm font-black text-green tracking-tight">
-                 {amount ? Number(formatUnits(estimatedOutputBigInt, decimalsOut)).toLocaleString() : "0.00"}
-             </span>
-          </div>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className={`${inputBase} text-input`}
+            placeholder="0.00"
+            disabled={isBusy || isSuccess || isError}
+          />
+          <PercentSlider 
+            value={sliderPct} 
+            onChange={handleSliderChange} 
+            disabled={isBusy || isSuccess || isError} 
+          />
         </div>
+        {/* Vertical Max button — right side */}
+        <div className="flex flex-col shrink-0" style={{ width: 64, borderLeft: '1px solid var(--color-border)' }}>
+          <button
+            onClick={handleMax}
+            disabled={isBusy || isSuccess || isError}
+            className="flex-1 font-mono font-semibold uppercase flex items-center justify-center transition-all text-toggle-label hover:brightness-110"
+            style={{
+              letterSpacing: '0.07em',
+              background: 'transparent',
+              color: 'var(--color-gold)',
+            }}
+          >
+            MAX
+          </button>
+        </div>
+      </div>
 
-        {/* SMART BUTTON WITH PROGRESS BAR */}
-        <div className="relative w-full rounded-xl overflow-hidden shadow-lg transition-all active:scale-[0.99]">
-            {status !== 'idle' && !isError && (
-                <div 
-                    className={`absolute top-0 left-0 h-full transition-all duration-500 ease-out ${isSuccess ? 'bg-green' : 'bg-gold/30'}`}
-                    style={{ width: getProgressWidth() }}
-                />
-            )}
-            
-            <button 
-                className={`relative w-full py-4 font-black text-[10px] uppercase tracking-widest z-10 flex items-center justify-center gap-2 transition-all duration-200
-                    ${isButtonDisabled && !isBusy && !isSuccess && !isError ? 'bg-bg text-text2 cursor-not-allowed shadow-none' : ''}
-                    ${isBusy ? 'cursor-not-allowed text-text' : ''}
-                    ${isSuccess ? 'cursor-not-allowed text-card shadow-lg' : ''}
-                    ${isError ? 'bg-pink text-card cursor-not-allowed shadow-lg' : ''}
-                    ${status === 'idle' && !isButtonDisabled ? 'bg-gold text-card hover:brightness-110 shadow-lg' : ''}
-                    ${status !== 'idle' && !isSuccess && !isError ? 'text-text' : ''}
-                `}
-                disabled={isButtonDisabled} 
-                onClick={handleStartFlow}
-            >
-                {isBusy && <div className="w-3 h-3 border-2 border-text border-t-transparent rounded-full animate-spin" />}
-                {getButtonText()}
-            </button>
+      {/* ── Sub-stats ── */}
+      <div className="grid grid-cols-2 gap-2 pt-2 mt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
+        <div className="text-left">
+          <p className="section-label mb-1">Exchange Rate</p>
+          <span className="font-mono font-bold text-summary-value text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            1 USDC = 1 RGD
+          </span>
         </div>
+        <div className="text-left">
+          <p className="section-label mb-1">You Receive</p>
+          <span 
+            className="font-mono font-bold text-summary-value" 
+            style={{ color: isBuying ? 'var(--color-green)' : 'var(--color-pink)', fontVariantNumeric: 'tabular-nums' }}
+          >
+            {amount ? Number(formatUnits(estimatedOutputBigInt, decimalsOut)).toLocaleString() : "0.00"} {symbolOut}
+          </span>
+        </div>
+      </div>
+
+      {/* ── CTA Button ── */}
+      <div className="mt-2 relative rounded-xl overflow-hidden">
+        {status !== 'idle' && !isError && (
+          <div
+            className="absolute inset-y-0 left-0 transition-all duration-500"
+            style={{
+              width: getProgressWidth(),
+              background: status === 'success' 
+                ? 'var(--color-green)' 
+                : (isBuying ? 'rgba(107, 203, 110, 0.3)' : 'rgba(255, 122, 176, 0.3)'),
+            }}
+          />
+        )}
+        <button
+          disabled={isButtonDisabled}
+          onClick={handleStartFlow}
+          className="relative z-10 w-full py-4 font-display font-bold text-[15px] uppercase tracking-wide flex items-center justify-center gap-2 transition-all rounded-xl"
+          style={ctaBtnStyle}
+        >
+          {isBusy && <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />}
+          {getButtonText()}
+        </button>
       </div>
     </div>
   );
