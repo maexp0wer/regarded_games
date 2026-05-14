@@ -253,7 +253,7 @@ export default function SeasonDetailPage() {
   // 7. Loading / error states
   if (isMetaLoading || isGiniLoading || isConfigLoading || isPhaseLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-primary animate-pulse font-mono text-sm uppercase tracking-widest">
+      <div className="min-h-screen flex items-center justify-center text-gold animate-pulse font-mono text-sm uppercase tracking-widest">
         Reading Ledger…
       </div>
     );

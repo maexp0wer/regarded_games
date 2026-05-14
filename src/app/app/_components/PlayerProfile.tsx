@@ -81,7 +81,6 @@ export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
     padding: '6px 10px',
     color: 'var(--color-text)',
     fontFamily: 'var(--font-mono)',
-    fontSize: 13,
     outline: 'none',
     width: '100%',
     transition: 'border-color 0.15s',
@@ -102,12 +101,11 @@ export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
       >
         {/* Avatar */}
         <div
-          className="shrink-0 overflow-hidden"
+          className="shrink-0 overflow-hidden avatar-gold-glow"
           style={{
             width: 72, height: 72, borderRadius: '50%',
             background: 'var(--color-card2)',
             border: '2px solid var(--color-gold)',
-            boxShadow: '0 0 16px rgba(245,184,0,0.2)',
           }}
         >
           <img
@@ -123,6 +121,7 @@ export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
           {isEditing ? (
             <div className="flex flex-col gap-2">
               <input
+                className="text-input-sm"
                 style={inputStyle}
                 value={profile.name}
                 onChange={(e) => setProfile({ ...profile, name: e.target.value })}
@@ -131,7 +130,8 @@ export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
                 onBlur={(e) => { e.target.style.borderColor = 'var(--color-border)'; }}
               />
               <input
-                style={{ ...inputStyle, fontSize: 11 }}
+                className="text-input-xs"
+                style={inputStyle}
                 value={profile.imageUrl}
                 onChange={(e) => setProfile({ ...profile, imageUrl: e.target.value })}
                 placeholder="Custom Image URL (optional)"

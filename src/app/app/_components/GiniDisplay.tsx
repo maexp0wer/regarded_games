@@ -98,7 +98,7 @@ export function GiniDisplay({
       className="card-app relative flex flex-col h-full"
       style={{
         minHeight: 300,
-        background: 'linear-gradient(90deg, rgba(255,61,138,0.05) 20%, rgba(77,159,255,0.05) 80%)',
+        background: 'linear-gradient(90deg, var(--color-pink-a05) 20%, var(--color-blue-a05) 80%)',
         borderColor: 'var(--color-border-bright)',
       }}
     >
@@ -119,7 +119,7 @@ export function GiniDisplay({
             right: 0,
             height: 6,
             background:
-              'linear-gradient(90deg, rgba(255,61,138,0.5) 0%, var(--color-border-bright) 40%, var(--color-border-bright) 60%, rgba(77,159,255,0.5) 100%)',
+              'linear-gradient(90deg, var(--color-pink-a50) 0%, var(--color-border-bright) 40%, var(--color-border-bright) 60%, var(--color-blue-a50) 100%)',
           }}
         >
           {/* Scale ticks + labels */}
@@ -140,11 +140,10 @@ export function GiniDisplay({
                 />
                 {major && (
                   <span
-                    className="absolute font-mono text-text2/50"
+                    className="absolute font-mono text-text2/50 text-tick-label"
                     style={{
                       left: `${pct}%`,
                       top: 18,
-                      fontSize: 10,
                       transform: 'translateX(-50%)',
                       whiteSpace: 'nowrap',
                     }}
@@ -158,7 +157,7 @@ export function GiniDisplay({
 
           {/* ── Proletariat (pink) marker ── */}
           <div className="gini-marker" style={{ left: toScalePct(socTargetBps) }}>
-            <div style={{ position: 'absolute', width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,61,138,0.1) 0%, transparent 70%)', top: 12, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, var(--color-pink-a10) 0%, transparent 70%)', top: 12, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
             <div
               className="absolute flex flex-col items-center gap-1"
               style={{
@@ -174,7 +173,7 @@ export function GiniDisplay({
                   height: 52,
                   borderRadius: '50%',
                   background: 'var(--color-card2)',
-                  border: '2px solid rgba(255,61,138,0.4)',
+                  border: '2px solid var(--color-pink-a40)',
                   display: 'grid',
                   placeItems: 'center',
                   color: 'var(--color-pink)',
@@ -221,8 +220,8 @@ export function GiniDisplay({
                 }}
               >
                 <span
-                  className="font-mono uppercase"
-                  style={{ fontSize: 8, letterSpacing: '0.15em', color: 'var(--color-text2)', opacity: 0.6 }}
+                  className="font-mono uppercase text-marker-micro"
+                  style={{ letterSpacing: '0.15em', color: 'var(--color-text2)', opacity: 0.6 }}
                 >
                   Initial
                 </span>
@@ -253,7 +252,7 @@ export function GiniDisplay({
             className="gini-marker transition-all duration-700 ease-out"
             style={{ left: toScalePct(gCurrent), top: -11 }}
           >
-            <div style={{ position: 'absolute', width: 60, height: 60, borderRadius: '50%', background: 'radial-gradient(circle, rgba(245,184,0,0.05) 45%, transparent 70%)', top: 14, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', width: 60, height: 60, borderRadius: '50%', background: 'radial-gradient(circle, var(--color-gold-a05) 45%, transparent 70%)', top: 14, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
             <div className="gini-knob gold" />
             {/* CURRENT label + BPS + progress below the track */}
             <div className="flex flex-col items-center" style={{ marginTop: 10, gap: 3 }}>
@@ -265,7 +264,7 @@ export function GiniDisplay({
               </span>
               <span
                 className="font-mono text-sm font-semibold"
-                style={{ color: 'var(--color-primary)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
+                style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
               >
                 {gCurrent.toLocaleString()}
               </span>
@@ -290,7 +289,7 @@ export function GiniDisplay({
 
           {/* ── Bourgeoisie (blue) marker ── */}
           <div className="gini-marker" style={{ left: toScalePct(capTargetBps) }}>
-            <div style={{ position: 'absolute', width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(77,159,255,0.1) 0%, transparent 70%)', top: 12, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, var(--color-blue-a10) 0%, transparent 70%)', top: 12, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
             <div
               className="absolute flex flex-col items-center gap-1"
               style={{
@@ -306,7 +305,7 @@ export function GiniDisplay({
                   height: 52,
                   borderRadius: '50%',
                   background: 'var(--color-card2)',
-                  border: '2px solid rgba(77,159,255,0.4)',
+                  border: '2px solid var(--color-blue-a40)',
                   display: 'grid',
                   placeItems: 'center',
                   color: 'var(--color-blue)',

@@ -189,7 +189,7 @@ export function Stake() {
           <button 
             onClick={() => { if(!isBusy) { setMode('stake'); setAmount(""); } }}
             className={`flex-1 text-[9px] font-black uppercase tracking-widest transition-all 
-              ${isStakeMode ? 'bg-primary text-card' : 'text-text2 hover:text-text hover:bg-white/5'}`}
+              ${isStakeMode ? 'bg-gold text-card' : 'text-text2 hover:text-text hover:bg-white/5'}`}
             disabled={isBusy}
           >
             Stake
@@ -197,7 +197,7 @@ export function Stake() {
           <button 
             onClick={() => { if(!isBusy) { setMode('unstake'); setAmount(""); } }}
             className={`flex-1 text-[9px] font-black uppercase tracking-widest transition-all 
-              ${!isStakeMode ? 'bg-primary text-card' : 'text-text2 hover:text-text hover:bg-white/5'}`}
+              ${!isStakeMode ? 'bg-gold text-card' : 'text-text2 hover:text-text hover:bg-white/5'}`}
             disabled={isBusy}
           >
             Unstake
@@ -208,7 +208,7 @@ export function Stake() {
         <div className="grid grid-cols-4 gap-2 text-left px-1">
           <div className="flex flex-col">
             <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Wallet RGD</span>
-            <span className="text-lg font-black text-primary tracking-tighter leading-none">
+            <span className="text-lg font-black text-gold tracking-tighter leading-none">
               {Number(formatUnits(currentWallet, 18)).toLocaleString()}
             </span>
           </div>
@@ -220,13 +220,13 @@ export function Stake() {
           </div>
           <div className="flex flex-col">
             <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Locked</span>
-            <span className="text-lg font-black text-danger tracking-tighter leading-none">
+            <span className="text-lg font-black text-pink tracking-tighter leading-none">
               {currentLocked > 0n ? Number(formatUnits(currentLocked, 18)).toFixed(2) : "0.00"}
             </span>
           </div>
           <div className="flex flex-col text-right">
             <span className="text-[8px] uppercase font-bold text-text2 tracking-widest mb-1">Available</span>
-            <span className="text-lg font-black text-success tracking-tighter leading-none">
+            <span className="text-lg font-black text-green tracking-tighter leading-none">
               {Number(formatUnits(withdrawable, 18)).toLocaleString()}
             </span>
           </div>
@@ -258,7 +258,7 @@ export function Stake() {
             />
             <button 
                 onClick={handleMax} 
-                className="text-[9px] font-black bg-primary/10 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-all ml-4"
+                className="text-[9px] font-black bg-gold/10 text-gold px-3 py-1.5 rounded-lg hover:bg-gold/20 transition-all ml-4"
                 disabled={isBusy || isSuccess || isError}
             >MAX</button>
           </div>
@@ -268,7 +268,7 @@ export function Stake() {
         <div className="relative w-full rounded-xl overflow-hidden shadow-lg transition-all active:scale-[0.99]">
             {status !== 'idle' && !isError && (
                 <div 
-                    className={`absolute top-0 left-0 h-full transition-all duration-500 ease-out ${isSuccess ? 'bg-success' : 'bg-primary/30'}`}
+                    className={`absolute top-0 left-0 h-full transition-all duration-500 ease-out ${isSuccess ? 'bg-green' : 'bg-gold/30'}`}
                     style={{ width: getProgressWidth() }}
                 />
             )}
@@ -278,8 +278,8 @@ export function Stake() {
                     ${isButtonDisabled && !isBusy && !isSuccess && !isError ? 'bg-bg text-text2 cursor-not-allowed shadow-none' : ''}
                     ${isBusy ? 'cursor-not-allowed text-text' : ''}
                     ${isSuccess ? 'cursor-not-allowed text-card shadow-lg' : ''}
-                    ${isError ? 'bg-danger text-card cursor-not-allowed shadow-lg' : ''}
-                    ${status === 'idle' && !isButtonDisabled ? 'bg-primary text-card hover:brightness-110 shadow-lg' : ''}
+                    ${isError ? 'bg-pink text-card cursor-not-allowed shadow-lg' : ''}
+                    ${status === 'idle' && !isButtonDisabled ? 'bg-gold text-card hover:brightness-110 shadow-lg' : ''}
                     ${status !== 'idle' && !isSuccess && !isError ? 'text-text' : ''}
                 `}
                 disabled={isButtonDisabled} 

@@ -29,7 +29,7 @@ export function PrizePoolCard({
     <div
       className="card-app relative flex flex-col justify-between text-center overflow-hidden"
       style={{
-        background: 'radial-gradient(400px 200px at 50% 100%, rgba(245,184,0,0.05), transparent 60%), linear-gradient(180deg, var(--color-card2), var(--color-card))',
+        background: 'radial-gradient(400px 200px at 50% 100%, var(--color-gold-a05), transparent 60%), linear-gradient(180deg, var(--color-card2), var(--color-card))',
         borderColor: 'var(--color-border-bright)',
       }}
     >
@@ -39,8 +39,8 @@ export function PrizePoolCard({
       </div>
 
       <p
-        className="relative font-display font-extrabold leading-none tracking-[-0.04em] text-gold m-0"
-        style={{ fontSize: 'clamp(30px, 4vw, 84px)', textShadow: '0 0 40px rgba(245,184,0,0.25)', fontVariantNumeric: 'tabular-nums' }}
+        className="relative font-display font-extrabold leading-none tracking-[-0.04em] text-gold m-0 text-display-prize"
+        style={{ textShadow: '0 0 40px var(--color-gold-a25)', fontVariantNumeric: 'tabular-nums' }}
       >
         <span style={{ fontSize: '0.5em', verticalAlign: '0.4em', color: 'var(--color-gold-soft)', marginRight: 4 }}>$</span>
         {prizePoolWithYield.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

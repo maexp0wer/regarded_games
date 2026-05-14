@@ -85,7 +85,7 @@ export const Logo = (props: SVGProps<SVGSVGElement>) => (
             }}
             x="193.93756"
             y="323.83566"
-            fill="var(--color-primary)"
+            fill="var(--color-gold)"
           >
             Regarded
           </tspan>
@@ -100,7 +100,7 @@ export const Logo = (props: SVGProps<SVGSVGElement>) => (
               textAlign: 'start',
               textAnchor: 'start',
             }}
-            fill="var(--color-primary)"
+            fill="var(--color-gold)"
           >
             GAMES
           </tspan>

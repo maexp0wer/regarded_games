@@ -131,11 +131,11 @@ export default function DocsShell({
               href={`/docs/${result.docSlug}${result.headingId ? `#${result.headingId}` : ''}`}
               className="block px-4 py-2 text-sm rounded-md hover:bg-card transition-colors group"
             >
-              <span className="font-medium text-text group-hover:text-primary">
+              <span className="font-medium text-text group-hover:text-gold">
                 {result.headingTitle}
               </span>
               {result.level > 1 && (
-                 <span className="block text-xs text-text/50 mt-0.5 group-hover:text-primary/70">
+                 <span className="block text-xs text-text/50 mt-0.5 group-hover:text-gold/70">
                     in {result.docTitle}
                  </span>
               )}
@@ -166,8 +166,8 @@ export default function DocsShell({
                           onClick={(e) => handleLinkClick(e, h1.id)}
                           className={`block px-4 py-2 text-sm rounded-md transition-all duration-200 ${
                             h1Active
-                              ? 'bg-card text-primary font-bold shadow-sm' 
-                              : 'text-text font-bold hover:bg-primary hover:text-bg'
+                              ? 'bg-card text-gold font-bold shadow-sm' 
+                              : 'text-text font-bold hover:bg-gold hover:text-bg'
                           }`}
                         >
                           {h1.title}
@@ -187,8 +187,8 @@ export default function DocsShell({
                                     onClick={(e) => handleLinkClick(e, h2.id)}
                                     className={`block px-3 py-1 text-sm rounded-md transition-all duration-200 ${
                                       h2Active
-                                        ? 'text-primary font-semibold bg-card/50'
-                                        : 'text-text/70 hover:bg-primary hover:text-bg'
+                                        ? 'text-gold font-semibold bg-card/50'
+                                        : 'text-text/70 hover:bg-gold hover:text-bg'
                                     }`}
                                   >
                                     {h2.title}
@@ -208,8 +208,8 @@ export default function DocsShell({
                                           onClick={(e) => handleLinkClick(e, h3.id)}
                                           className={`block px-3 py-1 text-[11px] rounded-md transition-all duration-200 ${
                                             activeId === h3.id
-                                              ? 'text-primary font-medium'
-                                              : 'text-text/60 hover:text-primary'
+                                              ? 'text-gold font-medium'
+                                              : 'text-text/60 hover:text-gold'
                                           }`}
                                         >
                                           {h3.title}
@@ -234,7 +234,7 @@ export default function DocsShell({
               <div key={doc.slug} className="mb-2">
                 <Link
                   href={`/docs/${doc.slug}`}
-                  className="block px-4 py-2 text-sm rounded-md text-text font-bold hover:bg-primary hover:text-bg transition-all duration-200"
+                  className="block px-4 py-2 text-sm rounded-md text-text font-bold hover:bg-gold hover:text-bg transition-all duration-200"
                 >
                   {doc.title}
                 </Link>
@@ -257,7 +257,7 @@ export default function DocsShell({
                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
             </svg>
           </button>
-          <div className='text-primary flex justify-center items-center '>
+          <div className='text-gold flex justify-center items-center '>
                       <Link href="/"><Logo className="w-40 text-white" /></Link>
                     </div>
           <div className="font-bold text-lg md:text-xl whitespace-nowrap hidden sm:block pl-5">Documentation</div>
@@ -273,7 +273,7 @@ export default function DocsShell({
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-card border border-transparent focus:border-primary rounded-full py-1.5 pl-10 pr-4 text-sm focus:outline-none transition-all"
+                className="w-full bg-card border border-transparent focus:border-gold rounded-full py-1.5 pl-10 pr-4 text-sm focus:outline-none transition-all"
               />
             </div>
           </div>

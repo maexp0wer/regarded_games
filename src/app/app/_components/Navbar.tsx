@@ -38,7 +38,7 @@ export function Navbar() {
             style={{ textDecoration: 'none' }}
           >
             {/* Gold mark */}
-            <div className='text-primary flex justify-center items-center '>
+            <div className='text-gold flex justify-center items-center '>
               <Logo className='w-40 text-white'/>
             </div>
           </Link>
@@ -104,11 +104,24 @@ export function Navbar() {
         </div>
       </nav>
 
+      {/* ── Debug: Tailwind breakpoint indicator ── */}
+      {process.env.NEXT_PUBLIC_DEBUG === 'true' && (
+        <div className="fixed top-3 left-3 z-9999 flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 font-mono text-[11px] text-text2 shadow-lg">
+          <span className="font-semibold text-[--color-gold]">BP:</span>
+          <span className="sm:hidden">xs</span>
+          <span className="hidden sm:inline md:hidden">sm</span>
+          <span className="hidden md:inline lg:hidden">md</span>
+          <span className="hidden lg:inline xl:hidden">lg</span>
+          <span className="hidden xl:inline 2xl:hidden">xl</span>
+          <span className="hidden 2xl:inline">2xl</span>
+        </div>
+      )}
+
       {/* ── Mobile overlay nav ── */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-[51] md:hidden"
-          style={{ background: 'rgba(11,10,9,0.85)', backdropFilter: 'blur(8px)' }}
+          className="fixed inset-0 z-51 md:hidden"
+          style={{ background: 'var(--color-dark-a85)', backdropFilter: 'blur(8px)' }}
           onClick={() => setIsModalOpen(false)}
           role="dialog"
           aria-modal="true"

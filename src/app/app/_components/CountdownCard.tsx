@@ -55,15 +55,11 @@ export function CountdownCard({
   const winnerLabel = winningSide === 'cap' ? 'Bourgeoisie' : winningSide === 'soc' ? 'Proletariat' : 'Tie';
   const winnerColor = winningSide === 'cap' ? 'var(--color-blue)' : winningSide === 'soc' ? 'var(--color-pink)' : 'var(--color-text2)';  
 
-  const factionGradientRgba = winningSide === 'cap'
-    ? 'rgba(77, 159, 255, 0.07)'
-    : winningSide === 'soc'
-    ? 'rgba(255, 61, 138, 0.07)'
-    : 'rgba(128, 128, 128, 0.07)';
+  const factionBgClass = winningSide === 'cap' ? 'faction-bg-cap' : winningSide === 'soc' ? 'faction-bg-soc' : 'faction-bg-none';
   const factionTextShadow = winningSide === 'cap'
-    ? '0 0 40px rgba(77, 159, 255, 0.25)'
+    ? '0 0 40px var(--color-blue-a25)'
     : winningSide === 'soc'
-    ? '0 0 40px rgba(255, 61, 138, 0.25)'
+    ? '0 0 40px var(--color-pink-a25)'
     : 'none';
 
     const topLabelText = isPayout && progressPercent > 0 && progressPercent < 100 
@@ -75,11 +71,8 @@ export function CountdownCard({
 
   return (
     <div
-      className="card-app relative flex flex-col overflow-hidden text-center justify-between"
-      style={isPayout && winnerLabel ? {
-        background: `radial-gradient(400px 200px at 50% 100%, ${factionGradientRgba}, transparent 60%), linear-gradient(180deg, var(--color-card2), var(--color-card))`,
-        borderColor: 'var(--color-border-bright)',
-      } : {}}
+      className={`card-app relative flex flex-col overflow-hidden text-center justify-between ${isPayout && winnerLabel ? factionBgClass : ''}`}
+      style={isPayout && winnerLabel ? { borderColor: 'var(--color-border-bright)' } : {}}
     >
       {isPayout ? (
           <>
@@ -88,9 +81,8 @@ export function CountdownCard({
               {topLabelText}
             </div>
             <p
-              className="relative font-display font-extrabold leading-none tracking-[-0.04em] m-0"
+              className="relative font-display font-extrabold leading-none tracking-[-0.04em] m-0 text-display-prize"
               style={{
-                fontSize: 'clamp(30px, 4vw, 84px)',
                 color: winnerColor,
                 textShadow: factionTextShadow,
               }}
@@ -108,18 +100,12 @@ export function CountdownCard({
           </div>
 
           {showBootstrapWarning ? (
-          <div 
-            className="flex flex-col items-center justify-center h-full gap-1"
-            style={{
-              background: `radial-gradient(400px 200px at 50% 100%, ${factionGradientRgba}, transparent 60%), linear-gradient(180deg, var(--color-card2), var(--color-card))`,
-              borderColor: 'var(--color-border-bright)',
-            }}
+          <div className={`flex flex-col items-center justify-center h-full gap-1 ${factionBgClass}`}
           >
             <p
-              className="font-display font-extrabold m-0"
+              className="font-display font-extrabold m-0 text-display-counter"
               style={{
                 color: 'var(--color-pink)',
-                fontSize: 'clamp(20px, 2.5vw, 40px)',
                 lineHeight: '1',
                 textShadow: factionTextShadow,
               }}
@@ -131,18 +117,12 @@ export function CountdownCard({
             </p>
           </div>
         ) : isVictoryPending ? (
-          <div 
-            className="flex flex-col items-center justify-center h-full gap-1"
-            style={{
-              background: `radial-gradient(400px 200px at 50% 100%, ${factionGradientRgba}, transparent 60%), linear-gradient(180deg, var(--color-card2), var(--color-card))`,
-              borderColor: 'var(--color-border-bright)',
-            }}
+          <div className={`flex flex-col items-center justify-center h-full gap-1 ${factionBgClass}`}
           >
             <p
-              className="font-display font-extrabold m-0"
+              className="font-display font-extrabold m-0 text-display-counter"
               style={{
                 color: 'var(--color-pink)',
-                fontSize: 'clamp(20px, 2.5vw, 40px)',
                 lineHeight: '1',
                 textShadow: factionTextShadow,
               }}

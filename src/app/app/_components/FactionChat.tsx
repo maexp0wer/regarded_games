@@ -49,8 +49,8 @@ export function FactionChat({ seasonSlug, isCapitalist }: FactionChatProps) {
         style={{ background: 'var(--color-card2)', borderBottom: '1px solid var(--color-border)' }}
       >
         <span
-          className="font-display font-extrabold uppercase tracking-tight"
-          style={{ fontSize: 14, color: factionColor }}
+          className="font-display font-extrabold uppercase tracking-tight text-faction-header"
+          style={{ color: factionColor }}
         >
           {factionLabel}
         </span>

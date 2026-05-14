@@ -26,45 +26,46 @@ export function SeasonPhasePills({
       : null;
 
   // Calculate Colors
-  const phaseColor = (isBootstrap || isVictoryPending) 
-    ? 'var(--color-danger)' 
-    : isAuction 
-      ? 'var(--color-gold)' 
-      : isPayout 
-        ? 'var(--color-blue)' 
+  const phaseColor = (isBootstrap || isVictoryPending)
+    ? 'var(--color-pink)'
+    : isAuction
+      ? 'var(--color-gold)'
+      : isPayout
+        ? 'var(--color-blue)'
         : 'var(--color-green)';
-        
+
+  const pillClass = (isBootstrap || isVictoryPending)
+    ? 'pill-phase-pink'
+    : isAuction
+      ? 'pill-phase-gold'
+      : isPayout
+        ? 'pill-phase-blue'
+        : 'pill-phase-green';
+
   const phaseDotGlow = `0 0 8px ${phaseColor}`;
 
   return (
     <div className={className}>
-      <div
-        className="pill border"
-        style={{ 
-          color: phaseColor, 
-          borderColor: phaseColor + '33', 
-          background: phaseColor + '10' 
-        }}
-      >
-        <span 
-          className="w-1.5 h-1.5 rounded-full shrink-0" 
-          style={{ background: phaseColor, boxShadow: phaseDotGlow }} 
+      <div className={`pill border ${pillClass}`}>
+        <span
+          className="w-1.5 h-1.5 rounded-full shrink-0"
+          style={{ background: phaseColor, boxShadow: phaseDotGlow }}
         />
         {phaseLabel}
       </div>
-      
+
       {subPhaseLabel && (
-        <div 
-          className="pill border" 
-          style={{ 
-            color: 'var(--color-gold)', 
-            borderColor: 'rgba(245,184,0,0.3)', 
-            background: 'rgba(245,184,0,0.08)' 
+        <div
+          className="pill border"
+          style={{
+            color: 'var(--color-gold)',
+            borderColor: 'var(--color-gold-a30)',
+            background: 'var(--color-gold-a08)',
           }}
         >
-          <span 
-            className="w-1.5 h-1.5 rounded-full shrink-0" 
-            style={{ background: 'var(--color-gold)', boxShadow: '0 0 8px var(--color-gold)' }} 
+          <span
+            className="w-1.5 h-1.5 rounded-full shrink-0"
+            style={{ background: 'var(--color-gold)', boxShadow: '0 0 8px var(--color-gold)' }}
           />
           {subPhaseLabel}
         </div>

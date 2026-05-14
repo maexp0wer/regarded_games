@@ -68,7 +68,7 @@ export default function PercentSlider({ value, onChange, disabled = false }: Per
           style={{
             top: '50%', marginTop: -1, height: 2,
             width: `${clamped}%`,
-            background: 'var(--color-primary)',
+            background: 'var(--color-gold)',
             transition: dragging ? 'none' : 'width 0.08s',
           }}
         />
@@ -83,7 +83,7 @@ export default function PercentSlider({ value, onChange, disabled = false }: Per
               transform: 'translate(-50%, -50%)',
               width: 7,
               height: 7,
-              background: snap <= clamped ? 'var(--color-primary)' : 'var(--color-border-bright)',
+              background: snap <= clamped ? 'var(--color-gold)' : 'var(--color-border-bright)',
               transition: 'background 0.1s',
               zIndex: 1,
             }}
@@ -98,10 +98,10 @@ export default function PercentSlider({ value, onChange, disabled = false }: Per
             transform: 'translate(-50%, -50%)',
             width: 14,
             height: 14,
-            background: 'var(--color-primary)',
+            background: 'var(--color-gold)',
             boxShadow: dragging
-              ? '0 0 0 5px rgba(245,184,0,0.25)'
-              : '0 0 0 3px rgba(245,184,0,0.15)',
+              ? '0 0 0 5px var(--color-gold-a25)'
+              : '0 0 0 3px var(--color-gold-a15)',
             cursor: dragging ? 'grabbing' : 'grab',
             zIndex: 2,
             transition: dragging ? 'none' : 'left 0.08s, box-shadow 0.15s',
@@ -117,8 +117,8 @@ export default function PercentSlider({ value, onChange, disabled = false }: Per
           min={0}
           max={100}
           value={inputVal}
-          className="font-mono font-bold tabular-nums shrink-0 bg-transparent border-b outline-none text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          style={{ fontSize: 11, color: 'var(--color-primary)', width: 32, borderColor: 'var(--color-primary)' }}
+          className="text-input-xs font-mono font-bold tabular-nums shrink-0 bg-transparent border-b outline-none text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          style={{ color: 'var(--color-gold)', width: 32, borderColor: 'var(--color-gold)' }}
           onChange={(e) => setInputVal(e.target.value)}
           onBlur={(e) => commitEdit(e.target.value)}
           onKeyDown={(e) => {
@@ -128,8 +128,8 @@ export default function PercentSlider({ value, onChange, disabled = false }: Per
         />
       ) : (
         <span
-          className="font-mono font-bold tabular-nums shrink-0 cursor-text"
-          style={{ fontSize: 11, color: 'var(--color-primary)', width: 32, textAlign: 'right' }}
+          className="text-input-xs font-mono font-bold tabular-nums shrink-0 cursor-text"
+          style={{ color: 'var(--color-gold)', width: 32, textAlign: 'right' }}
           onClick={() => { setInputVal(String(clamped)); setEditing(true); }}
         >
           {clamped}%

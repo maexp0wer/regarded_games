@@ -95,8 +95,7 @@ export const WalletButton = () => {
                     className="flex items-center gap-2 rounded-full px-4 py-2 bg-card border border-border transition-all hover:border-border-bright"
                   >
                     <span
-                      className="w-2 h-2 rounded-full bg-green shrink-0"
-                      style={{ boxShadow: '0 0 0 3px rgba(107,203,110,0.15)' }}
+                      className="w-2 h-2 rounded-full bg-green shrink-0 wallet-glow"
                     />
                     <span className="font-mono text-[12px] font-semibold text-text">
                       {account.displayName}

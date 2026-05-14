@@ -48,7 +48,7 @@ export function OrderQueueItem({
         <div className="text-text text-[10px]">☰</div>
         <div className="flex flex-col text-left">
           <div className="flex items-center gap-2">
-            <span className={`text-[11px] font-bold ${group.isBuy ? 'text-success' : 'text-danger'}`}>
+            <span className={`text-[11px] font-bold ${group.isBuy ? 'text-green' : 'text-pink'}`}>
               ${parseFloat(group.unitPrice).toFixed(4)}
             </span>
           </div>
@@ -76,18 +76,18 @@ export function OrderQueueItem({
             <button
               onClick={() => onMoveGroup(groupIdx, -1)}
               disabled={groupIdx === 0}
-              className="bg-text/50 p-1 px-2 rounded text-bg text-[8px] hover:bg-primary hover:text-bg transition-colors"
+              className="bg-text/50 p-1 px-2 rounded text-bg text-[8px] hover:bg-gold hover:text-bg transition-colors"
             >▲</button>
             <button
               onClick={() => onMoveGroup(groupIdx, 1)}
               disabled={groupIdx === groupCount - 1}
-              className="bg-text/50 p-1 px-2 rounded text-bg text-[8px] hover:bg-primary hover:text-bg transition-colors"
+              className="bg-text/50 p-1 px-2 rounded text-bg text-[8px] hover:bg-gold hover:text-bg transition-colors"
             >▼</button>
           </>
         )}
         <button
           onClick={() => onRemoveGroup(group)}
-          className="text-text2 hover:text-primary ml-1 p-1"
+          className="text-text2 hover:text-gold ml-1 p-1"
         >×</button>
       </div>
     </div>

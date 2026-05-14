@@ -21,7 +21,7 @@ function RainbowKitThemeWrapper({ children }: { children: React.ReactNode }) {
     ...baseTheme,
     colors: {
       ...baseTheme.colors,
-      accentColor: 'var(--color-primary)',
+      accentColor: 'var(--color-gold)',
       accentColorForeground: 'white',
       modalBackground: 'var(--color-card)',
       modalBorder: 'transparent',

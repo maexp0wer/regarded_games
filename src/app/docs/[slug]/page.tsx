@@ -15,7 +15,7 @@ import { ComponentPropsWithoutRef } from 'react';
 const customComponents = {
   // 1. HEADINGS (With scroll-mt-24 to fix sticky header overlap)
   h1: (props: ComponentPropsWithoutRef<'h1'>) => (
-    <h1 {...props} className="text-3xl md:text-3xl font-bold mt-10 mb-6 text-primary tracking-tight scroll-mt-24">
+    <h1 {...props} className="text-3xl md:text-3xl font-bold mt-10 mb-6 text-gold tracking-tight scroll-mt-24">
       {props.children}
     </h1>
   ),
@@ -52,12 +52,12 @@ const customComponents = {
     </ol>
   ),
   blockquote: (props: React.ComponentPropsWithoutRef<'blockquote'>) => (
-    <blockquote {...props} className="border-l-4 border-primary/50 pl-4 italic  text-text bg-card rounded-r-md">
+    <blockquote {...props} className="border-l-4 border-gold/50 pl-4 italic  text-text bg-card rounded-r-md">
       {props.children}
     </blockquote>
   ),
   code: (props: ComponentPropsWithoutRef<'code'>) => (
-    <code {...props} className="bg-card text-primary  py-0.5 rounded text-sm font-mono border border-text/10">
+    <code {...props} className="bg-card text-gold  py-0.5 rounded text-sm font-mono border border-text/10">
       {props.children}
     </code>
   ),
@@ -81,7 +81,7 @@ const customComponents = {
       return (
         <Link 
           href={href} 
-          className="text-text font-medium underline underline-offset-4 decoration-text/30 hover:decoration-primary transition-all" 
+          className="text-text font-medium underline underline-offset-4 decoration-text/30 hover:decoration-gold transition-all" 
           {...rest}
         >
           {children}
@@ -93,7 +93,7 @@ const customComponents = {
         href={href} 
         target="_blank" 
         rel="noopener noreferrer" 
-        className="text-primary font-medium underline underline-offset-4 decoration-primary/30 hover:decoration-primary transition-all" 
+        className="text-gold font-medium underline underline-offset-4 decoration-gold/30 hover:decoration-gold transition-all" 
         {...rest}
       >
         {children}

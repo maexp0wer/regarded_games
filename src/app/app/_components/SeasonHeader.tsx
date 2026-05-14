@@ -35,8 +35,7 @@ export function SeasonHeader({
     >
       {/* Big season number */}
       <p
-        className="font-display font-extrabold leading-[0.85] tracking-[-0.04em] text-text"
-        style={{ fontSize: 'clamp(48px, 8vw, 84px)' }}
+        className="font-display font-extrabold leading-[0.85] tracking-[-0.04em] text-text text-display-hero"
       >
         S
         <em className="not-italic font-medium" style={{ color: 'var(--color-muted2)' }}>
@@ -46,8 +45,7 @@ export function SeasonHeader({
 
       {/* Bottom meta strip */}
       <div
-        className="flex flex-wrap gap-x-6 gap-y-2 font-mono text-[12px] uppercase tracking-[0.04em] -mb-2"
-        style={{ color: 'var(--color-muted)' }}
+        className="flex flex-wrap gap-x-6 gap-y-2 font-mono text-[12px] uppercase tracking-[0.04em] -mb-2 text-text2"
       >
         <div>
           Participants

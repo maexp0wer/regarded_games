@@ -116,8 +116,8 @@ function ClaimableCard({ season, playerAddress }: { season: any; playerAddress: 
         {/* Amount */}
         <div className="flex flex-col items-end shrink-0">
           <span
-            className="font-display font-extrabold leading-none"
-            style={{ fontSize: 22, color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}
+            className="font-display font-extrabold leading-none text-summary-value"
+            style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}
           >
             ${payout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>

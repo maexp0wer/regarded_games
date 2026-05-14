@@ -92,7 +92,7 @@ const GenericModal: FC<GenericModalProps> = ({
         <h2 id="modal-title-id" className="sr-only">{title}</h2>
         <button
           onClick={onClose}
-          className="absolute right-3 top-3 z-10 rounded-full p-1 text-text transition-colors hover:bg-primary hover:text-bg"
+          className="absolute right-3 top-3 z-10 rounded-full p-1 text-text transition-colors hover:bg-gold hover:text-bg"
           aria-label="Close modal"
         >
           <svg

@@ -216,16 +216,15 @@ function AuctionMaskInner({
       <div>
         <p className="section-label mb-1">FIM Balance</p>
         <div
-          className="font-display font-extrabold leading-none"
+          className="font-display font-extrabold leading-none text-display-auction"
           style={{
-            fontSize: 'clamp(36px, 5vw, 56px)',
             color: 'var(--color-gold)',
-            textShadow: '0 0 40px rgba(245,184,0,0.25)',
+            textShadow: '0 0 40px var(--color-gold-a25)',
             fontVariantNumeric: 'tabular-nums',
           }}
         >
           {fimDisplayValue}
-          <span className="font-mono font-medium text-text2 ml-2" style={{ fontSize: 14 }}>FIM</span>
+          <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
         </div>
       </div>
 
@@ -233,7 +232,7 @@ function AuctionMaskInner({
       {isPhaseLoading ? (
         <p className="section-label animate-pulse">Loading Phase…</p>
       ) : isPhaseError || currentPhase == null ? (
-        <div className="rounded-xl px-4 py-3 text-center" style={{ background: 'rgba(255,84,84,0.08)', border: '1px solid rgba(255,84,84,0.2)' }}>
+        <div className="rounded-xl px-4 py-3 text-center surface-red-warn">
           <p className="font-mono text-[10px] uppercase font-bold tracking-widest" style={{ color: 'var(--color-red)' }}>Phase data unavailable</p>
         </div>
       ) : !isAuctionPhase ? (
@@ -246,8 +245,7 @@ function AuctionMaskInner({
           {!hasStakedAnything && (
             <Link href="/stake">
               <div
-                className="rounded-xl px-4 py-3 text-center cursor-pointer transition-opacity hover:opacity-80"
-                style={{ background: 'rgba(255,61,138,0.07)', border: '1px solid rgba(255,61,138,0.2)' }}
+                className="rounded-xl px-4 py-3 text-center cursor-pointer transition-opacity hover:opacity-80 surface-pink-warn"
               >
                 <p className="font-mono text-[10px] uppercase font-bold tracking-widest" style={{ color: 'var(--color-pink)' }}>
                   No Collateral Staked
@@ -276,8 +274,7 @@ function AuctionMaskInner({
             <input
               type="number"
               placeholder="0.00"
-              className="bg-transparent border-none p-0 w-full font-mono font-bold text-text outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              style={{ fontSize: 32 }}
+              className="text-input-lg bg-transparent border-none p-0 w-full font-mono font-bold text-text outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               value={buyAmount}
               onChange={(e) => setBuyAmount(e.target.value)}
               disabled={isBusy || isSuccess || isError}
@@ -293,7 +290,7 @@ function AuctionMaskInner({
             {!isError && status !== 'idle' && (
               <div
                 className="absolute inset-y-0 left-0 transition-all duration-500"
-                style={{ width: getProgressWidth(), background: isSuccess ? 'var(--color-green)' : 'rgba(245,184,0,0.3)' }}
+                style={{ width: getProgressWidth(), background: isSuccess ? 'var(--color-green)' : 'var(--color-gold-a30)' }}
               />
             )}
             <button
@@ -325,7 +322,7 @@ function AuctionMaskInner({
         >
           <span className="section-label">Eligible FIM REMAINING (TOTAL)</span>
           <span className="font-mono font-semibold text-sm" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            <span style={{ color: 'var(--color-primary)' }}>{additionalEligibleDisplay}</span>
+            <span style={{ color: 'var(--color-gold)' }}>{additionalEligibleDisplay}</span>
             <span className="text-text2 font-normal text-xs ml-1">({eligibleDisplay})</span>
           </span>
         </div>

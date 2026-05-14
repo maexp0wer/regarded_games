@@ -192,8 +192,8 @@ export function TradingMask({
     );
   }
 
-  const buyActive  = { background: 'rgba(107,203,110,0.15)', color: 'var(--color-green)', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' };
-  const sellActive = { background: 'rgba(255,61,138,0.15)', color: 'var(--color-pink)',  boxShadow: '0 1px 4px rgba(0,0,0,0.2)' };
+  const buyActive  = { background: 'var(--color-green-a15)', color: 'var(--color-green)', boxShadow: '0 1px 4px #00000033' };
+  const sellActive = { background: 'var(--color-pink-a15)',  color: 'var(--color-pink)',  boxShadow: '0 1px 4px #00000033' };
   const segInactive = { color: 'var(--color-text2)', background: 'transparent' };
 
   const ctaBtnStyle = isBusy || workflowStatus !== 'idle'
@@ -201,8 +201,8 @@ export function TradingMask({
     : isButtonDisabled
     ? { background: 'var(--color-card2)', color: 'var(--color-text2)', cursor: 'not-allowed' }
     : isBuy
-    ? { background: 'linear-gradient(135deg, #6bcb6e, #4daa50)', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px rgba(107,203,110,0.5)' }
-    : { background: 'linear-gradient(135deg, #ff7ab0, #ff3d8a)', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px rgba(255,61,138,0.5)' };
+    ? { background: 'linear-gradient(135deg, #6bcb6e, #4daa50)', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-green-a50)' }
+    : { background: 'linear-gradient(135deg, #ff7ab0, #ff3d8a)', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-pink-a50)' };
 
   return (
     <div
@@ -214,16 +214,15 @@ export function TradingMask({
         <div>
           <p className="section-label mb-1">FIM Balance</p>
           <div
-            className="font-display font-extrabold leading-none"
+            className="font-display font-extrabold leading-none text-display-trading"
             style={{
-              fontSize: 'clamp(24px, 4vw, 56px)',
               color: 'var(--color-gold)',
-              textShadow: '0 0 40px rgba(245,184,0,0.25)',
+              textShadow: '0 0 40px var(--color-gold-a25)',
               fontVariantNumeric: 'tabular-nums',
             }}
           >
             {Number(formatUnits(fimBalance || 0n, 18)).toLocaleString()}
-            <span className="font-mono font-medium text-text2 ml-2" style={{ fontSize: 14 }}>FIM</span>
+            <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
           </div>
         </div>
         {userStats ? (
@@ -279,8 +278,7 @@ export function TradingMask({
             type="number"
             value={targetAmount}
             onChange={(e) => setTargetAmount(e.target.value)}
-            className={inputBase}
-            style={{ fontSize: 28 }}
+            className={`${inputBase} text-input-md`}
             placeholder={isMaker ? '0.00' : 'MAX'}
           />
           <PercentSlider value={sliderPct} onChange={handleSliderChange} disabled={isBusy} />
@@ -293,11 +291,11 @@ export function TradingMask({
               <button
                 key={mode}
                 onClick={() => setIsMaker(mode === 'Maker')}
-                className="flex-1 font-mono font-semibold uppercase flex items-center justify-center transition-all"
+                className="flex-1 font-mono font-semibold uppercase flex items-center justify-center transition-all text-toggle-label"
                 style={{
-                  fontSize: 10, letterSpacing: '0.07em',
-                  background: active ? 'var(--color-primary)' : 'transparent',
-                  color: active ? 'var(--color-primary3)' : 'var(--color-text2)',
+                  letterSpacing: '0.07em',
+                  background: active ? 'var(--color-gold)' : 'transparent',
+                  color: active ? 'var(--color-gold-pale)' : 'var(--color-text2)',
                   borderBottom: i === 0 ? '1px solid var(--color-border)' : undefined,
                 }}
               >
@@ -334,11 +332,11 @@ export function TradingMask({
                 <button
                   key={mode}
                   onClick={() => handlePriceModeSwitch(mode)}
-                  className="flex-1 font-mono font-semibold uppercase flex items-center justify-center transition-all text-center"
+                  className="flex-1 font-mono font-semibold uppercase flex items-center justify-center transition-all text-center text-toggle-label"
                   style={{
-                    fontSize: 10, letterSpacing: '0.07em',
-                    background: active ? 'var(--color-primary)' : 'transparent',
-                    color: active ? 'var(--color-primary3)' : 'var(--color-text2)',
+                    letterSpacing: '0.07em',
+                    background: active ? 'var(--color-gold)' : 'transparent',
+                    color: active ? 'var(--color-gold-pale)' : 'var(--color-text2)',
                     borderBottom: i === 0 ? '1px solid var(--color-border)' : undefined,
                     padding: '0 4px', lineHeight: 1.3,
                   }}
@@ -392,8 +390,8 @@ export function TradingMask({
           <div>
             <p className="section-label mb-1">{isMaker ? 'Order Total' : 'Total Cost'}</p>
             <span
-              className="font-mono font-bold"
-              style={{ fontSize: 22, color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}
+              className="font-mono font-bold text-summary-value"
+              style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}
             >
               ${formatDynamicUsdc(isMaker ? makerTotalUsdcRaw : executionPayload.totalCostRaw)}
             </span>
@@ -402,9 +400,8 @@ export function TradingMask({
             <div className="text-right">
               <p className="section-label mb-1">{isBuy ? 'Buying' : 'Selling'}</p>
               <span
-                className="font-mono font-bold"
+                className="font-mono font-bold text-summary-sub"
                 style={{
-                  fontSize: 18,
                   color: isBuy ? 'var(--color-green)' : 'var(--color-pink)',
                   fontVariantNumeric: 'tabular-nums',
                 }}
@@ -418,7 +415,7 @@ export function TradingMask({
         {isSelfFill && (
           <div
             className="rounded-xl px-4 py-2.5 flex items-center gap-2"
-            style={{ background: 'rgba(255,61,138,0.07)', border: '1px solid rgba(255,61,138,0.2)' }}
+            className="surface-pink-warn"
           >
             <span className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-pink)' }}>
               Cannot fill own order

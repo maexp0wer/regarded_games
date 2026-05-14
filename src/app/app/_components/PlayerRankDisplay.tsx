@@ -55,7 +55,7 @@ const PlayerRankDisplay: React.FC<PlayerRankDisplayProps> = ({ seasonAddress, us
   const knobStyle: React.CSSProperties = {
     width: 16, height: 16, borderRadius: '50%',
     background: 'var(--color-card)', border: '2px solid white',
-    boxShadow: '0 0 10px rgba(255,255,255,0.3)',
+    boxShadow: '0 0 10px #ffffff4d',
   };
 
   return (
@@ -110,7 +110,7 @@ const PlayerRankDisplay: React.FC<PlayerRankDisplayProps> = ({ seasonAddress, us
               className="absolute inset-y-0 left-0 transition-all duration-700"
               style={{
                 width: `${100 - totalPercent}%`,
-                background: 'linear-gradient(90deg, rgba(245,184,0,0.4), var(--color-gold))',
+                background: 'linear-gradient(90deg, var(--color-gold-a40), var(--color-gold))',
               }}
             />
           </div>
@@ -118,7 +118,7 @@ const PlayerRankDisplay: React.FC<PlayerRankDisplayProps> = ({ seasonAddress, us
             className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 transition-all duration-700"
             style={{ left: `${100 - totalPercent}%` }}
           >
-            <div style={{ ...knobStyle, borderColor: 'var(--color-gold)', boxShadow: '0 0 10px rgba(245,184,0,0.5)' }} />
+            <div style={{ ...knobStyle, borderColor: 'var(--color-gold)', boxShadow: '0 0 10px var(--color-gold-a50)' }} />
             <div className="absolute top-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
               <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-gold)' }}>
                 Top {totalPercent < 1 ? '<1' : totalPercent.toFixed(1)}%
@@ -142,7 +142,7 @@ const PlayerRankDisplay: React.FC<PlayerRankDisplayProps> = ({ seasonAddress, us
               className="absolute inset-y-0 left-0 transition-all duration-700"
               style={{
                 width: `${100 - relativePercent}%`,
-                background: 'linear-gradient(90deg, rgba(245,184,0,0.4), var(--color-gold))',
+                background: 'linear-gradient(90deg, var(--color-gold-a40), var(--color-gold))',
               }}
             />
           </div>
@@ -150,7 +150,7 @@ const PlayerRankDisplay: React.FC<PlayerRankDisplayProps> = ({ seasonAddress, us
             className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 transition-all duration-700"
             style={{ left: `${100 - relativePercent}%` }}
           >
-            <div style={{ ...knobStyle, borderColor: 'var(--color-gold)', boxShadow: '0 0 10px rgba(245,184,0,0.5)' }} />
+            <div style={{ ...knobStyle, borderColor: 'var(--color-gold)', boxShadow: '0 0 10px var(--color-gold-a50)' }} />
             <div className="absolute top-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
               <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-gold)' }}>
                 Top {relativePercent < 1 ? '<1' : relativePercent.toFixed(1)}%

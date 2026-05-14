@@ -48,7 +48,7 @@ const Card: React.FC<CardProps> = ({
       </div>
 
       <div className='mt-auto text-right p-5 pr-12'>
-        <button onClick={onButtonClick} className="text-primary hover:underline">
+        <button onClick={onButtonClick} className="text-gold hover:underline">
           {buttonText}
         </button>
       </div>

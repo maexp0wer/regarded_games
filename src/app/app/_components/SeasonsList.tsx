@@ -174,8 +174,7 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
               {/* Left column: big season number + pills (desktop) */}
               <div className="shrink-0 hidden sm:flex sm:flex-col sm:items-start sm:gap-2">
                 <p
-                  className="font-display font-extrabold leading-none tracking-[-0.04em]"
-                  style={{ fontSize: 'clamp(48px, 6vw, 72px)', color: 'var(--color-text)' }}
+                  className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-display-season"
                 >
                   S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
                 </p>
@@ -191,8 +190,7 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
                 {/* Mobile header: small season number + pills */}
                 <div className="flex sm:hidden items-center flex-wrap gap-2">
                   <p
-                    className="font-display font-extrabold leading-none tracking-[-0.04em]"
-                    style={{ fontSize: '24px', color: 'var(--color-text)' }}
+                    className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-season-mobile"
                   >
                     S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
                   </p>

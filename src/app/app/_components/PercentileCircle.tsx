@@ -77,7 +77,7 @@ export const PercentileCircle: React.FC<PercentileCircleProps> = ({
       
       {/* 3. PERCENTAGE TEXT */}
       {showText && (
-        <span className={`font-mono font-black whitespace-nowrap ${s.font} ${isCapitalist ? 'text-info' : 'text-danger'}`}>
+        <span className={`font-mono font-black whitespace-nowrap ${s.font} ${isCapitalist ? 'text-blue' : 'text-pink'}`}>
           {Math.round(percentage)}%
         </span>
       )}

@@ -25,7 +25,7 @@ const tableData = [
     parentExplanation: "75% of the initial $RGD supply is directly controlled by you, the DAO members.",
     name: "DAO Treasury Reserve",        // Tier 2
     percentage: 40,
-    color: "var(--color-primary)",
+    color: "var(--color-gold)",
     explanation: "Long-Term Capital. Controlled entirely by governance for future growth, acquisitions, or diversification. Subject to a 5-year linear unlock.",
     subChildren: [              // Tier 3
     ]
@@ -36,11 +36,11 @@ const tableData = [
     parentColor: "var(--color-card3)",
     name: "Growth & Ecosystem",         // Tier 2
     percentage: 20,
-    color: "var(--color-primary2)",
+    color: "var(--color-gold-soft)",
     explanation: "Funds Active Incentives and marketing. Released based on DAO-approved milestones.",
     subChildren: [               // Tier 3
-      { name: "Merkl Rewards", percentage: 5, color: "var(--color-primary)" },
-      { name: "User Acquisition", percentage: 15, color: "var(--color-primary2)" }
+      { name: "Merkl Rewards", percentage: 5, color: "var(--color-gold)" },
+      { name: "User Acquisition", percentage: 15, color: "var(--color-gold-soft)" }
     ]
   },
   {
@@ -49,12 +49,12 @@ const tableData = [
     parentColor: "var(--color-card3)",
     name: "Market Formation",         // Tier 2
     percentage: 15,
-    color: "var(--color-primary3)",
+    color: "var(--color-gold-pale)",
     explanation: "Distributed to early community participants and used to provide initial exchange liquidity to ensure Day 1 market stability.",
     subChildren: [               // Tier 3
-      { name: "Genesis Program", percentage: 3, color: "var(--color-primary)" },
-      { name: "Capital Auction", percentage: 6, color: "var(--color-primary2)" },
-      { name: "Liquidity Pool", percentage: 6, color: "var(--color-primary3)" },
+      { name: "Genesis Program", percentage: 3, color: "var(--color-gold)" },
+      { name: "Capital Auction", percentage: 6, color: "var(--color-gold-soft)" },
+      { name: "Liquidity Pool", percentage: 6, color: "var(--color-gold-pale)" },
     ]
   },
   {
@@ -64,7 +64,7 @@ const tableData = [
     parentExplanation: "only 25% of the initial $RGD supply is not directly controlled by you, but distributed to the non-profit DAO LLC and vested among the founding Team for longterm alignment.",
     name: "Operational Reserve",         // Tier 2
     percentage: 10,
-    color: "var(--color-secondary)",
+    color: "var(--color-blue)",
     explanation: "Allocated to the non-profit Regarded DAO LLC to cover real-world costs (legal compliance, audits, hosting). Managed via multi-sig with strict spending rules.",
     subChildren: [               // Tier 3
     ]
@@ -75,7 +75,7 @@ const tableData = [
     parentColor: "var(--color-card3)",
     name: "Team",         // Tier 2
     percentage: 15,
-    color: "var(--color-secondary2)",
+    color: "var(--color-blue-soft)",
     explanation: "Incentivizes the founding team. Subject to a 4-year vesting schedule with a 12-month cliff.",
     subChildren: [
     ]
@@ -152,7 +152,7 @@ export default function Home() {
       }`}>
 
         <div className="w-full max-w-6xl p-8 text-text">
-          <div className='text-primary flex justify-center items-center '>
+          <div className='text-gold flex justify-center items-center '>
             <Logo className='w-40 text-white'/>
           </div>
 
@@ -161,10 +161,10 @@ export default function Home() {
           <section className="hero-section min-h-screen flex items-center justify-center">
             
             <div className="text-center max-w-4xl px-4">
-              <h1 className="text-4xl md:text-6xl font-bold mb-2 text-primary">
+              <h1 className="text-4xl md:text-6xl font-bold mb-2 text-gold">
                 Class Warfare
               </h1>
-              <h1 className="text-4xl md:text-6xl font-bold mb-6 text-primary">
+              <h1 className="text-4xl md:text-6xl font-bold mb-6 text-gold">
                 The Game 
               </h1>
               <h2 className="text-xl md:text-2xl mb-8">
@@ -376,7 +376,7 @@ export default function Home() {
           actions={
               <button 
                 onClick={() => scrollToId('contactForm')}
-                className="w-full lg:w-2/3 bg-primary hover:bg-primary2 text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
+                className="w-full lg:w-2/3 bg-gold hover:bg-gold-soft text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
                 Register
               </button> 
           }
@@ -404,7 +404,7 @@ export default function Home() {
           actions={
             <button 
               onClick={() => scrollToId('contactForm')}
-              className="w-full lg:w-2/3 bg-primary hover:bg-primary2 text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
+              className="w-full lg:w-2/3 bg-gold hover:bg-gold-soft text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
               Get referral code
             </button>
           }
@@ -430,7 +430,7 @@ export default function Home() {
           actions={
               <button 
                 onClick={() => window.open('http://app.localhost:3000')}
-                className="w-full lg:w-2/3 bg-primary hover:bg-primary2 text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
+                className="w-full lg:w-2/3 bg-gold hover:bg-gold-soft text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
                 Launch Testnet App
               </button>
           }
@@ -457,7 +457,7 @@ export default function Home() {
           actions={
             <button 
               onClick={() => window.open('https://github.com/maexp0wer/Regardo_games')}
-              className="w-full lg:w-2/3 bg-primary hover:bg-primary2 text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
+              className="w-full lg:w-2/3 bg-gold hover:bg-gold-soft text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
               Open GitHub
             </button>
           }

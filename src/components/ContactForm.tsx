@@ -245,18 +245,18 @@ const ContactForm: React.FC = () => {
   };
 
   // --- Tailwind CSS Classes ---
-  const inputClasses = "mt-1 block w-full px-3 py-2 bg-card2 rounded-md text-sm shadow-sm placeholder-bg3 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-primary text-text";
+  const inputClasses = "mt-1 block w-full px-3 py-2 bg-card2 rounded-md text-sm shadow-sm placeholder-bg3 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-gold text-text";
   const labelClasses = "block text-sm font-medium text-text";
-  const errorClasses = "mt-1 text-xs text-danger";
+  const errorClasses = "mt-1 text-xs text-pink";
   const checkboxLabelClasses = "ml-2 text-sm text-text";
-  const checkboxClasses = "h-4 w-4 rounded text-text focus:ring-primary border-primary";
-  const requiredStar = <span className="text-danger">*</span>;
-  const buttonBaseClasses = "px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary";
+  const checkboxClasses = "h-4 w-4 rounded text-text focus:ring-gold border-gold";
+  const requiredStar = <span className="text-pink">*</span>;
+  const buttonBaseClasses = "px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-gold";
   const buttonInactiveClasses = "bg-card2 border-card2 text-text hover:bg-card3";
-  const buttonActiveClasses = "bg-primary text-bg";
+  const buttonActiveClasses = "bg-gold text-bg";
   const subButtonBaseClasses = "px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out";
   const subButtonInactiveClasses = "bg-card2 border-card2 text-text hover:bg-card3";
-  const subButtonActiveClasses = "bg-primary text-bg";
+  const subButtonActiveClasses = "bg-gold text-bg";
   const { darkMode} = useTheme();
 
   return (
@@ -265,8 +265,8 @@ const ContactForm: React.FC = () => {
 
     <form onSubmit={handleSubmit} className="space-y-6 p-6 bg-card rounded-lg shadow-md ">
        {/* General Success/Error Messages */}
-       {submitStatus === 'success' && ( <div className={`p-4 mb-4 text-sm ${darkMode ? 'dark text-bg' : 'texttext'} bg-success rounded-lg`} role="alert">{submitMessage}</div> )}
-       {submitStatus === 'error' && ( <div className="p-4 mb-4 text-sm text-bg bg-danger rounded-lg" role="alert">{submitMessage || 'An error occurred. Please check the fields below.'}</div> )}
+       {submitStatus === 'success' && ( <div className={`p-4 mb-4 text-sm ${darkMode ? 'dark text-bg' : 'texttext'} bg-green rounded-lg`} role="alert">{submitMessage}</div> )}
+       {submitStatus === 'error' && ( <div className="p-4 mb-4 text-sm text-bg bg-pink rounded-lg" role="alert">{submitMessage || 'An error occurred. Please check the fields below.'}</div> )}
        <div className="grid grid-cols-1 gap-y-6 lg:grid-cols-2 lg:gap-x-6">
 
           {/* Role Buttons - Top */}
@@ -352,7 +352,7 @@ const ContactForm: React.FC = () => {
                      <div>
                        <label htmlFor="otherContributorType" className={`${labelClasses} text-xs`}>If Other Contribution Area, please specify: {requiredStar}</label>
                        <input type="text" id="otherContributorType" value={otherContributorType} onChange={(e) => setOtherContributorType(e.target.value)}
-                         className={`${inputClasses} text-xs py-1 ${errors.otherContributorType ? 'border-danger' : ''}`}
+                         className={`${inputClasses} text-xs py-1 ${errors.otherContributorType ? 'border-pink' : ''}`}
                          required
                        />
                        {errors.otherContributorType && <p className={errorClasses}>{errors.otherContributorType}</p>}
@@ -366,7 +366,7 @@ const ContactForm: React.FC = () => {
             <div className="lg:col-span-2">
                 <label htmlFor="otherIdentity" className={labelClasses}>Please specify who you are: {requiredStar}</label>
                 <input type="text" id="otherIdentity" value={otherIdentity} onChange={handleOtherTextChange}
-                    className={`${inputClasses} ${errors.otherIdentity ? 'border-danger' : ''}`} required />
+                    className={`${inputClasses} ${errors.otherIdentity ? 'border-pink' : ''}`} required />
                 {errors.otherIdentity && <p id="otheridentity-error" className={errorClasses}>{errors.otherIdentity}</p>}
             </div>
           )}
@@ -382,7 +382,7 @@ const ContactForm: React.FC = () => {
                 id="partnerSpecification"
                 value={partnerSpecification}
                 onChange={handlePartnerSpecChange}
-                className={`${inputClasses} ${errors.partnerSpecification ? 'border-danger' : ''}`}
+                className={`${inputClasses} ${errors.partnerSpecification ? 'border-pink' : ''}`}
                 aria-describedby={errors.partnerSpecification ? 'partnerspec-error' : undefined}
                 aria-invalid={!!errors.partnerSpecification}
                 required
@@ -400,7 +400,7 @@ const ContactForm: React.FC = () => {
             <label htmlFor="email" className={labelClasses}>Email Address {(newsletter || selectedRoles.includes('contributor') || selectedRoles.includes('potential_partner')) && requiredStar}</label>
             <input
               type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)}
-              className={`${inputClasses} ${errors.email ? 'border-danger' : ''}`}
+              className={`${inputClasses} ${errors.email ? 'border-pink' : ''}`}
               required={newsletter || selectedRoles.includes('contributor') || selectedRoles.includes('potential_partner')}
               aria-describedby={errors.email ? 'email-error' : undefined}
               aria-invalid={!!errors.email}
@@ -409,8 +409,8 @@ const ContactForm: React.FC = () => {
           </div>
 
           {/* Conditional Amount Fields */}
-          {selectedRoles.includes('investor') && ( <div><label htmlFor="investmentAmount" className={labelClasses}>Investment Amount</label><input type="text" id="investmentAmount" value={investmentAmount} onChange={(e) => setInvestmentAmount(e.target.value)} inputMode="decimal" className={`${inputClasses} ${errors.investmentAmount ? 'border-danger' : ''}`} />{errors.investmentAmount && <p id="investment-error" className={errorClasses}>{errors.investmentAmount}</p>}</div> )}
-          {selectedRoles.includes('future_player') && ( <div><label htmlFor="playAmount" className={labelClasses}>How much USDC will you play with?</label><input type="text" id="playAmount" value={playAmount} onChange={(e) => setPlayMoney(e.target.value)} inputMode="decimal" className={`${inputClasses} ${errors.playAmount ? 'border-danger' : ''}`} />{errors.playAmount && <p id="property-error" className={errorClasses}>{errors.playAmount}</p>}</div> )}
+          {selectedRoles.includes('investor') && ( <div><label htmlFor="investmentAmount" className={labelClasses}>Investment Amount</label><input type="text" id="investmentAmount" value={investmentAmount} onChange={(e) => setInvestmentAmount(e.target.value)} inputMode="decimal" className={`${inputClasses} ${errors.investmentAmount ? 'border-pink' : ''}`} />{errors.investmentAmount && <p id="investment-error" className={errorClasses}>{errors.investmentAmount}</p>}</div> )}
+          {selectedRoles.includes('future_player') && ( <div><label htmlFor="playAmount" className={labelClasses}>How much USDC will you play with?</label><input type="text" id="playAmount" value={playAmount} onChange={(e) => setPlayMoney(e.target.value)} inputMode="decimal" className={`${inputClasses} ${errors.playAmount ? 'border-pink' : ''}`} />{errors.playAmount && <p id="property-error" className={errorClasses}>{errors.playAmount}</p>}</div> )}
 
           {/* Tickboxes Section */}
           <div className="lg:col-span-2">
@@ -434,7 +434,7 @@ const ContactForm: React.FC = () => {
                           <div>
                               <label htmlFor="walletAddress" className={labelClasses}>ERC-20 Wallet Address {requiredStar}</label>
                               <input type="text" id="walletAddress" placeholder="0x..." value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)}
-                                  className={`${inputClasses} ${errors.walletAddress ? 'border-danger' : ''}`} required
+                                  className={`${inputClasses} ${errors.walletAddress ? 'border-pink' : ''}`} required
                                   aria-describedby={errors.walletAddress ? 'wallet-error' : undefined} aria-invalid={!!errors.walletAddress} />
                               {errors.walletAddress && <p id="wallet-error" className={errorClasses}>{errors.walletAddress}</p>}
                           </div>
@@ -442,7 +442,7 @@ const ContactForm: React.FC = () => {
                           <div>
                               <label htmlFor="referenceCode" className={labelClasses}>Reference Code (Optional)</label>
                               <input type="text" id="referenceCode" value={referenceCode} onChange={handleReferenceCodeChange}
-                                  className={`${inputClasses} ${errors.referenceCode ? 'border-danger' : ''}`}
+                                  className={`${inputClasses} ${errors.referenceCode ? 'border-pink' : ''}`}
                                   aria-describedby={errors.referenceCode ? 'refcode-error' : undefined} aria-invalid={!!errors.referenceCode} />
                               {errors.referenceCode && <p id="refcode-error" className={errorClasses}>{errors.referenceCode}</p>}
                           </div>
@@ -456,7 +456,7 @@ const ContactForm: React.FC = () => {
                               <div>
                                   <label htmlFor="ownReferenceCode" className={labelClasses}>Enter Desired Reference Code</label>
                                   <input type="text" id="ownReferenceCode" value={ownReferenceCode} onChange={handleOwnReferenceCodeChange}
-                                      className={`${inputClasses} ${errors.ownReferenceCode ? 'border-danger' : ''}`}
+                                      className={`${inputClasses} ${errors.ownReferenceCode ? 'border-pink' : ''}`}
                                       aria-describedby={errors.ownReferenceCode ? 'owncode-error' : undefined} aria-invalid={!!errors.ownReferenceCode} />
                                   {errors.ownReferenceCode && <p id="owncode-error" className={errorClasses}>{errors.ownReferenceCode}</p>}
                               </div>
@@ -472,7 +472,7 @@ const ContactForm: React.FC = () => {
        </div> {/* End of grid wrapper */}
 
        {/* Submit Button */}
-       <div> <button type="submit" disabled={isLoading} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-bg bg-primary hover:bg-primary2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"> {isLoading ? (<svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-text" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>) : 'Send Message'} </button> </div>
+       <div> <button type="submit" disabled={isLoading} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-bg bg-gold hover:bg-gold2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gold disabled:opacity-50 disabled:cursor-not-allowed"> {isLoading ? (<svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-text" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>) : 'Send Message'} </button> </div>
     </form>
   );
 };

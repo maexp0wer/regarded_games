@@ -110,7 +110,7 @@ export function VictoryProgressBar({
     <div className="flex flex-col gap-3 w-full items-start text-left">
       {!hideLabels && (
         <span className={`text-[10px] font-bold uppercase tracking-wider leading-none 
-          ${isTie ? 'text-text2/40' : (progress.side === 'cap' ? 'text-info' : 'text-danger')}`}
+          ${isTie ? 'text-text2/40' : (progress.side === 'cap' ? 'text-blue' : 'text-pink')}`}
         >
           {isTie ? (
             'Tie'
@@ -124,9 +124,9 @@ export function VictoryProgressBar({
         <div 
           className={`h-full transition-all duration-1000 ease-out 
             ${progress.side === 'cap' 
-              ? 'bg-info shadow-[0_0_8px_rgba(0,180,216,0.3)]' 
-              : progress.side === 'soc' 
-                ? 'bg-danger shadow-[0_0_8px_rgba(255,71,87,0.3)]' 
+              ? 'bg-blue shadow-[0_0_8px_#4d9fff4d]'
+              : progress.side === 'soc'
+                ? 'bg-pink shadow-[0_0_8px_#ff3d8a4d]'
                 : 'bg-transparent'}`}
           style={{ width: `${progress.prog}%` }}
         />

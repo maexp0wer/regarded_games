@@ -9,7 +9,9 @@
       "Bash(git checkout *)",
       "Bash(npm run *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\src\" -Recurse -File)",
+      "Bash(Select-Object FullName)"
     ]
   }
 }

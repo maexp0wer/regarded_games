@@ -105,7 +105,7 @@ export function PlayerActiveSeasons({ playerAddress }: PlayerActiveSeasonsProps)
 
   if (isScanning || isCheckingBalances) return (
     <div className="p-12 text-center animate-pulse">
-      <span className="text-primary font-display uppercase tracking-widest text-[10px]">Syncing Player Dossier...</span>
+      <span className="text-gold font-display uppercase tracking-widest text-[10px]">Syncing Player Dossier...</span>
     </div>
   );
 
@@ -151,10 +151,10 @@ function PayoutValueDisplay({ seasonAddress, playerAddress }: { seasonAddress: s
 
     return (
         <div className="flex flex-col items-start">
-            <span className={`text-[9px] uppercase font-bold tracking-widest mb-0.5 ${isClaimable ? 'text-primary' : 'text-text2'}`}>
+            <span className={`text-[9px] uppercase font-bold tracking-widest mb-0.5 ${isClaimable ? 'text-gold' : 'text-text2'}`}>
                 {isClaimable ? 'Claimable' : 'Claimed'}
             </span>
-            <span className={`text-xl font-black tracking-tighter leading-none ${isClaimable ? 'text-primary' : 'text-text'}`}>
+            <span className={`text-xl font-black tracking-tighter leading-none ${isClaimable ? 'text-gold' : 'text-text'}`}>
                 ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 <span className="text-[10px] opacity-40 ml-1 font-sans font-bold">USDC</span>
             </span>
@@ -178,8 +178,8 @@ function SeasonHoldingRow({ pos, playerAddress }: { pos: any, playerAddress: str
   const isTrading = pos.phase === 'TRADING';
   const isConcluded = pos.phase === 'PAYOUT' || pos.phase === 'ENDED';
   
-  const phaseColor = isAuction ? 'text-danger' : isConcluded ? 'text-info' : 'text-success';
-  const phaseBg = isAuction ? 'bg-danger' : isConcluded ? 'bg-info' : 'bg-success';
+  const phaseColor = isAuction ? 'text-pink' : isConcluded ? 'text-blue' : 'text-green';
+  const phaseBg = isAuction ? 'bg-pink' : isConcluded ? 'bg-blue' : 'bg-green';
 
   return (
     <Link href={`/season_${pos.id}`} className="block group">
@@ -232,7 +232,7 @@ function SeasonHoldingRow({ pos, playerAddress }: { pos: any, playerAddress: str
   {/* 4. HOLDINGS - Compact fixed width */}
   <div className="flex flex-col items-start md:w-24 shrink-0">
     <span className="text-[9px] uppercase font-bold text-text2 tracking-widest mb-0.5">Holdings</span>
-    <span className="text-xl font-black text-primary tracking-tighter leading-none truncate w-full">
+    <span className="text-xl font-black text-gold tracking-tighter leading-none truncate w-full">
       {Number(formatUnits(pos.balance, 18)).toLocaleString()}
     </span>
   </div>

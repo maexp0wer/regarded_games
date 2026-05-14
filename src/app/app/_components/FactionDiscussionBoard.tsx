@@ -41,7 +41,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist }: FactionDisc
 
   const factionColor = isCapitalist ? 'var(--color-blue)' : 'var(--color-pink)';
   const factionLabel = isCapitalist ? 'THE BOURGEOISIE' : 'THE PROLETARIAT';
-  const pillBg       = isCapitalist ? 'rgba(77,159,255,0.12)' : 'rgba(255,61,138,0.12)';
+  const pillClass    = isCapitalist ? 'pill-faction-cap' : 'pill-faction-soc';
 
   return (
     <div
@@ -58,14 +58,14 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist }: FactionDisc
         style={{ background: 'var(--color-card2)', borderBottom: '1px solid var(--color-border)' }}
       >
         <span
-          className="font-display font-extrabold uppercase tracking-tight"
-          style={{ fontSize: 14, color: factionColor }}
+          className="font-display font-extrabold uppercase tracking-tight text-faction-header"
+          style={{ color: factionColor }}
         >
           {factionLabel}
         </span>
         <span
-          className="font-mono text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full"
-          style={{ color: factionColor, background: pillBg }}
+          className={`font-mono text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${pillClass}`}
+          style={{ color: factionColor }}
         >
           {isCapitalist ? 'Bourgeois Access' : 'Proletariat Access'}
         </span>
@@ -109,7 +109,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist }: FactionDisc
                 background: 'var(--color-card2)',
                 border: '1px solid var(--color-border)',
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = factionColor + '66'; }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = isCapitalist ? 'var(--color-blue-a40)' : 'var(--color-pink-a40)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-border)'; }}
             >
               <p className="font-mono text-[9px] font-bold uppercase tracking-widest mb-1.5" style={{ color: factionColor, opacity: 0.7 }}>
@@ -143,7 +143,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist }: FactionDisc
           rel="noopener noreferrer"
           className="w-full flex items-center justify-center py-2.5 rounded-xl font-mono font-bold text-[10px] uppercase tracking-widest transition-all"
           style={{ background: 'var(--color-card)', color: 'var(--color-text2)', border: '1px solid var(--color-border)' }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = factionColor; (e.currentTarget as HTMLElement).style.borderColor = factionColor + '66'; }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = factionColor; (e.currentTarget as HTMLElement).style.borderColor = isCapitalist ? 'var(--color-blue-a40)' : 'var(--color-pink-a40)'; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--color-text2)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-border)'; }}
         >
           + Draft New Directive
