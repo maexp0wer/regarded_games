@@ -95,7 +95,7 @@ export function useSeasonGini(seasonAddress: string | undefined) {
       const query = `
         query GetGiniData($address: String!) {
           playerSeasonStatss(where: { seasonAddress: $address }, limit: 1000) {
-            items { playerAddress fimBalance }
+            items { playerAddress fimBalance fimBurned }
           }
           orderss(where: { seasonAddress: $address, active: true, isBuy: false }, limit: 1000) {
             items { maker remainingAmount }
@@ -125,10 +125,11 @@ export function useSeasonGini(seasonAddress: string | undefined) {
         orderWealth[m] = (orderWealth[m] || 0n) + BigInt(o.remainingAmount);
       });
 
-      // 2. Combine Wallet + Sell Orders
+      // 2. Combine Wallet + Sell Orders (using effective balance: fimBalance + fimBurned)
       const wealthMap = new Map<string, bigint>();
       rawPlayers.forEach((p: any) => {
-        wealthMap.set(p.playerAddress.toLowerCase(), BigInt(p.fimBalance));
+        const effectiveBalance = BigInt(p.fimBalance) + BigInt(p.fimBurned || "0");
+        wealthMap.set(p.playerAddress.toLowerCase(), effectiveBalance);
       });
       Object.entries(orderWealth).forEach(([maker, amt]) => {
         wealthMap.set(maker, (wealthMap.get(maker) || 0n) + amt);

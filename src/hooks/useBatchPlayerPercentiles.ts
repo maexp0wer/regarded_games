@@ -55,7 +55,7 @@ export function useBatchPlayerPercentiles(
             limit: $limit,
             after: $after
           ) {
-            items { playerAddress, fimBalance }
+            items { playerAddress, fimBalance, fimBurned }
             pageInfo { endCursor, hasNextPage }
           }
         }
@@ -86,11 +86,12 @@ export function useBatchPlayerPercentiles(
 
         if (playersData.length === 0) return {};
 
-        // --- ISSUE 1 FIX: ADD LOCKED FIM BACK TO BALANCE ---
+        // --- ISSUE 1 FIX: ADD LOCKED FIM BACK TO BALANCE + ACCOUNT FOR BURNED FIM ---
         const playerBalances = new Map<string, bigint>();
 
         for (const p of playersData) {
-          playerBalances.set(p.playerAddress.toLowerCase(), BigInt(p.fimBalance));
+          const effectiveBalance = BigInt(p.fimBalance) + BigInt(p.fimBurned || "0");
+          playerBalances.set(p.playerAddress.toLowerCase(), effectiveBalance);
         }
 
         // Refund the FIM locked in "Sell" orders to their effective balance

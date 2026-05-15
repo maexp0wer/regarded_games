@@ -17,10 +17,10 @@ export async function POST(req: Request) {
     const sAddr = seasonAddress.toLowerCase();
     const uAddr = userAddress.toLowerCase();
 
-    // 2. Fetch User Balance
+    // 2. Fetch User Balance (effective: fim_balance + fim_burned)
     const userQuery = `
-      SELECT fim_balance 
-      FROM player_season_stats 
+      SELECT fim_balance, fim_burned
+      FROM player_season_stats
       WHERE season_address = $1 AND player_address = $2
       LIMIT 1
     `;
@@ -32,34 +32,35 @@ export async function POST(req: Request) {
     }
 
     const row = userRes.rows[0];
-    
+
     // Handle potential casing differences safely
     const balanceValue = row.fim_balance ?? row.fimBalance ?? row.balance;
-    
+    const burnedValue = row.fim_burned ?? row.fimBurned ?? 0;
+
     if (balanceValue === undefined) {
       console.error("Percentile API Error: Column 'fim_balance' not found in result.");
       return NextResponse.json({ error: 'Database schema mismatch: fim_balance column not found' }, { status: 500 });
     }
 
-    const rawUserBalance = BigInt(balanceValue);
+    const rawUserBalance = BigInt(balanceValue) + BigInt(burnedValue);
     const rawThreshold = BigInt(massThreshold); 
 
     const isCapitalist = rawUserBalance > rawThreshold;
     const operator = isCapitalist ? '>' : '<=';
 
-    // 3. Count Stats (Rank & Total)
+    // 3. Count Stats (Rank & Total) using effective balance (fim_balance + fim_burned)
     const statsQuery = `
-      SELECT 
+      SELECT
         COUNT(*) as total_in_faction,
-        COUNT(*) FILTER (WHERE fim_balance > $3::NUMERIC) as richer_than_user
+        COUNT(*) FILTER (WHERE (fim_balance + COALESCE(fim_burned, 0)) > $3::NUMERIC) as richer_than_user
       FROM player_season_stats
       WHERE season_address = $1
-        AND fim_balance ${operator} $2::NUMERIC
+        AND (fim_balance + COALESCE(fim_burned, 0)) ${operator} $2::NUMERIC
     `;
 
     const statsRes = await pool.query(statsQuery, [
-        sAddr, 
-        rawThreshold.toString(), 
+        sAddr,
+        rawThreshold.toString(),
         rawUserBalance.toString()
     ]);
     

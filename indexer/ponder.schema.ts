@@ -14,6 +14,7 @@ export const playerSeasonStats = onchainTable("player_season_stats", (t) => ({
   seasonAddress: t.hex().notNull(),
   playerAddress: t.hex().notNull(),
   fimBalance: t.bigint().default(0n).notNull(),
+  fimBurned: t.bigint().default(0n).notNull(),
   netContribution: t.bigint().default(0n).notNull(),
   realizedPayout: t.bigint().default(0n).notNull(),
   totalPotentialPayout: t.bigint().default(0n).notNull(),

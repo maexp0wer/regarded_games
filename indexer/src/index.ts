@@ -72,9 +72,10 @@ ponder.on("FIM:Transfer", async ({ event, context }) => {
   else if (to === ZERO_ADDRESS) {
     await context.db
       .insert(playerSeasonStats)
-      .values({ seasonAddress: season.address, playerAddress: from, fimBalance: -value, netContribution: 0n })
+      .values({ seasonAddress: season.address, playerAddress: from, fimBalance: -value, fimBurned: value, netContribution: 0n })
       .onConflictDoUpdate((row) => ({
         fimBalance: row.fimBalance - value,
+        fimBurned: row.fimBurned + value,
       }));
   } 
   

@@ -28,7 +28,7 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
     functionName: 'finalProgressBps', query: { enabled: !!seasonAddress },
   });
 
-  const { payout, pnl: livePnL, userFim, userNetContrib, realizedPayout, loading: calcLoading, refetch: refetchPayout } =
+  const { payout, pnl: livePnL, userFim, userNetContrib, fimBurned, realizedPayout, loading: calcLoading, refetch: refetchPayout } =
     usePayout(seasonAddress, address);
 
   const canClaim = payout > 0;
@@ -104,14 +104,10 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
         {/* Your Holdings */}
         <div className="flex flex-col gap-1 p-4" style={{ background: 'var(--color-card2)', borderRight: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>
           <span className="section-label">{hasClaimed ? 'FIM Burned' : 'Your Holdings'}</span>
-          {hasClaimed ? (
-            <span className="font-mono text-[13px] text-text2 italic">Settled</span>
-          ) : (
-            <span className="font-mono font-semibold text-[15px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-              {userFim.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-              <span className="ml-1 text-[10px] text-text2">FIM</span>
-            </span>
-          )}
+          <span className="font-mono font-semibold text-[15px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {(hasClaimed ? fimBurned : userFim).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            <span className="ml-1 text-[10px] text-text2">FIM</span>
+          </span>
         </div>
 
         {/* Net Contribution */}
