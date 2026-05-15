@@ -12,7 +12,7 @@ import PercentSlider from '@/components/PercentSlider';
 import ERC20Abi from '@/deployments/abis/MockUSDC.json';
 import StakingAbi from '@/deployments/abis/Staking.json';
 import AuctionAbi from '@/deployments/abis/Auction.json';
-import coreAddresses from '@/deployments/core.json';
+import coreAddresses from '@/deployments/local/core.json';
 
 const DEAD_ADDRESS = '0x0000000000000000000000000000000000000000';
 

@@ -5,7 +5,7 @@ import { useChainId, usePublicClient, useReadContract } from 'wagmi';
 import { Address, getAddress } from 'viem';
 import { base, baseSepolia, foundry } from 'wagmi/chains';
 import { useQuery } from '@tanstack/react-query';
-import coreDeployment from '@/deployments/core.json';
+import coreDeployment from '@/deployments/local/core.json';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
 import Link from 'next/link';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';

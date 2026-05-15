@@ -12,7 +12,7 @@ const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '';
 
 // 1. Define all chains (Anvil for dev, Base for test/prod)
 const chains = [
-  foundry, // Anvil (31337)
+  ...(process.env.NEXT_PUBLIC_DEBUG === 'true' ? [foundry] : []), // Anvil (31337)
   baseSepolia,
   base,
 ] as const;
@@ -41,12 +41,14 @@ const connectors = typeof window !== 'undefined' ? connectorsForWallets(
 export const config = createConfig({
   chains,
   transports: {
-    // Local Anvil Node
-    [foundry.id]: http(process.env.NEXT_PUBLIC_ANVIL_RPC_URL),
-    
+    ...(process.env.NEXT_PUBLIC_DEBUG === 'true' && {
+      // Local Anvil Node
+      [foundry.id]: http(process.env.NEXT_PUBLIC_ANVIL_RPC_URL),
+    }),
+
     // Base Sepolia Testnet (Alchemy)
     [baseSepolia.id]: http(process.env.NEXT_PUBLIC_ALCHEMY_BASE_SEPOLIA_RPC_URL),
-    
+
     // Base Mainnet (Alchemy)
     [base.id]: http(process.env.NEXT_PUBLIC_ALCHEMY_BASE_RPC_URL),
   },

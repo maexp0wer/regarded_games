@@ -9,8 +9,7 @@ import PercentSlider from '@/components/PercentSlider';
 
 // ABIs & Addresses
 import MockRouterAbiRaw from '@/deployments/abis/MockUniswapRouter.json';
-import Core from '@/deployments/core.json';
-import Mocks from '@/deployments/mocks.json';
+import Core from '@/deployments/local/core.json';
 
 const MockRouterAbi = MockRouterAbiRaw as any;
 
@@ -26,7 +25,7 @@ export function SwapMask() {
   const [status, setStatus] = useState<WorkflowStep>('idle');
 
   // Configuration
-  const ROUTER_ADDRESS = Mocks.Router as `0x${string}`;
+  const routerAddr = Core.Router as `0x${string}`;
   const usdcAddr = Core.USDC as `0x${string}`;
   const rgdAddr = Core.RGD as `0x${string}`;
 
@@ -48,7 +47,7 @@ export function SwapMask() {
   
   // Read allowance for the CURRENT input token
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: tokenIn, abi: erc20Abi, functionName: 'allowance', args: address ? [address, ROUTER_ADDRESS] : undefined,
+    address: tokenIn, abi: erc20Abi, functionName: 'allowance', args: address ? [address, routerAddr] : undefined,
   });
 
   // --- 2. Logic & Math ---
@@ -95,7 +94,7 @@ export function SwapMask() {
     try {
       // 1. Check Allowance
       const liveAllowance = await publicClient.readContract({
-        address: tokenIn, abi: erc20Abi, functionName: 'allowance', args: [address, ROUTER_ADDRESS]
+        address: tokenIn, abi: erc20Abi, functionName: 'allowance', args: [address, routerAddr]
       }) as bigint;
 
       if (liveAllowance < amountBigInt) {
@@ -103,7 +102,7 @@ export function SwapMask() {
         // Max approval for convenience
         const maxApproval = 115792089237316195423570985008687907853269984665640564039457584007913129639935n;
         const approveHash = await writeContractAsync({
-          address: tokenIn, abi: erc20Abi, functionName: 'approve', args: [ROUTER_ADDRESS, maxApproval],
+          address: tokenIn, abi: erc20Abi, functionName: 'approve', args: [routerAddr, maxApproval],
         });
         setStatus('mining_approval');
         await publicClient.waitForTransactionReceipt({ hash: approveHash });
@@ -114,7 +113,7 @@ export function SwapMask() {
       setStatus('swapping');
       
       const swapHash = await writeContractAsync({
-        address: ROUTER_ADDRESS,
+        address: routerAddr,
         abi: MockRouterAbi,
         functionName: 'exactInputSingle',
         args: [{

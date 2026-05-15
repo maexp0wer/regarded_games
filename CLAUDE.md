@@ -50,7 +50,7 @@ All data-fetching hooks use `useQuery` from `@tanstack/react-query` with a stabl
 - **Client-side:** wagmi hooks (`useReadContract`, `useWriteContract`, `useAccount`, `usePublicClient`)
 - **Server-side (API routes):** instantiate viem `publicClient` directly via `NEXT_PUBLIC_CHAIN_ID`
 - Chains: dev 31337 (Anvil), testnet 84532 (Base Sepolia), prod 8453 (Base mainnet)
-- Contract addresses from `src/deployments/core.json` + `seasons.json` via `src/lib/contracts.ts`
+- Contract addresses from `src/deployments/local/core.json` via `src/lib/contracts.ts`
 - ABIs in `src/deployments/abis/` (source of truth)
 - Wallet addresses always normalized to lowercase
 - Faction threshold calculated live client-side from raw balances — **not** read from the contract (contract value is stale)

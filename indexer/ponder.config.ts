@@ -6,7 +6,7 @@ import { FimAbi } from "./abis/FimAbi";
 import { ExchangeAbi } from "./abis/ExchangeAbi";
 import { AuctionAbi } from "./abis/AuctionAbi";
 import { TreasuryAbi } from "./abis/TreasuryAbi";
-import coreDeployment from "../src/deployments/core.json";
+import coreDeployment from "../src/deployments/local/core.json";
 
 const CONTROLLER_ADDRESS = coreDeployment.Controller as `0x${string}`;
 const TREASURY_ADDRESS = coreDeployment.Treasury as `0x${string}`;

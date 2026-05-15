@@ -6,7 +6,7 @@ import { Address } from 'viem';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 
-import coreDeployment from '@/deployments/core.json';
+import coreDeployment from '@/deployments/local/core.json';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { usePayout } from '@/hooks/usePayout';
 

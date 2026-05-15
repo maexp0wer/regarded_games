@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { parseUnits, formatUnits, erc20Abi, maxUint256 } from 'viem';
 import { Order } from '@/hooks/useOrderBook';
-import Core from '@/deployments/core.json';
+import Core from '@/deployments/local/core.json';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
 import { useTradeExecution, ExecutionPayload } from '@/hooks/useTradeExecution';
 import { PercentileCircle } from './PercentileCircle';

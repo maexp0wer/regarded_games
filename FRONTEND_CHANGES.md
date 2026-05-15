@@ -11,7 +11,7 @@ This document covers every contract-level change that affects the frontend. All 
 | Contract file | `REG.sol` | `RGD.sol` |
 | ERC20 name | `"Gini Governance"` | `"Regarded Games"` |
 | ERC20 symbol | `"REG"` | `"RGD"` |
-| Key in `deployments/core.json` | `"REG"` | `"RGD"` |
+| Key in `deployments/local/core.json` | `"REG"` | `"RGD"` |
 
 **Action required:** Update the JSON key used to read the governance token address from `core.json`.
 

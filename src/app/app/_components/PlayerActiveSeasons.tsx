@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 
 // Assets & Hooks
-import coreDeployment from '@/deployments/core.json';
+import coreDeployment from '@/deployments/local/core.json';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';

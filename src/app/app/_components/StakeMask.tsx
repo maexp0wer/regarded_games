@@ -11,7 +11,7 @@ import PercentSlider from '@/components/PercentSlider';
 // ABIs
 import ERC20AbiRaw from '@/deployments/abis/MockUSDC.json'; 
 import StakingAbiRaw from '@/deployments/abis/Staking.json';
-import coreAddresses from '@/deployments/core.json';
+import coreAddresses from '@/deployments/local/core.json';
 
 const ERC20Abi = ERC20AbiRaw as any;
 const StakingAbi = StakingAbiRaw as any;
