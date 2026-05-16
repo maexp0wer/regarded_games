@@ -100,6 +100,20 @@ export default function SeasonDetailPage() {
     query: { enabled: !!seasonAddress, refetchInterval: 3000 },
   });
 
+  const { data: isSeasonActiveRaw } = useReadContract({
+    address: seasonAddress,
+    abi: GameSeasonAbi as any,
+    functionName: 'isActive',
+    query: { enabled: !!seasonAddress, refetchInterval: 3000 },
+  });
+
+  const { data: tradingStartTimeRaw } = useReadContract({
+    address: seasonAddress,
+    abi: GameSeasonAbi as any,
+    functionName: 'tradingStartTime',
+    query: { enabled: !!seasonAddress, refetchInterval: 3000 },
+  });
+
   const { data: myOrders, refetch: refetchOpenOrders } = useOpenOrders(seasonAddress, userAddress);
   const hasOrders = myOrders && myOrders.length > 0;
 
@@ -163,9 +177,9 @@ export default function SeasonDetailPage() {
     const getVal = (key: string, index: number) => (r[key] !== undefined ? r[key] : r[index]);
 
     const cfg = {
-      createdAt:          Number(getVal('createdAt', 0)),
+      auctionStartTime:   Number(getVal('auctionStartTime', 0)),
       auctionDuration:    Number(getVal('auctionDuration', 1)),
-      gameDuration:       Number(getVal('gameDuration', 2)),
+      tradingDuration:    Number(getVal('tradingDuration', 2)),
       victoryThresholdBps:Number(getVal('victoryThresholdBps', 3)),
       baseBeta:           Number(getVal('beta', 4)),
       buybackBps:         Number(getVal('buybackBps', 5)),
@@ -246,8 +260,20 @@ export default function SeasonDetailPage() {
   const isTrading  = currentPhase === 'TRADING';
   const isPayout   = currentPhase === 'PAYOUT' || currentPhase === 'DISTRIBUTION';
 
-  const tradingStart = (config?.createdAt || 0) + (config?.auctionDuration || 0);
-  const seasonEnd    = (config?.createdAt || 0) + (config?.auctionDuration || 0) + (config?.gameDuration || 0);
+  const scheduledTradingStart = (config?.auctionStartTime || 0) + (config?.auctionDuration || 0);
+  const actualTradingStart    = tradingStartTimeRaw ? Number(tradingStartTimeRaw) : 0;
+  const tradingStart          = actualTradingStart > 0 ? actualTradingStart : scheduledTradingStart;
+  const seasonEnd             = tradingStart + (config?.tradingDuration || 0);
+
+  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
+  useEffect(() => {
+    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const isTradingTimeExpired =
+    isTrading && (isSeasonActiveRaw === false || (seasonEnd > 0 && now >= seasonEnd));
+  const effectiveVictoryPending = isVictoryPending || isTradingTimeExpired;
 
   const formattedName = seasonSlug?.replace(/_/g, ' ') || 'Season Dashboard';
 
@@ -275,7 +301,8 @@ export default function SeasonDetailPage() {
     isAuction,
     isBootstrap: isAuctionOrBootstrap,
     isPayout,
-    isVictoryPending,
+    isVictoryPending: effectiveVictoryPending,
+    isTimeLimitExpired: isTradingTimeExpired,
     winningSide,
     progressPercent,
   };
@@ -295,6 +322,7 @@ export default function SeasonDetailPage() {
           currentPhase={currentPhase}
           isBootstrap={isAuctionOrBootstrap}
           isPayout={isPayout}
+          isVictoryPending={effectiveVictoryPending}
         />
         <PrizePoolCard
           seasonAddress={seasonAddress}
@@ -369,6 +397,7 @@ export default function SeasonDetailPage() {
               onRemoveOrder={handleRemoveOrder}
               onMoveOrder={handleMoveOrder}
               onReorderOrders={handleReorderOrders}
+              isOnHold={effectiveVictoryPending}
             />
             <div className="lg:col-span-2">
               <OrderBook

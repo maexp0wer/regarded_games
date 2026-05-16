@@ -206,7 +206,7 @@ export default function Home() {
                 <div className="flex flex-col items-center text-center bg-card p-8 rounded-xl shadow-md max-h-screen">
                   <Regardo className="w-full h-auto max-h-70 transition-transform duration-200 ease-in-out hover:scale-110" viewBox="0 0 500 800" onClick={openRegardoModal}/>
                   <h3 className="text-xl font-bold mt-8 m-3">Regardo, the Capitalist</h3>
-                  <p className='text-sm'>Play the game of accumulation. Use your capital to concentrate power, outmaneuver rivals, and push the economy towards a state of perfect inequality. If you win, the Oligarchy - the select few controlling 50% of the supply - splits the entire prize pool. The rest get nothing.</p>
+                  <p className='text-sm'>Play the game of accumulation. Use your capital to concentrate power, outmaneuver rivals, and push the economy towards a state of perfect inequality. If you win, the Bourgeoisie - the select few controlling 50% of the supply - splits the entire prize pool. The rest get nothing.</p>
                 </div>
                 <GenericModal
                   isOpen={isRegardoModalOpen}
@@ -236,7 +236,7 @@ export default function Home() {
                   <Carlo className="w-full h-auto max-h-70  transition-transform duration-200 ease-in-out hover:scale-110 pt-8" viewBox="0 0 500 800" onClick={openCarloModal}/>
                   <h3 className="text-xl font-bold mt-8 m-3">Carlo, the Socialist</h3>
                   <p className='text-sm'>Play the game of coordination. Organize with the masses to resist the pull of capital and drive the economy towards perfect distribution.
-                    If you win, the Solidarity Fund caps the rich and pays the surplus to those who sacrificed for the collective.
+                    If you win, the Solidarity Fund caps the rich and pays the surplus to the Proletariat - the mass that holds the other 50% of the supply.
                   </p>
                 
                 </div>

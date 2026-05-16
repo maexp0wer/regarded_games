@@ -18,7 +18,7 @@
         "internalType": "uint256"
       },
       {
-        "name": "_gameDuration",
+        "name": "_tradingDuration",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -106,6 +106,19 @@
   },
   {
     "type": "function",
+    "name": "auctionStartTime",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "beta",
     "inputs": [],
     "outputs": [
@@ -149,19 +162,6 @@
     "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "createdAt",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -354,19 +354,6 @@
   },
   {
     "type": "function",
-    "name": "gameDuration",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getConfig",
     "inputs": [],
     "outputs": [
@@ -376,7 +363,7 @@
         "internalType": "struct GameSeason.SeasonConfig",
         "components": [
           {
-            "name": "createdAt",
+            "name": "auctionStartTime",
             "type": "uint256",
             "internalType": "uint256"
           },
@@ -386,7 +373,7 @@
             "internalType": "uint256"
           },
           {
-            "name": "gameDuration",
+            "name": "tradingDuration",
             "type": "uint256",
             "internalType": "uint256"
           },
@@ -665,19 +652,6 @@
   },
   {
     "type": "function",
-    "name": "seasonStartTime",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "setAuction",
     "inputs": [
       {
@@ -758,6 +732,32 @@
   {
     "type": "function",
     "name": "totalSupply",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "tradingDuration",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "tradingStartTime",
     "inputs": [],
     "outputs": [
       {

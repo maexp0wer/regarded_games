@@ -20,7 +20,7 @@ export interface PayoutData {
   refetch: () => void;
 }
 
-export function usePayout(seasonAddress: string, userAddress: string | undefined): PayoutData {
+export function usePayout(seasonAddress: string | undefined, userAddress: string | undefined): PayoutData {
   
   // 1. Fetch RPC Data (Only need live/changing state: FIM Balance)
   const { data: rpcData, isLoading: rpcLoading, refetch: refetchRpc } = useReadContracts({

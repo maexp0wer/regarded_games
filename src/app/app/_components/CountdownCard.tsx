@@ -33,6 +33,7 @@ export function CountdownCard({
   isBootstrap,
   isPayout,
   isVictoryPending,
+  isTimeLimitExpired = false,
   winningSide,
   progressPercent,
 }: {
@@ -42,6 +43,7 @@ export function CountdownCard({
   isBootstrap: boolean;
   isPayout: boolean;
   isVictoryPending: boolean;
+  isTimeLimitExpired?: boolean;
   winningSide: 'cap' | 'soc' | 'none';
   progressPercent: number;
 }) {
@@ -134,7 +136,9 @@ export function CountdownCard({
             Settlement Pending
           </p>
           <p className="font-sans text-xs text-text2 leading-snug m-0">
-            Victory condition met. Preparing Payout Phase.
+            {isTimeLimitExpired
+              ? 'Trading period ended. Awaiting settlement.'
+              : 'Victory condition met. Preparing Payout Phase.'}
           </p>
         </div>
       ) : (

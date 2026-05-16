@@ -36,9 +36,9 @@ type SeasonRegistry = {
   season: Address;
   phase: string;
   config: {
-    createdAt: number;
+    auctionStartTime: number;
     auctionDuration: number;
-    gameDuration: number;
+    tradingDuration: number;
     victoryThresholdBps: number;
     baseBeta: number;
     buybackBps: number;
@@ -141,13 +141,13 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
             }
         }
 
-        const victoryPending = (season.phase === 'TRADING') && (gCurrVal >= capTarget || gCurrVal <= socTarget);
+        const isVictoryPending = (season.phase === 'TRADING') && (gCurrVal >= capTarget || gCurrVal <= socTarget);
 
-        return { 
-            gCurrent: gCurrVal, 
+        return {
+            gCurrent: gCurrVal,
             progressPercent: Math.min(Math.max(prog, 0), 100),
             winningSide: side,
-            isVictoryPending: victoryPending
+            isVictoryPending,
         };
     }, [giniData, season, gInitialRaw]);
 
@@ -156,9 +156,13 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
     const isTrading = season.phase === 'TRADING';
     const isAuction = season.phase === 'AUCTION';
 
+    const nowSec = Math.floor(Date.now() / 1000);
+    const isTimeLimitExpired = isTrading && season.seasonEndTime > 0 && nowSec >= season.seasonEndTime;
+    const effectiveVictoryPending = isVictoryPending || isTimeLimitExpired;
+
     const showTimeStat = isTrading || isBootstrap || isAuction;
     const statusLabel = isTrading ? 'Ends' : 'Trading Starts';
-    const statusTime = (isVictoryPending || isBootstrap) ? 'SHORTLY' : isTrading ? formatDate(season.seasonEndTime) : formatDate(season.tradingStartTime);
+    const statusTime = (effectiveVictoryPending || isBootstrap) ? 'SHORTLY' : isTrading ? formatDate(season.seasonEndTime) : formatDate(season.tradingStartTime);
 
     if (!season.config) return null;
 
@@ -178,10 +182,10 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
                 >
                   S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
                 </p>
-                <SeasonPhasePills 
-                  phase={season.phase} 
-                  isVictoryPending={isVictoryPending} 
-                  className="flex flex-col gap-1.5" 
+                <SeasonPhasePills
+                  phase={season.phase}
+                  isVictoryPending={effectiveVictoryPending}
+                  className="flex flex-col gap-1.5"
                 />
               </div>
 
@@ -194,10 +198,10 @@ function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, tot
                   >
                     S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
                   </p>
-                  <SeasonPhasePills 
-                    phase={season.phase} 
-                    isVictoryPending={isVictoryPending} 
-                    className="flex items-center flex-wrap gap-2" 
+                  <SeasonPhasePills
+                    phase={season.phase}
+                    isVictoryPending={effectiveVictoryPending}
+                    className="flex items-center flex-wrap gap-2"
                   />
                 </div>
 
@@ -297,14 +301,14 @@ export function SeasonsList() {
 
                 const getVal = (key: string, idx: number) => cfg[key] !== undefined ? cfg[key] : cfg[idx];
                 
-                const cAt = Number(getVal('createdAt', 0));
+                const cAt = Number(getVal('auctionStartTime', 0));
                 const aDu = Number(getVal('auctionDuration', 1));
-                const gDu = Number(getVal('gameDuration', 2));
-                
+                const gDu = Number(getVal('tradingDuration', 2));
+
                 const parsedConfig = {
-                    createdAt: cAt,
+                    auctionStartTime: cAt,
                     auctionDuration: aDu,
-                    gameDuration: gDu,
+                    tradingDuration: gDu,
                     victoryThresholdBps: Number(getVal('victoryThresholdBps', 3)),
                     baseBeta: Number(getVal('beta', 4)),
                     // Add Policy BPS for list display

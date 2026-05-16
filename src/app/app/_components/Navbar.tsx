@@ -23,6 +23,7 @@ export function Navbar() {
     { name: 'Seasons',   href: '/seasons' },
     { name: 'Stake',     href: '/stake' },
     { name: 'Swap',      href: '/swap' },
+    { name: 'ICO',       href: '/ico' },
     { name: 'Docs',      href: `${docsUrl}`, external: true },
   ];
 

@@ -10,6 +10,7 @@ import coreDeployment from "../src/deployments/local/core.json";
 
 const CONTROLLER_ADDRESS = coreDeployment.Controller as `0x${string}`;
 const TREASURY_ADDRESS = coreDeployment.Treasury as `0x${string}`;
+const START_BLOCK = parseInt(process.env.PONDER_START_BLOCK ?? "0");
 
 export default createConfig({
   database: {
@@ -35,7 +36,7 @@ export default createConfig({
       abi: GameControllerAbi,
       chain: "anvil", // Switch to "baseSepolia" or "base" for deployment
       address: CONTROLLER_ADDRESS,
-      startBlock: 0,
+      startBlock: START_BLOCK,
     },
     GameSeason: {
       abi: GameSeasonAbi,
@@ -45,7 +46,7 @@ export default createConfig({
         event: parseAbiItem("event SeasonDeployed(uint256 indexed seasonId, address season, address auction, address exchange, address fim)"),
         parameter: "season",
       }),
-      startBlock: 0,
+      startBlock: START_BLOCK,
     },
     FIM: {
       abi: FimAbi,
@@ -55,7 +56,7 @@ export default createConfig({
         event: parseAbiItem("event SeasonDeployed(uint256 indexed seasonId, address season, address auction, address exchange, address fim)"),
         parameter: "fim",
       }),
-      startBlock: 0,
+      startBlock: START_BLOCK,
     },
     Exchange: {
       abi: ExchangeAbi,
@@ -65,7 +66,7 @@ export default createConfig({
         event: parseAbiItem("event SeasonDeployed(uint256 indexed seasonId, address season, address auction, address exchange, address fim)"),
         parameter: "exchange",
       }),
-      startBlock: 0,
+      startBlock: START_BLOCK,
     },
      Auction: {
       abi: AuctionAbi,
@@ -75,12 +76,13 @@ export default createConfig({
         event: parseAbiItem("event SeasonDeployed(uint256 indexed seasonId, address season, address auction, address exchange, address fim)"),
         parameter: "auction",
       }),
+      startBlock: START_BLOCK,
     },
     Treasury: {
       abi: TreasuryAbi,
       chain: "anvil",
       address: TREASURY_ADDRESS,
-      startBlock: 0,
+      startBlock: START_BLOCK,
     },
   },
 });

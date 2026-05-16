@@ -9,7 +9,7 @@ interface SeasonDetailsProps {
   seasonEnd: number;
   M_dynamic: number;
   config: {
-    createdAt: number;
+    auctionStartTime: number;
     victoryThresholdBps: number;
     baseBeta: number;
     buybackBps: number;
@@ -50,7 +50,7 @@ export function SeasonDetails({ tradingStart, seasonEnd, M_dynamic, config, seas
       <div className="card-app flex flex-col gap-3" style={{ borderColor: 'var(--color-border-bright)' }}>
         <p className="section-label pb-2" style={{ borderBottom: '1px solid var(--color-border)' }}>Schedule</p>
         {[
-          { label: 'Season Start',   value: formatDate(config?.createdAt || 0) },
+          { label: 'Season Start',   value: formatDate(config?.auctionStartTime || 0) },
           { label: 'Trading Start',  value: formatDate(tradingStart) },
           { label: 'Season End',     value: formatDate(seasonEnd) },
         ].map(({ label, value }) => (

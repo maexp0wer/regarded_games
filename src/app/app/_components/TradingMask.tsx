@@ -26,6 +26,7 @@ interface TradingMaskProps {
   onRemoveOrder: (id: string) => void;
   onMoveOrder: (index: number, direction: -1 | 1) => void;
   onReorderOrders: (newOrders: Order[]) => void;
+  isOnHold?: boolean;
 }
 
 export function TradingMask({
@@ -33,6 +34,7 @@ export function TradingMask({
   isBuy, setIsBuy, isMaker, setIsMaker,
   targetAmount, setTargetAmount,
   selectedOrders, onRemoveOrder, onReorderOrders,
+  isOnHold = false,
 }: TradingMaskProps) {
   const { address, isConnected } = useAccount();
   const [price, setPrice] = useState('1.00');
@@ -188,6 +190,26 @@ export function TradingMask({
     return (
       <div className="card-app flex items-center justify-center h-full">
         <p className="font-mono text-sm text-text2">Please connect wallet</p>
+      </div>
+    );
+  }
+
+  if (isOnHold) {
+    return (
+      <div className="card-app flex flex-col gap-5 h-full" style={{ borderColor: 'var(--color-border-bright)' }}>
+        <div>
+          <p className="section-label mb-1">FIM Balance</p>
+          <div
+            className="font-display font-extrabold leading-none text-display-trading"
+            style={{ color: 'var(--color-gold)', textShadow: '0 0 40px var(--color-gold-a25)', fontVariantNumeric: 'tabular-nums' }}
+          >
+            {Number(formatUnits(fimBalance || 0n, 18)).toLocaleString()}
+            <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
+          </div>
+        </div>
+        <div className="rounded-xl px-4 py-3 text-center" style={{ background: 'var(--color-card2)', border: '1px solid var(--color-border)' }}>
+          <p className="section-label">Season on Hold</p>
+        </div>
       </div>
     );
   }
