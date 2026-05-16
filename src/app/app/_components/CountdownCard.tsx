@@ -142,7 +142,8 @@ export function CountdownCard({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-4 gap-2">
+        /* Updated grid classes here: grid-cols-4 by default, grid-cols-2 at 'md', back to grid-cols-4 at 'lg' */
+        <div className="grid grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="cd-cell">
             <div className="cd-num">{pad(days)}</div>
             <div className="cd-unit">Days</div>

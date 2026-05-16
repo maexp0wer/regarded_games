@@ -1,16 +1,17 @@
 'use client';
 
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useReadContract, useAccount } from 'wagmi';
+import { useAccount } from 'wagmi';
 
-// Hooks / ABIs
+// Hooks
 import { useSeasonGini, useSeasonById } from '@/hooks/useSeasonGini';
+import { useSeasonPhase } from '@/hooks/useSeasonPhase';
+import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 import { Order } from '@/hooks/useOrderBook';
-import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
 import { useOpenOrders } from '@/hooks/useOpenOrders';
-import { usePayout } from '@/hooks/usePayout'; // <-- Added usePayout hook
+import { usePayout } from '@/hooks/usePayout';
 
 // Components
 import { SeasonHeader } from '../_components/SeasonHeader';
@@ -36,10 +37,10 @@ export default function SeasonDetailPage() {
   const { data: metadata, isLoading: isMetaLoading } = useSeasonById(seasonSlug);
   const { address: userAddress } = useAccount();
 
-  const seasonAddress  = metadata?.address         as `0x${string}` | undefined;
-  const auctionAddress = metadata?.auctionAddress  as `0x${string}` | undefined;
-  const exchangeAddress= metadata?.exchangeAddress as `0x${string}` | undefined;
-  const fimAddress     = metadata?.fimAddress      as `0x${string}` | undefined;
+  const seasonAddress   = metadata?.address         as `0x${string}` | undefined;
+  const auctionAddress  = metadata?.auctionAddress  as `0x${string}` | undefined;
+  const exchangeAddress = metadata?.exchangeAddress as `0x${string}` | undefined;
+  const fimAddress      = metadata?.fimAddress      as `0x${string}` | undefined;
 
   // 2. Trading state (lifted)
   const [isBuy, setIsBuy] = useState(true);
@@ -62,57 +63,29 @@ export default function SeasonDetailPage() {
   };
   const handleReorderOrders = (orders: Order[]) => setSelectedOrders(orders);
 
-  // 4. Data fetching
-  const { data: giniData,  isLoading: isGiniLoading   } = useSeasonGini(seasonAddress);
+  // 4. Unified season state
+  const phase   = useSeasonPhase(seasonAddress);
+  const victory = useSeasonVictory(seasonAddress);
+  const { data: giniData, isLoading: isGiniLoading } = useSeasonGini(seasonAddress);
 
-  const { data: rawConfig, isLoading: isConfigLoading } = useReadContract({
-    address: seasonAddress,
-    abi: GameSeasonAbi as any,
-    functionName: 'getConfig',
-    query: { enabled: !!seasonAddress, staleTime: Infinity },
-  });
+  const {
+    currentPhase,
+    isAuction,
+    isAuctionOrBootstrap,
+    isTrading,
+    isPayout,
+    tradingStart,
+    seasonEnd,
+    isTradingTimeExpired,
+    config,
+  } = phase;
 
-  const { data: gInitialRaw, refetch: refetchGInitial } = useReadContract({
-    address: seasonAddress,
-    abi: GameSeasonAbi as any,
-    functionName: 'g_initial',
-    query: { enabled: !!seasonAddress },
-  });
-
-  const { data: finalProgressBpsRaw } = useReadContract({
-    address: seasonAddress,
-    abi: GameSeasonAbi as any,
-    functionName: 'finalProgressBps',
-    query: { enabled: !!seasonAddress },
-  });
-
-  const { data: isOligarchyWinRaw } = useReadContract({
-    address: seasonAddress,
-    abi: GameSeasonAbi as any,
-    functionName: 'isOligarchyWin',
-    query: { enabled: !!seasonAddress },
-  });
-
-  const { data: phase, isLoading: isPhaseLoading } = useReadContract({
-    address: seasonAddress,
-    abi: GameSeasonAbi as any,
-    functionName: 'getPhase',
-    query: { enabled: !!seasonAddress, refetchInterval: 3000 },
-  });
-
-  const { data: isSeasonActiveRaw } = useReadContract({
-    address: seasonAddress,
-    abi: GameSeasonAbi as any,
-    functionName: 'isActive',
-    query: { enabled: !!seasonAddress, refetchInterval: 3000 },
-  });
-
-  const { data: tradingStartTimeRaw } = useReadContract({
-    address: seasonAddress,
-    abi: GameSeasonAbi as any,
-    functionName: 'tradingStartTime',
-    query: { enabled: !!seasonAddress, refetchInterval: 3000 },
-  });
+  const {
+    M_dynamic,
+    winningSide,
+    progressPercent,
+    effectiveVictoryPending,
+  } = victory;
 
   const { data: myOrders, refetch: refetchOpenOrders } = useOpenOrders(seasonAddress, userAddress);
   const hasOrders = myOrders && myOrders.length > 0;
@@ -124,7 +97,6 @@ export default function SeasonDetailPage() {
   );
   const factionData = userAddress ? percentilesMap?.[userAddress.toLowerCase()] : undefined;
 
-  // Determine if the claim action button is needed for this user
   const { payout, realizedPayout } = usePayout(seasonAddress, userAddress);
   const isPayoutActionable = !!userAddress && payout > 0 && realizedPayout === 0;
 
@@ -138,147 +110,10 @@ export default function SeasonDetailPage() {
     }).catch((e) => console.error('JIT Sync Failed:', e));
   }, [userAddress, factionData?.isCapitalist]);
 
-  // Phase change effect
-  useEffect(() => {
-    if (phase === 'TRADING') refetchGInitial();
-  }, [phase, refetchGInitial]);
-
-  // 5. Gini calculations
-  const {
-    config,
-    gCurrent,
-    gInitial,
-    capTargetBps,
-    socTargetBps,
-    M_dynamic,
-    progressPercent,
-    winningSide,
-    isVictoryPending,
-  } = useMemo(() => {
-    const safeDefaults = {
-      config: null,
-      gCurrent: 5000,
-      gInitial: 5000,
-      capTargetBps: 0,
-      socTargetBps: 0,
-      M_dynamic: 0,
-      progressPercent: 0,
-      winningSide: 'none' as 'soc' | 'cap' | 'none',
-      isVictoryPending: false,
-    };
-    if (!rawConfig) return safeDefaults;
-
-    const currentPhase = phase as string;
-    const isAuction = currentPhase === 'AUCTION' || currentPhase === 'BOOTSTRAP';
-    const isTradingPhase = currentPhase === 'TRADING';
-    const isPayoutPhase = currentPhase === 'PAYOUT' || currentPhase === 'DISTRIBUTION';
-
-    const r = rawConfig as any;
-    const getVal = (key: string, index: number) => (r[key] !== undefined ? r[key] : r[index]);
-
-    const cfg = {
-      auctionStartTime:   Number(getVal('auctionStartTime', 0)),
-      auctionDuration:    Number(getVal('auctionDuration', 1)),
-      tradingDuration:    Number(getVal('tradingDuration', 2)),
-      victoryThresholdBps:Number(getVal('victoryThresholdBps', 3)),
-      baseBeta:           Number(getVal('beta', 4)),
-      buybackBps:         Number(getVal('buybackBps', 5)),
-      liquidityBps:       Number(getVal('liquidityBps', 6)),
-      reinvestBps:        Number(getVal('reinvestBps', 7)),
-      daoBps:             Number(getVal('daoBps', 8)),
-    };
-
-    const rawGini = giniData?.gini || 0;
-    const rawGInit = gInitialRaw ? Number(gInitialRaw) : 0;
-    const playerCount = giniData?.playerCount || 0;
-
-    let gCurrVal = 0, gInitVal = 0;
-
-    if (isAuction) {
-      gCurrVal = playerCount === 0 ? 5000 : rawGini;
-      gInitVal = gCurrVal;
-    } else if (isPayoutPhase && finalProgressBpsRaw !== undefined && isOligarchyWinRaw !== undefined) {
-      gInitVal = rawGInit;
-      const gI = gInitVal / 10000;
-      const V2 = cfg.victoryThresholdBps / 10000;
-      const rawBeta2 = cfg.baseBeta / 10000;
-      const M2 = rawBeta2 + Math.pow(1 - gI, 2);
-      const capT = (gI + V2 * (1 - gI)) * 10000;
-      const socT = (gI * (1 - (M2 > 0 ? V2 / M2 : 0))) * 10000;
-      const finalProg = Number(finalProgressBpsRaw) / 10000;
-      gCurrVal = isOligarchyWinRaw
-        ? Math.round(gInitVal + (capT - gInitVal) * finalProg)
-        : Math.round(gInitVal - (gInitVal - socT) * finalProg);
-    } else {
-      gInitVal = rawGInit;
-      gCurrVal = rawGini;
-    }
-
-    const gI_Norm = gInitVal / 10000;
-    const V = cfg.victoryThresholdBps / 10000;
-    const rawBeta = cfg.baseBeta / 10000;
-    const M = rawBeta + Math.pow(1 - gI_Norm, 2);
-
-    const capTargetNorm = gI_Norm + V * (1 - gI_Norm);
-    const socTerm = M > 0 ? V / M : 0;
-    const socTargetNorm = gI_Norm * (1 - socTerm);
-    const capTarget = capTargetNorm * 10000;
-    const socTarget = socTargetNorm * 10000;
-
-    let prog = 0, side: 'soc' | 'cap' | 'none' = 'none';
-    if (!isAuction) {
-      if (gCurrVal > gInitVal) {
-        side = 'cap';
-        const dist = capTarget - gInitVal, covered = gCurrVal - gInitVal;
-        prog = dist > 0 ? (covered / dist) * 100 : 0;
-      } else if (gCurrVal < gInitVal) {
-        side = 'soc';
-        const dist = gInitVal - socTarget, covered = gInitVal - gCurrVal;
-        prog = dist > 0 ? (covered / dist) * 100 : 0;
-      }
-    }
-
-    const victoryConditionMet = isTradingPhase && (gCurrVal >= capTarget || gCurrVal <= socTarget);
-
-    return {
-      config: cfg,
-      gCurrent: gCurrVal,
-      gInitial: gInitVal,
-      capTargetBps: capTarget,
-      socTargetBps: socTarget,
-      M_dynamic: M,
-      progressPercent: Math.min(Math.max(prog, 0), 100),
-      winningSide: side,
-      isVictoryPending: victoryConditionMet,
-    };
-  }, [giniData, rawConfig, gInitialRaw, phase, finalProgressBpsRaw, isOligarchyWinRaw]);
-
-  // 6. Phase flags
-  const currentPhase = phase as string;
-  const isAuctionOrBootstrap = currentPhase === 'AUCTION' || currentPhase === 'BOOTSTRAP';
-  const isAuction = currentPhase === 'AUCTION';
-  const isTrading  = currentPhase === 'TRADING';
-  const isPayout   = currentPhase === 'PAYOUT' || currentPhase === 'DISTRIBUTION';
-
-  const scheduledTradingStart = (config?.auctionStartTime || 0) + (config?.auctionDuration || 0);
-  const actualTradingStart    = tradingStartTimeRaw ? Number(tradingStartTimeRaw) : 0;
-  const tradingStart          = actualTradingStart > 0 ? actualTradingStart : scheduledTradingStart;
-  const seasonEnd             = tradingStart + (config?.tradingDuration || 0);
-
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
-  useEffect(() => {
-    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const isTradingTimeExpired =
-    isTrading && (isSeasonActiveRaw === false || (seasonEnd > 0 && now >= seasonEnd));
-  const effectiveVictoryPending = isVictoryPending || isTradingTimeExpired;
-
   const formattedName = seasonSlug?.replace(/_/g, ' ') || 'Season Dashboard';
 
-  // 7. Loading / error states
-  if (isMetaLoading || isGiniLoading || isConfigLoading || isPhaseLoading) {
+  // 5. Loading / error states
+  if (isMetaLoading || isGiniLoading || phase.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gold animate-pulse font-mono text-sm uppercase tracking-widest">
         Reading Ledger…
@@ -322,7 +157,6 @@ export default function SeasonDetailPage() {
           currentPhase={currentPhase}
           isBootstrap={isAuctionOrBootstrap}
           isPayout={isPayout}
-          isVictoryPending={effectiveVictoryPending}
         />
         <PrizePoolCard
           seasonAddress={seasonAddress}
@@ -345,18 +179,7 @@ export default function SeasonDetailPage() {
               fimAddress={fimAddress}
               currentPhase={currentPhase}
             />
-            <GiniDisplay
-              seasonAddress={seasonAddress}
-              gCurrent={gCurrent}
-              gInitial={gInitial}
-              socTargetBps={socTargetBps}
-              capTargetBps={capTargetBps}
-              winningSide={winningSide}
-              progressPercent={progressPercent}
-              currentPhase={currentPhase}
-              isAuction={true}
-              isBootstrap={isAuctionOrBootstrap}
-            />
+            <GiniDisplay seasonAddress={seasonAddress} />
           </div>
 
           {/* Bottom row: activity | season details */}
@@ -419,18 +242,7 @@ export default function SeasonDetailPage() {
               />
             )}
             <div className={hasOrders ? 'lg:col-span-2' : 'lg:col-span-3'}>
-              <GiniDisplay
-                seasonAddress={seasonAddress}
-                gCurrent={gCurrent}
-                gInitial={gInitial}
-                socTargetBps={socTargetBps}
-                capTargetBps={capTargetBps}
-                winningSide={winningSide}
-                progressPercent={progressPercent}
-                currentPhase={currentPhase}
-                isAuction={false}
-                isBootstrap={false}
-              />
+              <GiniDisplay seasonAddress={seasonAddress} />
             </div>
           </div>
 
@@ -480,40 +292,12 @@ export default function SeasonDetailPage() {
                 seasonAddress={seasonAddress}
                 userAddress={userAddress || ''}
               />
-              
-              {/* If actionable, stack Gini strictly in the right column */}
-              {isPayoutActionable && (
-                <GiniDisplay
-                  seasonAddress={seasonAddress}
-                  gCurrent={gCurrent}
-                  gInitial={gInitial}
-                  socTargetBps={socTargetBps}
-                  capTargetBps={capTargetBps}
-                  winningSide={winningSide}
-                  progressPercent={progressPercent}
-                  currentPhase={currentPhase}
-                  isAuction={false}
-                  isBootstrap={false}
-                />
-              )}
+
+              {isPayoutActionable && <GiniDisplay seasonAddress={seasonAddress} />}
             </div>
           </div>
 
-          {/* Once settled (or ineligible), break out to full width */}
-          {!isPayoutActionable && (
-            <GiniDisplay
-              seasonAddress={seasonAddress}
-              gCurrent={gCurrent}
-              gInitial={gInitial}
-              socTargetBps={socTargetBps}
-              capTargetBps={capTargetBps}
-              winningSide={winningSide}
-              progressPercent={progressPercent}
-              currentPhase={currentPhase}
-              isAuction={false}
-              isBootstrap={false}
-            />
-          )}
+          {!isPayoutActionable && <GiniDisplay seasonAddress={seasonAddress} />}
 
           <SeasonDetails
             tradingStart={tradingStart}

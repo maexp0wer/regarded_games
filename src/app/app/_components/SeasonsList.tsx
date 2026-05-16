@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { useChainId, usePublicClient, useReadContract } from 'wagmi'; 
+import React, { useState } from 'react';
+import { useChainId, usePublicClient } from 'wagmi';
 import { Address, getAddress } from 'viem';
 import { base, baseSepolia, foundry } from 'wagmi/chains';
 import { useQuery } from '@tanstack/react-query';
 import coreDeployment from '@/deployments/local/core.json';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
+import { useSeasonPhase } from '@/hooks/useSeasonPhase';
+import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 import Link from 'next/link';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { VictoryProgressBar } from './VictoryProgressBar';
@@ -28,27 +30,13 @@ const GAME_CONTROLLER_SEASONS_ABI = [
   },
 ] as const;
 
-const GAME_SEASON_FULL_ABI = GameSeasonAbi as any; 
+const GAME_SEASON_FULL_ABI = GameSeasonAbi as any;
 
 // --- Types ---
 type SeasonRegistry = {
-    id: number;
+  id: number;
   season: Address;
   phase: string;
-  config: {
-    auctionStartTime: number;
-    auctionDuration: number;
-    tradingDuration: number;
-    victoryThresholdBps: number;
-    baseBeta: number;
-    buybackBps: number;
-    liquidityBps: number;
-    reinvestBps: number;
-    daoBps: number;
-  };
-  auctionStartTime: number; 
-  tradingStartTime: number;
-  seasonEndTime: number;
 };
 
 // --- Helpers ---
@@ -64,207 +52,135 @@ const getControllerAddress = (chainId: number): Address | undefined => {
   return controllerAddress ? getAddress(controllerAddress) : undefined;
 };
 
-// Adjusted to 24-hour format
 const formatDate = (timestamp: number) => {
-    if (!timestamp) return 'N/A';
-    return new Date(timestamp * 1000).toLocaleString(undefined, { 
-      month: 'short', 
-      day: 'numeric', 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: false // Forces 24-hour format
-    });
+  if (!timestamp) return 'N/A';
+  return new Date(timestamp * 1000).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
 };
 
 // ============================================================================
 // SUB-COMPONENT: SEASON CARD
 // ============================================================================
-function SeasonCard({ season, totalCount, index }: { season: SeasonRegistry, totalCount: number, index: number }) {
-    
-    // 1. Fetch Live Data
-    const { data: giniData } = useSeasonGini(season.season);
-    
-    const { data: gInitialRaw } = useReadContract({
-        address: season.season,
-        abi: GameSeasonAbi as any,
-        functionName: 'g_initial',
-        query: { enabled: season.phase === 'TRADING' || season.phase === 'PAYOUT', staleTime: Infinity }
-    });
+function SeasonCard({ season }: { season: SeasonRegistry }) {
+  const { data: giniData } = useSeasonGini(season.season);
+  const phase = useSeasonPhase(season.season);
+  const victory = useSeasonVictory(season.season);
 
-    const seasonNumber = season.id + 1;
-    const slug = `season_${seasonNumber}`;
+  const seasonNumber = season.id + 1;
+  const slug = `season_${seasonNumber}`;
 
-    // 2. Math & Logic (Mirrors GiniDashboard)
-    const { 
-        gCurrent, 
-        progressPercent, 
-        winningSide,
-        isVictoryPending 
-    } = useMemo(() => {
-        if (!season.config) return { gCurrent: 0, progressPercent: 0, winningSide: 'none', isVictoryPending: false };
+  const {
+    currentPhase,
+    isAuction,
+    isBootstrap,
+    isTrading,
+    tradingStart,
+    seasonEnd,
+    config,
+  } = phase;
+  const { gCurrent, effectiveVictoryPending } = victory;
 
-        const rawGini = giniData?.gini || 0;
-        const playerCount = giniData?.playerCount || 0;
-        
-        const isAuction = season.phase === 'AUCTION' || season.phase === 'BOOTSTRAP';
-        const gCurrVal = (isAuction && playerCount === 0) ? 5000 : rawGini;
-        
-        const rawGInit = gInitialRaw ? Number(gInitialRaw) : 0;
-        const gInitVal = isAuction ? gCurrVal : rawGInit;
+  if (!config || !currentPhase) return null;
 
-        const gI_Norm = gInitVal / 10000;
-        const V = (season.config.victoryThresholdBps || 2500) / 10000;
-        const rawBeta = (season.config.baseBeta || 14000) / 10000;
-        const M = rawBeta + Math.pow(1 - gI_Norm, 2);
+  const statusLabel = isTrading ? 'Ends' : 'Trading Starts';
+  const showTimeStat = isTrading || isBootstrap || isAuction;
+  const statusTime = (effectiveVictoryPending || isBootstrap)
+    ? 'SHORTLY'
+    : isTrading
+    ? formatDate(seasonEnd)
+    : formatDate(tradingStart);
 
-        const capTargetNorm = gI_Norm + (V * (1 - gI_Norm));
-        const socTerm = M > 0 ? (V / M) : 0;
-        const socTargetNorm = gI_Norm * (1 - socTerm);
+  const num = String(seasonNumber).padStart(2, '0');
 
-        const capTarget = capTargetNorm * 10000;
-        const socTarget = socTargetNorm * 10000;
-
-        let prog = 0;
-        let side = 'none';
-
-        if (!isAuction) {
-            if (gCurrVal > gInitVal) {
-                side = 'cap';
-                const dist = capTarget - gInitVal;
-                const covered = gCurrVal - gInitVal;
-                prog = dist > 0 ? (covered / dist) * 100 : 0;
-            } else if (gCurrVal < gInitVal) {
-                side = 'soc';
-                const dist = gInitVal - socTarget;
-                const covered = gInitVal - gCurrVal;
-                prog = dist > 0 ? (covered / dist) * 100 : 0;
-            }
-        }
-
-        const isVictoryPending = (season.phase === 'TRADING') && (gCurrVal >= capTarget || gCurrVal <= socTarget);
-
-        return {
-            gCurrent: gCurrVal,
-            progressPercent: Math.min(Math.max(prog, 0), 100),
-            winningSide: side,
-            isVictoryPending,
-        };
-    }, [giniData, season, gInitialRaw]);
-
-    // 3. UI/Style Definitions
-    const isBootstrap = season.phase === 'BOOTSTRAP';
-    const isTrading = season.phase === 'TRADING';
-    const isAuction = season.phase === 'AUCTION';
-
-    const nowSec = Math.floor(Date.now() / 1000);
-    const isTimeLimitExpired = isTrading && season.seasonEndTime > 0 && nowSec >= season.seasonEndTime;
-    const effectiveVictoryPending = isVictoryPending || isTimeLimitExpired;
-
-    const showTimeStat = isTrading || isBootstrap || isAuction;
-    const statusLabel = isTrading ? 'Ends' : 'Trading Starts';
-    const statusTime = (effectiveVictoryPending || isBootstrap) ? 'SHORTLY' : isTrading ? formatDate(season.seasonEndTime) : formatDate(season.tradingStartTime);
-
-    if (!season.config) return null;
-
-    const num = String(seasonNumber).padStart(2, '0');
-
-    return (
-        <Link href={`/${slug}`} className="block group">
-          <div
-            className="card-app transition-all group-hover:border-border-bright"
-            style={{ borderColor: 'var(--color-border)' }}
-          >
-            <div className="flex items-start gap-6">
-              {/* Left column: big season number + pills (desktop) */}
-              <div className="shrink-0 hidden sm:flex sm:flex-col sm:items-start sm:gap-2">
-                <p
-                  className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-display-season"
-                >
-                  S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
-                </p>
-                <SeasonPhasePills
-                  phase={season.phase}
-                  isVictoryPending={effectiveVictoryPending}
-                  className="flex flex-col gap-1.5"
-                />
-              </div>
-
-              {/* Main content */}
-              <div className="flex-1 min-w-0 flex flex-col gap-4">
-                {/* Mobile header: small season number + pills */}
-                <div className="flex sm:hidden items-center flex-wrap gap-2">
-                  <p
-                    className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-season-mobile"
-                  >
-                    S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
-                  </p>
-                  <SeasonPhasePills
-                    phase={season.phase}
-                    isVictoryPending={effectiveVictoryPending}
-                    className="flex items-center flex-wrap gap-2"
-                  />
-                </div>
-
-                {/* Stats grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="section-label mb-1">Prize Pool</p>
-                    <span className="font-mono font-bold text-[18px]" style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}>
-                      ${(giniData?.prizePool ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="section-label mb-1">Participants</p>
-                    <span className="font-mono font-bold text-[18px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                      {(giniData?.playerCount ?? 0).toLocaleString()}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="section-label mb-1">Multiplier</p>
-                    <span className="font-mono font-bold text-[18px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                      {(season.config.baseBeta / 10000 + Math.pow(1 - (gCurrent / 10000), 2)).toFixed(2)}×
-                    </span>
-                  </div>
-                  {showTimeStat && (
-                    <div>
-                      <p className="section-label mb-1">{statusLabel}</p>
-                      <span className="font-mono font-semibold text-[13px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        {statusTime}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Progress bar */}
-                <>
-                {!(isBootstrap  || isAuction) &&(
-                  <div>
-                    <p className="section-label mb-2">Victory Progress</p>
-                    <VictoryProgressBar
-                      seasonAddress={season.season}
-                      gini={gCurrent}
-                      gInitial={gInitialRaw ? Number(gInitialRaw) : 5000}
-                      victoryThresholdBps={season.config.victoryThresholdBps}
-                      baseBeta={season.config.baseBeta}
-                      phase={season.phase}
-                    />
-                  </div>
-                )}
-              </>
-              </div>
-
-              {/* Arrow */}
-              <svg
-                className="w-5 h-5 shrink-0 self-center transition-transform group-hover:translate-x-1"
-                fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                style={{ color: 'var(--color-text2)', opacity: 0.4 }}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
+  return (
+    <Link href={`/${slug}`} className="block group">
+      <div
+        className="card-app transition-all group-hover:border-border-bright"
+        style={{ borderColor: 'var(--color-border)' }}
+      >
+        <div className="flex items-start gap-6">
+          {/* Left column: big season number + pills (desktop) */}
+          <div className="shrink-0 hidden sm:flex sm:flex-col sm:items-start sm:gap-2">
+            <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-display-season">
+              S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
+            </p>
+            <SeasonPhasePills
+              phase={currentPhase}
+              isVictoryPending={effectiveVictoryPending}
+              className="flex flex-col gap-1.5"
+            />
           </div>
-        </Link>
-    );
+
+          {/* Main content */}
+          <div className="flex-1 min-w-0 flex flex-col gap-4">
+            {/* Mobile header: small season number + pills */}
+            <div className="flex sm:hidden items-center flex-wrap gap-2">
+              <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-season-mobile">
+                S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
+              </p>
+              <SeasonPhasePills
+                phase={currentPhase}
+                isVictoryPending={effectiveVictoryPending}
+                className="flex items-center flex-wrap gap-2"
+              />
+            </div>
+
+            {/* Stats grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p className="section-label mb-1">Prize Pool</p>
+                <span className="font-mono font-bold text-[18px]" style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}>
+                  ${(giniData?.prizePool ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div>
+                <p className="section-label mb-1">Participants</p>
+                <span className="font-mono font-bold text-[18px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {(giniData?.playerCount ?? 0).toLocaleString()}
+                </span>
+              </div>
+              <div>
+                <p className="section-label mb-1">Multiplier</p>
+                <span className="font-mono font-bold text-[18px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {(config.baseBeta / 10000 + Math.pow(1 - (gCurrent / 10000), 2)).toFixed(2)}×
+                </span>
+              </div>
+              {showTimeStat && (
+                <div>
+                  <p className="section-label mb-1">{statusLabel}</p>
+                  <span className="font-mono font-semibold text-[13px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {statusTime}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Progress bar */}
+            {!(isBootstrap || isAuction) && (
+              <div>
+                <p className="section-label mb-2">Victory Progress</p>
+                <VictoryProgressBar seasonAddress={season.season} />
+              </div>
+            )}
+          </div>
+
+          {/* Arrow */}
+          <svg
+            className="w-5 h-5 shrink-0 self-center transition-transform group-hover:translate-x-1"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            style={{ color: 'var(--color-text2)', opacity: 0.4 }}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </Link>
+  );
 }
 
 // ============================================================================
@@ -274,65 +190,38 @@ export function SeasonsList() {
   const chainId = useChainId();
   const controllerAddress = getControllerAddress(chainId);
   const [showAll, setShowAll] = useState(false);
-  const publicClient = usePublicClient(); 
+  const publicClient = usePublicClient();
 
   const { data: seasonsData, isLoading } = useQuery({
-    queryKey: ['allSeasons_v2', chainId, controllerAddress],
+    queryKey: ['allSeasons_v3', chainId, controllerAddress],
     queryFn: async () => {
-        if (!controllerAddress || !publicClient) return [];
-        const allSeasons: SeasonRegistry[] = [];
-        
-        for (let i = 0; i < 50; i++) {
-            try {
-                const data = await publicClient.readContract({
-                    address: controllerAddress,
-                    abi: GAME_CONTROLLER_SEASONS_ABI,
-                    functionName: 'seasons',
-                    args: [BigInt(i)] as const,
-                }) as [Address, Address, Address, Address];
+      if (!controllerAddress || !publicClient) return [];
+      const allSeasons: SeasonRegistry[] = [];
 
-                const cfg: any = await publicClient.readContract({ 
-                    address: data[0], abi: GAME_SEASON_FULL_ABI, functionName: 'getConfig' 
-                });
+      for (let i = 0; i < 50; i++) {
+        try {
+          const data = await publicClient.readContract({
+            address: controllerAddress,
+            abi: GAME_CONTROLLER_SEASONS_ABI,
+            functionName: 'seasons',
+            args: [BigInt(i)] as const,
+          }) as [Address, Address, Address, Address];
 
-                const phase = await publicClient.readContract({ 
-                    address: data[0], abi: GAME_SEASON_FULL_ABI, functionName: 'getPhase' 
-                });
+          const phase = await publicClient.readContract({
+            address: data[0], abi: GAME_SEASON_FULL_ABI, functionName: 'getPhase'
+          });
 
-                const getVal = (key: string, idx: number) => cfg[key] !== undefined ? cfg[key] : cfg[idx];
-                
-                const cAt = Number(getVal('auctionStartTime', 0));
-                const aDu = Number(getVal('auctionDuration', 1));
-                const gDu = Number(getVal('tradingDuration', 2));
-
-                const parsedConfig = {
-                    auctionStartTime: cAt,
-                    auctionDuration: aDu,
-                    tradingDuration: gDu,
-                    victoryThresholdBps: Number(getVal('victoryThresholdBps', 3)),
-                    baseBeta: Number(getVal('beta', 4)),
-                    // Add Policy BPS for list display
-                    buybackBps: Number(getVal('buybackBps', 5) || 0),
-                    liquidityBps: Number(getVal('liquidityBps', 6) || 0),
-                    reinvestBps: Number(getVal('reinvestBps', 7) || 0),
-                    daoBps: Number(getVal('daoBps', 8) || 0),
-                };
-
-                allSeasons.push({
-                    id: i,
-                    season: data[0], 
-                    phase: phase as string, 
-                    config: parsedConfig,
-                    auctionStartTime: cAt,
-                    tradingStartTime: cAt + aDu, 
-                    seasonEndTime: cAt + aDu + gDu, 
-                });
-            } catch { break; }
-        }
-        return allSeasons;
+          allSeasons.push({
+            id: i,
+            season: data[0],
+            phase: phase as string,
+          });
+        } catch { break; }
+      }
+      return allSeasons;
     },
     enabled: !!controllerAddress && !!publicClient,
-});
+  });
 
   if (isLoading) return (
     <div className="w-full p-12 text-center">
@@ -361,7 +250,7 @@ export function SeasonsList() {
       {/* Cards */}
       <div className="flex flex-col gap-4">
         {filtered.map((s) => (
-          <SeasonCard key={s.season} season={s} totalCount={display.length} index={s.id} />
+          <SeasonCard key={s.season} season={s} />
         ))}
         {filtered.length === 0 && (
           <div

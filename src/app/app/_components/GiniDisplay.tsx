@@ -1,63 +1,28 @@
 'use client';
 
 import React from 'react';
-import { useReadContract } from 'wagmi';
-import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
+
+import { useSeasonPhase } from '@/hooks/useSeasonPhase';
+import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 import Carlo from '@/components/icons/Carlo.svg';
 import Regardo from '@/components/icons/Regardo.svg';
 
 interface GiniDisplayProps {
   seasonAddress: string;
-  gCurrent: number;
-  gInitial: number;
-  socTargetBps: number;
-  capTargetBps: number;
-  winningSide: 'soc' | 'cap' | 'none';
-  progressPercent: number;
-  currentPhase: string | null;
-  isAuction: boolean;
-  isBootstrap: boolean;
 }
 
-export function GiniDisplay({
-  seasonAddress,
-  gCurrent,
-  gInitial,
-  socTargetBps,
-  capTargetBps,
-  winningSide,
-  progressPercent,
-  currentPhase,
-  isAuction,
-  isBootstrap,
-}: GiniDisplayProps) {
-  const { data: finalProgressBps } = useReadContract({
-    address: seasonAddress as `0x${string}`,
-    abi: GameSeasonAbi as any,
-    functionName: 'finalProgressBps',
-    query: { enabled: !!seasonAddress },
-  });
-  const { data: isOligarchyWin } = useReadContract({
-    address: seasonAddress as `0x${string}`,
-    abi: GameSeasonAbi as any,
-    functionName: 'isOligarchyWin',
-    query: { enabled: !!seasonAddress },
-  });
+export function GiniDisplay({ seasonAddress }: GiniDisplayProps) {
+  const { isAuction, isBootstrap, isPayout } = useSeasonPhase(seasonAddress);
+  const {
+    gCurrent,
+    gInitial,
+    capTargetBps,
+    socTargetBps,
+    winningSide,
+    progressPercent,
+  } = useSeasonVictory(seasonAddress);
 
-  const isPayout = currentPhase === 'PAYOUT' || currentPhase === 'DISTRIBUTION';
   const isTrading = !isAuction && !isBootstrap && !isPayout;
-
-  const officialProgress =
-    isPayout && finalProgressBps !== undefined
-      ? Number(finalProgressBps) / 100
-      : progressPercent;
-
-  const officialSide =
-    isPayout && isOligarchyWin !== undefined
-      ? isOligarchyWin
-        ? 'cap'
-        : 'soc'
-      : winningSide;
 
   // Compress scale in trading and payout phases so targets appear ~200 BPS from each end
   const useCompressedScale = isTrading || isPayout;
@@ -69,7 +34,6 @@ export function GiniDisplay({
     return `${((clamped - scaleMin) / (scaleMax - scaleMin)) * 100}%`;
   };
 
-  // Ticks: in trading/payout phases use 1k major + 500 minor lines, skip start/end positions
   const scaleTicks: { value: number; major: boolean }[] = useCompressedScale
     ? (() => {
         const ticks: { value: number; major: boolean }[] = [];
@@ -232,7 +196,6 @@ export function GiniDisplay({
                   {gInitial.toLocaleString()}
                 </span>
               </div>
-              {/* Half-size neutral knob matching the faction dot style */}
               <div
                 style={{
                   width: 12,
@@ -254,7 +217,6 @@ export function GiniDisplay({
           >
             <div style={{ position: 'absolute', width: 60, height: 60, borderRadius: '50%', background: 'radial-gradient(circle, var(--color-gold-a05) 45%, transparent 70%)', top: 14, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
             <div className="gini-knob gold" />
-            {/* CURRENT label + BPS + progress below the track */}
             <div className="flex flex-col items-center" style={{ marginTop: 10, gap: 3 }}>
               <span
                 className="font-mono text-[10px] uppercase tracking-wider"
@@ -268,19 +230,19 @@ export function GiniDisplay({
               >
                 {gCurrent.toLocaleString()}
               </span>
-              {officialSide !== 'none' && (
+              {winningSide !== 'none' && (
                 <span
                   className="font-mono text-[10px] text-center"
                   style={{ color: 'var(--color-text2)', whiteSpace: 'nowrap' }}
                 >
-                  {officialProgress.toFixed(1)}% to{' '}
+                  {progressPercent.toFixed(1)}% to{' '}
                   <span
                     style={{
-                      color: officialSide === 'soc' ? 'var(--color-pink)' : 'var(--color-blue)',
+                      color: winningSide === 'soc' ? 'var(--color-pink)' : 'var(--color-blue)',
                       fontWeight: 'bold',
                     }}
                   >
-                    {officialSide === 'soc' ? 'Proletariat' : 'Bourgeoisie'}
+                    {winningSide === 'soc' ? 'Proletariat' : 'Bourgeoisie'}
                   </span>
                 </span>
               )}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { useChainId, usePublicClient, useReadContracts, useReadContract } from 'wagmi'; 
+import { useChainId, usePublicClient, useReadContracts } from 'wagmi';
 import { Address, formatUnits, erc20Abi } from 'viem';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -10,13 +10,15 @@ import Link from 'next/link';
 import coreDeployment from '@/deployments/local/core.json';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
+import { useSeasonPhase } from '@/hooks/useSeasonPhase';
+import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
 import { usePayout } from '@/hooks/usePayout';
 
 // Shared Components
 import { PercentileCircle } from './PercentileCircle';
 import { VictoryProgressBar } from './VictoryProgressBar';
-import { SeasonPhasePills } from './SeasonPhasePills'; 
+import { SeasonPhasePills } from './SeasonPhasePills';
 
 const CONTROLLER_ABI = [
   {
@@ -41,8 +43,7 @@ export function PlayerActiveSeasons({ playerAddress }: PlayerActiveSeasonsProps)
   const chainId = useChainId();
   const publicClient = usePublicClient();
   const [showAll, setShowAll] = useState(false);
-  
-  // Track dynamically valid positions after checking payouts
+
   const [validPositions, setValidPositions] = useState<Record<string, boolean>>({});
 
   const controllerAddress = useMemo(() => {
@@ -50,9 +51,9 @@ export function PlayerActiveSeasons({ playerAddress }: PlayerActiveSeasonsProps)
     return (coreDeployment as any)[chainMap[chainId] || 'Controller'] as Address;
   }, [chainId]);
 
-  // 1. SCAN REGISTRY
+  // 1. SCAN REGISTRY (addresses + phase only — math is owned by per-row hooks)
   const { data: registry, isLoading: isScanning } = useQuery({
-    queryKey: ['player-dashboard-full-registry', chainId, controllerAddress],
+    queryKey: ['player-dashboard-registry-v2', chainId, controllerAddress],
     queryFn: async () => {
       if (!controllerAddress || !publicClient) return [];
       const list = [];
@@ -61,20 +62,14 @@ export function PlayerActiveSeasons({ playerAddress }: PlayerActiveSeasonsProps)
           const data = await publicClient.readContract({
             address: controllerAddress, abi: CONTROLLER_ABI, functionName: 'seasons', args: [BigInt(i)],
           });
-          const [cfg, phase]: [any, any] = await Promise.all([
-            publicClient.readContract({ address: data[0], abi: GameSeasonAbi as any, functionName: 'getConfig' }),
-            publicClient.readContract({ address: data[0], abi: GameSeasonAbi as any, functionName: 'getPhase' })
-          ]);
-          const getVal = (key: string, idx: number) => cfg[key] !== undefined ? cfg[key] : cfg[idx];
-          list.push({ 
-            id: i + 1, 
-            season: data[0], 
-            fim: data[3], 
+          const phase = await publicClient.readContract({
+            address: data[0], abi: GameSeasonAbi as any, functionName: 'getPhase'
+          });
+          list.push({
+            id: i + 1,
+            season: data[0],
+            fim: data[3],
             phase: phase as string,
-            config: {
-              victoryThresholdBps: Number(getVal('victoryThresholdBps', 3)),
-              baseBeta: Number(getVal('beta', 4) || getVal('baseBeta', 4)),
-            }
           });
         } catch { break; }
       }
@@ -96,7 +91,7 @@ export function PlayerActiveSeasons({ playerAddress }: PlayerActiveSeasonsProps)
 
   const activePositions = useMemo(() => {
     if (!registry || !balanceResults) return [];
-    
+
     return registry.map((s, idx) => ({
       ...s,
       balance: (balanceResults[idx]?.result as bigint) || 0n
@@ -128,14 +123,14 @@ export function PlayerActiveSeasons({ playerAddress }: PlayerActiveSeasonsProps)
     <div className="w-full flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-            <h2 className="font-display font-extrabold text-[28px] tracking-[-0.02em] text-text">
-              Active Seasons
-            </h2>
-            {displayedCount > 0 && (
-                <span className="section-label px-2 py-1 bg-card2 rounded-md hidden sm:block">
-                    {displayedCount} Positions
-                </span>
-            )}
+          <h2 className="font-display font-extrabold text-[28px] tracking-[-0.02em] text-text">
+            Active Seasons
+          </h2>
+          {displayedCount > 0 && (
+            <span className="section-label px-2 py-1 bg-card2 rounded-md hidden sm:block">
+              {displayedCount} Positions
+            </span>
+          )}
         </div>
         <button
           onClick={() => setShowAll(!showAll)}
@@ -155,10 +150,10 @@ export function PlayerActiveSeasons({ playerAddress }: PlayerActiveSeasonsProps)
           </div>
         ) : (
           activePositions.reverse().map((pos) => (
-            <SeasonHoldingRow 
-              key={pos.season} 
-              pos={pos} 
-              playerAddress={playerAddress} 
+            <SeasonHoldingRow
+              key={pos.season}
+              pos={pos}
+              playerAddress={playerAddress}
               showAll={showAll}
               onValidation={handleValidation}
             />
@@ -198,45 +193,11 @@ function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: any) {
   const { data: statsMap } = useBatchPlayerPercentiles(pos.season, [playerAddress.toLowerCase()]);
   const playerStats = statsMap?.[playerAddress.toLowerCase()];
 
-  const { data: gInitialRaw } = useReadContract({
-    address: pos.season,
-    abi: GameSeasonAbi as any,
-    functionName: 'g_initial',
-    query: { enabled: pos.phase === 'TRADING' || pos.phase === 'PAYOUT' || pos.phase === 'ENDED' }
-  });
+  const { currentPhase, isAuctionOrBootstrap, isPayout } = useSeasonPhase(pos.season);
+  const { effectiveVictoryPending } = useSeasonVictory(pos.season);
 
-  // Calculate victory pending status perfectly mirroring the general SeasonCard
-  const { isVictoryPending } = useMemo(() => {
-      if (!pos.config) return { isVictoryPending: false };
-
-      const rawGini = giniData?.gini || 0;
-      const playerCount = giniData?.playerCount || 0;
-      
-      const isAuctionPhase = pos.phase === 'AUCTION' || pos.phase === 'BOOTSTRAP';
-      const gCurrVal = (isAuctionPhase && playerCount === 0) ? 5000 : rawGini;
-      
-      const rawGInit = gInitialRaw ? Number(gInitialRaw) : 0;
-      const gInitVal = isAuctionPhase ? gCurrVal : rawGInit;
-
-      const gI_Norm = gInitVal / 10000;
-      const V = (pos.config.victoryThresholdBps || 2500) / 10000;
-      const rawBeta = (pos.config.baseBeta || 14000) / 10000;
-      const M = rawBeta + Math.pow(1 - gI_Norm, 2);
-
-      const capTargetNorm = gI_Norm + (V * (1 - gI_Norm));
-      const socTerm = M > 0 ? (V / M) : 0;
-      const socTargetNorm = gI_Norm * (1 - socTerm);
-
-      const capTarget = capTargetNorm * 10000;
-      const socTarget = socTargetNorm * 10000;
-
-      const victoryPending = (pos.phase === 'TRADING') && (gCurrVal >= capTarget || gCurrVal <= socTarget);
-
-      return { isVictoryPending: victoryPending };
-  }, [giniData, pos, gInitialRaw]);
-
-  const isAuction = pos.phase === 'AUCTION' || pos.phase === 'BOOTSTRAP';
-  const isConcluded = pos.phase === 'PAYOUT' || pos.phase === 'ENDED';
+  const phase = currentPhase ?? pos.phase;
+  const isConcluded = isPayout || phase === 'ENDED';
   const num = String(pos.id).padStart(2, '0');
 
   // Payout parsing logic
@@ -252,16 +213,16 @@ function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: any) {
         style={{ borderColor: 'var(--color-border)' }}
       >
         <div className="flex items-start gap-6">
-          
+
           {/* Left column: big season number + pills (desktop) */}
           <div className="shrink-0 hidden sm:flex sm:flex-col sm:items-start sm:gap-2">
             <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-display-season">
               S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
             </p>
-            <SeasonPhasePills 
-              phase={pos.phase} 
-              isVictoryPending={isVictoryPending} 
-              className="flex flex-col gap-1.5" 
+            <SeasonPhasePills
+              phase={phase}
+              isVictoryPending={effectiveVictoryPending}
+              className="flex flex-col gap-1.5"
             />
           </div>
 
@@ -272,10 +233,10 @@ function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: any) {
               <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-season-mobile">
                 S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
               </p>
-              <SeasonPhasePills 
-                phase={pos.phase} 
-                isVictoryPending={isVictoryPending} 
-                className="flex items-center flex-wrap gap-2" 
+              <SeasonPhasePills
+                phase={phase}
+                isVictoryPending={effectiveVictoryPending}
+                className="flex items-center flex-wrap gap-2"
               />
             </div>
 
@@ -283,7 +244,6 @@ function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: any) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {isConcluded ? (
                 <>
-                  {/* 1. Claimable / Claimed amount (Gold state prioritized) */}
                   <div>
                     <p className="section-label mb-1">{claimLabel}</p>
                     <span className="font-mono font-bold text-[18px]" style={{ color: canClaim ? 'var(--color-gold)' : 'var(--color-text)', fontVariantNumeric: 'tabular-nums' }}>
@@ -292,7 +252,6 @@ function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: any) {
                     </span>
                   </div>
 
-                  {/* 2. Prize Pool (Neutral) */}
                   <div>
                     <p className="section-label mb-1">Prize Pool</p>
                     <span className="font-mono font-bold text-[18px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -300,7 +259,6 @@ function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: any) {
                     </span>
                   </div>
 
-                  {/* 3. Season PnL */}
                   <div>
                     <p className="section-label mb-1">Season PnL</p>
                     <span className="font-mono font-bold text-[18px]" style={{ color: pnl > 0 ? 'var(--color-green)' : pnl < 0 ? 'var(--color-red)' : 'var(--color-text2)', fontVariantNumeric: 'tabular-nums' }}>
@@ -309,31 +267,28 @@ function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: any) {
                     </span>
                   </div>
 
-                  {/* 4. Your result (Circle) */}
                   {playerStats && (
                     <div>
-                        <p className="section-label mb-1">Your result</p>
-                        <div className="mt-1">
-                            <PercentileCircle 
-                                percentage={playerStats.factionPercentile} 
-                                isCapitalist={playerStats.isCapitalist} 
-                                size="md"
-                            />
-                        </div>
+                      <p className="section-label mb-1">Your result</p>
+                      <div className="mt-1">
+                        <PercentileCircle
+                          percentage={playerStats.factionPercentile}
+                          isCapitalist={playerStats.isCapitalist}
+                          size="md"
+                        />
+                      </div>
                     </div>
                   )}
                 </>
               ) : (
                 <>
-                  {/* 1. Holdings (Gold prioritized) */}
                   <div>
                     <p className="section-label mb-1">Holdings</p>
                     <span className="font-mono font-bold text-[18px]" style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}>
                       {Number(formatUnits(pos.balance, 18)).toLocaleString()}
                     </span>
                   </div>
-                  
-                  {/* 2. Prize Pool (Neutral) */}
+
                   <div>
                     <p className="section-label mb-1">Prize Pool</p>
                     <span className="font-mono font-bold text-[18px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -341,35 +296,27 @@ function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: any) {
                     </span>
                   </div>
 
-                  {/* 3. Your Standing (Circle) */}
                   {playerStats && (
                     <div>
-                        <p className="section-label mb-1">Your Standing</p>
-                        <div className="mt-1">
-                            <PercentileCircle 
-                                percentage={playerStats.factionPercentile} 
-                                isCapitalist={playerStats.isCapitalist} 
-                                size="md"
-                            />
-                        </div>
+                      <p className="section-label mb-1">Your Standing</p>
+                      <div className="mt-1">
+                        <PercentileCircle
+                          percentage={playerStats.factionPercentile}
+                          isCapitalist={playerStats.isCapitalist}
+                          size="md"
+                        />
+                      </div>
                     </div>
                   )}
                 </>
               )}
             </div>
 
-            {/* Progress bar wrapped with same general structure */}
-            {!isAuction && gInitialRaw !== undefined && (
+            {/* Progress bar */}
+            {!isAuctionOrBootstrap && (
               <div>
                 <p className="section-label mb-2">Victory Progress</p>
-                <VictoryProgressBar
-                    seasonAddress={pos.season} 
-                    gini={giniData?.gini || 0}
-                    gInitial={Number(gInitialRaw)}
-                    victoryThresholdBps={pos.config.victoryThresholdBps}
-                    baseBeta={pos.config.baseBeta}
-                    phase={pos.phase}
-                />
+                <VictoryProgressBar seasonAddress={pos.season} />
               </div>
             )}
           </div>

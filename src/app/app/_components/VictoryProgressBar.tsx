@@ -1,100 +1,24 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import { useReadContract } from 'wagmi';
-import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
+import React from 'react';
+
+import { useSeasonPhase } from '@/hooks/useSeasonPhase';
+import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 
 interface VictoryProgressBarProps {
-  seasonAddress: string; // Required to fetch official settlement data
-  gini: number;
-  gInitial: number;
-  victoryThresholdBps: number;
-  baseBeta: number;
-  phase: string;
+  seasonAddress: string;
   hideLabels?: boolean;
 }
 
-export function VictoryProgressBar({ 
-  seasonAddress,
-  gini, 
-  gInitial, 
-  victoryThresholdBps, 
-  baseBeta, 
-  phase,
-  hideLabels = false 
-}: VictoryProgressBarProps) {
-  
-  // --- 1. FETCH OFFICIAL SETTLED DATA ---
-  const { data: finalProgressBps } = useReadContract({
-    address: seasonAddress as `0x${string}`,
-    abi: GameSeasonAbi as any,
-    functionName: 'finalProgressBps',
-    query: { enabled: !!seasonAddress }
-  });
+export function VictoryProgressBar({ seasonAddress, hideLabels = false }: VictoryProgressBarProps) {
+  const { currentPhase, isAuctionOrBootstrap, isTrading, isPayout } = useSeasonPhase(seasonAddress);
+  const { winningSide, progressPercent } = useSeasonVictory(seasonAddress);
 
-  const { data: isOligarchyWin } = useReadContract({
-    address: seasonAddress as `0x${string}`,
-    abi: GameSeasonAbi as any,
-    functionName: 'isOligarchyWin',
-    query: { enabled: !!seasonAddress }
-  });
+  if (isAuctionOrBootstrap) return null;
 
-  const progress = useMemo(() => {
-    // --- 2. PAYOUT PHASE OVERRIDE ---
-    // If the season is over and we have contract data, use it.
-    if (phase === 'PAYOUT' && finalProgressBps !== undefined) {
-        const bps = Number(finalProgressBps);
-        
-        // If the contract says 0 BPS, it's a tie
-        if (bps === 0) return { prog: 0, side: 'none' };
-
-        return { 
-          prog: bps / 100, 
-          side: isOligarchyWin ? 'cap' : 'soc' 
-        };
-    }
-
-    // --- 3. LIVE TRADING MATH (Fallback) ---
-    // This runs during TRADING, or while PAYOUT data is still loading
-    if (!gInitial) return { prog: 0, side: 'none' };
-
-    const gCurr = gini;
-    const gInit = gInitial;
-    
-    const gI_Norm = gInit / 10000;
-    const V = victoryThresholdBps / 10000;
-    const rawBeta = baseBeta / 10000;
-    const M = rawBeta + Math.pow(1 - gI_Norm, 2);
-
-    const capTarget = (gI_Norm + (V * (1 - gI_Norm))) * 10000;
-    const socTarget = (gI_Norm * (1 - (M > 0 ? (V / M) : 0))) * 10000;
-
-    let prog = 0;
-    let side = 'none';
-
-    if (gCurr > gInit) {
-        side = 'cap';
-        const dist = capTarget - gInit;
-        const covered = gCurr - gInit;
-        prog = dist > 0 ? (covered / dist) * 100 : 0;
-    } else if (gCurr < gInit) {
-        side = 'soc';
-        const dist = gInit - socTarget;
-        const covered = gInit - gCurr;
-        prog = dist > 0 ? (covered / dist) * 100 : 0;
-    }
-
-    return { 
-      prog: Math.min(Math.max(prog, 0), 100), 
-      side 
-    };
-  }, [gini, gInitial, victoryThresholdBps, baseBeta, phase, finalProgressBps, isOligarchyWin]);
-
-  // Handle Non-Active Phases
-  if (phase !== 'TRADING' && phase !== 'PAYOUT') {
-    if (phase === 'AUCTION' || phase === 'BOOTSTRAP') return null;
+  if (!isTrading && !isPayout) {
     return (
-      <div className="h-[42px] flex items-center justify-center border border-dashed border-border/10 rounded-lg bg-card2/20">
+      <div className="h-42px flex items-center justify-center border border-dashed border-border/10 rounded-lg bg-card2/20">
         <span className="text-[9px] font-black text-text2/40 uppercase tracking-[0.2em]">
           Season Settled
         </span>
@@ -102,33 +26,29 @@ export function VictoryProgressBar({
     );
   }
 
-  const isTie = progress.prog === 0;
-  const sideLabel = progress.side === 'cap' ? 'Bourgeois' : 'Proletarian';
-  const suffix = phase === 'PAYOUT' ? 'Win' : 'Progress';
+  const isTie = progressPercent === 0 || winningSide === 'none';
+  const sideLabel = winningSide === 'cap' ? 'Bourgeois' : 'Proletarian';
+  const suffix = currentPhase === 'PAYOUT' ? 'Win' : 'Progress';
 
   return (
     <div className="flex flex-col gap-3 w-full items-start text-left">
       {!hideLabels && (
-        <span className={`text-[10px] font-bold uppercase tracking-wider leading-none 
-          ${isTie ? 'text-text2/40' : (progress.side === 'cap' ? 'text-blue' : 'text-pink')}`}
+        <span className={`text-[10px] font-bold uppercase tracking-wider leading-none
+          ${isTie ? 'text-text2/40' : (winningSide === 'cap' ? 'text-blue' : 'text-pink')}`}
         >
-          {isTie ? (
-            'Tie'
-          ) : (
-            `${progress.prog.toFixed(1)}% ${sideLabel} ${suffix}`
-          )}
+          {isTie ? 'Tie' : `${progressPercent.toFixed(1)}% ${sideLabel} ${suffix}`}
         </span>
       )}
-      
+
       <div className="w-full h-1.5 bg-card2 rounded-full overflow-hidden border border-border/5">
-        <div 
-          className={`h-full transition-all duration-1000 ease-out 
-            ${progress.side === 'cap' 
+        <div
+          className={`h-full transition-all duration-1000 ease-out
+            ${winningSide === 'cap'
               ? 'bg-blue shadow-[0_0_8px_#4d9fff4d]'
-              : progress.side === 'soc'
+              : winningSide === 'soc'
                 ? 'bg-pink shadow-[0_0_8px_#ff3d8a4d]'
                 : 'bg-transparent'}`}
-          style={{ width: `${progress.prog}%` }}
+          style={{ width: `${progressPercent}%` }}
         />
       </div>
     </div>
