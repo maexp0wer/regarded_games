@@ -288,7 +288,7 @@ export function Stake() {
       </div>
 
       {/* ── Sub-stats ── */}
-      <div className="grid grid-cols-3 gap-2 pt-2 mt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
+      <div className="grid grid-cols-2 gap-2 pt-2 mt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
         <div className="text-left">
           <p className="section-label mb-1">Staked</p>
           <span className="font-mono font-bold text-summary-value text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -301,12 +301,13 @@ export function Stake() {
             {currentLocked > 0n ? Number(formatUnits(currentLocked, 18)).toFixed(2) : "0.00"}
           </span>
         </div>
+        {/*
         <div className="text-left">
           <p className="section-label mb-1">Available</p>
           <span className="font-mono font-bold text-summary-value text-green" style={{ fontVariantNumeric: 'tabular-nums' }}>
             {Number(formatUnits(withdrawable, 18)).toLocaleString()}
           </span>
-        </div>
+        </div>*/}
       </div>
 
       {/* ── CTA Button ── */}
