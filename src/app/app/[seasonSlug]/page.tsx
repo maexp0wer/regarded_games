@@ -183,15 +183,18 @@ export default function SeasonDetailPage() {
           </div>
 
           {/* Bottom row: activity | season details */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <AuctionActivityFeed seasonAddress={seasonAddress} />
-            <div className="xl:col-span-2">
+          <div className="grid grid-cols-1 xl:grid-cols-10 gap-6">
+            <div className="xl:col-span-3">
+              <AuctionActivityFeed seasonAddress={seasonAddress} />
+            </div>
+            <div className="xl:col-span-7">
               <SeasonDetails
                 tradingStart={tradingStart}
                 seasonEnd={seasonEnd}
                 M_dynamic={M_dynamic}
                 config={config}
                 seasonAddress={seasonAddress}
+                xlWeighted
               />
             </div>
           </div>
@@ -247,15 +250,18 @@ export default function SeasonDetailPage() {
           </div>
 
           {/* Activity feed | season details */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <TradingActivityFeed seasonAddress={seasonAddress} />
-            <div className="xl:col-span-2">
+          <div className="grid grid-cols-1 xl:grid-cols-10 gap-6">
+            <div className="xl:col-span-3">
+              <TradingActivityFeed seasonAddress={seasonAddress} />
+            </div>
+            <div className="xl:col-span-7">
               <SeasonDetails
                 tradingStart={tradingStart}
                 seasonEnd={seasonEnd}
                 M_dynamic={M_dynamic}
                 config={config}
                 seasonAddress={seasonAddress}
+                xlWeighted
               />
             </div>
           </div>
