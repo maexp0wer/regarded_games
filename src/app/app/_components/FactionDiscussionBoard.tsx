@@ -17,8 +17,8 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist }: FactionDisc
     setError(null);
     const seasonNum = seasonSlug.match(/\d+/)?.[0] || '1';
     const categorySlug = isCapitalist
-      ? `season-${seasonNum}/s${seasonNum}-capitalist-strategy`
-      : `season-${seasonNum}/s${seasonNum}-socialist-strategy`;
+      ? `season-${seasonNum}/s${seasonNum}-bourgeoisie-strategy`
+      : `season-${seasonNum}/s${seasonNum}-proletariat-strategy`;
 
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_DISCOURSE_URL}/c/${categorySlug}.json`, {

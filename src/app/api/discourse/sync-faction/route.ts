@@ -62,11 +62,11 @@ export async function POST(req: Request) {
       const limit = BigInt(limitRaw as bigint);
       const isCap = bal > limit;
 
-      const seasonIdMatch = seasonSlug?.match(/\d+/)?.[0] || "0";
-      const seasonNum = Number(seasonIdMatch) + 1;
+      const seasonIdMatch = seasonSlug?.match(/\d+/)?.[0] || "1";
+      const seasonNum = Number(seasonIdMatch);
 
-      const targetGroupName = isCap ? `S${seasonNum}_Capitalist` : `S${seasonNum}_Socialist`;
-      const oldGroupName = isCap ? `S${seasonNum}_Socialist` : `S${seasonNum}_Capitalist`;
+      const targetGroupName = isCap ? `S${seasonNum}_Bourgeoisie` : `S${seasonNum}_Proletariat`;
+      const oldGroupName = isCap ? `S${seasonNum}_Proletariat` : `S${seasonNum}_Bourgeoisie`;
 
       // ==========================================
       // THE FIX: CHECK IN-MEMORY CACHE FIRST

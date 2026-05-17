@@ -16,6 +16,25 @@ ponder.on("GameController:SeasonDeployed", async ({ event, context }) => {
     createdAt: event.block.timestamp,
     prizePool: 0n,
   });
+
+  // Provision Discourse groups, categories, and chat channels
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://127.0.0.1:3000";
+  const seasonNum = Number(event.args.seasonId) + 1;
+  console.log(`[Indexer] SeasonDeployed: seasonId=${event.args.seasonId}, calling setup-season for seasonNum=${seasonNum}`);
+  try {
+    const res = await fetch(`${appUrl}/api/discourse/setup-season`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-discourse-admin-token": process.env.DISCOURSE_INIT_SECRET || "",
+      },
+      body: JSON.stringify({ seasonNum }),
+    });
+    const body = await res.text();
+    console.log(`[Indexer] setup-season response: ${res.status} ${body}`);
+  } catch (e) {
+    console.error(`[Indexer] setup-season fetch error:`, e);
+  }
 });
 
 // 2. Track FIM Balances & Prize Pool (The Source of Truth)
@@ -273,7 +292,7 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
               addresses: [buyer, seller], // Both buyer and seller balances changed!
               seasonAddress: currentSeason.address,
               fimAddress: currentSeason.fimAddress,
-              seasonSlug: `season_${currentSeason.seasonId}`
+              seasonSlug: `season_${Number(currentSeason.seasonId) + 1}`
           })
       }).catch(e => console.error(`[Indexer] Discourse sync error:`, e));
       

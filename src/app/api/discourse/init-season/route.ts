@@ -85,6 +85,12 @@ export async function POST(req: Request) {
 
     console.log(`Found ${players.length} players`);
 
+    // Fetch S{seasonId}_Players group ID once before the loop
+    const playersGroupName = `S${seasonId}_Players`;
+    const playersGroupRes = await fetch(`${url}/groups/${playersGroupName}.json`, { headers });
+    const playersGroupId = playersGroupRes.ok ? (await playersGroupRes.json()).group.id : null;
+    if (!playersGroupId) console.log(`Warning: group ${playersGroupName} not found — players will not be added to it`);
+
     let successCount = 0;
 
     //Provision Players
@@ -93,15 +99,15 @@ export async function POST(req: Request) {
       const wallet = player.playerAddress.toLowerCase();
       const isCapitalist = BigInt(player.fimBalance) > threshold;
       const targetGroupName = isCapitalist
-        ? `S${seasonId}_Capitalist`
-        : `S${seasonId}_Socialist`;
+        ? `S${seasonId}_Bourgeoisie`
+        : `S${seasonId}_Proletariat`;
 
       console.log(`Processing ${wallet}`);
 
       // --- A. Create/Sync User via SSO ---
       const ssoParams = new URLSearchParams({
         external_id: wallet,
-        email: `${wallet}@players.yourgame.com`,
+        email: `${wallet}@regarded.local`,
         username: wallet,
         name: `Player ${wallet.slice(2, 8)}`
       });
@@ -165,6 +171,15 @@ export async function POST(req: Request) {
         console.log(`${wallet} -> ${targetGroupName}`);
       } else {
         console.log(`Failed assigning ${wallet}`);
+      }
+
+      // --- E. Also Add to S{seasonId}_Players ---
+      if (playersGroupId) {
+        await fetch(`${url}/admin/users/${user.id}/groups`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ group_id: playersGroupId })
+        });
       }
     }
 

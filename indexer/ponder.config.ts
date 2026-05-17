@@ -1,3 +1,7 @@
+import dotenv from "dotenv";
+dotenv.config({ path: "../.env.local", override: true });
+dotenv.config({ path: "../.env" });
+
 import { createConfig, factory } from "ponder";
 import { parseAbiItem } from "viem";
 import { GameControllerAbi } from "./abis/GameControllerAbi";

@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     // ---- 1. Prepare SSO Payload ----
     const params = new URLSearchParams({
       external_id: wallet,
-      email: `${wallet}@players.yourgame.com`,
+      email: `${wallet}@regarded.local`,
       username,
       name: `Player ${wallet.slice(2, 8)}`
     });

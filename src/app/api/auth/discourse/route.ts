@@ -74,19 +74,24 @@ export async function GET(req: NextRequest) {
   const nonce = new URLSearchParams(payloadRaw).get('nonce');
 
   // 6. Build Return Payload
+  // Note: do NOT include 'groups' for non-admins — group membership is managed
+  // exclusively by init-season and sync-faction API routes. Including groups=""
+  // with discourse_connect_overrides_groups would wipe faction memberships on login.
   const returnParams = new URLSearchParams({
     nonce: nonce!,
     external_id: walletAddress,
     email: `${walletAddress}@regarded.local`,
-    username: walletAddress, // Always full address for uniqueness
-    name: displayName,       // Custom Name or Regarded Anon
+    username: walletAddress,
+    name: displayName,
     avatar_url: finalAvatarUrl,
     avatar_force_update: "true",
     require_activation: "false",
     admin: isSystemAdmin ? "true" : "false",
     moderator: isSystemAdmin ? "true" : "false",
-    groups: isSystemAdmin ? "admins" : "",
   });
+  if (isSystemAdmin) {
+    returnParams.set('groups', 'admins');
+  }
 
   const returnPayload = Buffer.from(returnParams.toString()).toString('base64');
   const returnHmac = crypto.createHmac('sha256', SECRET);

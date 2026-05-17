@@ -12,7 +12,23 @@
       "Bash(git commit -m ' *)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\src\" -Recurse -File)",
       "Bash(Select-Object FullName)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\src\" -Recurse -Name)",
+      "Bash(Sort-Object)",
+      "Bash(python3 -)",
+      "Bash(python3 -c ' *)",
+      "Bash(Find c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\indexer -type f -name \"*.ts\" -o -name \"*.json\" -o -name \"*.yaml\" -o -name \"*.yml\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(grep -r \"S\\\\d\\\\+_Capitalist\\\\|S\\\\d\\\\+_Socialist\\\\|S\\\\d\\\\+_Players\" --include=\"*.ts\" --include=\"*.js\" --include=\"*.md\" ! -path \"*/node_modules/*\")",
+      "Bash(grep -r \"group.*create\\\\|POST.*groups\\\\|create.*group\" --include=\"*.ts\" ! -path \"*/node_modules/*\")",
+      "Bash(curl -s -X POST http://127.0.0.1:3000/api/discourse/setup-season -H \"Content-Type: application/json\" -H 'x-discourse-admin-token: r%fSgqfzO$0YlN%@%on&' -d '{\"seasonNum\": 1}')",
+      "Bash(Get-Content \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\.env.local\")",
+      "Bash(Select-String \"DISCOURSE_INIT_SECRET\")",
+      "Bash(curl -s -X POST http://127.0.0.1:3000/api/discourse/setup-season -H 'Content-Type: application/json' -H 'x-discourse-admin-token: jeTN6Oe8IiBfITffH1mb' -d '{\"seasonNum\": 1}')",
+      "WebFetch(domain:docs.discourse.org)",
+      "WebFetch(domain:meta.discourse.org)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }
