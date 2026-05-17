@@ -3,9 +3,11 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    const { seasonSlug, isCapitalist } = await req.json();
+    const { seasonSlug, isCapitalist, isGeneral } = await req.json();
     const seasonNumber = seasonSlug.match(/\d+/)?.[0] || "1";
-    const targetGroupName = isCapitalist ? `S${seasonNumber}_Bourgeoisie` : `S${seasonNumber}_Proletariat`;
+    const targetGroupName = isGeneral
+      ? `S${seasonNumber}_General`
+      : isCapitalist ? `S${seasonNumber}_Bourgeoisie` : `S${seasonNumber}_Proletariat`;
 
     const res = await fetch(`${process.env.NEXT_PUBLIC_DISCOURSE_URL}/chat/api/channels`, {
       headers: {

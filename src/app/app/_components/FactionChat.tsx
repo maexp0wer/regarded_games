@@ -12,7 +12,8 @@ interface DiscourseMessage {
 
 interface FactionChatProps {
   seasonSlug: string;
-  isCapitalist: boolean;
+  isCapitalist?: boolean;
+  auctionMode?: boolean;
 }
 
 function formatTime(iso: string) {
@@ -24,63 +25,89 @@ function shortAddr(addr: string) {
   return addr;
 }
 
-export function FactionChat({ seasonSlug, isCapitalist }: FactionChatProps) {
+export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = false }: FactionChatProps) {
   const { address } = useAccount();
+  const [tab, setTab] = useState<'faction' | 'general'>(auctionMode ? 'general' : 'faction');
   const [channelId, setChannelId] = useState<number | null>(null);
   const [messages, setMessages] = useState<DiscourseMessage[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [discovering, setDiscovering] = useState(true);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const [connected, setConnected] = useState(false);
+  const messageListRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const factionColor = isCapitalist ? 'var(--color-blue)' : 'var(--color-pink)';
+  const factionColor = auctionMode ? 'var(--color-primary)' : isCapitalist ? 'var(--color-blue)' : 'var(--color-pink)';
   const factionLabel = isCapitalist ? 'THE BOURGEOISIE' : 'THE PROLETARIAT';
 
-  // Discover channel once
+  // Discover channel + fetch initial messages in one shot to avoid intermediate empty states
   useEffect(() => {
     async function discover() {
       setDiscovering(true);
+      setConnected(false);
+      // Don't clear messages here — keep the previous tab's messages visible while loading
       try {
-        const res = await fetch('/api/discourse/discover-channel', {
+        const chanRes = await fetch('/api/discourse/discover-channel', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ seasonSlug, isCapitalist }),
+          body: JSON.stringify({ seasonSlug, isCapitalist, isGeneral: tab === 'general' }),
         });
-        const data = await res.json();
-        if (data.channelId) setChannelId(data.channelId);
+        const chanData = await chanRes.json();
+        const newChannelId: number | null = chanData.channelId ?? null;
+
+        let newMessages: DiscourseMessage[] = [];
+        if (newChannelId) {
+          const msgRes = await fetch(`/api/discourse/chat-messages?channelId=${newChannelId}`);
+          const msgData = await msgRes.json();
+          if (Array.isArray(msgData.messages)) {
+            newMessages = msgData.messages;
+            setConnected(true);
+          }
+        }
+
+        // Update both at once so the render sees a consistent state
+        setChannelId(newChannelId);
+        setMessages(newMessages);
       } catch (e) {
         console.error('Channel discovery failed', e);
+        setChannelId(null);
+        setMessages([]);
       } finally {
         setDiscovering(false);
       }
     }
     discover();
-  }, [seasonSlug, isCapitalist]);
+  }, [seasonSlug, isCapitalist, tab]);
 
-  // Fetch messages
+  // Fetch messages (used by the polling interval and after sending)
   const fetchMessages = useCallback(async () => {
     if (!channelId) return;
     try {
       const res = await fetch(`/api/discourse/chat-messages?channelId=${channelId}`);
       const data = await res.json();
-      if (Array.isArray(data.messages)) setMessages(data.messages);
+      if (Array.isArray(data.messages)) {
+        setMessages(data.messages);
+        setConnected(true);
+      }
     } catch (e) {
       console.error('Message fetch failed', e);
+      setConnected(false);
     }
   }, [channelId]);
 
-  // Poll every 4 seconds
+  // Poll every 4 seconds (skip the immediate call — discover already fetched initial messages)
   useEffect(() => {
     if (!channelId) return;
-    fetchMessages();
     const id = setInterval(fetchMessages, 4000);
     return () => clearInterval(id);
   }, [channelId, fetchMessages]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = messageListRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
   }, [messages]);
 
   async function sendMessage() {
@@ -107,12 +134,41 @@ export function FactionChat({ seasonSlug, isCapitalist }: FactionChatProps) {
     }
   }
 
-  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  function resizeTextarea() {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }
+
+  function onInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    setInput(e.target.value);
+    resizeTextarea();
+  }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      sendMessageAndReset();
     }
   }
+
+  async function sendMessageAndReset() {
+    await sendMessage();
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+  }
+
+  function switchTab(next: 'faction' | 'general') {
+    if (next === tab) return;
+    setTab(next);
+    setSendError(null);
+    setInput('');
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+  }
+
+  const dotColor = connected ? 'var(--color-green)' : 'var(--color-red)';
 
   return (
     <div
@@ -125,29 +181,54 @@ export function FactionChat({ seasonSlug, isCapitalist }: FactionChatProps) {
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between px-5 py-3 shrink-0"
+        className="flex items-center justify-between px-4 py-2.5 shrink-0"
         style={{ background: 'var(--color-card2)', borderBottom: '1px solid var(--color-border)' }}
       >
-        <span
-          className="font-display font-extrabold uppercase tracking-tight text-faction-header"
-          style={{ color: factionColor }}
-        >
-          {factionLabel}
-        </span>
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--color-green)' }} />
-            <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: 'var(--color-green)' }} />
+        {/* Segmented toggle — hidden in auction mode */}
+        {auctionMode ? (
+          <span
+            className="font-display font-extrabold uppercase tracking-tight text-[11px] section-label"
+            style={{ color: 'var(--color-text2)' }}
+          >
+            Chat
           </span>
-          <span className="font-mono text-[9px] uppercase tracking-widest text-text2">Tactical Comms · Live</span>
-        </div>
+        ) : (
+          <div
+            className="flex items-center rounded-lg p-0.5 gap-0.5"
+            style={{ background: 'var(--color-bg)' }}
+          >
+            {(['faction', 'general'] as const).map((t) => {
+              const isActive = tab === t;
+              const label = t === 'faction' ? factionLabel : 'ALL PLAYERS';
+              return (
+                <button
+                  key={t}
+                  onClick={() => switchTab(t)}
+                  className="font-display font-extrabold uppercase tracking-tight text-[11px] px-3 py-1 rounded-md transition-all"
+                  style={{
+                    background: isActive ? (t === 'faction' ? factionColor : 'var(--color-text)') : 'transparent',
+                    color: isActive ? '#fff' : 'var(--color-text2)',
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Live indicator — green when connected, red when not */}
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: dotColor }} />
+          <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: dotColor }} />
+        </span>
       </div>
 
       {/* Message list */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-3 flex flex-col gap-3">
-        {discovering ? (
+      <div ref={messageListRef} className="flex-1 overflow-y-auto custom-scrollbar px-4 py-3 flex flex-col gap-3">
+        {discovering && messages.length === 0 ? (
           <p className="section-label animate-pulse text-center mt-8">Establishing Secure Connection…</p>
-        ) : !channelId ? (
+        ) : !channelId && !discovering ? (
           <p className="font-mono text-[11px] text-center mt-8" style={{ color: 'var(--color-red)' }}>
             Comms Offline · Channel not found
           </p>
@@ -159,7 +240,7 @@ export function FactionChat({ seasonSlug, isCapitalist }: FactionChatProps) {
             return (
               <div key={msg.id} className={`flex flex-col gap-0.5 ${isOwn ? 'items-end' : 'items-start'}`}>
                 <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-[10px]" style={{ color: factionColor }}>
+                  <span className="font-mono text-[10px]" style={{ color: tab === 'general' ? 'var(--color-text2)' : factionColor }}>
                     {isOwn ? 'YOU' : shortAddr(msg.user.username)}
                   </span>
                   <span className="font-mono text-[9px] text-text2">{formatTime(msg.created_at)}</span>
@@ -167,7 +248,7 @@ export function FactionChat({ seasonSlug, isCapitalist }: FactionChatProps) {
                 <div
                   className="px-3 py-1.5 text-sm max-w-[85%] wrap-break-word"
                   style={{
-                    background: isOwn ? factionColor : 'var(--color-card2)',
+                    background: isOwn ? (tab === 'general' ? 'var(--color-green)' : factionColor) : 'var(--color-card2)',
                     color: isOwn ? '#fff' : 'var(--color-text)',
                     borderRadius: isOwn ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
                   }}
@@ -178,7 +259,6 @@ export function FactionChat({ seasonSlug, isCapitalist }: FactionChatProps) {
             );
           })
         )}
-        <div ref={bottomRef} />
       </div>
 
       {/* Input */}
@@ -189,24 +269,35 @@ export function FactionChat({ seasonSlug, isCapitalist }: FactionChatProps) {
       )}
       {channelId && (
         <div
-          className="shrink-0 flex items-center gap-2 px-4 py-3"
+          className="shrink-0 flex items-end gap-2 px-3 py-3"
           style={{ borderTop: '1px solid var(--color-border)' }}
         >
-          <input
-            className="flex-1 bg-transparent font-mono text-sm outline-none placeholder:text-text2"
-            style={{ color: 'var(--color-text)' }}
-            placeholder={address ? 'Send transmission…' : 'Connect wallet to chat'}
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            className="flex-1 font-mono text-sm outline-none placeholder:text-text2 resize-none overflow-y-auto custom-scrollbar rounded-xl px-3 py-2 leading-relaxed"
+            style={{ background: 'var(--color-bg)', color: 'var(--color-text)', maxHeight: '8rem' }}
+            placeholder={address ? 'Chat…' : 'Connect wallet to chat'}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={onInputChange}
             onKeyDown={onKeyDown}
             disabled={!address || sending}
           />
           <button
-            className="btn-primary px-3 py-1 text-xs uppercase tracking-widest font-mono shrink-0"
-            onClick={sendMessage}
+            className="shrink-0 flex items-center justify-center rounded-full w-8 h-8 mb-0.5 transition-opacity disabled:opacity-30"
+            style={{ background: tab === 'general' ? 'var(--color-green)' : factionColor }}
+            onClick={sendMessageAndReset}
             disabled={!input.trim() || !address || sending}
+            aria-label="Send"
           >
-            {sending ? '…' : 'Send'}
+            {sending ? (
+              <span className="font-mono text-[10px] text-white">…</span>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            )}
           </button>
         </div>
       )}

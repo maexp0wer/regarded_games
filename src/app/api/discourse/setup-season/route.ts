@@ -94,7 +94,26 @@ export async function POST(req: Request) {
     const socCategoryId = safeJson(socBody)?.category?.id;
     console.log(`Proletariat category id=${socCategoryId} (${socRes.status}) ${socBody.slice(0, 200)}`);
 
-    // ── 4. Chat Channels (linked to faction subcategories) ──────────────
+    // ── 4. Chat Channels ────────────────────────────────────────────────
+    // General channel linked to parent category (all S{N}_Players)
+    if (parentId) {
+      const generalChanRes = await fetch(`${url}/chat/api/channels`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          channel: {
+            chatable_type: 'Category',
+            chatable_id: parentId,
+            name: `S${seasonNum}_General`,
+            description: `Season ${seasonNum} general chat for all players`,
+            auto_join_users: true
+          }
+        })
+      });
+      console.log(`General channel (${generalChanRes.status}) ${await generalChanRes.text()}`);
+    }
+
+    // Faction channels linked to faction subcategories
     if (capCategoryId) {
       const capChanRes = await fetch(`${url}/chat/api/channels`, {
         method: 'POST',

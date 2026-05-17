@@ -171,15 +171,25 @@ export default function SeasonDetailPage() {
           ═══════════════════════════════════════════ */}
       {isAuctionOrBootstrap && (
         <>
-          {/* Main row: buy widget | gini gauge */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.55fr] gap-6">
-            <AuctionMask
-              seasonAddress={seasonAddress}
-              auctionAddress={auctionAddress}
-              fimAddress={fimAddress}
-              currentPhase={currentPhase}
-            />
-            <GiniDisplay seasonAddress={seasonAddress} />
+          {/* Main row: buy widget (3) | gini gauge (5) | all-players chat (2) */}
+          <div className="grid grid-cols-1 xl:grid-cols-10 gap-6">
+            <div className="xl:col-span-3">
+              <AuctionMask
+                seasonAddress={seasonAddress}
+                auctionAddress={auctionAddress}
+                fimAddress={fimAddress}
+                currentPhase={currentPhase}
+              />
+            </div>
+            <div className="xl:col-span-5">
+              <GiniDisplay seasonAddress={seasonAddress} />
+            </div>
+            <div className="xl:col-span-2">
+              <FactionChat
+                seasonSlug={seasonSlug}
+                auctionMode
+              />
+            </div>
           </div>
 
           {/* Bottom row: activity | season details */}
@@ -235,18 +245,32 @@ export default function SeasonDetailPage() {
             </div>
           </div>
 
-          {/* Open orders (conditional) | Gini */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Open orders (3/10, conditional) | Gini (4/10) | Chat (3/10) */}
+          <div className="grid grid-cols-1 xl:grid-cols-10 gap-6">
             {hasOrders && (
-              <OpenOrders
-                orders={myOrders ||[]}
-                exchangeAddress={exchangeAddress}
-                onRefresh={refetchOpenOrders}
-              />
+              <div className="xl:col-span-3">
+                <OpenOrders
+                  orders={myOrders || []}
+                  exchangeAddress={exchangeAddress}
+                  onRefresh={refetchOpenOrders}
+                />
+              </div>
             )}
-            <div className={hasOrders ? 'lg:col-span-2' : 'lg:col-span-3'}>
+            <div className={
+              hasOrders
+                ? (factionData ? 'xl:col-span-4' : 'xl:col-span-7')
+                : (factionData ? 'xl:col-span-7' : 'xl:col-span-10')
+            }>
               <GiniDisplay seasonAddress={seasonAddress} />
             </div>
+            {factionData && (
+              <div className="xl:col-span-3">
+                <FactionChat
+                  seasonSlug={seasonSlug}
+                  isCapitalist={factionData.isCapitalist}
+                />
+              </div>
+            )}
           </div>
 
           {/* Activity feed | season details */}
@@ -268,19 +292,11 @@ export default function SeasonDetailPage() {
 
           {/* Faction war room */}
           {factionData && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 h-150">
-                <FactionDiscussionBoard
-                  seasonSlug={seasonSlug}
-                  isCapitalist={factionData.isCapitalist}
-                />
-              </div>
-              <div className="h-150">
-                <FactionChat
-                  seasonSlug={seasonSlug}
-                  isCapitalist={factionData.isCapitalist}
-                />
-              </div>
+            <div className="h-150">
+              <FactionDiscussionBoard
+                seasonSlug={seasonSlug}
+                isCapitalist={factionData.isCapitalist}
+              />
             </div>
           )}
         </>
