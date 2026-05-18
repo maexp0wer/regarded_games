@@ -141,12 +141,12 @@ export default function SeasonDetailPage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <main className="pt-4 pb-16 space-y-6 animate-in fade-in duration-700">
+    <main className="pt-4 pb-16 space-y-2 animate-in fade-in duration-700">
 
       {/* ═══════════════════════════════════════════
           HERO ROW — always 3 equal cards
           ═══════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         <SeasonHeader
           seasonAddress={seasonAddress}
           seasonName={formattedName}
@@ -169,7 +169,7 @@ export default function SeasonDetailPage() {
       {isAuctionOrBootstrap && (
         <>
           {/* Main row: buy widget (3) | gini gauge (5) | all-players chat (2) */}
-          <div className="grid grid-cols-1 xl:grid-cols-10 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-10 gap-2">
             <div className="xl:col-span-3">
               <AuctionMask
                 seasonAddress={seasonAddress}
@@ -190,7 +190,7 @@ export default function SeasonDetailPage() {
           </div>
 
           {/* Bottom row: activity | season details */}
-          <div className="grid grid-cols-1 xl:grid-cols-10 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-10 gap-2">
             <div className="xl:col-span-3">
               <AuctionActivityFeed seasonAddress={seasonAddress} />
             </div>
@@ -214,7 +214,7 @@ export default function SeasonDetailPage() {
       {isTrading && (
         <>
           {/* Trading mask | order book + my orders stacked */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
             <TradingMask
               seasonSlug={seasonSlug}
               seasonAddress={seasonAddress}
@@ -232,7 +232,7 @@ export default function SeasonDetailPage() {
               onReorderOrders={handleReorderOrders}
               isOnHold={effectiveVictoryPending}
             />
-            <div className="lg:col-span-2 flex flex-col gap-4 h-full">
+            <div className="lg:col-span-2 flex flex-col gap-2 h-full">
               <OrderBook
                 seasonAddress={seasonAddress}
                 isBuy={isBuy}
@@ -250,7 +250,7 @@ export default function SeasonDetailPage() {
           </div>
 
           {/* Gini | Chat */}
-          <div className="grid grid-cols-1 xl:grid-cols-10 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-10 gap-2">
             <div className={factionData ? 'xl:col-span-7' : 'xl:col-span-10'}>
               <GiniDisplay seasonAddress={seasonAddress} />
             </div>
@@ -277,7 +277,7 @@ export default function SeasonDetailPage() {
           )}
 
           {/* Activity feed | season details */}
-          <div className="grid grid-cols-1 xl:grid-cols-10 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-10 gap-2">
             <div className="xl:col-span-3">
               <TradingActivityFeed seasonAddress={seasonAddress} />
             </div>
@@ -300,9 +300,9 @@ export default function SeasonDetailPage() {
           ═══════════════════════════════════════════ */}
       {isPayout && (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
             <PayoutMask seasonAddress={seasonAddress} />
-            <div className="lg:col-span-2 flex flex-col gap-6">
+            <div className="lg:col-span-2 flex flex-col gap-2">
               <PlayerRankDisplay
                 seasonAddress={seasonAddress}
                 userAddress={userAddress || ''}

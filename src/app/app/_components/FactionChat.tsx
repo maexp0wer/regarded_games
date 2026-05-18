@@ -182,17 +182,12 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
 
   return (
     <div
-      className="flex flex-col min-h-88 max-h-128 overflow-hidden"
-      style={{
-        background: 'var(--color-card)',
-        border: '1px solid var(--color-border-bright)',
-        borderRadius: 20,
-      }}
+      className="flex flex-col min-h-88 max-h-128 overflow-hidden card-app"
     >
       {/* Header — hidden on mobile when board is active (board's own header takes over) */}
       <div
         className={`items-center justify-between px-4 py-2.5 shrink-0 ${!auctionMode && showBoard ? 'hidden lg:flex' : 'flex'}`}
-        style={{ background: 'var(--color-card2)', borderBottom: '1px solid var(--color-border)' }}
+        
       >
         {/* Segmented toggle — hidden in auction mode */}
         {auctionMode ? (

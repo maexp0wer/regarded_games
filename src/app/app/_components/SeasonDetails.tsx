@@ -46,7 +46,7 @@ export function SeasonDetails({ tradingStart, seasonEnd, M_dynamic, config, seas
   ].filter(item => item.value > 0) : [];
 
   return (
-    <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 h-full${xlWeighted ? ' xl:grid-cols-7' : ''}`}>
+    <div className={`grid grid-cols-1 md:grid-cols-3 gap-2 h-full${xlWeighted ? ' xl:grid-cols-7' : ''}`}>
 
       {/* ── Schedule ── */}
       <div className={`card-app flex flex-col gap-3${xlWeighted ? ' xl:col-span-2' : ''}`} style={{ borderColor: 'var(--color-border-bright)' }}>
