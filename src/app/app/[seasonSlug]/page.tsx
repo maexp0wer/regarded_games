@@ -10,7 +10,6 @@ import { useSeasonPhase } from '@/hooks/useSeasonPhase';
 import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 import { Order } from '@/hooks/useOrderBook';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
-import { useOpenOrders } from '@/hooks/useOpenOrders';
 import { usePayout } from '@/hooks/usePayout';
 
 // Components
@@ -86,9 +85,6 @@ export default function SeasonDetailPage() {
     progressPercent,
     effectiveVictoryPending,
   } = victory;
-
-  const { data: myOrders, refetch: refetchOpenOrders } = useOpenOrders(seasonAddress, userAddress);
-  const hasOrders = myOrders && myOrders.length > 0;
 
   const { data: percentilesMap } = useBatchPlayerPercentiles(
     seasonAddress,
@@ -216,7 +212,7 @@ export default function SeasonDetailPage() {
           ═══════════════════════════════════════════ */}
       {isTrading && (
         <>
-          {/* Trading mask | order book */}
+          {/* Trading mask | order book + my orders stacked */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <TradingMask
               seasonSlug={seasonSlug}
@@ -235,32 +231,26 @@ export default function SeasonDetailPage() {
               onReorderOrders={handleReorderOrders}
               isOnHold={effectiveVictoryPending}
             />
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 flex flex-col gap-4 h-full">
               <OrderBook
                 seasonAddress={seasonAddress}
                 isBuy={isBuy}
                 isMaker={isMaker}
                 onSelectOrder={handleSelectOrder}
               />
+              {userAddress && (
+                <OpenOrders
+                  seasonAddress={seasonAddress}
+                  userAddress={userAddress}
+                  exchangeAddress={exchangeAddress}
+                />
+              )}
             </div>
           </div>
 
-          {/* Open orders (3/10, conditional) | Gini (4/10) | Chat (3/10) */}
+          {/* Gini | Chat */}
           <div className="grid grid-cols-1 xl:grid-cols-10 gap-6">
-            {hasOrders && (
-              <div className="xl:col-span-3">
-                <OpenOrders
-                  orders={myOrders || []}
-                  exchangeAddress={exchangeAddress}
-                  onRefresh={refetchOpenOrders}
-                />
-              </div>
-            )}
-            <div className={
-              hasOrders
-                ? (factionData ? 'xl:col-span-4' : 'xl:col-span-7')
-                : (factionData ? 'xl:col-span-7' : 'xl:col-span-10')
-            }>
+            <div className={factionData ? 'xl:col-span-7' : 'xl:col-span-10'}>
               <GiniDisplay seasonAddress={seasonAddress} />
             </div>
             {factionData && (

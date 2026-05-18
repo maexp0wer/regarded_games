@@ -43,7 +43,9 @@ export const orders = onchainTable("orders", (t) => ({
   initialAmount: t.bigint().notNull(),
   remainingAmount: t.bigint().notNull(),
   active: t.boolean().notNull().default(true),
+  isCancelled: t.boolean().notNull().default(false),
   timestamp: t.bigint().notNull(),
+  settledAt: t.bigint(),
 }));
 
 export const trades = onchainTable("trades", (t) => ({

@@ -95,7 +95,7 @@ export function OrderBook({
 
   return (
     <div
-      className="card-app flex flex-col h-full min-h-150 overflow-hidden"
+      className="card-app flex flex-col flex-1 min-h-80 overflow-hidden"
       style={{ padding: 0, borderColor: 'var(--color-border-bright)' }}
     >
       {/* Header */}

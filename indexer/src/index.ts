@@ -263,7 +263,8 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
   // 5. Update the Order state (using primary key 'id')
   await context.db.update(schema.orders, { id: uniqueId }).set({
     remainingAmount: newRemaining,
-    active: newRemaining > 0n 
+    active: newRemaining > 0n,
+    ...(newRemaining === 0n ? { settledAt: event.block.timestamp } : {}),
   });
 
   // 6. Record the Trade History
@@ -315,9 +316,11 @@ ponder.on("Exchange:OrderCancelled", async ({ event, context }) => {
   const uniqueId = `${seasonAddress}-${id}`;
 
   // 2. Update using the primary key 'id'
-  await context.db.update(schema.orders, { id: uniqueId }).set({ // <-- FIXED
+  // remainingAmount is preserved (not zeroed) so we know how much was unfilled at cancellation
+  await context.db.update(schema.orders, { id: uniqueId }).set({
     active: false,
-    remainingAmount: 0n
+    isCancelled: true,
+    settledAt: event.block.timestamp,
   });
 });
 

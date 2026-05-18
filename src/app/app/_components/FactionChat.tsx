@@ -37,6 +37,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
   const [connected, setConnected] = useState(false);
   const messageListRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isAtBottom = useRef(true);
 
   const factionColor = auctionMode ? 'var(--color-primary)' : isCapitalist ? 'var(--color-blue)' : 'var(--color-pink)';
   const factionLabel = isCapitalist ? 'THE BOURGEOISIE' : 'THE PROLETARIAT';
@@ -103,10 +104,16 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
     return () => clearInterval(id);
   }, [channelId, fetchMessages]);
 
-  // Scroll to bottom on new messages
-  useEffect(() => {
+  function onMessageScroll() {
     const el = messageListRef.current;
     if (!el) return;
+    isAtBottom.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 60;
+  }
+
+  // Scroll to bottom on new messages only when user hasn't scrolled up
+  useEffect(() => {
+    const el = messageListRef.current;
+    if (!el || !isAtBottom.current) return;
     el.scrollTop = el.scrollHeight;
   }, [messages]);
 
@@ -172,7 +179,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
 
   return (
     <div
-      className="flex flex-col h-full overflow-hidden"
+      className="flex flex-col min-h-88 max-h-128 overflow-hidden"
       style={{
         background: 'var(--color-card)',
         border: '1px solid var(--color-border-bright)',
@@ -225,7 +232,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
       </div>
 
       {/* Message list */}
-      <div ref={messageListRef} className="flex-1 overflow-y-auto custom-scrollbar px-4 py-3 flex flex-col gap-3">
+      <div ref={messageListRef} onScroll={onMessageScroll} className="flex-1 overflow-y-auto custom-scrollbar px-4 py-3 flex flex-col gap-3">
         {discovering && messages.length === 0 ? (
           <p className="section-label animate-pulse text-center mt-8">Establishing Secure Connection…</p>
         ) : !channelId && !discovering ? (
