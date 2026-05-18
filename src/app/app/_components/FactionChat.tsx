@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAccount } from 'wagmi';
+import { FactionDiscussionBoard } from './FactionDiscussionBoard';
 
 interface DiscourseMessage {
   id: number;
@@ -14,6 +15,8 @@ interface FactionChatProps {
   seasonSlug: string;
   isCapitalist?: boolean;
   auctionMode?: boolean;
+  showBoard?: boolean;
+  onToggleBoard?: () => void;
 }
 
 function formatTime(iso: string) {
@@ -25,7 +28,7 @@ function shortAddr(addr: string) {
   return addr;
 }
 
-export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = false }: FactionChatProps) {
+export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = false, showBoard = false, onToggleBoard }: FactionChatProps) {
   const { address } = useAccount();
   const [tab, setTab] = useState<'faction' | 'general'>(auctionMode ? 'general' : 'faction');
   const [channelId, setChannelId] = useState<number | null>(null);
@@ -186,9 +189,9 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
         borderRadius: 20,
       }}
     >
-      {/* Header */}
+      {/* Header — hidden on mobile when board is active (board's own header takes over) */}
       <div
-        className="flex items-center justify-between px-4 py-2.5 shrink-0"
+        className={`items-center justify-between px-4 py-2.5 shrink-0 ${!auctionMode && showBoard ? 'hidden lg:flex' : 'flex'}`}
         style={{ background: 'var(--color-card2)', borderBottom: '1px solid var(--color-border)' }}
       >
         {/* Segmented toggle — hidden in auction mode */}
@@ -224,15 +227,67 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
           </div>
         )}
 
-        {/* Live indicator — green when connected, red when not */}
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: dotColor }} />
-          <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: dotColor }} />
-        </span>
+        {/* Right side: board toggle + live dot */}
+        <div className="flex items-center gap-2">
+          {!auctionMode && onToggleBoard && (
+            <button
+              onClick={onToggleBoard}
+              aria-label="Toggle discussion board"
+              className="flex items-center justify-center w-6 h-6 rounded-lg transition-all"
+              style={{
+                background: showBoard ? factionColor : 'var(--color-bg)',
+                color: showBoard ? '#fff' : 'var(--color-text2)',
+                border: `1px solid ${showBoard ? factionColor : 'transparent'}`,
+              }}
+              onMouseEnter={(e) => {
+                if (!showBoard) {
+                  e.currentTarget.style.borderColor = factionColor;
+                  e.currentTarget.style.color = factionColor;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!showBoard) {
+                  e.currentTarget.style.borderColor = 'transparent';
+                  e.currentTarget.style.color = 'var(--color-text2)';
+                }
+              }}
+            >
+              {/* Forum/list icon */}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" />
+                <line x1="3" y1="12" x2="3.01" y2="12" />
+                <line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+            </button>
+          )}
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: dotColor }} />
+            <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: dotColor }} />
+          </span>
+        </div>
       </div>
 
-      {/* Message list */}
-      <div ref={messageListRef} onScroll={onMessageScroll} className="flex-1 overflow-y-auto custom-scrollbar px-4 py-3 flex flex-col gap-3">
+      {/* Board slot — small screens only, replaces chat when showBoard */}
+      {!auctionMode && showBoard && (
+        <div className="flex-1 min-h-0 overflow-hidden lg:hidden">
+          <FactionDiscussionBoard
+            seasonSlug={seasonSlug}
+            isCapitalist={isCapitalist}
+            embedded
+            onClose={onToggleBoard}
+          />
+        </div>
+      )}
+
+      {/* Message list — hidden on small screens when board is showing */}
+      <div
+        ref={messageListRef}
+        onScroll={onMessageScroll}
+        className={`flex-1 overflow-y-auto custom-scrollbar px-4 py-3 flex flex-col gap-3 ${!auctionMode && showBoard ? 'hidden lg:flex' : ''}`}
+      >
         {discovering && messages.length === 0 ? (
           <p className="section-label animate-pulse text-center mt-8">Establishing Secure Connection…</p>
         ) : !channelId && !discovering ? (
@@ -268,15 +323,15 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
         )}
       </div>
 
-      {/* Input */}
+      {/* Input — hidden on small screens when board is showing */}
       {sendError && (
-        <p className="shrink-0 font-mono text-[10px] px-4 py-1" style={{ color: 'var(--color-red)' }}>
+        <p className={`shrink-0 font-mono text-[10px] px-4 py-1 ${!auctionMode && showBoard ? 'hidden lg:block' : ''}`} style={{ color: 'var(--color-red)' }}>
           {sendError}
         </p>
       )}
       {channelId && (
         <div
-          className="shrink-0 flex items-end gap-2 px-3 py-3"
+          className={`shrink-0 flex items-end gap-2 px-3 py-3 ${!auctionMode && showBoard ? 'hidden lg:flex' : ''}`}
           style={{ borderTop: '1px solid var(--color-border)' }}
         >
           <textarea

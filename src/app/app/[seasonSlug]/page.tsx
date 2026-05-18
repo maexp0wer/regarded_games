@@ -42,6 +42,7 @@ export default function SeasonDetailPage() {
   const fimAddress      = metadata?.fimAddress      as `0x${string}` | undefined;
 
   // 2. Trading state (lifted)
+  const [showBoard, setShowBoard] = useState(false);
   const [isBuy, setIsBuy] = useState(true);
   const [isMaker, setIsMaker] = useState(false);
   const [targetAmount, setTargetAmount] = useState('');
@@ -258,10 +259,22 @@ export default function SeasonDetailPage() {
                 <FactionChat
                   seasonSlug={seasonSlug}
                   isCapitalist={factionData.isCapitalist}
+                  showBoard={showBoard}
+                  onToggleBoard={() => setShowBoard((v) => !v)}
                 />
               </div>
             )}
           </div>
+
+          {/* Discussion board — large screens only, slides in below gini+chat */}
+          {factionData && showBoard && (
+            <div className="hidden md:block animate-in slide-in-from-top-4 fade-in duration-300">
+              <FactionDiscussionBoard
+                seasonSlug={seasonSlug}
+                isCapitalist={factionData.isCapitalist}
+              />
+            </div>
+          )}
 
           {/* Activity feed | season details */}
           <div className="grid grid-cols-1 xl:grid-cols-10 gap-6">
@@ -279,16 +292,6 @@ export default function SeasonDetailPage() {
               />
             </div>
           </div>
-
-          {/* Faction war room */}
-          {factionData && (
-            <div className="h-150">
-              <FactionDiscussionBoard
-                seasonSlug={seasonSlug}
-                isCapitalist={factionData.isCapitalist}
-              />
-            </div>
-          )}
         </>
       )}
 
