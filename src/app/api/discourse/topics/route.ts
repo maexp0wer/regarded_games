@@ -36,7 +36,7 @@ export async function GET(req: Request) {
     const data = await res.json();
     return NextResponse.json({
       topics: data.topic_list?.topics ?? [],
-      categoryId: data.topic_list?.category_id ?? null,
+      categoryId: data.category?.id ?? null,
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Failed to resolve category (${catRes.status})` }, { status: catRes.status });
     }
     const catData = await catRes.json();
-    const categoryId = catData.topic_list?.category_id;
+    const categoryId = catData.category?.id;
     if (!categoryId) {
       return NextResponse.json({ error: 'Could not resolve category ID' }, { status: 500 });
     }

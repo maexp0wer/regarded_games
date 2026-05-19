@@ -5,7 +5,7 @@ import Regardo from '@/components/icons/Regardo.svg';
 import Carlo from '@/components/icons/Carlo.svg';
 
 
-export type PercentileSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+export type PercentileSize = 'xxs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 interface PercentileCircleProps {
   percentage: number;
@@ -19,6 +19,7 @@ interface PercentileCircleProps {
 // Map sizes to Tailwind and SVG dimensions
 // STROKE logic: We INCREASE the number for larger sizes to make the ring "wider"
 const sizeMap = {
+  xxs: { container: 'gap-1', icon: 'w-3', circle: 'w-3 h-3', font: 'text-[11px]', stroke: 6 },
   xs: { container: 'gap-1', icon: 'w-3', circle: 'w-3 h-3', font: 'text-[12px]', stroke: 6 },
   sm: { container: 'gap-1.5', icon: 'w-4', circle: 'w-4 h-4', font: 'text-[12px]', stroke: 7 },
   md: { container: 'gap-2', icon: 'w-7', circle: 'w-7 h-7', font: 'text-[12px]', stroke: 8 },
@@ -46,7 +47,7 @@ export const PercentileCircle: React.FC<PercentileCircleProps> = ({
     <div className={`inline-flex items-center leading-none ${s.container} ${className}`}>
       
       {/* 1. FACTION ICON */}
-      {showIcon && (
+      {showIcon && size !== 'xxs' && (
         <div className={`flex-shrink-0 flex items-center ${s.icon}`}>
           {isCapitalist ? (
             <Regardo className="w-full h-auto opacity-90" viewBox="0 0 600 800"/>

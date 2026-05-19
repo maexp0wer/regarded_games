@@ -53,16 +53,16 @@
   --color-gold:        #f5b800;
   --color-gold-soft:   #ffd34a;
   --color-gold-pale:   #1a1305;
-  --color-pink:        #ff3d8a;
+  --color-pink:        #e72828;
   --color-pink-soft:   #ff7ab0;
-  --color-blue:        #4d9fff;
+  --color-blue:        #1064c4;
   --color-blue-soft:   #8cc0ff;
   --color-green:       #6bcb6e;
   --color-green-soft:  #2d8c30;
   --color-red:         #ff5454;
 }
 
-/* ── TRANSPARENCY PALETTE — hex+alpha, bright base colors ────────
+/* ── TRANSPARENCY PALETTE — hex+alpha, bright base colors ──────── #4d9fff;
    Naming: --color-{hue}-a{opacity-as-2-digit-percent}
    Base colors match dark-mode brand values; work correctly on
    both light and dark card backgrounds (matching prior rgba usage).

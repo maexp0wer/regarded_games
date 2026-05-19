@@ -1,31 +1,18 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useRecentTrades } from '@/hooks/useRecentTrades';
-import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
 import { PercentileCircle } from './PercentileCircle';
 
 export function TradingActivityFeed({ seasonAddress }: { seasonAddress: string }) {
   const { data: trades, isLoading } = useRecentTrades(seasonAddress);
-
-  const participants = useMemo(() => {
-    if (!trades) return [];
-    const addrs = new Set<string>();
-    trades.forEach(t => {
-      if (t.seller) addrs.add(t.seller.toLowerCase());
-      if (t.buyer)  addrs.add(t.buyer.toLowerCase());
-    });
-    return Array.from(addrs);
-  }, [trades]);
-
-  const { data: percentileMap, isFetching } = useBatchPlayerPercentiles(seasonAddress, participants);
 
   const fmt = (ts: number) =>
     new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 
   return (
     <div
-      className="card-app flex flex-col h-full"
+      className="card-app flex flex-col max-h-130"
       style={{ borderColor: 'var(--color-border-bright)', padding: 0 }}
     >
       {/* Header */}
@@ -34,9 +21,6 @@ export function TradingActivityFeed({ seasonAddress }: { seasonAddress: string }
         style={{ borderBottom: '1px solid var(--color-border)' }}
       >
         <p className="section-label">Recent Activity</p>
-        {isFetching && (
-          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--color-gold)' }} />
-        )}
       </div>
 
       {/* Column headers */}
@@ -63,8 +47,8 @@ export function TradingActivityFeed({ seasonAddress }: { seasonAddress: string }
           </div>
         ) : (
           trades.map((trade) => {
-            const sellerStats = percentileMap?.[trade.seller?.toLowerCase() || ''];
-            const buyerStats  = percentileMap?.[trade.buyer?.toLowerCase()  || ''];
+            const sellerKnown = trade.sellerBalance !== '0';
+            const buyerKnown  = trade.buyerBalance  !== '0';
 
             return (
               <div
@@ -78,14 +62,14 @@ export function TradingActivityFeed({ seasonAddress }: { seasonAddress: string }
                     {fmt(trade.timestamp)}
                   </span>
                   <div className="flex items-center gap-2 shrink-0">
-                    {sellerStats ? (
-                      <PercentileCircle percentage={sellerStats.factionPercentile} isCapitalist={sellerStats.isCapitalist} size="sm" />
+                    {sellerKnown ? (
+                      <PercentileCircle percentage={trade.sellerPercentile} isCapitalist={trade.sellerIsCapitalist} size="sm" />
                     ) : (
                       <span className="font-mono text-[10px] text-text2 opacity-30">anon</span>
                     )}
                     <span className="font-mono text-[10px] text-text2 opacity-30">→</span>
-                    {buyerStats ? (
-                      <PercentileCircle percentage={buyerStats.factionPercentile} isCapitalist={buyerStats.isCapitalist} size="sm" />
+                    {buyerKnown ? (
+                      <PercentileCircle percentage={trade.buyerPercentile} isCapitalist={trade.buyerIsCapitalist} size="sm" />
                     ) : (
                       <span className="font-mono text-[10px] text-text2 opacity-30">anon</span>
                     )}

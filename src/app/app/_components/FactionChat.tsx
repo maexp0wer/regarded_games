@@ -50,7 +50,6 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
     async function discover() {
       setDiscovering(true);
       setConnected(false);
-      // Don't clear messages here — keep the previous tab's messages visible while loading
       try {
         const chanRes = await fetch('/api/discourse/discover-channel', {
           method: 'POST',
@@ -175,6 +174,9 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
     setTab(next);
     setSendError(null);
     setInput('');
+    setMessages([]);
+    setChannelId(null);
+    setDiscovering(true);
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
   }
 
@@ -186,7 +188,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
     >
       {/* Header — hidden on mobile when board is active (board's own header takes over) */}
       <div
-        className={`items-center justify-between px-4 py-2.5 shrink-0 ${!auctionMode && showBoard ? 'hidden lg:flex' : 'flex'}`}
+        className={`items-center justify-between shrink-0 ${!auctionMode && showBoard ? 'hidden lg:flex' : 'flex'}`}
         
       >
         {/* Segmented toggle — hidden in auction mode */}
@@ -209,7 +211,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
                 <button
                   key={t}
                   onClick={() => switchTab(t)}
-                  className="font-display font-extrabold uppercase tracking-tight text-[11px] px-3 py-1 rounded-md transition-all"
+                  className="font-display font-extrabold uppercase tracking-tight text-[9px] px-3 py-1 rounded-md transition-all"
                   style={{
                     background: isActive ? (t === 'faction' ? factionColor : 'var(--color-text)') : 'transparent',
                     color: isActive ? '#fff' : 'var(--color-text2)',
@@ -281,12 +283,12 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
       <div
         ref={messageListRef}
         onScroll={onMessageScroll}
-        className={`flex-1 overflow-y-auto custom-scrollbar px-4 py-3 flex flex-col gap-3 ${!auctionMode && showBoard ? 'hidden lg:flex' : ''}`}
+        className={`flex-1 overflow-y-auto custom-scrollbar pl-1 py-2 flex flex-col gap-1 ${!auctionMode && showBoard ? 'hidden lg:flex' : ''}`}
       >
         {discovering && messages.length === 0 ? (
           <p className="section-label animate-pulse text-center mt-8">Establishing Secure Connection…</p>
         ) : !channelId && !discovering ? (
-          <p className="font-mono text-[11px] text-center mt-8" style={{ color: 'var(--color-red)' }}>
+          <p className="font-mono text-[9px] text-center mt-8" style={{ color: 'var(--color-red)' }}>
             Comms Offline · Channel not found
           </p>
         ) : messages.length === 0 ? (
@@ -303,7 +305,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
                   <span className="font-mono text-[9px] text-text2">{formatTime(msg.created_at)}</span>
                 </div>
                 <div
-                  className="px-3 py-1.5 text-sm max-w-[85%] wrap-break-word"
+                  className="px-3 py-1.5 text-xs max-w-[85%] wrap-break-word"
                   style={{
                     background: isOwn ? (tab === 'general' ? 'var(--color-green)' : factionColor) : 'var(--color-card2)',
                     color: isOwn ? '#fff' : 'var(--color-text)',
@@ -326,13 +328,13 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
       )}
       {channelId && (
         <div
-          className={`shrink-0 flex items-end gap-2 px-3 py-3 ${!auctionMode && showBoard ? 'hidden lg:flex' : ''}`}
+          className={`shrink-0 flex items-end gap-2 pt-2 ${!auctionMode && showBoard ? 'hidden lg:flex' : ''}`}
           style={{ borderTop: '1px solid var(--color-border)' }}
         >
           <textarea
             ref={textareaRef}
             rows={1}
-            className="flex-1 font-mono text-sm outline-none placeholder:text-text2 resize-none overflow-y-auto custom-scrollbar rounded-xl px-3 py-2 leading-relaxed"
+            className="flex-1 font-mono text-xs outline-none placeholder:text-text2 resize-none overflow-y-auto custom-scrollbar rounded-xl px-3 py-2 leading-relaxed"
             style={{ background: 'var(--color-bg)', color: 'var(--color-text)', maxHeight: '8rem' }}
             placeholder={address ? 'Chat…' : 'Connect wallet to chat'}
             value={input}

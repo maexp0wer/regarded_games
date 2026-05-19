@@ -1,7 +1,24 @@
 import { ponder } from "ponder:registry";
 import { seasons, playerSeasonStats, yieldEvents, protocolStats } from "ponder:schema";
-import { eq } from "ponder";
+import { eq, and } from "ponder";
 import * as schema from "../ponder.schema";
+
+// Gini coefficient in basis points (0–10 000) from a balance map.
+// Divides by 1e15 before summing to stay within safe Number range.
+function computeGiniBps(bals: Map<string, bigint>): number {
+  const vals = Array.from(bals.values())
+    .map(v => Number(v / 1_000_000_000_000_000n))
+    .filter(v => v > 0)
+    .sort((a, b) => a - b);
+  const n = vals.length;
+  if (n <= 1) return 0;
+  const total = vals.reduce((s, v) => s + v, 0);
+  if (total === 0) return 0;
+  let num = 0;
+  for (let i = 0; i < n; i++) num += i * vals[i];
+  const gini = (2 * num - (n - 1) * total) / (n * total);
+  return Math.round(Math.max(0, Math.min(1, gini)) * 10_000);
+}
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
@@ -267,10 +284,88 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
     ...(newRemaining === 0n ? { settledAt: event.block.timestamp } : {}),
   });
 
-  // 6. Record the Trade History
+  // 6. Snapshot pre-trade balances (FIM:Transfer hasn't fired yet in this block's log order)
+  const [buyerStats, sellerStats] = await Promise.all([
+    context.db.find(schema.playerSeasonStats, { seasonAddress, playerAddress: buyer }),
+    context.db.find(schema.playerSeasonStats, { seasonAddress, playerAddress: seller }),
+  ]);
+  const buyerBalance = buyerStats ? buyerStats.fimBalance + buyerStats.fimBurned : 0n;
+  const sellerBalance = sellerStats ? sellerStats.fimBalance + sellerStats.fimBurned : 0n;
+
+  // 6b. Compute historical rank: query full distribution + active locked orders
+  const [allPlayerStats, activeSellOrders] = await Promise.all([
+    context.db.sql
+      .select({
+        playerAddress: schema.playerSeasonStats.playerAddress,
+        fimBalance: schema.playerSeasonStats.fimBalance,
+        fimBurned: schema.playerSeasonStats.fimBurned,
+      })
+      .from(schema.playerSeasonStats)
+      .where(eq(schema.playerSeasonStats.seasonAddress, seasonAddress)),
+    context.db.sql
+      .select({ maker: schema.orders.maker, remainingAmount: schema.orders.remainingAmount })
+      .from(schema.orders)
+      .where(and(
+        eq(schema.orders.seasonAddress, seasonAddress),
+        eq(schema.orders.active, true),
+        eq(schema.orders.isBuy, false),
+      )),
+  ]);
+
+  // Effective balance per player: fimBalance + fimBurned + FIM locked in active sell orders
+  const effectiveBals = new Map<string, bigint>();
+  for (const p of allPlayerStats) {
+    effectiveBals.set(p.playerAddress.toLowerCase(), p.fimBalance + p.fimBurned);
+  }
+  for (const o of activeSellOrders) {
+    const maker = o.maker.toLowerCase();
+    effectiveBals.set(maker, (effectiveBals.get(maker) ?? 0n) + o.remainingAmount);
+  }
+  // Remove exchange phantom (its balance = total locked FIM already added back above)
+  effectiveBals.delete(currentSeason.exchangeAddress.toLowerCase());
+
+  // Mass threshold: lowest balance such that all balances ≤ it sum to ≤ half supply
+  const sortedBals = Array.from(effectiveBals.values()).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const totalSupply = sortedBals.reduce((s, v) => s + v, 0n);
+  const half = totalSupply / 2n;
+  let accumulated = 0n;
+  let massThreshold = 0n;
+  for (const bal of sortedBals) {
+    accumulated += bal;
+    if (accumulated <= half) massThreshold = bal;
+    else break;
+  }
+
+  // Distance-based percentile (mirrors useBatchPlayerPercentiles algorithm)
+  const capBals = sortedBals.filter(b => b > massThreshold);
+  const socBals = sortedBals.filter(b => b <= massThreshold);
+  const thresholdNum = Number(massThreshold);
+  const maxCapNum = capBals.length > 0 ? Number(capBals[capBals.length - 1]) : thresholdNum;
+  const minSocNum = socBals.length > 0 ? Number(socBals[0]) : 0;
+
+  function distancePercentile(balRaw: bigint, isCap: boolean): number {
+    const bal = Number(balRaw);
+    if (isCap) {
+      const range = maxCapNum - thresholdNum;
+      return range > 0 ? Math.min(100, Math.max(0, ((bal - thresholdNum) / range) * 100)) : 100;
+    } else {
+      const range = thresholdNum - minSocNum;
+      return range > 0 ? Math.min(100, Math.max(0, ((thresholdNum - bal) / range) * 100)) : 100;
+    }
+  }
+
+  const buyerEffBal = effectiveBals.get(buyer.toLowerCase()) ?? buyerBalance;
+  const sellerEffBal = effectiveBals.get(seller.toLowerCase()) ?? sellerBalance;
+  const buyerIsCapitalist = buyerEffBal > massThreshold;
+  const sellerIsCapitalist = sellerEffBal > massThreshold;
+  const buyerPercentile = Math.round(distancePercentile(buyerEffBal, buyerIsCapitalist));
+  const sellerPercentile = Math.round(distancePercentile(sellerEffBal, sellerIsCapitalist));
+
+  const giniBps = computeGiniBps(effectiveBals);
+
+  // 7. Record the Trade History
   await context.db.insert(schema.trades).values({
-    // Using Transaction Hash + Log Index for unique ID
-    id: `${event.transaction.hash}-${event.log.logIndex}`, 
+    id: `${event.transaction.hash}-${event.log.logIndex}`,
     seasonAddress: seasonAddress,
     buyer: buyer,
     seller: seller,
@@ -278,6 +373,13 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
     usdcAmount: usdcPrice,
     timestamp: event.block.timestamp,
     txHash: event.transaction.hash,
+    buyerBalance,
+    sellerBalance,
+    buyerPercentile,
+    sellerPercentile,
+    buyerIsCapitalist,
+    sellerIsCapitalist,
+    giniBps,
   });
 
   // 7. ==========================================

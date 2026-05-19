@@ -28,6 +28,9 @@ import { FactionDiscussionBoard } from '../_components/FactionDiscussionBoard';
 import { FactionChat } from '../_components/FactionChat';
 import { CountdownCard } from '../_components/CountdownCard';
 import { PrizePoolCard } from '../_components/PrizePoolCard';
+import { CandlestickChart } from '../_components/CandlestickChart';
+import { ChordDiagram } from '../_components/ChordDiagram';
+import { useSeasonChart } from '@/hooks/useSeasonChart';
 
 export default function SeasonDetailPage() {
   const { seasonSlug } = useParams() as { seasonSlug: string };
@@ -95,6 +98,7 @@ export default function SeasonDetailPage() {
   const factionData = userAddress ? percentilesMap?.[userAddress.toLowerCase()] : undefined;
 
   const { payout, realizedPayout } = usePayout(seasonAddress, userAddress);
+  const chart = useSeasonChart(seasonAddress);
   const isPayoutActionable = !!userAddress && payout > 0 && realizedPayout === 0;
 
   // JIT faction sync
@@ -201,6 +205,10 @@ export default function SeasonDetailPage() {
                 M_dynamic={M_dynamic}
                 config={config}
                 seasonAddress={seasonAddress}
+                fimAddress={fimAddress}
+                auctionAddress={auctionAddress}
+                exchangeAddress={exchangeAddress}
+                isAuction
                 xlWeighted
               />
             </div>
@@ -209,91 +217,113 @@ export default function SeasonDetailPage() {
       )}
 
       {/* ═══════════════════════════════════════════
-          TRADING LAYOUT
-          ═══════════════════════════════════════════ */}
-      {isTrading && (
-        <>
-          {/* Trading mask | order book + my orders stacked */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-            <TradingMask
+      TRADING LAYOUT
+      ═══════════════════════════════════════════ */}
+  {isTrading && (
+    <>
+      {/* Gini | Chat */}
+      <div className="grid grid-cols-1 xl:grid-cols-10 gap-2">
+        <div className={factionData ? 'xl:col-span-7' : 'xl:col-span-10'}>
+          <GiniDisplay seasonAddress={seasonAddress} />
+        </div>
+        {factionData && (
+          <div className="xl:col-span-3">
+            <FactionChat
               seasonSlug={seasonSlug}
-              seasonAddress={seasonAddress}
-              exchangeAddress={exchangeAddress}
-              fimAddress={fimAddress}
-              isBuy={isBuy}
-              setIsBuy={setIsBuy}
-              isMaker={isMaker}
-              setIsMaker={setIsMaker}
-              targetAmount={targetAmount}
-              setTargetAmount={setTargetAmount}
-              selectedOrders={selectedOrders}
-              onRemoveOrder={handleRemoveOrder}
-              onMoveOrder={handleMoveOrder}
-              onReorderOrders={handleReorderOrders}
-              isOnHold={effectiveVictoryPending}
+              isCapitalist={factionData.isCapitalist}
+              showBoard={showBoard}
+              onToggleBoard={() => setShowBoard((v) => !v)}
             />
-            <div className="lg:col-span-2 flex flex-col gap-2 h-full">
-              <OrderBook
-                seasonAddress={seasonAddress}
-                isBuy={isBuy}
-                isMaker={isMaker}
-                onSelectOrder={handleSelectOrder}
-              />
-              {userAddress && (
-                <OpenOrders
-                  seasonAddress={seasonAddress}
-                  userAddress={userAddress}
-                  exchangeAddress={exchangeAddress}
-                />
-              )}
-            </div>
           </div>
+        )}
+      </div>
 
-          {/* Gini | Chat */}
-          <div className="grid grid-cols-1 xl:grid-cols-10 gap-2">
-            <div className={factionData ? 'xl:col-span-7' : 'xl:col-span-10'}>
-              <GiniDisplay seasonAddress={seasonAddress} />
-            </div>
-            {factionData && (
-              <div className="xl:col-span-3">
-                <FactionChat
-                  seasonSlug={seasonSlug}
-                  isCapitalist={factionData.isCapitalist}
-                  showBoard={showBoard}
-                  onToggleBoard={() => setShowBoard((v) => !v)}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Discussion board — large screens only, slides in below gini+chat */}
-          {factionData && showBoard && (
-            <div className="hidden md:block animate-in slide-in-from-top-4 fade-in duration-300">
-              <FactionDiscussionBoard
-                seasonSlug={seasonSlug}
-                isCapitalist={factionData.isCapitalist}
-              />
-            </div>
-          )}
-
-          {/* Activity feed | season details */}
-          <div className="grid grid-cols-1 xl:grid-cols-10 gap-2">
-            <div className="xl:col-span-3">
-              <TradingActivityFeed seasonAddress={seasonAddress} />
-            </div>
-            <div className="xl:col-span-7">
-              <SeasonDetails
-                tradingStart={tradingStart}
-                seasonEnd={seasonEnd}
-                M_dynamic={M_dynamic}
-                config={config}
-                seasonAddress={seasonAddress}
-                xlWeighted
-              />
-            </div>
-          </div>
-        </>
+      {/* Discussion board — large screens only, slides in below gini+chat */}
+      {factionData && showBoard && (
+        <div className="hidden md:block animate-in slide-in-from-top-4 fade-in duration-300">
+          <FactionDiscussionBoard
+            seasonSlug={seasonSlug}
+            isCapitalist={factionData.isCapitalist}
+          />
+        </div>
       )}
+
+      {/* Order book + chart | Trading mask + chord diagram */}
+      <div className="grid grid-cols-1 xl:grid-cols-10 gap-2">
+        <div className="xl:col-span-7 flex flex-col gap-2">
+          <OrderBook
+            seasonAddress={seasonAddress}
+            isBuy={isBuy}
+            isMaker={isMaker}
+            onSelectOrder={handleSelectOrder}
+          />
+          {userAddress && (
+            <OpenOrders
+              seasonAddress={seasonAddress}
+              userAddress={userAddress}
+              exchangeAddress={exchangeAddress}
+            />
+          )}
+          <CandlestickChart
+            candles={chart.candles}
+            timeframe={chart.timeframe}
+            onTimeframeChange={chart.onTimeframeChange}
+            onCandleClick={chart.onCandleClick}
+            selectedRange={chart.selectedRange}
+            capTargetBps={chart.capTargetBps}
+            socTargetBps={chart.socTargetBps}
+          />
+        </div>
+        <div className="xl:col-span-3 flex flex-col gap-2">
+          <TradingMask
+            seasonSlug={seasonSlug}
+            seasonAddress={seasonAddress}
+            exchangeAddress={exchangeAddress}
+            fimAddress={fimAddress}
+            isBuy={isBuy}
+            setIsBuy={setIsBuy}
+            isMaker={isMaker}
+            setIsMaker={setIsMaker}
+            targetAmount={targetAmount}
+            setTargetAmount={setTargetAmount}
+            selectedOrders={selectedOrders}
+            onRemoveOrder={handleRemoveOrder}
+            onMoveOrder={handleMoveOrder}
+            onReorderOrders={handleReorderOrders}
+            isOnHold={effectiveVictoryPending}
+          />
+          <ChordDiagram
+            trades={chart.trades}
+            timeWindowMs={chart.timeWindowMs}
+            selectedRange={chart.selectedRange}
+            onClearSelection={chart.onClearSelection}
+            isLive={chart.isLive}
+          />
+        </div>
+      </div>
+
+      {/* Activity feed | season details (stays as is) */}
+      <div className="grid grid-cols-1 xl:grid-cols-10 gap-2">
+        <div className="xl:col-span-3">
+          <TradingActivityFeed seasonAddress={seasonAddress} />
+        </div>
+        <div className="xl:col-span-7">
+          <SeasonDetails
+            tradingStart={tradingStart}
+            seasonEnd={seasonEnd}
+            M_dynamic={M_dynamic}
+            config={config}
+            seasonAddress={seasonAddress}
+            fimAddress={fimAddress}
+            auctionAddress={auctionAddress}
+            exchangeAddress={exchangeAddress}
+            isAuction={false}
+            xlWeighted
+          />
+        </div>
+      </div>
+    </>
+  )}
 
       {/* ═══════════════════════════════════════════
           PAYOUT / CONCLUDED LAYOUT
@@ -320,19 +350,14 @@ export default function SeasonDetailPage() {
             M_dynamic={M_dynamic}
             config={config}
             seasonAddress={seasonAddress}
+            fimAddress={fimAddress}
+            auctionAddress={auctionAddress}
+            exchangeAddress={exchangeAddress}
+            isAuction={false}
           />
         </>
       )}
 
-      {/* Footer */}
-      <div className="pt-4 flex flex-col items-center gap-2">
-        <p className="font-mono text-[10px] text-text2 uppercase tracking-[0.12em] m-0">
-          Protocol Reference
-        </p>
-        <code className="font-mono text-[11px] bg-card2 px-3 py-1 rounded-full text-text2 border border-border">
-          {metadata?.address}
-        </code>
-      </div>
     </main>
   );
 }

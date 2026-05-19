@@ -57,7 +57,13 @@ export const trades = onchainTable("trades", (t) => ({
   usdcAmount: t.bigint().notNull(),
   timestamp: t.bigint().notNull(),
   txHash: t.hex().notNull(),
-  
+  buyerBalance: t.bigint().notNull().default(0n),
+  sellerBalance: t.bigint().notNull().default(0n),
+  buyerPercentile: t.integer().notNull().default(50),
+  sellerPercentile: t.integer().notNull().default(50),
+  buyerIsCapitalist: t.boolean().notNull().default(false),
+  sellerIsCapitalist: t.boolean().notNull().default(false),
+  giniBps: t.integer().notNull().default(0),
 }));
 
 export const yieldEvents = onchainTable("yield_events", (t) => ({

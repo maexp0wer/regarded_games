@@ -46,7 +46,7 @@ indexer/node_modules
 indexer/npm-debug.log*
 indexer/yarn-debug.log*
 indexer/yarn-error.log*
-indexer/.pnpm-debug.log*
+indexer/.pnpm-debug.log*z
 
 # Misc
 indexer/.DS_Store

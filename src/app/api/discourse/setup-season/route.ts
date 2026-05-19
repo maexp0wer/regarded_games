@@ -1,4 +1,24 @@
 import { NextResponse } from 'next/server';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+function parseCategoryIntros(seasonNum: number): Record<string, { title: string; body: string }> {
+  const raw = readFileSync(join(process.cwd(), 'content', 'discourse-category-intros.md'), 'utf-8')
+    .replace(/\{seasonNum\}/g, String(seasonNum));
+  const result: Record<string, { title: string; body: string }> = {};
+  for (const part of raw.split(/^## /m).filter(Boolean)) {
+    const lines = part.split('\n');
+    const key = lines[0].trim();
+    const rest = lines.slice(1).join('\n').trim();
+    const titleMatch = rest.match(/^### (.+)$/m);
+    if (!titleMatch) continue;
+    result[key] = {
+      title: titleMatch[1].trim(),
+      body: rest.replace(/^### .+\n?/, '').trim(),
+    };
+  }
+  return result;
+}
 
 export async function POST(req: Request) {
   const adminToken = req.headers.get('x-discourse-admin-token');
@@ -24,6 +44,8 @@ export async function POST(req: Request) {
 
     console.log(`\n===== DISCOURSE SETUP: SEASON ${seasonNum} =====`);
 
+    const intros = parseCategoryIntros(seasonNum);
+
     // ── 1. Ensure Groups (idempotent) ──────────────────────────────────
     async function ensureGroup(name: string): Promise<void> {
       const check = await fetch(`${url}/groups/${name}.json`, { headers });
@@ -42,19 +64,38 @@ export async function POST(req: Request) {
     await ensureGroup(`S${seasonNum}_Proletariat`);
 
     // ── 2. Ensure Categories (idempotent via /site.json slug lookup) ───
-    async function ensureCategory(slug: string, payload: object): Promise<number | null> {
+    async function ensureCategory(slug: string, payload: object): Promise<{ id: number | null; topicId: number | null }> {
       const siteRes = await fetch(`${url}/site.json`, { headers });
       const siteData = safeJson(await siteRes.text());
       const existing = (siteData?.categories as any[] || []).find((c: any) => c.slug === slug);
-      if (existing) { console.log(`Category exists: ${slug} (id=${existing.id})`); return existing.id; }
+      if (existing) { console.log(`Category exists: ${slug} (id=${existing.id})`); return { id: existing.id, topicId: existing.topic_id ?? null }; }
       const res = await fetch(`${url}/categories.json`, { method: 'POST', headers, body: JSON.stringify(payload) });
       const body = await res.text();
-      const id = safeJson(body)?.category?.id ?? null;
-      console.log(`Created category: ${slug} (id=${id}, status=${res.status}) ${body.slice(0, 200)}`);
-      return id;
+      const parsed = safeJson(body)?.category;
+      console.log(`Created category: ${slug} (id=${parsed?.id}, status=${res.status}) ${body.slice(0, 200)}`);
+      return { id: parsed?.id ?? null, topicId: parsed?.topic_id ?? null };
     }
 
-    const parentId = await ensureCategory(`season-${seasonNum}`, {
+    // Updates the auto-created "About this category" topic Discourse places in the correct sub-category.
+    async function updateAboutTopic(topicId: number, introKey: string): Promise<void> {
+      const intro = intros[introKey];
+      if (!intro) { console.log(`No intro defined for key: ${introKey}`); return; }
+      await fetch(`${url}/t/-/${topicId}`, {
+        method: 'PUT', headers,
+        body: JSON.stringify({ title: intro.title })
+      });
+      const topicRes = await fetch(`${url}/t/${topicId}.json`, { headers });
+      const topicData = safeJson(await topicRes.text());
+      const firstPostId = topicData?.post_stream?.posts?.[0]?.id;
+      if (!firstPostId) { console.log(`Could not find first post for topic ${topicId}`); return; }
+      const postRes = await fetch(`${url}/posts/${firstPostId}`, {
+        method: 'PUT', headers,
+        body: JSON.stringify({ post: { raw: intro.body } })
+      });
+      console.log(`Updated about topic "${introKey}" (topic=${topicId}, post=${firstPostId}, status=${postRes.status})`);
+    }
+
+    const { id: parentId, topicId: parentTopicId } = await ensureCategory(`season-${seasonNum}`, {
       name: `Season ${seasonNum}`,
       slug: `season-${seasonNum}`,
       color: 'CC4713',
@@ -65,8 +106,9 @@ export async function POST(req: Request) {
         [`S${seasonNum}_Proletariat`]: 1
       }
     });
+    if (parentTopicId) await updateAboutTopic(parentTopicId, 'season-parent');
 
-    const capCategoryId = await ensureCategory(`s${seasonNum}-bourgeoisie-strategy`, {
+    const { id: capCategoryId, topicId: capTopicId } = await ensureCategory(`s${seasonNum}-bourgeoisie-strategy`, {
       name: `S${seasonNum} Bourgeoisie Strategy`,
       slug: `s${seasonNum}-bourgeoisie-strategy`,
       parent_category_id: parentId,
@@ -74,8 +116,9 @@ export async function POST(req: Request) {
       text_color: 'FFFFFF',
       permissions: { [`S${seasonNum}_Bourgeoisie`]: 1 }
     });
+    if (capTopicId) await updateAboutTopic(capTopicId, 'bourgeoisie-strategy');
 
-    const socCategoryId = await ensureCategory(`s${seasonNum}-proletariat-strategy`, {
+    const { id: socCategoryId, topicId: socTopicId } = await ensureCategory(`s${seasonNum}-proletariat-strategy`, {
       name: `S${seasonNum} Proletariat Strategy`,
       slug: `s${seasonNum}-proletariat-strategy`,
       parent_category_id: parentId,
@@ -83,6 +126,7 @@ export async function POST(req: Request) {
       text_color: 'FFFFFF',
       permissions: { [`S${seasonNum}_Proletariat`]: 1 }
     });
+    if (socTopicId) await updateAboutTopic(socTopicId, 'proletariat-strategy');
 
     // ── 3. Ensure Chat Channels (idempotent via name lookup) ────────────
     async function ensureChannel(name: string, payload: object): Promise<void> {

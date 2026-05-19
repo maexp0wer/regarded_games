@@ -30,7 +30,27 @@
       "WebFetch(domain:meta.discourse.org)",
       "WebFetch(domain:github.com)",
       "Bash(Get-ChildItem \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\src\\\\app\\\\app\\\\\" -Name -Recurse | Select-String \"page.tsx\")",
-      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\src\\\\hooks\" -Filter \"*order*\" -Recurse)"
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\src\\\\hooks\" -Filter \"*order*\" -Recurse)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\indexer\" -Depth 1)",
+      "Bash(Select-Object -Property FullName, PSIsContainer)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\docs\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -First 20)",
+      "Bash(npx --yes create-docusaurus@latest docs classic --typescript --skip-install)",
+      "Bash(npm install *)",
+      "Bash(Remove-Item -Recurse -Force \"C:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\src\\\\app\\\\docs\")",
+      "Bash(Remove-Item -Recurse -Force \"C:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\src\\\\content\\\\docs\")",
+      "Bash(Remove-Item -Force \"C:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\src\\\\lib\\\\docs.ts\")",
+      "Bash(Remove-Item -Force \"C:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\src\\\\lib\\\\docs-structure.ts\")",
+      "Bash(Remove-Item -Force \"C:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\src\\\\components\\\\DocsShell.tsx\")",
+      "PowerShell(New-Item -ItemType Directory -Force -Path \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\docs\\\\whitepaper\")",
+      "PowerShell(Move-Item -Path \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\docs\\\\docs\\\\Whitepaper.md\" -Destination \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\docs\\\\whitepaper\\\\Whitepaper.md\" -Force)",
+      "PowerShell(& \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\docs\\\\split-whitepaper.ps1\")",
+      "PowerShell(& \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\docs\\\\reformat-whitepaper.ps1\")",
+      "PowerShell(& \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\docs\\\\cleanup-whitepaper.ps1\")",
+      "PowerShell(& \"c:\\\\Users\\\\info\\\\Documents\\\\Work\\\\ritardo_games\\\\docs\\\\final-cleanup.ps1\")",
+      "Bash(npx tsx *)",
+      "Bash(npm start *)",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:3001/docs/whitepaper/\" -UseBasicParsing -ErrorAction Stop; \"Status: $\\($r.StatusCode\\)\"; \"Length: $\\($r.Content.Length\\)\"; if \\($r.Content -match '<title>\\([^<]+\\)</title>'\\) { \"Title: $\\($Matches[1]\\)\" }; if \\($r.Content -match 'Part I: The Philosophical Foundation'\\) { 'FOUND: Part I in sidebar' } else { 'MISSING: Part I label' }; if \\($r.Content -match '1\\\\. Structural Asymmetries'\\) { 'FOUND: section 1 in sidebar' } else { 'MISSING: section 1' }; if \\($r.Content -match 'tableOfContents' -or $r.Content -match 'class=\"theme-doc-toc'\\) { 'WARN: right TOC may still be present' } else { 'OK: right TOC absent in HTML' })"
     ]
   }
 }
