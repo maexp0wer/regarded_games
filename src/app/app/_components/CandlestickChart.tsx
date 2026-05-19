@@ -36,8 +36,8 @@ const TIMEFRAME_MS: Record<Timeframe, number> = {
 };
 
 // Fallback hex values — overridden at init time by getCSSVar
-const CAP_COLOR_FALLBACK = '#4d9fff';
-const SOC_COLOR_FALLBACK = '#e72828';
+const CAP_COLOR_FALLBACK = '#4d9fff62';
+const SOC_COLOR_FALLBACK = '#e7282862';
 
 export function CandlestickChart({
   candles,
@@ -78,8 +78,8 @@ export function CandlestickChart({
     const textColor   = getCSSVar('--color-text2')  || '#8a8378';
     const upColor     = getCSSVar('--color-green')  || '#6bcb6e';
     const downColor   = getCSSVar('--color-red')    || '#ff5454';
-    const capColor    = getCSSVar('--color-blue')    || CAP_COLOR_FALLBACK;
-    const socColor    = getCSSVar('--color-pink')    || SOC_COLOR_FALLBACK;
+    const capColor    = getCSSVar('--color-blue-a50')   || CAP_COLOR_FALLBACK;
+    const socColor    = getCSSVar('--color-pink-a50')   || SOC_COLOR_FALLBACK;
     const giniColor   = getCSSVar('--color-gold') || '#CC4713';
 
     capColorRef.current = capColor;
@@ -241,7 +241,7 @@ export function CandlestickChart({
   }, [selectedRange]);
 
   return (
-    <div className="card-app flex flex-col gap-2 min-w-0 overflow-hidden p-3! "
+    <div className="card-app flex flex-col gap-2 min-w-0 overflow-hidden h-full "
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -277,8 +277,8 @@ export function CandlestickChart({
       </div>
       {/* containerRef must always be in the DOM so the chart initialisation effect
           ([] deps) finds it on first mount, before candle data arrives. */}
-      <div className="relative w-full h-96">
-        <div ref={containerRef} className="w-full h-full" />
+      <div className="relative w-full h-110">
+        <div ref={containerRef} className="w-full h-full pt-5" />
         {candles.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center text-sm text-text2 animate-pulse">
             Reading Ledger…

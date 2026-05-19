@@ -9,9 +9,9 @@ function getCSSVar(name: string): string {
   if (typeof window === 'undefined') return '';
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
-const SIZE = 300;
+const SIZE = 250;
 const INNER_RADIUS = SIZE / 2 - 36;
-const OUTER_RADIUS = SIZE / 2 - 22;
+const OUTER_RADIUS = SIZE / 2 - 18;
 
 interface ChordDiagramProps {
   trades: SeasonTrade[];
@@ -231,7 +231,7 @@ export function ChordDiagram({
     }
 
     // Fixed axis labels: 0% at bottom (6 o'clock), 100% Cap/Soc split at top (12 o'clock)
-    const labelR = OUTER_RADIUS + 13;
+    const labelR = OUTER_RADIUS + 10;
     const yTop = -labelR;
     const axisLabels = [
       { x:  25,  y: yTop,   text: '100%', anchor: 'start',  color: CAP_COLOR, size: '14px', weight: 'bold' },

@@ -78,7 +78,7 @@ export function OpenOrders({ seasonAddress, userAddress, exchangeAddress }: Open
 
   return (
     <div
-      className="card-app flex flex-col shrink-0"
+      className="card-app flex flex-col"
       style={{ borderColor: 'var(--color-border-bright)', padding: 0 }}
     >
       {/* Header + filter toggles */}

@@ -184,7 +184,9 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
 
   return (
     <div
-      className="flex flex-col min-h-88 max-h-128 overflow-hidden card-app"
+      className="flex flex-col h-full overflow-hidden card-app" style={{
+        background: 'var(--color-card)',
+      }}
     >
       {/* Header — hidden on mobile when board is active (board's own header takes over) */}
       <div

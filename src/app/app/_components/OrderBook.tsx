@@ -182,8 +182,8 @@ export function OrderBook({
 
   return (
     <div
-      className="card-app flex flex-col flex-1 overflow-hidden"
-      style={{ padding: 0, borderColor: 'var(--color-border-bright)', maxHeight: '600px' }}
+      className="card-app flex flex-col flex-1 overflow-hidden h-full max-h-200"
+      style={{ padding: 0, borderColor: 'var(--color-border-bright)'}}
     >
       {/* Dynamic Style Injection to hide inputs' spin arrows globally */}
       <style dangerouslySetInnerHTML={{__html: `
@@ -202,9 +202,7 @@ export function OrderBook({
         className="px-4 h-9 shrink-0 flex items-stretch justify-between gap-4"
         style={{ borderBottom: '1px solid var(--color-border)' }}
       >
-        <div className="flex items-center">
-          <p className="section-label">Order Book</p>
-        </div>
+
 
         {/* Filters Panel Group spanning whole height */}
         <div className="flex items-stretch gap-4 py-1">
