@@ -18,8 +18,6 @@ import { GiniDisplay } from '../_components/GiniDisplay';
 import { SeasonDetails } from '../_components/SeasonDetails';
 import { AuctionMask } from '../_components/AuctionMask';
 import { AuctionActivityFeed } from '../_components/AuctionActivityFeed';
-import { OrderBook } from '../_components/OrderBook';
-import { TradingActivityFeed } from '../_components/TradingActivityFeed';
 import { TradingMask } from '../_components/TradingMask';
 import { OpenOrders } from '../_components/OpenOrders';
 import { PayoutMask } from '../_components/PayoutMask';
@@ -29,7 +27,7 @@ import { FactionChat } from '../_components/FactionChat';
 import { CountdownCard } from '../_components/CountdownCard';
 import { PrizePoolCard } from '../_components/PrizePoolCard';
 import { CandlestickChart } from '../_components/CandlestickChart';
-import { ChordDiagram } from '../_components/ChordDiagram';
+import { TradingPanelMenu } from '../_components/TradingPanelMenu';
 import { useSeasonChart } from '@/hooks/useSeasonChart';
 
 export default function SeasonDetailPage() {
@@ -145,12 +143,12 @@ export default function SeasonDetailPage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <main className="pt-4 pb-16 space-y-1 animate-in fade-in duration-700">
+    <main className="pt-4 pb-16 space-y-2 animate-in fade-in duration-700">
 
       {/* ═══════════════════════════════════════════
           HERO ROW — always 3 equal cards
           ═══════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-1">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         <SeasonHeader
           seasonAddress={seasonAddress}
           seasonName={formattedName}
@@ -173,7 +171,7 @@ export default function SeasonDetailPage() {
       {isAuctionOrBootstrap && (
         <>
           {/* Main row: buy widget (3) | gini gauge (5) | all-players chat (2) */}
-          <div className="grid grid-cols-1 xl:grid-cols-10 gap-1">
+          <div className="grid grid-cols-1 xl:grid-cols-10 gap-2">
             <div className="xl:col-span-3">
               <AuctionMask
                 seasonAddress={seasonAddress}
@@ -194,7 +192,7 @@ export default function SeasonDetailPage() {
           </div>
 
           {/* Bottom row: activity | season details */}
-          <div className="grid grid-cols-1 xl:grid-cols-10 gap-1">
+          <div className="grid grid-cols-1 xl:grid-cols-10 gap-2">
             <div className="xl:col-span-3">
               <AuctionActivityFeed seasonAddress={seasonAddress} />
             </div>
@@ -221,31 +219,8 @@ export default function SeasonDetailPage() {
       ═══════════════════════════════════════════ */}
   {isTrading && (
     <>
-      {/* Row 1: TradingMask (2) | Gini (6) | Chat (2) */}
-      <div className="grid grid-cols-1 xl:grid-cols-10 gap-1">
-        <div className="xl:col-span-2">
-          <ChordDiagram
-            trades={chart.trades}
-            timeWindowMs={chart.timeWindowMs}
-            selectedRange={chart.selectedRange}
-            onClearSelection={chart.onClearSelection}
-            isLive={chart.isLive}
-          />
-        </div>
-        <div className={factionData ? 'xl:col-span-6' : 'xl:col-span-8'}>
-          <GiniDisplay seasonAddress={seasonAddress} />
-        </div>
-        {factionData && (
-          <div className="xl:col-span-2">
-            <FactionChat
-              seasonSlug={seasonSlug}
-              isCapitalist={factionData.isCapitalist}
-              showBoard={showBoard}
-              onToggleBoard={() => setShowBoard((v) => !v)}
-            />
-          </div>
-        )}
-      </div>
+      {/* Row 1: Gini (full width) */}
+      <GiniDisplay seasonAddress={seasonAddress} />
 
       {/* Discussion board — large screens only, slides in below row 1 */}
       {factionData && showBoard && (
@@ -257,9 +232,10 @@ export default function SeasonDetailPage() {
         </div>
       )}
 
-      {/* Row 2: OrderBook (4) | Chart + OpenOrders (4) | ChordDiagram (2) */}
-      <div className="grid grid-cols-1 xl:grid-cols-10 gap-1">
-        <div className="grid xl:col-span-5 gap-1">
+      {/* Row 2: Chart+OpenOrders | PanelMenu | TradingMask */}
+      <div className="flex gap-2 items-stretch">
+        {/* Chart column grows/shrinks as panels open */}
+        <div className="flex-1 flex flex-col gap-2 min-w-0">
           <CandlestickChart
             candles={chart.candles}
             timeframe={chart.timeframe}
@@ -269,7 +245,6 @@ export default function SeasonDetailPage() {
             capTargetBps={chart.capTargetBps}
             socTargetBps={chart.socTargetBps}
           />
-        
           {userAddress && (
             <OpenOrders
               seasonAddress={seasonAddress}
@@ -278,17 +253,27 @@ export default function SeasonDetailPage() {
             />
           )}
         </div>
-        <div className="xl:col-span-3 flex flex-col gap-1">
-          
-          <OrderBook
-            seasonAddress={seasonAddress}
-            isBuy={isBuy}
-            isMaker={isMaker}
-            onSelectOrder={handleSelectOrder}
-          />
-          
-        </div>
-        <div className="xl:col-span-2">
+
+        {/* Panel menu: vertical toggle bar + sliding panel area */}
+        <TradingPanelMenu
+          seasonAddress={seasonAddress}
+          isBuy={isBuy}
+          isMaker={isMaker}
+          onSelectOrder={handleSelectOrder}
+          selectedOrderIds={selectedOrders.map(o => o.id)}
+          trades={chart.trades}
+          timeWindowMs={chart.timeWindowMs}
+          selectedRange={chart.selectedRange}
+          onClearSelection={chart.onClearSelection}
+          isLive={chart.isLive}
+          seasonSlug={seasonSlug}
+          isCapitalist={factionData?.isCapitalist}
+          showBoard={showBoard}
+          onToggleBoard={() => setShowBoard((v) => !v)}
+        />
+
+        {/* Trading mask — fixed width */}
+        <div className="shrink-0 w-90">
           <TradingMask
             seasonSlug={seasonSlug}
             seasonAddress={seasonAddress}
@@ -309,26 +294,19 @@ export default function SeasonDetailPage() {
         </div>
       </div>
 
-      {/* Row 3: Activity (4) | SeasonDetails (6) */}
-      <div className="grid grid-cols-1 xl:grid-cols-10 gap-1">
-        <div className="xl:col-span-4">
-          <TradingActivityFeed seasonAddress={seasonAddress} />
-        </div>
-        <div className="xl:col-span-6">
-          <SeasonDetails
-            tradingStart={tradingStart}
-            seasonEnd={seasonEnd}
-            M_dynamic={M_dynamic}
-            config={config}
-            seasonAddress={seasonAddress}
-            fimAddress={fimAddress}
-            auctionAddress={auctionAddress}
-            exchangeAddress={exchangeAddress}
-            isAuction={false}
-            xlWeighted
-          />
-        </div>
-      </div>
+      {/* Row 3: SeasonDetails */}
+      <SeasonDetails
+        tradingStart={tradingStart}
+        seasonEnd={seasonEnd}
+        M_dynamic={M_dynamic}
+        config={config}
+        seasonAddress={seasonAddress}
+        fimAddress={fimAddress}
+        auctionAddress={auctionAddress}
+        exchangeAddress={exchangeAddress}
+        isAuction={false}
+        xlWeighted
+      />
     </>
   )}
 
@@ -337,9 +315,9 @@ export default function SeasonDetailPage() {
           ═══════════════════════════════════════════ */}
       {isPayout && (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-1">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
             <PayoutMask seasonAddress={seasonAddress} />
-            <div className="lg:col-span-2 flex flex-col gap-1">
+            <div className="lg:col-span-2 flex flex-col gap-2">
               <PlayerRankDisplay
                 seasonAddress={seasonAddress}
                 userAddress={userAddress || ''}

@@ -9,7 +9,7 @@ function getCSSVar(name: string): string {
   if (typeof window === 'undefined') return '';
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
-const SIZE = 250;
+const SIZE = 300;
 const INNER_RADIUS = SIZE / 2 - 36;
 const OUTER_RADIUS = SIZE / 2 - 18;
 
@@ -296,11 +296,11 @@ export function ChordDiagram({
       </div>
 
       {tradeCount === 0 ? (
-        <div className="flex items-center justify-center h-64 text-sm text-text2 font-mono">
+        <div className="flex items-center justify-center h-full text-sm text-text2 font-mono">
           No trades in this window
         </div>
       ) : (
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center h-full">
           <svg ref={svgRef} width={SIZE} height={SIZE} className="max-w-full" />
         </div>
       )}

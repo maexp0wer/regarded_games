@@ -131,14 +131,16 @@ export function CandlestickChart({
       priceFormat: { type: 'volume' },
     }, 1);
 
-    // Gini line — overlaid on price pane, left scale
+    // Gini line — overlaid on volume pane, left scale
     const giniSeries = chart.addSeries(LineSeries, {
       color: giniColor,
       lineWidth: 2,
       lineType: LineType.Curved,
       priceScaleId: 'left',
       priceFormat: { type: 'price', precision: 0, minMove: 1 },
-    });
+      title: 'Gini BPS',
+      lastValueVisible: true,
+    }, 1);
     giniSeries.priceScale().applyOptions({ scaleMargins: { top: 0.1, bottom: 0.1 } });
 
     chartRef.current = chart;

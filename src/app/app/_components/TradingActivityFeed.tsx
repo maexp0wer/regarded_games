@@ -4,7 +4,7 @@ import React from 'react';
 import { useRecentTrades } from '@/hooks/useRecentTrades';
 import { PercentileCircle } from './PercentileCircle';
 
-export function TradingActivityFeed({ seasonAddress }: { seasonAddress: string }) {
+export function TradingActivityFeed({ seasonAddress, className }: { seasonAddress: string; className?: string }) {
   const { data: trades, isLoading } = useRecentTrades(seasonAddress);
 
   const fmt = (ts: number) =>
@@ -12,7 +12,7 @@ export function TradingActivityFeed({ seasonAddress }: { seasonAddress: string }
 
   return (
     <div
-      className="card-app flex flex-col max-h-130"
+      className={`card-app flex flex-col ${className ?? 'max-h-130'}`}
       style={{ borderColor: 'var(--color-border-bright)', padding: 0 }}
     >
       {/* Header */}

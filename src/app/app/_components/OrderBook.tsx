@@ -14,20 +14,48 @@ interface OrderBookProps {
 }
 
 type AggregatedOrder = Order & { subOrders: Order[] };
-type FactionFilter = 'ALL' | 'BOURGEOISIE' | 'PROLETARIAT';
+
+const BTN_BASE = 'rounded-lg flex items-center justify-center font-mono font-semibold uppercase tracking-widest transition-all px-3';
+const BTN_H = 28;
+const BTN_FONT = 11;
+
+function FilterBtn({ label, active, onClick, className = '', activeBg, activeBorder }: { label: string; active: boolean; onClick: () => void; className?: string; activeBg?: string; activeBorder?: string }) {
+  const defaultActiveBg = activeBg || 'var(--color-gold-a10)';
+  const defaultActiveBorder = activeBorder || 'var(--color-gold-a25)';
+
+  return (
+    <button
+  onClick={onClick}
+  className={`${BTN_BASE} ${className} ${
+    !active ? 'bg-card2 hover: color-text hover:bg-card transition-colors' : ''
+  }`}
+  style={{
+    fontSize: BTN_FONT,
+    letterSpacing: '0.1em',
+    height: BTN_H,
+    color: active ? 'var(--color-text)' : 'var(--color-text2)',
+    background: active ? defaultActiveBg : undefined,
+    border: `1px solid ${active ? defaultActiveBorder : 'var(--color-border)'}`,
+  }}
+>
+  {label}
+</button>
+  );
+}
 
 export function OrderBook({
   seasonAddress, isBuy, isMaker, onSelectOrder, selectedOrderIds = [],
 }: OrderBookProps) {
   const { data } = useOrderBook(seasonAddress);
-  
-  // Filter states
-  const [faction, setFaction] = useState<FactionFilter>('ALL');
-  const [rankFilterEnabled, setRankFilterEnabled] = useState<boolean>(false);
+
+  const [showAsks, setShowAsks] = useState(true);
+  const [showBids, setShowBids] = useState(true);
+  const [showBourgeoisie, setShowBourgeoisie] = useState(true);
+  const [showProletariat, setShowProletariat] = useState(true);
+  const [rankFilterEnabled, setRankFilterEnabled] = useState(false);
   const [minPercentile, setMinPercentile] = useState<number | ''>(0);
   const [maxPercentile, setMaxPercentile] = useState<number | ''>(100);
 
-  // Refs to control precise scrolling to the center target
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const targetRowRef = useRef<HTMLDivElement>(null);
 
@@ -88,78 +116,63 @@ export function OrderBook({
         }));
       });
 
-    // Compute active filtering fallback boundaries if inputs are cleared
     const parsedMin = minPercentile === '' ? 0 : minPercentile;
     const parsedMax = maxPercentile === '' ? 100 : maxPercentile;
+    const sideFiltering = showAsks !== showBids;
+    const factionFiltering = showBourgeoisie !== showProletariat;
 
     return rawRows.filter((row) => {
+      // Side filter — only when exactly one side is toggled off
+      if (sideFiltering) {
+        if (!showAsks && row.ask && !row.bid) return false;
+        if (!showBids && row.bid && !row.ask) return false;
+      }
+
       const makerAddress = row.ask?.maker || row.bid?.maker;
       if (!makerAddress) return true;
 
       const stats = percentileMap?.[makerAddress.toLowerCase()];
-      if (!stats) return faction === 'ALL';
 
-      // Faction filter
-      if (faction === 'BOURGEOISIE' && !stats.isCapitalist) return false;
-      if (faction === 'PROLETARIAT' && stats.isCapitalist) return false;
+      // Faction filter — only when exactly one faction is toggled off
+      if (factionFiltering) {
+        if (!stats) return false;
+        if (!showBourgeoisie && stats.isCapitalist) return false;
+        if (!showProletariat && !stats.isCapitalist) return false;
+      }
 
-      // Min/Max percentile range filter (only applied if explicitly enabled)
-      if (rankFilterEnabled) {
+      // Rank range filter
+      if (rankFilterEnabled && stats) {
         if (stats.factionPercentile < parsedMin || stats.factionPercentile > parsedMax) return false;
       }
 
       return true;
     });
-  }, [data, percentileMap, faction, rankFilterEnabled, minPercentile, maxPercentile]);
+  }, [data, percentileMap, showAsks, showBids, showBourgeoisie, showProletariat, rankFilterEnabled, minPercentile, maxPercentile]);
 
-  // Find the unique key of the filtered row closest to $1.000 USD
   const closestRowKey = useMemo(() => {
     if (priceRows.length === 0) return null;
     let closestKey = priceRows[0].uniqueKey;
     let minDistance = Math.abs(parseFloat(priceRows[0].price) - 1.0);
-
     for (let i = 1; i < priceRows.length; i++) {
       const distance = Math.abs(parseFloat(priceRows[i].price) - 1.0);
-      if (distance < minDistance) {
-        minDistance = distance;
-        closestKey = priceRows[i].uniqueKey;
-      }
+      if (distance < minDistance) { minDistance = distance; closestKey = priceRows[i].uniqueKey; }
     }
     return closestKey;
   }, [priceRows]);
 
-  // Adjust container viewport scrolling to line up targets squarely into center layout frame
   useEffect(() => {
     if (scrollContainerRef.current && targetRowRef.current) {
       const container = scrollContainerRef.current;
       const target = targetRowRef.current;
-
       const containerRect = container.getBoundingClientRect();
       const targetRect = target.getBoundingClientRect();
-      const relativeTargetTop = targetRect.top - containerRect.top;
-
-      container.scrollTop += relativeTargetTop - (containerRect.height / 2) + (targetRect.height / 2);
+      container.scrollTop += (targetRect.top - containerRect.top) - (containerRect.height / 2) + (targetRect.height / 2);
     }
   }, [closestRowKey]);
 
   const isAskActive = !isMaker && isBuy;
   const isBidActive = !isMaker && !isBuy;
-
   const handleOrderClick = (order: AggregatedOrder) => order.subOrders.forEach(sub => onSelectOrder(sub));
-
-  // Helper to determine the dynamic faction button background and text colors
-  const getFactionStyles = (f: FactionFilter) => {
-    if (faction !== f) {
-      return { background: 'transparent', color: 'var(--color-text2)' };
-    }
-    if (f === 'BOURGEOISIE') {
-      return { background: 'var(--color-blue)', color: 'var(--color-bg)' };
-    }
-    if (f === 'PROLETARIAT') {
-      return { background: 'var(--color-pink)', color: 'var(--color-bg)' };
-    }
-    return { background: 'var(--color-border-bright)', color: '#fff' };
-  };
 
   const renderRank = (makerAddress: string, align: 'start' | 'end') => {
     const stats = percentileMap?.[makerAddress.toLowerCase()];
@@ -174,226 +187,190 @@ export function OrderBook({
           <PercentileCircle percentage={stats.factionPercentile} isCapitalist={stats.isCapitalist} size="xxs" />
         </span>
         <span className="hidden sm:inline-flex">
-          <PercentileCircle percentage={stats.factionPercentile} isCapitalist={stats.isCapitalist} size="xs" />
+          <PercentileCircle percentage={stats.factionPercentile} isCapitalist={stats.isCapitalist} size="xxs" />
         </span>
       </div>
     );
   };
 
+  // Determine which sides to display (both off = show both)
+  const bothSidesOff = !showAsks && !showBids;
+  const displayAsks = showAsks || bothSidesOff;
+  const displayBids = showBids || bothSidesOff;
+  const gridColsClass = displayAsks && displayBids ? 'grid-cols-8' : 'grid-cols-4';
+
+  const rankInputStyle = (active: boolean): React.CSSProperties => ({
+    fontSize: BTN_FONT,
+    height: BTN_H,
+    width: 44,
+    background: 'var(--color-card2)',
+    borderColor: active ? 'var(--color-gold-a25)' : 'var(--color-border)',
+    color: active ? 'var(--color-text)' : 'var(--color-text2)',
+    opacity: active ? 1 : 0.45,
+    outline: 'none',
+    letterSpacing: '0.05em',
+  });
+
   return (
-    <div
-      className="card-app flex flex-col flex-1 overflow-hidden h-full max-h-200"
-      style={{ padding: 0, borderColor: 'var(--color-border-bright)'}}
-    >
+    <div className="flex flex-col h-full gap-1">
       {/* Dynamic Style Injection to hide inputs' spin arrows globally */}
       <style dangerouslySetInnerHTML={{__html: `
         .no-spinners::-webkit-outer-spin-button,
-        .no-spinners::-webkit-inner-spin-button {
-          -webkit-appearance: none;
-          margin: 0;
-        }
-        .no-spinners {
-          -moz-appearance: textfield;
-        }
+        .no-spinners::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .no-spinners { -moz-appearance: textfield; }
       `}} />
 
-      {/* Header Container stretching elements to full height */}
-      <div
-        className="px-4 h-9 shrink-0 flex items-stretch justify-between gap-4"
-        style={{ borderBottom: '1px solid var(--color-border)' }}
-      >
+      {/* Floating filter rows — sit above the card, not part of it */}
+      <div className="flex flex-col gap-1 shrink-0">
+        {/* Row 1: Side */}
+        <div className="flex gap-1 w-full">
+          <FilterBtn label="Ask" active={showAsks} onClick={() => setShowAsks(v => !v)} className="flex-1" activeBg="var(--color-pink-a10)" activeBorder="var(--color-pink-a25)" />
+          <FilterBtn label="Bid" active={showBids} onClick={() => setShowBids(v => !v)} className="flex-1" activeBg="var(--color-green-a10)" activeBorder="var(--color-green-a25)" />
+        </div>
 
+        {/* Row 2: Faction */}
+        <div className="flex gap-1 w-full">
+          <FilterBtn label="Bourgeoisie" active={showBourgeoisie} onClick={() => setShowBourgeoisie(v => !v)} className="flex-1" activeBg="var(--color-blue-a10)" activeBorder="var(--color-blue-a25)" />
+          <FilterBtn label="Proletariat" active={showProletariat} onClick={() => setShowProletariat(v => !v)} className="flex-1" activeBg="var(--color-pink-a10)" activeBorder="var(--color-pink-a25)" />
+        </div>
 
-        {/* Filters Panel Group spanning whole height */}
-        <div className="flex items-stretch gap-4 py-1">
-          {/* Faction Class Selectors */}
-          <div className="flex bg-black bg-opacity-20 rounded border items-stretch" style={{ borderColor: 'var(--color-border)' }}>
-            {(['ALL', 'BOURGEOISIE', 'PROLETARIAT'] as FactionFilter[]).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFaction(f)}
-                className="section-label uppercase px-2.5 transition-all tracking-wider flex items-center justify-center rounded-sm font-mono"
-                style={{
-                  ...getFactionStyles(f),
-                  cursor: 'pointer',
-                  border: 'none',
-                }}
-              >
-                {f.toLowerCase()}
-              </button>
-            ))}
-          </div>
-
-          {/* Rank % Activation Toggle and Inputs Combo */}
-          <div className="flex items-stretch gap-2">
-            <button
-              onClick={() => setRankFilterEnabled(!rankFilterEnabled)}
-              className="section-label uppercase tracking-wider font-mono px-2 rounded border transition-colors select-none flex items-center justify-center"
-              style={{
-                background: rankFilterEnabled ? 'var(--color-border-bright)' : 'rgba(0,0,0,0.2)',
-                borderColor: 'var(--color-border)',
-                color: rankFilterEnabled ? '#fff' : 'var(--color-text2)',
-                cursor: 'pointer'
-              }}
-            >
-              Rank %
-            </button>
-            
-            <input
-              type="number"
-              min="0"
-              max="100"
-              placeholder="0"
-              disabled={!rankFilterEnabled}
-              value={minPercentile}
-              onChange={(e) => {
-                const rawValue = e.target.value;
-                if (rawValue === '') {
-                  setMinPercentile('');
-                } else {
-                  const val = Math.min(100, Math.max(0, parseInt(rawValue) || 0));
-                  setMinPercentile(val);
-                }
-              }}
-              className="w-12 bg-black bg-opacity-40 rounded px-1.5 section-label font-mono text-center border transition-opacity no-spinners"
-              style={{
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text)',
-                outline: 'none',
-                opacity: rankFilterEnabled ? 1 : 0.3,
-              }}
-            />
-            
-            <div className="flex items-center">
-              <span className="section-label font-mono text-text2 opacity-40">—</span>
-            </div>
-            
-            <input
-              type="number"
-              min="0"
-              max="100"
-              placeholder="100"
-              disabled={!rankFilterEnabled}
-              value={maxPercentile}
-              onChange={(e) => {
-                const rawValue = e.target.value;
-                if (rawValue === '') {
-                  setMaxPercentile('');
-                } else {
-                  const val = Math.min(100, Math.max(0, parseInt(rawValue) || 0));
-                  setMaxPercentile(val);
-                }
-              }}
-              className="w-12 bg-black bg-opacity-40 rounded px-1.5 section-label font-mono text-center border transition-opacity no-spinners"
-              style={{
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text)',
-                outline: 'none',
-                opacity: rankFilterEnabled ? 1 : 0.3,
-              }}
-            />
-          </div>
+        {/* Row 3: Rank range */}
+        <div className="flex items-center gap-1 w-full">
+          <FilterBtn label="Rank %" active={rankFilterEnabled} onClick={() => setRankFilterEnabled(v => !v)} className="flex-1" />
+          <input
+            type="number" min="0" max="100" placeholder="0"
+            disabled={!rankFilterEnabled}
+            value={minPercentile}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setMinPercentile(raw === '' ? '' : Math.min(100, Math.max(0, parseInt(raw) || 0)));
+            }}
+            className="rounded-lg font-mono font-semibold text-center border transition-all no-spinners"
+            style={rankInputStyle(rankFilterEnabled)}
+          />
+          <span className="font-mono opacity-40" style={{ fontSize: BTN_FONT, color: 'var(--color-text2)' }}>—</span>
+          <input
+            type="number" min="0" max="100" placeholder="100"
+            disabled={!rankFilterEnabled}
+            value={maxPercentile}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setMaxPercentile(raw === '' ? '' : Math.min(100, Math.max(0, parseInt(raw) || 0)));
+            }}
+            className="rounded-lg font-mono font-semibold text-center border transition-all no-spinners"
+            style={rankInputStyle(rankFilterEnabled)}
+          />
         </div>
       </div>
 
-      {/* Column headers */}
+      {/* Order book card */}
       <div
-        className="grid grid-cols-8 px-4 py-2 shrink-0"
-        style={{
-          background: 'var(--color-card2)',
-          borderBottom: '1px solid var(--color-border)',
-        }}
+        className="card-app flex flex-col flex-1 min-h-0 overflow-hidden max-h-200"
+        style={{ padding: 0, borderColor: 'var(--color-border-bright)' }}
       >
-        <span className="section-label text-right pr-2">Rank</span>
-        <span className="section-label text-right pr-2">Amount</span>
-        <span className="section-label text-right pr-2">Total</span>
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-right pr-4 flex items-center justify-end" style={{ color: 'var(--color-green)' }}>Ask</span>
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-widest pl-4 flex items-center" style={{ color: 'var(--color-pink)' }}>Bid</span>
-        <span className="section-label pl-2">Total</span>
-        <span className="section-label pl-2">Amount</span>
-        <span className="section-label pl-2">Rank</span>
-      </div>
+        {/* Column headers */}
+        <div
+          className={`grid ${gridColsClass} px-4 py-2 shrink-0`}
+          style={{ background: 'var(--color-card2)', borderBottom: '1px solid var(--color-border)' }}
+        >
+          {displayAsks && (
+            <>
+              <span className="section-label text-right pr-2">Rank</span>
+              <span className="section-label text-right pr-2">Amount</span>
+              <span className="section-label text-right pr-2">Total</span>
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-right pr-4 flex items-center justify-end" style={{ color: 'var(--color-red)' }}>Ask</span>
+            </>
+          )}
+          {displayBids && (
+            <>
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-widest pl-4 flex items-center" style={{ color: 'var(--color-green)' }}>Bid</span>
+              <span className="section-label pl-2">Total</span>
+              <span className="section-label pl-2">Amount</span>
+              <span className="section-label pl-2">Rank</span>
+            </>
+          )}
+        </div>
 
-      {/* Rows Viewport */}
-      <div 
-        ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto custom-scrollbar relative"
-      >
-        {priceRows.length === 0 ? (
-          <div className="flex items-center justify-center h-full py-20">
-            <p className="section-label opacity-40">No Matching Orders Found</p>
-          </div>
-        ) : (
-          priceRows.map((row) => {
-            const askSelected = row.ask?.subOrders.some(o => selectedOrderIds.includes(o.id)) ?? false;
-            const bidSelected = row.bid?.subOrders.some(o => selectedOrderIds.includes(o.id)) ?? false;
-            const isClosestToOne = row.uniqueKey === closestRowKey;
+        {/* Rows viewport */}
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar relative">
+          {priceRows.length === 0 ? (
+            <div className="flex items-center justify-center h-full py-20">
+              <p className="section-label opacity-40">No Matching Orders Found</p>
+            </div>
+          ) : (
+            priceRows.map((row) => {
+              const askSelected = row.ask?.subOrders.some(o => selectedOrderIds.includes(o.id)) ?? false;
+              const bidSelected = row.bid?.subOrders.some(o => selectedOrderIds.includes(o.id)) ?? false;
+              const isClosestToOne = row.uniqueKey === closestRowKey;
 
-            return (
-              <div
-                key={row.uniqueKey}
-                ref={isClosestToOne ? targetRowRef : undefined}
-                className="grid grid-cols-8 px-4 items-stretch"
-                style={{ borderBottom: '1px solid rgba(42,37,32,0.6)' }}
-              >
-                {/* Ask side */}
+              return (
                 <div
-                  onClick={() => isAskActive && row.ask && handleOrderClick(row.ask)}
-                  className="col-span-4 grid grid-cols-4 items-center py-2 transition-colors"
-                  style={{
-                    borderRight: '1px solid var(--color-border)',
-                    cursor: isAskActive && row.ask ? 'pointer' : 'default',
-                    background: askSelected ? 'rgba(107,203,110,0.08)' : undefined,
-                  }}
-                  onMouseEnter={(e) => { if (isAskActive && row.ask) (e.currentTarget as HTMLElement).style.background = 'rgba(107,203,110,0.05)'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = askSelected ? 'rgba(107,203,110,0.08)' : ''; }}
+                  key={row.uniqueKey}
+                  ref={isClosestToOne ? targetRowRef : undefined}
+                  className={`grid ${gridColsClass} px-4 items-stretch`}
+                  style={{ borderBottom: '1px solid rgba(42,37,32,0.6)' }}
                 >
-                  {row.ask ? (
-                    <>
-                      <div className="flex justify-end pr-2">{renderRank(row.ask.maker, 'end')}</div>
-                      <span className="font-mono text-[11px] text-text text-right pr-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        {row.ask.amount.toLocaleString()}
-                      </span>
-                      <span className="font-mono font-semibold text-[11px] text-text text-right pr-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        ${(row.ask.pricePerFim * row.ask.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </span>
-                      <span className="font-mono font-semibold text-[11px] text-right pr-3" style={{ color: 'var(--color-green)', fontVariantNumeric: 'tabular-nums' }}>
-                        ${parseFloat(row.price).toFixed(4)}
-                      </span>
-                    </>
-                  ) : <div className="col-span-4" />}
-                </div>
+                  {displayAsks && (
+                    <div
+                      onClick={() => isAskActive && row.ask && handleOrderClick(row.ask)}
+                      className="col-span-4 grid grid-cols-4 items-center py-2 transition-colors"
+                      style={{
+                        borderRight: displayBids ? '1px solid var(--color-border)' : undefined,
+                        cursor: isAskActive && row.ask ? 'pointer' : 'default',
+                        background: askSelected ? 'rgba(107,203,110,0.08)' : undefined,
+                      }}
+                      onMouseEnter={(e) => { if (isAskActive && row.ask) (e.currentTarget as HTMLElement).style.background = 'rgba(107,203,110,0.05)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = askSelected ? 'rgba(107,203,110,0.08)' : ''; }}
+                    >
+                      {row.ask ? (
+                        <>
+                          <div className="flex justify-end pr-2">{renderRank(row.ask.maker, 'end')}</div>
+                          <span className="font-mono text-[11px] text-text text-right pr-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            {row.ask.amount.toLocaleString()}
+                          </span>
+                          <span className="font-mono font-semibold text-[11px] text-text text-right pr-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            ${(row.ask.pricePerFim * row.ask.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          </span>
+                          <span className="font-mono font-semibold text-[11px] text-right pr-3" style={{ color: 'var(--color-red)', fontVariantNumeric: 'tabular-nums' }}>
+                            ${parseFloat(row.price).toFixed(4)}
+                          </span>
+                        </>
+                      ) : <div className="col-span-4" />}
+                    </div>
+                  )}
 
-                {/* Bid side */}
-                <div
-                  onClick={() => isBidActive && row.bid && handleOrderClick(row.bid)}
-                  className="col-span-4 grid grid-cols-4 items-center py-2 transition-colors"
-                  style={{
-                    cursor: isBidActive && row.bid ? 'pointer' : 'default',
-                    background: bidSelected ? 'rgba(255,61,138,0.08)' : undefined,
-                  }}
-                  onMouseEnter={(e) => { if (isBidActive && row.bid) (e.currentTarget as HTMLElement).style.background = 'rgba(255,61,138,0.05)'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = bidSelected ? 'rgba(255,61,138,0.08)' : ''; }}
-                >
-                  {row.bid ? (
-                    <>
-                      <span className="font-mono font-semibold text-[11px] pl-3" style={{ color: 'var(--color-pink)', fontVariantNumeric: 'tabular-nums' }}>
-                        ${parseFloat(row.price).toFixed(4)}
-                      </span>
-                      <span className="font-mono font-semibold text-[11px] text-text pl-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        ${(row.bid.pricePerFim * row.bid.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </span>
-                      <span className="font-mono text-[11px] text-text pl-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        {row.bid.amount.toLocaleString()}
-                      </span>
-                      <div className="pl-2">{renderRank(row.bid.maker, 'start')}</div>
-                    </>
-                  ) : <div className="col-span-4" />}
+                  {displayBids && (
+                    <div
+                      onClick={() => isBidActive && row.bid && handleOrderClick(row.bid)}
+                      className="col-span-4 grid grid-cols-4 items-center py-2 transition-colors"
+                      style={{
+                        cursor: isBidActive && row.bid ? 'pointer' : 'default',
+                        background: bidSelected ? 'rgba(255,61,138,0.08)' : undefined,
+                      }}
+                      onMouseEnter={(e) => { if (isBidActive && row.bid) (e.currentTarget as HTMLElement).style.background = 'rgba(255,61,138,0.05)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = bidSelected ? 'rgba(255,61,138,0.08)' : ''; }}
+                    >
+                      {row.bid ? (
+                        <>
+                          <span className="font-mono font-semibold text-[11px] pl-3" style={{ color: 'var(--color-green)', fontVariantNumeric: 'tabular-nums' }}>
+                            ${parseFloat(row.price).toFixed(4)}
+                          </span>
+                          <span className="font-mono font-semibold text-[11px] text-text pl-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            ${(row.bid.pricePerFim * row.bid.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          </span>
+                          <span className="font-mono text-[11px] text-text pl-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            {row.bid.amount.toLocaleString()}
+                          </span>
+                          <div className="pl-2">{renderRank(row.bid.maker, 'start')}</div>
+                        </>
+                      ) : <div className="col-span-4" />}
+                    </div>
+                  )}
                 </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );
