@@ -209,8 +209,7 @@ function AuctionMaskInner({
 
   return (
     <div
-      className="card-app flex flex-col gap-5 h-full"
-      style={{ borderColor: 'var(--color-border-bright)' }}
+      className="card-app flex flex-col gap-5 h-full border-border2"
     >
       {/* ── FIM Balance ── */}
       <div>
@@ -219,7 +218,7 @@ function AuctionMaskInner({
           className="font-display font-extrabold leading-none text-display-trading"
           style={{
             color: 'var(--color-gold)',
-            textShadow: '0 0 40px var(--color-gold-a25)',
+            textShadow: '0 0 40px var(--color-gold-35)',
             fontVariantNumeric: 'tabular-nums',
           }}
         >
@@ -247,7 +246,7 @@ function AuctionMaskInner({
               <div
                 className="rounded-xl px-4 py-3 text-center cursor-pointer transition-opacity hover:opacity-80 surface-pink-warn"
               >
-                <p className="font-mono text-[10px] uppercase font-bold tracking-widest" style={{ color: 'var(--color-pink)' }}>
+                <p className="font-mono text-[10px] uppercase font-bold tracking-widest text-red">
                   No Collateral Staked
                 </p>
                 <p className="font-mono text-[10px] text-text2 mt-1 tracking-wide">
@@ -290,7 +289,7 @@ function AuctionMaskInner({
             {!isError && status !== 'idle' && (
               <div
                 className="absolute inset-y-0 left-0 transition-all duration-500"
-                style={{ width: getProgressWidth(), background: isSuccess ? 'var(--color-green)' : 'var(--color-gold-a30)' }}
+                style={{ width: getProgressWidth(), background: isSuccess ? 'var(--color-green)' : 'var(--color-gold-35)' }}
               />
             )}
             <button

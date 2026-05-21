@@ -180,7 +180,7 @@ export function Stake() {
 
   // Shared Design Constants
   const inputBase = 'bg-transparent border-none p-0 w-full font-mono font-bold text-text outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none';
-  const activeStyle = { background: 'var(--color-gold-a15)', color: 'var(--color-gold)', boxShadow: '0 1px 4px #00000033' };
+  const activeStyle = { background: 'var(--color-gold-15)', color: 'var(--color-gold)', boxShadow: '0 1px 4px #00000033' };
   const segInactive = { color: 'var(--color-text2)', background: 'transparent' };
 
   const ctaBtnStyle = isBusy || (status !== 'idle' && !isError && !isSuccess)
@@ -188,17 +188,16 @@ export function Stake() {
     : isButtonDisabled && !isSuccess && !isError
     ? { background: 'var(--color-card2)', color: 'var(--color-text2)', cursor: 'not-allowed' }
     : isError
-    ? { background: 'var(--color-pink)', color: 'var(--color-bg)', cursor: 'not-allowed' }
+    ? { background: 'var(--color-red)', color: 'var(--color-bg)', cursor: 'not-allowed' }
     : isSuccess
     ? { background: 'var(--color-green)', color: 'var(--color-bg)', cursor: 'not-allowed' }
-    : { background: 'var(--color-gold)', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-gold-a50)' };
+    : { background: 'var(--color-gold)', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-gold-70)' };
 
 
   if (!isConnected) {
     return (
       <div 
-        className="card-app flex flex-col items-center justify-center gap-4 w-full max-w-lg py-12"
-        style={{ borderColor: 'var(--color-border-bright)' }}
+        className="card-app flex flex-col items-center justify-center gap-4 w-full max-w-lg py-12 border-border2"
       >
         <p className="font-mono text-sm text-text2">Please connect wallet to stake</p>
         <WalletButton />
@@ -208,8 +207,7 @@ export function Stake() {
 
   return (
     <div 
-      className="card-app flex flex-col gap-4 w-full max-w-lg"
-      style={{ borderColor: 'var(--color-border-bright)' }}
+      className="card-app flex flex-col gap-4 w-full max-w-lg border-border2"
     >
       {/* ── Balances Header ── */}
       <div className="flex flex-col pb-2">
@@ -220,7 +218,7 @@ export function Stake() {
               className="font-display font-extrabold leading-none text-display-swap"
               style={{
                 color: 'var(--color-gold)',
-                textShadow: '0 0 40px var(--color-gold-a25)',
+                textShadow: '0 0 40px var(--color-gold-35)',
                 fontVariantNumeric: 'tabular-nums',
               }}
             >
@@ -317,7 +315,7 @@ export function Stake() {
             className="absolute inset-y-0 left-0 transition-all duration-500"
             style={{
               width: getProgressWidth(),
-              background: status === 'success' ? 'var(--color-green)' : 'rgba(245,184,0,0.3)',
+              background: status === 'success' ? 'var(--color-green)' : 'var(--color-gold-35)',
             }}
           />
         )}

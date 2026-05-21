@@ -88,8 +88,7 @@ export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
 
   return (
     <div
-      className="card-app overflow-hidden w-full"
-      style={{ borderColor: 'var(--color-border-bright)', padding: 0 }}
+      className="card-app overflow-hidden w-full border-border2 p-0"
     >
       {/* Top: avatar + name */}
       <div

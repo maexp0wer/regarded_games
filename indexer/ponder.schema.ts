@@ -1,4 +1,4 @@
-import { onchainTable, primaryKey } from "ponder";
+import { onchainTable, primaryKey, index } from "ponder";
 
 export const seasons = onchainTable("seasons", (t) => ({
   address: t.hex().primaryKey(),
@@ -81,4 +81,23 @@ export const protocolStats = onchainTable("protocol_stats", (t) => ({
   id: t.text().primaryKey(), // "global"
   totalYieldGenerated: t.bigint(),
   totalBuybacks: t.bigint(),
+}));
+
+export const candles = onchainTable("candles", (t) => ({
+  seasonAddress:  t.hex().notNull(),
+  timeframe:      t.text().notNull(),    // "5m" | "1h" | "4h" | "1d"
+  bucketTs:       t.bigint().notNull(),  // Unix seconds, bucket start
+  // storedPrice = usdcAmount * 10n**18n / fimAmount; human price = storedPrice / 1e6
+  openPrice:      t.bigint().notNull(),
+  highPrice:      t.bigint().notNull(),
+  lowPrice:       t.bigint().notNull(),
+  closePrice:     t.bigint().notNull(),
+  // Raw fimAmount sums (18-decimal); frontend divides by 1e18
+  capBuyerVolume: t.bigint().notNull().default(0n),
+  socBuyerVolume: t.bigint().notNull().default(0n),
+  giniBps:        t.integer().notNull().default(0),
+  tradeCount:     t.integer().notNull().default(0),
+}), (table) => ({
+  pk:  primaryKey({ columns: [table.seasonAddress, table.timeframe, table.bucketTs] }),
+  idx: index("candles_season_tf_bucket").on(table.seasonAddress, table.timeframe, table.bucketTs),
 }));

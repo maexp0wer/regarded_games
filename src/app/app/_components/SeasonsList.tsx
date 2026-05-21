@@ -107,7 +107,7 @@ function SeasonCard({ season }: { season: SeasonRegistry }) {
           {/* Left column: big season number + pills (desktop) */}
           <div className="shrink-0 hidden sm:flex sm:flex-col sm:items-start sm:gap-2">
             <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-display-season">
-              S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
+              S<em className="not-italic font-medium" style={{ color: 'var(--color-text2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
             </p>
             <SeasonPhasePills
               phase={currentPhase}
@@ -121,7 +121,7 @@ function SeasonCard({ season }: { season: SeasonRegistry }) {
             {/* Mobile header: small season number + pills */}
             <div className="flex sm:hidden items-center flex-wrap gap-2">
               <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-season-mobile">
-                S<em className="not-italic font-medium" style={{ color: 'var(--color-muted2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
+                S<em className="not-italic font-medium" style={{ color: 'var(--color-text2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
               </p>
               <SeasonPhasePills
                 phase={currentPhase}
@@ -241,7 +241,7 @@ export function SeasonsList() {
         </h2>
         <button
           onClick={() => setShowAll(!showAll)}
-          className="btn-secondary px-4 py-2 text-[11px]"
+          className="btn-game-secondary px-4 py-2 text-[11px]"
         >
           {showAll ? 'Show Active' : 'Show All'}
         </button>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import * as d3 from 'd3';
 import { SeasonTrade } from '@/hooks/useSeasonTrades';
 import { buildChordData } from '@/utils/chartData';
@@ -9,9 +9,6 @@ function getCSSVar(name: string): string {
   if (typeof window === 'undefined') return '';
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
-const SIZE = 300;
-const INNER_RADIUS = SIZE / 2 - 36;
-const OUTER_RADIUS = SIZE / 2 - 18;
 
 interface ChordDiagramProps {
   trades: SeasonTrade[];
@@ -29,6 +26,34 @@ export function ChordDiagram({
   isLive,
 }: ChordDiagramProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<d3.Selection<HTMLDivElement, unknown, HTMLElement, unknown> | null>(null);
+  const [size, setSize] = useState(250);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect;
+      setSize(Math.floor(Math.min(width, height)));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const t = d3.select('body').append('div')
+      .style('position', 'fixed')
+      .style('pointer-events', 'none')
+      .style('font-family', 'JetBrains Mono, monospace')
+      .style('font-size', '11px')
+      .style('padding', '6px 10px')
+      .style('border-radius', '4px')
+      .style('display', 'none')
+      .style('z-index', '9999');
+    tooltipRef.current = t;
+    return () => { t.remove(); tooltipRef.current = null; };
+  }, []);
 
   const { timeStart, timeEnd } = useMemo(() => {
     if (selectedRange) {
@@ -39,9 +64,7 @@ export function ChordDiagram({
       const ms = Number(BigInt(t.timestamp)) * 1000;
       if (ms > latestMs) latestMs = ms;
     }
-    // +1 s so trades whose timestamp equals the latest block second
-    // satisfy ts < endSec (avoids excluding same-block trades).
-    const now = (latestMs || Date.now()) + 1000;
+    const now = latestMs || Date.now();
     return { timeStart: now - timeWindowMs, timeEnd: now };
   }, [selectedRange, timeWindowMs, trades]);
 
@@ -55,7 +78,7 @@ export function ChordDiagram({
     const endSec = timeEnd / 1000;
     return trades.filter((t) => {
       const ts = Number(BigInt(t.timestamp));
-      return ts >= startSec && ts < endSec;
+      return ts >= startSec && ts <= endSec;
     }).length;
   }, [trades, timeStart, timeEnd]);
 
@@ -65,8 +88,8 @@ export function ChordDiagram({
 
     if (chordData.groups.length === 0 || tradeCount === 0) return;
 
-    const CAP_COLOR   = getCSSVar('--color-blue')    || '#4d9fff';
-    const SOC_COLOR   = getCSSVar('--color-pink')    || '#e72828';
+    const CAP_COLOR   = getCSSVar('--color-gold')    || '#D4AF37';
+    const SOC_COLOR   = getCSSVar('--color-purple')  || '#9D4EDD';
     const BG_COLOR    = getCSSVar('--color-card')    || '#15120f';
     const BG2_COLOR   = getCSSVar('--color-card2')   || '#1b1814';
     const TXT_COLOR   = getCSSVar('--color-text2')   || '#8a8378';
@@ -89,10 +112,13 @@ export function ChordDiagram({
     const capTotal = totalVol.slice(0, numCap).reduce((s, v) => s + v, 0);
     const socTotal = totalVol.slice(numCap).reduce((s, v) => s + v, 0);
 
+    const innerRadius = size / 2 - 36;
+    const outerRadius = size / 2 - 18;
+
     const GAP      = 0.5;   // radians gap at 12 o'clock only (between 100% cap and 100% soc)
     const BAND_PAD = 0.01;  // trailing gap after every band (active and empty)
     const HALF_ARC = Math.PI - GAP / 2; // each half runs to the bottom with no gap there
-    const RR = INNER_RADIUS - 1;
+    const RR = innerRadius - 1;
     const MIN_DRAW = 0.02;             // visible arc width for zero-volume groups
     const MIN_SLOT = MIN_DRAW + BAND_PAD; // slot = draw + gap, same trailing gap as active bands
 
@@ -153,29 +179,23 @@ export function ChordDiagram({
     });
 
     const root = svg
-      .attr('viewBox', `0 0 ${SIZE} ${SIZE}`)
+      .attr('viewBox', `0 0 ${size} ${size}`)
       .append('g')
-      .attr('transform', `translate(${SIZE / 2},${SIZE / 2})`);
+      .attr('transform', `translate(${size / 2},${size / 2})`);
 
     const ribbon = d3.ribbon().radius(RR);
     const arcGen = d3.arc<{ start: number; end: number }>()
-      .innerRadius(INNER_RADIUS)
-      .outerRadius(OUTER_RADIUS)
+      .innerRadius(innerRadius)
+      .outerRadius(outerRadius)
       .startAngle(d => d.start)
       .endAngle(d => d.end);
 
-    const tooltip = d3.select('body').append('div')
-      .style('position', 'fixed')
-      .style('pointer-events', 'none')
+    if (!tooltipRef.current) return;
+    const tooltip = tooltipRef.current
       .style('background', BG2_COLOR)
       .style('border', `1px solid ${TXT_COLOR}`)
       .style('color', TXT1_COLOR)
-      .style('font-family', 'JetBrains Mono, monospace')
-      .style('font-size', '11px')
-      .style('padding', '6px 10px')
-      .style('border-radius', '4px')
-      .style('display', 'none')
-      .style('z-index', '9999');
+      .style('display', 'none');
 
     // Draw chord ribbons — upper triangular, one ribbon per (i,j) pair
     for (let i = 0; i < N; i++) {
@@ -218,7 +238,7 @@ export function ChordDiagram({
         .attr('stroke-width', isEmpty ? 0 : 1);
 
       if (!isEmpty) arc
-        .on('mouseover', (event: MouseEvent) => {
+        .on('mouseover', (_event: MouseEvent) => {
           tooltip.style('display', 'block').html(
             `${g.label}<br/>${g.playerCount} player${g.playerCount !== 1 ? 's' : ''}<br/>${totalVol[i].toFixed(1)} FIM`
           );
@@ -231,15 +251,15 @@ export function ChordDiagram({
     }
 
     // Fixed axis labels: 0% at bottom (6 o'clock), 100% Cap/Soc split at top (12 o'clock)
-    const labelR = OUTER_RADIUS + 10;
+    const labelR = outerRadius + 10;
     const yTop = -labelR;
     const axisLabels = [
-      { x:  25,  y: yTop,   text: '100%', anchor: 'start',  color: CAP_COLOR, size: '14px', weight: 'bold' },
-      { x: -25,  y: yTop,   text: '100%',  anchor: 'end',    color: SOC_COLOR, size: '14px', weight: 'bold' },
-      { x:  -10,  y: labelR,   text: '0%', anchor: 'start',  color: TXT_COLOR, size: '14px', weight: 'bold' },
+      { x:  25,  y: yTop,   text: '100%', anchor: 'start',  color: CAP_COLOR, fontSize: '14px', weight: 'bold' },
+      { x: -25,  y: yTop,   text: '100%',  anchor: 'end',    color: SOC_COLOR, fontSize: '14px', weight: 'bold' },
+      { x:  -10,  y: labelR,   text: '0%', anchor: 'start',  color: TXT_COLOR, fontSize: '14px', weight: 'bold' },
     ];
 
-    for (const { x, y, text, anchor, color, size, weight } of axisLabels) {
+    for (const { x, y, text, anchor, color, fontSize, weight } of axisLabels) {
       root.append('text')
         .attr('x', x)
         .attr('y', y)
@@ -247,13 +267,12 @@ export function ChordDiagram({
         .attr('dominant-baseline', 'middle')
         .attr('fill', color)
         .attr('font-family', 'JetBrains Mono, monospace')
-        .attr('font-size', size)
+        .attr('font-size', fontSize)
         .attr('font-weight', weight)
         .text(text);
     }
 
-    return () => { tooltip.remove(); };
-  }, [chordData, tradeCount]);
+  }, [chordData, tradeCount, size]);
 
   const modeLabel = useMemo(() => {
     if (selectedRange) {
@@ -272,10 +291,7 @@ export function ChordDiagram({
 
   return (
     <div
-      className="card-app flex flex-col gap-2 h-full"
-      style={{
-        background: 'linear-gradient(90deg, var(--color-pink-a05) 20%, var(--color-blue-a05) 80%)',
-      }}
+      className="p-6 rounded-3xl bg-[image:var(--subtle-glow)] flex flex-col gap-2 h-full"
     >
       <div className="flex items-center justify-between">
         <span className="h4-app">Trade Flows</span>
@@ -300,8 +316,8 @@ export function ChordDiagram({
           No trades in this window
         </div>
       ) : (
-        <div className="flex items-center justify-center h-full">
-          <svg ref={svgRef} width={SIZE} height={SIZE} className="max-w-full" />
+        <div ref={containerRef} className="flex items-center justify-center h-full w-full rounded-lg">
+          <svg ref={svgRef} width={size} height={size} />
         </div>
       )}
     </div>

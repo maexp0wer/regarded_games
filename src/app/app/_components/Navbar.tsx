@@ -122,7 +122,7 @@ export function Navbar() {
       {isModalOpen && (
         <div
           className="fixed inset-0 z-51 md:hidden"
-          style={{ background: 'var(--color-dark-a85)', backdropFilter: 'blur(8px)' }}
+          style={{ background: 'var(--color-card3)', backdropFilter: 'blur(8px)' }}
           onClick={() => setIsModalOpen(false)}
           role="dialog"
           aria-modal="true"

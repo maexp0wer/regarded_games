@@ -83,7 +83,7 @@ export default function PercentSlider({ value, onChange, disabled = false }: Per
               transform: 'translate(-50%, -50%)',
               width: 7,
               height: 7,
-              background: snap <= clamped ? 'var(--color-gold)' : 'var(--color-border-bright)',
+              background: snap <= clamped ? 'var(--color-gold)' : 'var(--color-border2)',
               transition: 'background 0.1s',
               zIndex: 1,
             }}
@@ -100,8 +100,8 @@ export default function PercentSlider({ value, onChange, disabled = false }: Per
             height: 14,
             background: 'var(--color-gold)',
             boxShadow: dragging
-              ? '0 0 0 5px var(--color-gold-a25)'
-              : '0 0 0 3px var(--color-gold-a15)',
+              ? '0 0 0 5px var(--color-gold-35)'
+              : '0 0 0 3px var(--color-gold-15)',
             cursor: dragging ? 'grabbing' : 'grab',
             zIndex: 2,
             transition: dragging ? 'none' : 'left 0.08s, box-shadow 0.15s',

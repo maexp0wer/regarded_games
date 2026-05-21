@@ -8,10 +8,12 @@ export function PrizePoolCard({
   seasonAddress,
   prizePool,
   currentPhase,
+  variant = 'card',
 }: {
   seasonAddress: string;
   prizePool: number;
   currentPhase: string | null;
+  variant?: 'card' | 'sidebar';
 }) {
   const isPayout = currentPhase === 'PAYOUT' || currentPhase === 'DISTRIBUTION';
   const { data: yieldTotals } = useYieldTotals(seasonAddress, currentPhase);
@@ -25,12 +27,50 @@ export function PrizePoolCard({
   
   const prizePoolWithYield = prizePool + (hasYield ? parseFloat(formatUnits(rawReinvest, 6)) : 0);
 
+  if (variant === 'sidebar') {
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <span
+            className="shrink-0 rounded-full"
+            style={{ width: 5, height: 5, background: 'var(--color-gold)' }}
+          />
+          <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-text2 font-semibold">
+            {hasYield ? 'Prize Pool + Yield' : 'Total Prize Pool'}
+          </span>
+        </div>
+        <div className="flex items-baseline gap-1">
+          <span
+            className="font-mono text-lg"
+            style={{ color: 'var(--color-gold)', opacity: 0.85 }}
+          >$</span>
+          <span
+            className="font-mono font-semibold leading-none tracking-tight"
+            style={{
+              fontSize: '2.125rem',
+              color: 'var(--color-gold)',
+              textShadow: '0 0 20px var(--color-gold-35)',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {prizePoolWithYield.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        </div>
+        {hasYield && (
+          <p className="font-mono text-[10px] text-text2 m-0">
+            Yield Bonus <b className="text-green ml-1 font-semibold">${reinvestFormatted}</b>
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       className="card-app relative flex flex-col justify-between text-center overflow-hidden"
       style={{
-        background: 'radial-gradient(400px 200px at 50% 100%, var(--color-gold-a05), transparent 60%), linear-gradient(180deg, var(--color-card2), var(--color-card))',
-        borderColor: 'var(--color-border-bright)',
+        background: 'radial-gradient(400px 200px at 50% 100%, var(--color-gold-15), transparent 60%), linear-gradient(180deg, var(--color-card2), var(--color-card))',
+        borderColor: 'var(--color-border2)',
       }}
     >
       <div className="relative section-label justify-center">
@@ -40,9 +80,9 @@ export function PrizePoolCard({
 
       <p
         className="relative font-display font-extrabold leading-none tracking-[-0.04em] text-gold m-0 text-display-prize"
-        style={{ textShadow: '0 0 40px var(--color-gold-a25)', fontVariantNumeric: 'tabular-nums' }}
+        style={{ textShadow: '0 0 40px var(--color-gold-35)', fontVariantNumeric: 'tabular-nums' }}
       >
-        <span style={{ fontSize: '0.5em', verticalAlign: '0.4em', color: 'var(--color-gold-soft)', marginRight: 4 }}>$</span>
+        <span style={{ fontSize: '0.5em', verticalAlign: '0.4em', color: 'var(--color-gold)', marginRight: 4 }}>$</span>
         {prizePoolWithYield.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </p>
 

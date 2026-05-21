@@ -84,8 +84,7 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
 
   return (
     <div
-      className="card-app flex flex-col gap-5 h-full"
-      style={{ borderColor: 'var(--color-border-bright)' }}
+      className="card-app flex flex-col gap-5 h-full border-border2"
     >
       {/* ── Header ── */}
       <div
@@ -165,7 +164,7 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
         ) : !hasClaimed ? (
           <div
             className="px-5 py-4 rounded-xl text-center"
-            style={{ background: 'var(--color-card2)', border: '1px dashed var(--color-border-bright)' }}
+            style={{ background: 'var(--color-card2)', border: '1px dashed var(--color-border2)' }}
           >
             <p className="font-mono text-[11px] uppercase font-bold tracking-widest text-text2">Ineligible</p>
             <p className="font-mono text-[10px] text-text2 mt-1 opacity-60">You did not participate in this season</p>

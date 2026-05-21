@@ -12,21 +12,15 @@ export function TradingActivityFeed({ seasonAddress, className }: { seasonAddres
 
   return (
     <div
-      className={`card-app flex flex-col ${className ?? 'max-h-130'}`}
-      style={{ borderColor: 'var(--color-border-bright)', padding: 0 }}
+      className={`card-app bg-[image:var(--subtle-glow)] flex flex-col border-border2 p-0 ${className ?? 'max-h-130'}`}
     >
       {/* Header */}
-      <div
-        className="flex items-center justify-between px-5 py-3 shrink-0"
-        style={{ borderBottom: '1px solid var(--color-border)' }}
-      >
-        <p className="section-label">Recent Activity</p>
-      </div>
+      
 
       {/* Column headers */}
       <div
         className="flex items-center justify-between px-5 py-2 shrink-0"
-        style={{ background: 'var(--color-card2)', borderBottom: '1px solid var(--color-border)' }}
+        style={{ background: 'var(--color-card3)', borderBottom: '1px solid var(--color-border)' }}
       >
         <div className="flex items-center gap-4">
           <span className="section-label w-15">Time</span>
@@ -53,8 +47,7 @@ export function TradingActivityFeed({ seasonAddress, className }: { seasonAddres
             return (
               <div
                 key={trade.id}
-                className="flex items-center justify-between px-5 py-2.5 gap-3 transition-colors hover:bg-card2/50"
-                style={{ borderTop: '1px solid var(--color-dark-a50)' }}
+                className="flex items-center justify-between px-5 py-2.5 gap-3 transition-colors hover:bg-card2/50 border-t border-border"
               >
                 {/* Left: time + participants */}
                 <div className="flex items-center gap-4 min-w-0">
@@ -63,13 +56,13 @@ export function TradingActivityFeed({ seasonAddress, className }: { seasonAddres
                   </span>
                   <div className="flex items-center gap-2 shrink-0">
                     {sellerKnown ? (
-                      <PercentileCircle percentage={trade.sellerPercentile} isCapitalist={trade.sellerIsCapitalist} size="sm" />
+                      <PercentileCircle percentage={trade.sellerPercentile} isCapitalist={trade.sellerIsCapitalist} size="xxs" />
                     ) : (
                       <span className="font-mono text-[10px] text-text2 opacity-30">anon</span>
                     )}
                     <span className="font-mono text-[10px] text-text2 opacity-30">→</span>
                     {buyerKnown ? (
-                      <PercentileCircle percentage={trade.buyerPercentile} isCapitalist={trade.buyerIsCapitalist} size="sm" />
+                      <PercentileCircle percentage={trade.buyerPercentile} isCapitalist={trade.buyerIsCapitalist} size="xxs" />
                     ) : (
                       <span className="font-mono text-[10px] text-text2 opacity-30">anon</span>
                     )}
@@ -79,7 +72,7 @@ export function TradingActivityFeed({ seasonAddress, className }: { seasonAddres
                 {/* Right: amount */}
                 <span
                   className="font-mono text-[11px] font-semibold w-20 text-right shrink-0"
-                  style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}
+                  style={{ color: 'var(--color-text)', fontVariantNumeric: 'tabular-nums' }}
                 >
                   {trade.amount.toLocaleString()} FIM
                 </span>

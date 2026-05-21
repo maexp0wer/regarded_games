@@ -9,9 +9,10 @@ import Regardo from '@/components/icons/Regardo.svg';
 
 interface GiniDisplayProps {
   seasonAddress: string;
+  sidebar?: React.ReactNode;
 }
 
-export function GiniDisplay({ seasonAddress }: GiniDisplayProps) {
+export function GiniDisplay({ seasonAddress, sidebar }: GiniDisplayProps) {
   const { isAuction, isBootstrap, isPayout } = useSeasonPhase(seasonAddress);
   const {
     gCurrent,
@@ -58,14 +59,15 @@ export function GiniDisplay({ seasonAddress }: GiniDisplayProps) {
   const capBpsAway = Math.round(Math.abs(capTargetBps - gCurrent));
 
   return (
+    
     <div
-      className="card-app relative flex flex-col h-full"
-      style={{
-        minHeight: 300,
-        background: 'linear-gradient(90deg, var(--color-pink-a05) 20%, var(--color-blue-a05) 80%)',
-        borderColor: 'var(--color-border-bright)',
-      }}
-    >
+  className={`relative h-full overflow-hidden flex min-h-[300px] border border-border2 bg-[image:var(--subtle-glow)] ${
+    sidebar ? 'flex-col md:flex-row p-0' : 'flex-col'
+  }`}
+>
+      {/* ── Gini content ── */}
+      <div className={`relative flex-1 flex flex-col${sidebar ? ' p-6 min-h-72 md:min-h-0' : ''}`}>
+
       {/* ── Header ── */}
       <div className="section-label font-mono font-semibold tracking-widest uppercase text-text2 mb-4">
         Gini BPS · Coefficient of Inequality
@@ -83,7 +85,7 @@ export function GiniDisplay({ seasonAddress }: GiniDisplayProps) {
             right: 0,
             height: 6,
             background:
-              'linear-gradient(90deg, var(--color-pink-a50) 0%, var(--color-border-bright) 40%, var(--color-border-bright) 60%, var(--color-blue-a50) 100%)',
+              'linear-gradient(90deg, var(--color-purple-70) 0%, var(--color-border2) 40%, var(--color-border2) 60%, var(--color-gold-70) 100%)',
           }}
         >
           {/* Scale ticks + labels */}
@@ -119,9 +121,9 @@ export function GiniDisplay({ seasonAddress }: GiniDisplayProps) {
             );
           })}
 
-          {/* ── Proletariat (pink) marker ── */}
+          {/* ── Proletariat (purple) marker ── */}
           <div className="gini-marker" style={{ left: toScalePct(socTargetBps) }}>
-            <div style={{ position: 'absolute', width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, var(--color-pink-a10) 0%, transparent 70%)', top: 12, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, var(--color-purple-15) 0%, transparent 70%)', top: 12, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
             <div
               className="absolute flex flex-col items-center gap-1"
               style={{
@@ -137,34 +139,28 @@ export function GiniDisplay({ seasonAddress }: GiniDisplayProps) {
                   height: 52,
                   borderRadius: '50%',
                   background: 'var(--color-card2)',
-                  border: '2px solid var(--color-pink-a40)',
+                  border: '2px solid var(--color-purple-35)',
                   display: 'grid',
                   placeItems: 'center',
-                  color: 'var(--color-pink)',
+                  color: 'var(--color-purple)',
                 }}
               >
                 <Carlo className="w-9 h-auto" viewBox="0 0 600 800" />
               </div>
-              <span
-                className="font-mono text-[10px] uppercase tracking-wider"
-                style={{ color: 'var(--color-text2)' }}
-              >
+              <span className="font-mono text-[10px] uppercase tracking-wider text-text2">
                 Proletariat
               </span>
               <span
-                className="font-mono text-sm font-semibold"
-                style={{ color: 'var(--color-pink)', fontVariantNumeric: 'tabular-nums' }}
+                className="font-mono text-sm font-semibold tabular-nums"
+                style={{ color: 'var(--color-purple)' }}
               >
                 {Math.round(socTargetBps).toLocaleString()}
               </span>
-              <span
-                className="font-mono text-[10px]"
-                style={{ color: 'var(--color-text2)', whiteSpace: 'nowrap' }}
-              >
+              <span className="font-mono text-[10px] text-text2 whitespace-nowrap">
                 {socBpsAway.toLocaleString()} BPS away
               </span>
             </div>
-            <div className="gini-knob pink" />
+            <div className="gini-knob soc" />
           </div>
 
           {/* ── Initial marker: half-size neutral knob, labels above ── */}
@@ -215,7 +211,7 @@ export function GiniDisplay({ seasonAddress }: GiniDisplayProps) {
             className="gini-marker transition-all duration-700 ease-out"
             style={{ left: toScalePct(gCurrent), top: -11 }}
           >
-            <div style={{ position: 'absolute', width: 60, height: 60, borderRadius: '50%', background: 'radial-gradient(circle, var(--color-gold-a05) 45%, transparent 70%)', top: 14, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', width: 60, height: 60, borderRadius: '50%', background: 'radial-gradient(circle, var(--color-gold-15) 45%, transparent 70%)', top: 14, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
             <div className="gini-knob gold" />
             <div className="flex flex-col items-center" style={{ marginTop: 10, gap: 3 }}>
               <span
@@ -231,16 +227,11 @@ export function GiniDisplay({ seasonAddress }: GiniDisplayProps) {
                 {gCurrent.toLocaleString()}
               </span>
               {winningSide !== 'none' && (
-                <span
-                  className="font-mono text-[10px] text-center"
-                  style={{ color: 'var(--color-text2)', whiteSpace: 'nowrap' }}
-                >
+                <span className="font-mono text-[10px] text-center text-text2 whitespace-nowrap">
                   {progressPercent.toFixed(1)}% to{' '}
                   <span
-                    style={{
-                      color: winningSide === 'soc' ? 'var(--color-pink)' : 'var(--color-blue)',
-                      fontWeight: 'bold',
-                    }}
+                    className="font-bold"
+                    style={{ color: winningSide === 'soc' ? 'var(--color-purple)' : 'var(--color-gold)' }}
                   >
                     {winningSide === 'soc' ? 'Proletariat' : 'Bourgeoisie'}
                   </span>
@@ -249,9 +240,9 @@ export function GiniDisplay({ seasonAddress }: GiniDisplayProps) {
             </div>
           </div>
 
-          {/* ── Bourgeoisie (blue) marker ── */}
+          {/* ── Bourgeoisie (gold) marker ── */}
           <div className="gini-marker" style={{ left: toScalePct(capTargetBps) }}>
-            <div style={{ position: 'absolute', width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, var(--color-blue-a10) 0%, transparent 70%)', top: 12, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, var(--color-gold-15) 0%, transparent 70%)', top: 12, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
             <div
               className="absolute flex flex-col items-center gap-1"
               style={{
@@ -267,37 +258,41 @@ export function GiniDisplay({ seasonAddress }: GiniDisplayProps) {
                   height: 52,
                   borderRadius: '50%',
                   background: 'var(--color-card2)',
-                  border: '2px solid var(--color-blue-a40)',
+                  border: '2px solid var(--color-gold-35)',
                   display: 'grid',
                   placeItems: 'center',
-                  color: 'var(--color-blue)',
+                  color: 'var(--color-gold)',
                 }}
               >
                 <Regardo className="w-9 h-auto" viewBox="0 0 600 800" />
               </div>
-              <span
-                className="font-mono text-[10px] uppercase tracking-wider"
-                style={{ color: 'var(--color-text2)' }}
-              >
+              <span className="font-mono text-[10px] uppercase tracking-wider text-text2">
                 Bourgeoisie
               </span>
               <span
-                className="font-mono text-sm font-semibold"
-                style={{ color: 'var(--color-blue)', fontVariantNumeric: 'tabular-nums' }}
+                className="font-mono text-sm font-semibold tabular-nums"
+                style={{ color: 'var(--color-gold)' }}
               >
                 {Math.round(capTargetBps).toLocaleString()}
               </span>
-              <span
-                className="font-mono text-[10px]"
-                style={{ color: 'var(--color-text2)', whiteSpace: 'nowrap' }}
-              >
+              <span className="font-mono text-[10px] text-text2 whitespace-nowrap">
                 {capBpsAway.toLocaleString()} BPS away
               </span>
             </div>
-            <div className="gini-knob blue" />
+            <div className="gini-knob cap" />
           </div>
         </div>
       </div>
+
+      </div>{/* end gini content */}
+
+      {sidebar && (
+        <aside
+          className="order-first md:order-last shrink-0 w-full md:w-91 flex flex-col gap-5.5 p-6 border-b md:border-b-0 md:border-l border-border"
+        >
+          {sidebar}
+        </aside>
+      )}
     </div>
   );
 }

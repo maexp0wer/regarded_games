@@ -10,29 +10,34 @@
 
 @theme {
   /* ── LIGHT palette (default) ────────────────────────────────── */
-  --color-bg:          #f9f7f4;
-  --color-card:        #ffffff;
-  --color-card2:       #f5f2ed;
-  --color-card3:       #f0ede8;
-  --color-text:        #1a1814;
-  --color-text2:       #7a7268;
-  --color-border:      #e0dbd2;
-  --color-border-bright: #ccc7be;
-  --color-muted2:      #a09890;
+  --color-bg: #F8F9FC;        /* Soft Cool Grey Canvas (Prevents eye strain) */
+  --color-card: #FFFFFF;      /* Pure White Primary Containers */
+  --color-card2: #F1F3F9;     /* Deep Nested Modules / Active Rows */
+  --color-card3: #E4E8F2;     /* Elevated Tooltips / Inner Wells */
 
-  --color-gold:        #c98a00;
-  --color-gold-soft:   #f5b800;
-  --color-gold-pale:   #fdf3d3;
-  --color-pink:        #d4215f;
-  --color-pink-soft:   #e8447e;
-  --color-blue:        #2d5eaa;
-  --color-blue-soft:   #4d9fff;
-  --color-green:       #2d8c30;
-  --color-green-soft:  #3aad3e;
-  --color-red:         #bb2222;
+  /* Typography Adjusted for Light Context */
+  --color-text: #161224;      /* Deep Midnight Charcoal (Soft Contrast) */
+  --color-text2: #655E85;     /* Slate Muted Subtitles */
 
-  /* ── TYPOGRAPHY ───────────────────────────────────────────────
-  --font-display: "Bricolage Grotesque", system-ui, sans-serif; */
+  /* Two-Tier Borders */
+  --color-border: #E2E8F0;    /* Tier 1: Crisp Clean Separation Line */
+  --color-border2: #CBD5E1;   /* Tier 2: Stronger Interactive Divider */
+
+  /* Accents Pushed to Deep Jewel Tones (Passes Web Accessibility Checks) */
+  --color-purple: #6A1B9A;       /* Royal Faction Violet — Proletariat/Socialist */
+  --color-purple-hover: #4A148C; /* Ultra Deep Purple state */
+
+  --color-gold: #D4AF37;         /* Burnished Amber Gold — Bourgeoisie/Capitalist */
+  --color-gold-hover: #AA820A;   /* Rich Ochre Shadow state */
+
+  /* Safe Trading Signals on White Canvas */
+  --color-green: #00875A;        /* Emerald Bull Green */
+  --color-green-hover: #006644;  /* Deep Forest Green state */
+
+  --color-red: #D32F2F;          /* Crimson Bear Red */
+  --color-red-hover: #B71C1C;    /* Maroon Danger state */
+
+  /* ── TYPOGRAPHY ─────────────────────────────────────────────── */
   --font-display: "Exo 2", system-ui, sans-serif;
   --font-sans:    "Space Grotesk",       system-ui, sans-serif;
   --font-mono:    "JetBrains Mono",      ui-monospace, monospace;
@@ -40,68 +45,75 @@
 
 /* ── DARK palette override ─────────────────────────────────────── */
 .dark {
-  --color-bg:          #0b0a09;
-  --color-card:        #15120f;
-  --color-card2:       #1b1814;
-  --color-card3:       #110f0d;
-  --color-text:        #f4ede0;
-  --color-text2:       #8a8378;
-  --color-border:      #2a2520;
-  --color-border-bright: #3a342d;
-  --color-muted2:      #5a534a;
+  --color-bg: #0D0B14;        /* Midnight Violet Canvas */
+  --color-card: #161322;      /* Primary Layout Containers */
+  --color-card2: #1F1A30;     /* Raised Modules / Active Panels */
+  --color-card3: #2B2544;     /* Elevated Modals / Dropdowns */
 
-  --color-gold:        #f5b800;
-  --color-gold-soft:   #ffd34a;
-  --color-gold-pale:   #1a1305;
-  --color-pink:        #e72828;
-  --color-pink-soft:   #ff7ab0;
-  --color-blue:        #1064c4;
-  --color-blue-soft:   #8cc0ff;
-  --color-green:       #6bcb6e;
-  --color-green-soft:  #2d8c30;
-  --color-red:         #ff5454;
+  /* Typography */
+  --color-text: #FFFFFF;      /* High Priority / Headings */
+  --color-text2: #9E97BD;     /* Muted Labels / Timestamps */
+
+  /* Two-Tier Borders */
+  --color-border: #251F3D;    /* Tier 1: Soft Structural Grid Line */
+  --color-border2: #4C3F7A;   /* Tier 2: High Contrast Divider / Inactive Focus */
+
+  /* Faction Accents */
+  --color-purple: #9D4EDD;       /* Proletariat/Socialist: Cyber Purple */
+  --color-purple-hover: #B577F2; /* Glowing Hover state */
+
+  --color-gold: #FFC300;         /* Bourgeoisie/Capitalist: Liquid Gold */
+  --color-gold-hover: #FFD447;   /* Brighter Metallic Gold state */
+
+  /* Trading Signals */
+  --color-green: #00F5A0;        /* Bull Green (Neon Mint) */
+  --color-green-hover: #33FFBC;  /* Light Emitting Green state */
+
+  --color-red: #FF3B69;          /* Bear Red (Electric Rose) */
+  --color-red-hover: #FF6687;    /* Saturated Hot Pink-Red state */
+
+  /* Intermediate Mid-tones to avoid muddy blends */
+  --color-magenta: #D81B60;
+  --color-orange: #FF8C00;
 }
 
-/* ── TRANSPARENCY PALETTE — hex+alpha, bright base colors ──────── #4d9fff;
-   Naming: --color-{hue}-a{opacity-as-2-digit-percent}
-   Base colors match dark-mode brand values; work correctly on
-   both light and dark card backgrounds (matching prior rgba usage).
+
+/* ── TRANSPARENCY PALETTE — color-mix, theme-aware ─────────────
+   Naming: --color-{hue}-{opacity}
+   15 = low (up to ~15%), 35 = medium (up to ~35%), 70 = high (up to ~70%)
    ──────────────────────────────────────────────────────────────── */
 :root {
-  /* gold (base #f5b800) */
-  --color-gold-a04: #f5b80009;  --color-gold-a05: #f5b8000d;
-  --color-gold-a08: #f5b80014;  --color-gold-a10: #f5b8001a;
-  --color-gold-a12: #f5b8001f;  --color-gold-a15: #f5b80026;
-  --color-gold-a18: #f5b8002e;  --color-gold-a20: #f5b80033;
-  --color-gold-a25: #f5b80040;  --color-gold-a30: #f5b8004d;
-  --color-gold-a40: #f5b80066;  --color-gold-a45: #f5b80073;
-  --color-gold-a50: #f5b80080;  --color-gold-a60: #f5b80099;
 
-  /* green (base #6bcb6e) */
-  --color-green-a05: #6bcb6e0d;  --color-green-a08: #6bcb6e14;
-  --color-green-a10: #6bcb6e1a;  --color-green-a12: #6bcb6e1f;
-  --color-green-a15: #6bcb6e26;  --color-green-a20: #6bcb6e33;
-  --color-green-a25: #6bcb6e40;  --color-green-a35: #6bcb6e59;
-  --color-green-a50: #6bcb6e80;  --color-green-a85: #6bcb6ed9;
+  --cyber-sunset: linear-gradient(90deg, var(--color-purple) 0%, var(--color-magenta) 45%, var(--color-orange) 75%, var(--color-gold) 100%);
+  --subtle-glow: linear-gradient(90deg, var(--color-purple-15) 0%, var(--color-magenta-15) 45%, var(--color-orange-15) 75%, var(--color-gold-15) 100%);
+  
+  /* Purple (Proletariat/Socialist) Transparencies */
+  --color-purple-15: color-mix(in srgb, var(--color-purple) 15%, transparent);
+  --color-purple-35: color-mix(in srgb, var(--color-purple) 35%, transparent);
+  --color-purple-70: color-mix(in srgb, var(--color-purple) 70%, transparent);
 
-  /* pink (base #ff3d8a) */
-  --color-pink-a03: #ff3d8a07;  --color-pink-a05: #ff3d8a0d;
-  --color-pink-a07: #ff3d8a12;  --color-pink-a08: #ff3d8a14;
-  --color-pink-a10: #ff3d8a1a;  --color-pink-a12: #ff3d8a1f;
-  --color-pink-a15: #ff3d8a26;  --color-pink-a20: #ff3d8a33;
-  --color-pink-a25: #ff3d8a40;  --color-pink-a35: #ff3d8a59;
-  --color-pink-a40: #ff3d8a66;  --color-pink-a50: #ff3d8a80;
+  /* Gold (Bourgeoisie/Capitalist) Transparencies */
+  --color-gold-15: color-mix(in srgb, var(--color-gold) 15%, transparent);
+  --color-gold-35: color-mix(in srgb, var(--color-gold) 35%, transparent);
+  --color-gold-70: color-mix(in srgb, var(--color-gold) 70%, transparent);
 
-  /* blue (base #4d9fff) */
-  --color-blue-a05: #4d9fff0d;  --color-blue-a07: #4d9fff12;
-  --color-blue-a10: #4d9fff1a;  --color-blue-a12: #4d9fff1f;
-  --color-blue-a20: #4d9fff33;  --color-blue-a25: #4d9fff40;
-  --color-blue-a40: #4d9fff66;  --color-blue-a50: #4d9fff80;
+  /* Bull Green Transparencies */
+  --color-green-15: color-mix(in srgb, var(--color-green) 15%, transparent);
+  --color-green-35: color-mix(in srgb, var(--color-green) 35%, transparent);
+  --color-green-70: color-mix(in srgb, var(--color-green) 70%, transparent);
 
-  /* neutral dark overlay */
-  --color-dark-a50: #2a252080;
-  --color-dark-a60: #2a252099;
-  --color-dark-a85: #0b0a09d9;
+  /* Bear Red Transparencies */
+  --color-red-15: color-mix(in srgb, var(--color-red) 15%, transparent);
+  --color-red-35: color-mix(in srgb, var(--color-red) 35%, transparent);
+  --color-red-70: color-mix(in srgb, var(--color-red) 70%, transparent);
+
+  /* Gradient Mid-tone Transparencies (dark-mode only; transparent in light) */
+  --color-magenta-15: color-mix(in srgb, var(--color-magenta) 15%, transparent);
+  --color-magenta-35: color-mix(in srgb, var(--color-magenta) 35%, transparent);
+  --color-magenta-70: color-mix(in srgb, var(--color-magenta) 70%, transparent);
+  --color-orange-15:  color-mix(in srgb, var(--color-orange)  15%, transparent);
+  --color-orange-35:  color-mix(in srgb, var(--color-orange)  35%, transparent);
+  --color-orange-70:  color-mix(in srgb, var(--color-orange)  70%, transparent);
 }
 
 /* ── BASE ──────────────────────────────────────────────────────── */
@@ -119,8 +131,8 @@ html, body {
 
 .dark body {
   background:
-    radial-gradient(1200px 600px at 80% -10%, var(--color-gold-a04), transparent 60%),
-    radial-gradient(900px 500px at -10% 120%, var(--color-pink-a03), transparent 60%),
+    radial-gradient(1200px 600px at 80% -10%, var(--color-gold-15), transparent 60%),
+    radial-gradient(900px 500px at -10% 120%, var(--color-purple-15), transparent 60%),
     var(--color-bg);
   min-height: 100vh;
 }
@@ -155,9 +167,9 @@ html, body {
   letter-spacing: 0.02em;
   text-transform: uppercase;
   cursor: pointer;
-  background: linear-gradient(180deg, var(--color-gold-soft), var(--color-gold));
+  background: linear-gradient(180deg, var(--color-gold-hover), var(--color-gold));
   color: #1a1305;
-  box-shadow: 0 8px 24px -10px var(--color-gold-a45);
+  box-shadow: 0 8px 24px -10px var(--color-gold-70);
   transition: filter 0.15s, transform 0.1s;
 }
 .btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
@@ -178,11 +190,13 @@ html, body {
   font-size: 15px;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  background: linear-gradient(180deg, var(--color-gold-soft), var(--color-gold));
+  background: linear-gradient(180deg, var(--color-gold-hover), var(--color-gold));
   color: #1a1305;
   opacity: 0.6;
   cursor: wait;
 }
+
+
 
 .btn-success {
   display: inline-flex;
@@ -199,81 +213,25 @@ html, body {
   letter-spacing: 0.02em;
   text-transform: uppercase;
   cursor: pointer;
-  background: linear-gradient(180deg, var(--color-green-a85), var(--color-green));
+  background: linear-gradient(180deg, var(--color-green-hover), var(--color-green));
   color: #0a1e0b;
-  box-shadow: 0 8px 24px -10px var(--color-green-a35);
+  box-shadow: 0 8px 24px -10px var(--color-green-35);
   transition: filter 0.15s, transform 0.1s;
 }
 .btn-success:hover:not(:disabled) { filter: brightness(1.08); }
 .btn-success:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.btn-danger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 14px 20px;
-  border-radius: 8px;
-  border: none;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  cursor: pointer;
-  background: linear-gradient(180deg, var(--color-pink-soft), var(--color-pink));
-  color: #1a0510;
-  box-shadow: 0 8px 24px -10px var(--color-pink-a35);
-  transition: filter 0.15s, transform 0.1s;
-}
-.btn-danger:hover:not(:disabled) { filter: brightness(1.08); }
-.btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 8px;
-  background: transparent;
-  border: 1px solid var(--color-border);
-  color: var(--color-text2);
-  font-family: var(--font-sans);
-  font-weight: 500;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.btn-secondary:hover { color: var(--color-text); border-color: var(--color-border-bright); }
-.btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.btn-three {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5px 10px;
-  border-radius: 6px;
-  background: var(--color-card2);
-  border: 1px solid var(--color-border);
-  color: var(--color-text2);
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.btn-three:hover { color: var(--color-text); border-color: var(--color-border-bright); }
+
 
 /* ================================================================
    CARD & LAYOUT
    ================================================================ */
 
 .card-app {
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: 5px;
+  border: 0px solid var(--color-border);
+  border-radius: 25px;
   padding: 24px;
 }
 
@@ -323,17 +281,6 @@ html, body {
 .h3-app { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text2); }
 .h4-app { font-family: var(--font-mono); font-size: 9px;  font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text2); }
 
-/* ── DISPLAY TEXT — breakpoint-stepped, replaces all clamp() ────── 
-.text-display-hero    { @apply text-5xl md:text-6xl lg:text-7xl; }
-.text-display-season  { @apply text-5xl lg:text-6xl xl:text-7xl; }
-.text-display-prize   { @apply text-4xl xl:text-7xl lg:text-5xl}
-.text-display-counter { @apply text-xl md:text-2xl xl:text-4xl; }
-.text-display-trading { @apply text-3xl md:text-4xl xl:text-5xl; }
-.text-display-swap    { @apply text-2xl xl:text-4xl; }
-.text-summary-value   { @apply text-base md:text-lg xl:text-2xl; }
-.text-input           { @apply text-2xl md:text-3xl xl:text-4xl; }
-.text-currency-label { @apply text-sm md:text-lg xl:text-xl; } */
-
 .text-display-hero    { @apply text-7xl}
 .text-display-season  { @apply text-5xl }
 .text-display-prize   { @apply text-4xl}
@@ -370,20 +317,20 @@ html, body {
   text-transform: uppercase;
 }
 .pill-live {
-  background: var(--color-green-a08);
+  background: var(--color-green-15);
   color: var(--color-green);
-  border: 1px solid var(--color-green-a25);
+  border: 1px solid var(--color-green-35);
 }
 .dark .pill-live {
-  background: var(--color-green-a08);
-  border-color: var(--color-green-a25);
+  background: var(--color-green-15);
+  border-color: var(--color-green-35);
 }
 .pill-live .pill-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--color-green);
-  box-shadow: 0 0 8px var(--color-green);
+  box-shadow: 0 0 8px var(--color-green-15);
   animation: pill-pulse 2s ease-in-out infinite;
 }
 @keyframes pill-pulse {
@@ -400,8 +347,9 @@ html, body {
   background: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: 10px;
-  padding: 3px;
+  padding: 2px;
   gap: 2px;
+  width: 100%;
 }
 
 .seg-btn {
@@ -416,17 +364,42 @@ html, body {
   border-radius: 7px;
   cursor: pointer;
   text-transform: uppercase;
-  transition: all 0.15s;
+  transition: all 0.15s ease;
   white-space: nowrap;
+  flex: 1;
+  text-align: center;
 }
-.seg-btn:hover { color: var(--color-text); }
-.seg-btn.active {
-  background: var(--color-card2);
+
+/* ── HOVER STATE (Only for unselected buttons) ── */
+.seg-btn:hover:not(:disabled):not(.active) {
+  background: var(--color-border);
   color: var(--color-text);
-  box-shadow: 0 1px 0 var(--color-border-bright);
 }
-.seg-btn.active-buy  { color: var(--color-green) !important; }
-.seg-btn.active-sell { color: var(--color-pink)  !important; }
+
+/* ── PRESS / ACTIVE STATE (When user clicks) ── */
+.seg-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* ── SELECTED / TOGGLED STATES ── */
+.seg-btn.buy.active {
+  background: var(--color-green);
+  color: #ffffff;
+}
+
+.seg-btn.sell.active {
+  background: var(--color-red);
+  color: #ffffff;
+}
+
+/* ── DISABLED STATES (Queue Locked) ── */
+.seg-btn:disabled {
+  cursor: not-allowed;
+}
+
+.seg-btn:disabled:not(.active) {
+  opacity: 0.3;
+}
 
 /* ================================================================
    CHIPS (quick-amount selectors)
@@ -444,15 +417,15 @@ html, body {
   cursor: pointer;
   transition: all 0.15s;
 }
-.chip:hover { color: var(--color-text); border-color: var(--color-border-bright); }
+.chip:hover { color: var(--color-text); border-color: var(--color-border2); }
 .chip.active {
   color: var(--color-gold);
-  border-color: var(--color-gold-a40);
-  background: var(--color-gold-a08);
+  border-color: var(--color-gold-35);
+  background: var(--color-gold-15);
 }
 .dark .chip.active {
-  border-color: var(--color-gold-a40);
-  background: var(--color-gold-a08);
+  border-color: var(--color-gold-35);
+  background: var(--color-gold-15);
 }
 
 /* ================================================================
@@ -469,7 +442,7 @@ html, body {
 .cd-num {
   font-family: var(--font-mono);
   font-weight: 600;
-  @apply text-base; /*lg:text-xl xl:text-[32px]*/
+  @apply text-base;
   line-height: 1;
   letter-spacing: -0.02em;
   color: var(--color-text);
@@ -513,11 +486,11 @@ html, body {
   justify-self: center;
   min-width: 44px;
 }
-.activity-row .ar-pill.buy  { background: var(--color-green-a10); color: var(--color-green); }
-.activity-row .ar-pill.sell { background: var(--color-pink-a10);  color: var(--color-pink);  }
+.activity-row .ar-pill.buy  { background: var(--color-green-15); color: var(--color-green); }
+.activity-row .ar-pill.sell { background: var(--color-red-15);   color: var(--color-red);   }
 .activity-row .ar-amt { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 .activity-row .ar-amt.positive { color: var(--color-green); }
-.activity-row .ar-amt.negative { color: var(--color-pink); }
+.activity-row .ar-amt.negative { color: var(--color-red); }
 
 /* ================================================================
    KV ROW — key / value pairs
@@ -541,10 +514,11 @@ html, body {
   font-variant-numeric: tabular-nums;
   font-size: 14px;
 }
-.kv-val.gold { color: var(--color-gold); }
-.kv-val.pink { color: var(--color-pink); }
-.kv-val.blue { color: var(--color-blue); }
+.kv-val.gold  { color: var(--color-gold); }
+.kv-val.cap   { color: var(--color-gold); }
+.kv-val.soc   { color: var(--color-purple); }
 .kv-val.green { color: var(--color-green); }
+.kv-val.red   { color: var(--color-red); }
 
 /* ================================================================
    DISTRIBUTION BARS
@@ -598,9 +572,10 @@ html, body {
   color: var(--color-text);
 }
 .stat-value.gold  { color: var(--color-gold); }
+.stat-value.cap   { color: var(--color-gold); }
+.stat-value.soc   { color: var(--color-purple); }
 .stat-value.green { color: var(--color-green); }
-.stat-value.pink  { color: var(--color-pink); }
-.stat-value.blue  { color: var(--color-blue); }
+.stat-value.red   { color: var(--color-red); }
 .stat-sub {
   font-family: var(--font-mono);
   font-size: 13px;
@@ -608,7 +583,7 @@ html, body {
   color: var(--color-text2);
   margin-left: 4px;
 }
-.stat-sub.pink { color: var(--color-pink); }
+.stat-sub.soc { color: var(--color-purple); }
 
 /* ================================================================
    GINI MARKER (on the gauge bar)
@@ -616,7 +591,7 @@ html, body {
 
 .gini-marker {
   position: absolute;
-  top: -9px; /* centers 24px faction dots on 6px track (−9 + 12 = 3 = track center) */
+  top: -9px;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
@@ -633,23 +608,23 @@ html, body {
   width: 28px;
   height: 28px;
   background: var(--color-gold);
-  box-shadow: 0 0 0 1px var(--color-gold), 0 0 5px var(--color-gold-a08);
+  box-shadow: 0 0 0 1px var(--color-gold), 0 0 5px var(--color-gold-15);
 }
-.gini-knob.pink {
-  background: var(--color-pink);
-  box-shadow: 0 0 0 1px var(--color-pink), 0 0 200px var(--color-pink-a05);
+.gini-knob.soc {
+  background: var(--color-purple);
+  box-shadow: 0 0 0 1px var(--color-purple), 0 0 200px var(--color-purple-15);
 }
-.gini-knob.blue {
-  background: var(--color-blue);
-  box-shadow: 0 0 0 1px var(--color-blue), 0 0 200px var(--color-blue-a05);
+.gini-knob.cap {
+  background: var(--color-gold);
+  box-shadow: 0 0 0 1px var(--color-gold), 0 0 200px var(--color-gold-15);
 }
 .gini-stem {
   width: 2px;
   height: 28px;
   opacity: 0.4;
 }
-.gini-stem.pink { background: var(--color-pink); }
-.gini-stem.blue { background: var(--color-blue); }
+.gini-stem.soc  { background: var(--color-purple); }
+.gini-stem.cap  { background: var(--color-gold); }
 .gini-stem.gold { background: var(--color-gold); }
 
 /* ================================================================
@@ -657,33 +632,34 @@ html, body {
    ================================================================ */
 
 /* SeasonPhasePills phase colors */
-.pill-phase-gold  { color: var(--color-gold);  border-color: var(--color-gold-a30);  background: var(--color-gold-a08); }
-.pill-phase-pink  { color: var(--color-pink);  border-color: var(--color-pink-a20);  background: var(--color-pink-a08); }
-.pill-phase-blue  { color: var(--color-blue);  border-color: var(--color-blue-a20);  background: var(--color-blue-a10); }
-.pill-phase-green { color: var(--color-green); border-color: var(--color-green-a20); background: var(--color-green-a10); }
+.pill-phase-gold  { color: var(--color-gold);   border-color: var(--color-gold-35);   background: var(--color-gold-15); }
+.pill-phase-soc   { color: var(--color-purple);  border-color: var(--color-purple-35); background: var(--color-purple-15); }
+.pill-phase-cap   { color: var(--color-gold);    border-color: var(--color-gold-35);   background: var(--color-gold-15); }
+.pill-phase-green { color: var(--color-green);   border-color: var(--color-green-35);  background: var(--color-green-15); }
+.pill-phase-red   { color: var(--color-red);     border-color: var(--color-red-35);    background: var(--color-red-15); }
 
 /* CountdownCard faction gradient backgrounds */
-.faction-bg-cap  { background: radial-gradient(400px 200px at 50% 100%, var(--color-blue-a07), transparent 60%), linear-gradient(180deg, var(--color-card2), var(--color-card)); }
-.faction-bg-soc  { background: radial-gradient(400px 200px at 50% 100%, var(--color-pink-a07), transparent 60%), linear-gradient(180deg, var(--color-card2), var(--color-card)); }
+.faction-bg-cap  { background: radial-gradient(400px 200px at 50% 100%, var(--color-gold-15),   transparent 60%), linear-gradient(180deg, var(--color-card2), var(--color-card)); }
+.faction-bg-soc  { background: radial-gradient(400px 200px at 50% 100%, var(--color-purple-15), transparent 60%), linear-gradient(180deg, var(--color-card2), var(--color-card)); }
 .faction-bg-none { background: radial-gradient(400px 200px at 50% 100%, #80808012, transparent 60%), linear-gradient(180deg, var(--color-card2), var(--color-card)); }
 
-/* OpenOrders buy/sell badges */
-.badge-buy  { background: var(--color-green-a12); color: var(--color-green); }
-.badge-sell { background: var(--color-pink-a12);  color: var(--color-pink); }
+/* Buy/Sell badges */
+.badge-buy  { background: var(--color-green-15); color: var(--color-green); }
+.badge-sell { background: var(--color-red-15);   color: var(--color-red); }
 
 /* FactionDiscussionBoard faction pills */
-.pill-faction-cap { background: var(--color-blue-a12); }
-.pill-faction-soc { background: var(--color-pink-a12); }
+.pill-faction-cap { background: var(--color-gold-15); }
+.pill-faction-soc { background: var(--color-purple-15); }
 
 /* AuctionMask / TradingMask warning surfaces */
-.surface-pink-warn { background: var(--color-pink-a07); border: 1px solid var(--color-pink-a20); }
-.surface-red-warn  { background: #ff54540d; border: 1px solid #ff545433; }
+.surface-pink-warn { background: var(--color-red-15); border: 1px solid var(--color-red-35); }
+.surface-red-warn  { background: var(--color-red-15); border: 1px solid var(--color-red-35); }
 
 /* WalletButton connected glow */
-.wallet-glow { box-shadow: 0 0 0 3px var(--color-green-a15); }
+.wallet-glow { box-shadow: 0 0 0 3px var(--color-green-15); }
 
 /* PlayerProfile avatar glow */
-.avatar-gold-glow { box-shadow: 0 0 16px var(--color-gold-a20); }
+.avatar-gold-glow { box-shadow: 0 0 16px var(--color-gold-35); }
 
 /* ================================================================
    CUSTOM SCROLLBAR
@@ -691,7 +667,7 @@ html, body {
 
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-muted2) var(--color-card2);
+  scrollbar-color: var(--color-text2) var(--color-card2);
 }
 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -699,7 +675,7 @@ html, body {
   border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--color-muted2);
+  background: var(--color-text2);
   border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
@@ -740,3 +716,333 @@ html, body {
 .prose th, .prose td { @apply border border-card p-4 align-top; }
 .prose th { @apply bg-card text-text font-semibold; }
 .prose tr:nth-child(2n) { @apply bg-card/50; }
+
+
+
+
+.btn-game-primary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.75rem;
+  font-family: var(--font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  
+  /* Hardcoded white guarantees a flawless contrast rating across dark and light variants */
+  color: #FFFFFF; 
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  
+  /* References our responsive theme variables */
+  background: var(--cyber-sunset);
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  
+  /* Ambient glowing drop shadow that matches the mode context */
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-purple) 35%, transparent);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-game-primary:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.12) saturate(1.05); /* Amplifies the underlying mode color mix */
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--color-magenta) 45%, transparent);
+}
+
+.btn-game-primary:active {
+  transform: translateY(1px);
+  filter: brightness(0.95);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-purple) 25%, transparent);
+}
+
+
+/* --- THE UNIVERSAL SECONDARY BUTTON ---
+   Adapts from a deep neon glass treatment to a premium frosted slate label */
+.btn-game-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.75rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  
+  /* Inherits structural layout definitions beautifully */
+  color: var(--color-text);
+  background-color: var(--color-card2); 
+  border: 1px solid var(--color-border2);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  
+  /* Soft, neutral shadow to ground it in light mode without muddying dark mode */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-game-secondary:hover {
+  background-color: var(--color-card3); 
+  border-color: var(--color-purple);    /* Fires up the regional focus glow */
+  box-shadow: 0 0 12px var(--color-purple-15);
+}
+
+.btn-game-secondary:active {
+  transform: scale(0.98);
+}
+
+
+
+
+.landing-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
+  border-radius: 1rem;
+  
+  /* System layout mapping */
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  
+  /* Smooth transition for every changing property */
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), 
+              border-color 0.3s ease, 
+              box-shadow 0.3s ease;
+  overflow: hidden;
+}
+
+/* Structural internal badge layout */
+.landing-card-badge {
+  align-self: flex-start;
+  padding: 0.25rem 0.75rem;
+  border-radius: 2rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  background-color: var(--color-gold-15);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 30%, transparent);
+  margin-bottom: 1.5rem;
+}
+
+/* Heading Typography treatment (Exo 2) */
+.landing-card-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--color-text);
+  margin-bottom: 0.75rem;
+  line-height: 1.2;
+}
+
+/* Body Text treatment */
+.landing-card-description {
+  font-family: var(--font-display); /* Using natural sans-serif flow for copy reading */
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--color-text2);
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+/* Live Terminal Stat Footer (JetBrains Mono) */
+.landing-card-footer {
+  margin-top: auto;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--color-text2);
+}
+
+.landing-card-stat-highlight {
+  color: var(--color-green);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   INTERACTIVE HOVER STATES (UNIVERSAL FOR BOTH MODES)
+   ========================================================================= */
+.landing-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--color-purple);
+  
+  /* Creates a combined deep base drop shadow and an ambient faction color glow */
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15), 
+              0 0 20px var(--color-purple-15);
+}
+
+/* Ambient gradient backdrop ring that fades in cleanly behind the card contents on hover */
+.landing-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--subtle-glow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 0;
+}
+
+.landing-card:hover::before {
+  opacity: 1; /* Turns on the ambient background watercolor gradient mist */
+}
+
+/* Ensures content stays floating beautifully stacked above the backdrop pseudolayer */
+.landing-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+
+
+.shadow-casino-banner {
+  box-shadow: var(--shadow-casino-banner, 0 10px 30px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3));
+}
+
+
+
+/* ==========================================================================
+   LANDING PAGE HERO HEADER
+   ========================================================================= */
+.hero-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 8rem 1.5rem 6rem 1.5rem;
+  max-width: 64rem;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+/* The massive primary display title (Exo 2) */
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 6vw, 4.5rem); /* Dynamically scales text fluidly on mobile vs desktop */
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--color-text);
+  margin-bottom: 1.5rem;
+}
+
+/* The high-energy gradient text wrapper */
+.hero-gradient-text {
+  /* Fix 1: Ensure background rendering context is locked */
+  display: inline-block; 
+  
+  /* Fix 2: Provide a robust fallback solid color in case clip breaks */
+  color: var(--color-gold); 
+  
+  /* Fix 3: Explicitly pull the background gradient variable */
+  background-image: var(--background-cyber-sunset) !important;
+  
+  /* Fix 4: Double-down on webkit text masking protocols */
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  
+  /* Optional: Protect readability in light mode */
+  filter: drop-shadow(0px 2px 8px color-mix(in srgb, var(--color-purple) 20%, transparent));
+}
+
+/* Explanatory subtitle copy */
+.hero-subtitle {
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  font-weight: 400;
+  color: var(--color-text2);
+  max-width: 42rem;
+  line-height: 1.6;
+  margin-bottom: 3rem;
+}
+
+/* Action block spacing container */
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  z-index: 10;
+}
+
+/* ==========================================================================
+   AMBIENT AMBIENT LIGHT LAYER (BACKGROUND GLOW)
+   ========================================================================= */
+.hero-blur-backdrop {
+  position: absolute;
+  top: -10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 45rem;
+  height: 25rem;
+  background: var(--background-subtle-glow);
+  filter: blur(80px);
+  border-radius: 50%;
+  opacity: 0.85;
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 0.3s ease;
+}
+
+
+.terminal-selector-track {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem;
+  background-color: var(--color-card); /* Flushes smoothly with layout backgrounds */
+  border: 1px solid var(--color-border); /* Tier 1 Structural border */
+  border-radius: 0.5rem;
+  gap: 0.25rem;
+}
+
+/* Individual Selector Buttons */
+.terminal-selector-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text2); /* Default muted label state */
+  background: transparent;
+  border: 1px solid transparent; /* Prevents layout shifting when active state changes */
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+/* Soft hover treatment for unselected options */
+.terminal-selector-btn:hover:not(.active) {
+  color: var(--color-text);
+  background-color: var(--color-card2);
+}
+
+/* ==========================================================================
+   THE ACTIVE SELECTED STATE (DYNAMIC HIGHLIGHT)
+   ========================================================================= */
+.terminal-selector-btn.active {
+  color: var(--color-text);
+  background-color: var(--color-card3); /* Lifts up visually from the track */
+  border-color: var(--color-border2);    /* Tier 2 high-contrast border definition */
+  
+  /* Micro neon bottom edge underscore */
+  box-shadow: inset 0 -2px 0 0 var(--color-purple);
+}

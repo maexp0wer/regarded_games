@@ -4,25 +4,23 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { FactionDiscussionBoard } from './FactionDiscussionBoard';
 
-const BTN_BASE = 'rounded-lg flex items-center justify-center font-mono font-semibold uppercase tracking-widest transition-all px-3';
-const BTN_H = 28;
-const BTN_FONT = 11;
-
 function TabBtn({ label, active, onClick, className = '', activeBg, activeBorder }: { label: string; active: boolean; onClick: () => void; className?: string; activeBg?: string; activeBorder?: string }) {
-  const defaultActiveBg = activeBg || 'var(--color-gold-a10)';
-  const defaultActiveBorder = activeBorder || 'var(--color-gold-a25)';
+  const defaultActiveBg = activeBg || 'var(--color-gold-15)';
+  const defaultActiveBorder = activeBorder || 'var(--color-gold-35)';
 
   return (
     <button
       onClick={onClick}
-      className={`${BTN_BASE} ${className}`}
+      className={`rounded-md flex px-2.5 py-1 items-center justify-center font-mono text-[10px] font-semibold uppercase tracking-widest transition-all border text-text2 ${
+        active ? '' : 'bg-card2 border-border hover:bg-card'
+      } ${className}`}
       style={{
-        fontSize: BTN_FONT,
+        fontSize: 11,
         letterSpacing: '0.1em',
-        height: BTN_H,
-        color: active ? 'var(--color-text)' : 'var(--color-text2)',
-        background: active ? defaultActiveBg : 'var(--color-card2)',
-        border: `1px solid ${active ? defaultActiveBorder : 'var(--color-border)'}`,
+        ...(active && {
+          background: defaultActiveBg,
+          borderColor: defaultActiveBorder,
+        }),
       }}
     >
       {label}
@@ -67,12 +65,22 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
   const messageListRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isAtBottom = useRef(true);
+  const tabCache = useRef<Partial<Record<'faction' | 'general', { channelId: number | null; messages: DiscourseMessage[] }>>>({});
 
-  const factionColor = auctionMode ? 'var(--color-primary)' : isCapitalist ? 'var(--color-blue)' : 'var(--color-pink)';
-  const factionLabel = isCapitalist ? 'THE BOURGEOISIE' : 'THE PROLETARIAT';
+  const factionColor = auctionMode ? 'var(--color-gold-70)' : isCapitalist ? 'var(--color-gold-70)' : 'var(--color-purple-70)';
+  const factionLabel = isCapitalist ? 'BOURGEOISIE' : 'PROLETARIAT';
 
   // Discover channel + fetch initial messages in one shot to avoid intermediate empty states
   useEffect(() => {
+    const cached = tabCache.current[tab];
+    if (cached) {
+      setChannelId(cached.channelId);
+      setMessages(cached.messages);
+      setConnected(cached.messages.length > 0);
+      setDiscovering(false);
+      return;
+    }
+
     async function discover() {
       setDiscovering(true);
       setConnected(false);
@@ -96,6 +104,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
         }
 
         // Update both at once so the render sees a consistent state
+        tabCache.current[tab] = { channelId: newChannelId, messages: newMessages };
         setChannelId(newChannelId);
         setMessages(newMessages);
       } catch (e) {
@@ -117,13 +126,14 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
       const data = await res.json();
       if (Array.isArray(data.messages)) {
         setMessages(data.messages);
+        tabCache.current[tab] = { channelId, messages: data.messages };
         setConnected(true);
       }
     } catch (e) {
       console.error('Message fetch failed', e);
       setConnected(false);
     }
-  }, [channelId]);
+  }, [channelId, tab]);
 
   // Poll every 4 seconds (skip the immediate call — discover already fetched initial messages)
   useEffect(() => {
@@ -200,92 +210,68 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
     setTab(next);
     setSendError(null);
     setInput('');
-    setMessages([]);
-    setChannelId(null);
-    setDiscovering(true);
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
   }
 
   const dotColor = connected ? 'var(--color-green)' : 'var(--color-red)';
 
   return (
-    <div className="flex flex-col h-full gap-1">
-      {/* Floating tab buttons — sit above the card, not part of it */}
-      {!auctionMode && (
-        <div className="flex gap-1 w-full shrink-0">
-          <TabBtn
-            label={factionLabel}
-            active={tab === 'faction'}
-            onClick={() => switchTab('faction')}
-            className="flex-1"
-            activeBg={isCapitalist ? 'var(--color-blue-a10)' : 'var(--color-pink-a10)'}
-            activeBorder={isCapitalist ? 'var(--color-blue-a25)' : 'var(--color-pink-a25)'}
-          />
-          <TabBtn
-            label="All Players"
-            active={tab === 'general'}
-            onClick={() => switchTab('general')}
-            className="flex-1"
-            activeBg="var(--color-green-a10)"
-            activeBorder="var(--color-green-a25)"
-          />
-          {/* Right side: board toggle + live dot */}
-          <div className="flex items-center gap-2 ml-auto">
-            {onToggleBoard && (
-              <button
-                onClick={onToggleBoard}
-                aria-label="Toggle discussion board"
-                className="flex items-center justify-center w-6 h-6 rounded-lg transition-all shrink-0"
-                style={{
-                  background: showBoard ? factionColor : 'var(--color-card2)',
-                  color: showBoard ? '#fff' : 'var(--color-text2)',
-                  border: `1px solid ${showBoard ? factionColor : 'transparent'}`,
-                }}
-                onMouseEnter={(e) => {
-                  if (!showBoard) {
-                    e.currentTarget.style.borderColor = factionColor;
-                    e.currentTarget.style.color = factionColor;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!showBoard) {
-                    e.currentTarget.style.borderColor = 'transparent';
-                    e.currentTarget.style.color = 'var(--color-text2)';
-                  }
-                }}
-              >
-                {/* Forum/list icon */}
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="8" y1="6" x2="21" y2="6" />
-                  <line x1="8" y1="12" x2="21" y2="12" />
-                  <line x1="8" y1="18" x2="21" y2="18" />
-                  <line x1="3" y1="6" x2="3.01" y2="6" />
-                  <line x1="3" y1="12" x2="3.01" y2="12" />
-                  <line x1="3" y1="18" x2="3.01" y2="18" />
-                </svg>
-              </button>
-            )}
-            <span className="relative flex h-2 w-2 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: dotColor }} />
-              <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: dotColor }} />
-            </span>
-          </div>
-        </div>
-      )}
-
+    <div className="flex flex-col h-full">
       {/* Main card container */}
-      <div
-        className="flex flex-col h-full flex-1 min-h-0 overflow-hidden card-app"
-        style={{
-          background: 'var(--color-card)',
-        }}
-      >
+      <div className="flex flex-col h-full flex-1 overflow-hidden card-app bg-card">
+        {/* Tab buttons header — part of the card */}
+        {!auctionMode && (
+          <div className="flex items-center justify-between pb-2 shrink-0 border-b border-border">
+            <div className="flex items-center gap-1">
+              <TabBtn
+                label={factionLabel}
+                active={tab === 'faction'}
+                onClick={() => switchTab('faction')}
+                activeBg={isCapitalist ? 'var(--color-gold-15)' : 'var(--color-purple-15)'}
+                activeBorder={isCapitalist ? 'var(--color-gold-35)' : 'var(--color-purple-35)'}
+              />
+              <TabBtn
+                label="All Players"
+                active={tab === 'general'}
+                onClick={() => switchTab('general')}
+                activeBg="var(--color-green-15)"
+                activeBorder="var(--color-green-35)"
+              />
+            </div>
+            {/* Right side: board toggle + live dot */}
+            <div className="flex items-center gap-2">
+              {onToggleBoard && (
+                <button
+                  onClick={onToggleBoard}
+                  aria-label="Toggle discussion board"
+                  className={`rounded-md flex p-1.5 items-center justify-center transition-all shrink-0 border text-text2 ${
+                    showBoard ? '' : 'bg-card2 border-border hover:bg-card'
+                  }`}
+                  style={showBoard ? { background: factionColor, borderColor: factionColor, color: '#fff' } : undefined}
+                >
+                  {/* Forum/list icon */}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6" />
+                    <line x1="8" y1="12" x2="21" y2="12" />
+                    <line x1="8" y1="18" x2="21" y2="18" />
+                    <line x1="3" y1="6" x2="3.01" y2="6" />
+                    <line x1="3" y1="12" x2="3.01" y2="12" />
+                    <line x1="3" y1="18" x2="3.01" y2="18" />
+                  </svg>
+                </button>
+              )}
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: dotColor }} />
+                <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: dotColor }} />
+              </span>
+            </div>
+          </div>
+        )}
         {/* Auction mode header */}
         {auctionMode && (
           <div className="flex items-center justify-between shrink-0 px-4 py-2">
             <span
-              className="font-display font-extrabold uppercase tracking-tight text-[11px] section-label"
-              style={{ color: 'var(--color-text2)' }}
+              className="font-display font-extrabold uppercase tracking-tight text-[11px] section-label text-text2"
             >
               Chat
             </span>
@@ -315,7 +301,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
           className={`flex-1 overflow-y-auto custom-scrollbar pl-1 py-2 flex flex-col gap-1 ${!auctionMode && showBoard ? 'hidden lg:flex' : ''}`}
         >
           {discovering && messages.length === 0 ? (
-            <p className="section-label animate-pulse text-center mt-8">Establishing Secure Connection…</p>
+            <p className="section-label animate-pulse text-center mt-8">Connecting…</p>
           ) : !channelId && !discovering ? (
             <p className="font-mono text-[9px] text-center mt-8" style={{ color: 'var(--color-red)' }}>
               Comms Offline · Channel not found
@@ -336,7 +322,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
                   <div
                     className="px-3 py-1.5 text-xs max-w-[85%] wrap-break-word"
                     style={{
-                      background: isOwn ? (tab === 'general' ? 'var(--color-green)' : factionColor) : 'var(--color-card2)',
+                      background: isOwn ? (tab === 'general' ? 'var(--color-green-70)' : factionColor) : 'var(--color-card3)',
                       color: isOwn ? '#fff' : 'var(--color-text)',
                       borderRadius: isOwn ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
                     }}
@@ -357,14 +343,13 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
         )}
         {channelId && (
           <div
-            className={`shrink-0 flex items-end gap-2 px-2 pb-2 ${!auctionMode && showBoard ? 'hidden lg:flex' : ''}`}
-            style={{ borderTop: '1px solid var(--color-border)', paddingTop: '8px' }}
+            className={`shrink-0 flex items-end gap-2 px-2 pb-2 pt-2 border-t border-border ${!auctionMode && showBoard ? 'hidden lg:flex' : ''}`}
           >
             <textarea
               ref={textareaRef}
               rows={1}
-              className="flex-1 font-mono text-xs outline-none placeholder:text-text2 resize-none overflow-y-auto custom-scrollbar rounded-xl px-3 py-2 leading-relaxed"
-              style={{ background: 'var(--color-bg)', color: 'var(--color-text)', maxHeight: '8rem' }}
+              className="flex-1 font-mono text-xs outline-none placeholder:text-text2 resize-none overflow-y-auto custom-scrollbar rounded-xl px-3 py-2 leading-relaxed bg-bg text-text"
+              style={{ maxHeight: '8rem' }}
               placeholder={address ? 'Chat…' : 'Connect wallet to chat'}
               value={input}
               onChange={onInputChange}

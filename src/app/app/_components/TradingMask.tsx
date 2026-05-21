@@ -196,26 +196,26 @@ export function TradingMask({
 
   if (isOnHold) {
     return (
-      <div className="card-app flex flex-col gap-5 h-full" style={{ borderColor: 'var(--color-border-bright)' }}>
-        <div>
+      <div className="flex flex-col gap-4 h-full">
+        <div className="card-app border border-border2">
           <p className="section-label mb-1">FIM Balance</p>
           <div
-            className="font-display font-extrabold leading-none text-display-trading"
-            style={{ color: 'var(--color-gold)', textShadow: '0 0 40px var(--color-gold-a25)', fontVariantNumeric: 'tabular-nums' }}
+            className="font-display font-extrabold leading-none text-display-trading tabular-nums"
+            style={{ color: 'var(--color-gold)', textShadow: '0 0 40px var(--color-gold-35)' }}
           >
             {Number(formatUnits(fimBalance || 0n, 18)).toLocaleString()}
             <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
           </div>
         </div>
-        <div className="rounded-xl px-4 py-3 text-center" style={{ background: 'var(--color-card2)', border: '1px solid var(--color-border)' }}>
+        <div className="card-app text-center border border-border2">
           <p className="section-label">Season on Hold</p>
         </div>
       </div>
     );
   }
 
-  const buyActive  = { background: 'var(--color-green-a15)', color: 'var(--color-green)', boxShadow: '0 1px 4px #00000033' };
-  const sellActive = { background: 'var(--color-pink-a15)',  color: 'var(--color-pink)',  boxShadow: '0 1px 4px #00000033' };
+  const buyActive  = { background: 'var(--color-green-15)', color: 'var(--color-green)', boxShadow: '0 1px 4px #00000033' };
+  const sellActive = { background: 'var(--color-red-15)',   color: 'var(--color-red)',   boxShadow: '0 1px 4px #00000033' };
   const segInactive = { color: 'var(--color-text2)', background: 'transparent' };
 
   const ctaBtnStyle = isBusy || workflowStatus !== 'idle'
@@ -223,23 +223,22 @@ export function TradingMask({
     : isButtonDisabled
     ? { background: 'var(--color-card2)', color: 'var(--color-text2)', cursor: 'not-allowed' }
     : isBuy
-    ? { background: 'linear-gradient(135deg, #6bcb6e, #4daa50)', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-green-a50)' }
-    : { background: 'linear-gradient(135deg, #ff7ab0, #ff3d8a)', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-pink-a50)' };
+    ? { background: 'linear-gradient(135deg, var(--color-green-hover), var(--color-green))', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-green-70)' }
+    : { background: 'linear-gradient(135deg, var(--color-red-hover), var(--color-red))', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-red-70)' };
 
   return (
-    <div
-      className="card-app flex flex-col gap-4 h-full"
-      style={{ borderColor: 'var(--color-border-bright)' }}
-    >
-      {/* ── Wallet balances row ── */}
-      <div className="flex items-start justify-between">
+    <div className="flex flex-col gap-5 h-full">
+      {/* ── Wallet balances card ── */}
+      <div
+        className="p-6 rounded-3xl flex items-start justify-between bg-linear-to-b from-(--color-gold-15) to-card to-10% border border-border2"
+      >
         <div>
           <p className="section-label mb-1">FIM Balance</p>
           <div
             className="font-display font-extrabold leading-none text-display-trading mr-4"
             style={{
               color: 'var(--color-gold)',
-              textShadow: '0 0 40px var(--color-gold-a25)',
+              textShadow: '0 0 40px var(--color-gold-35)',
               fontVariantNumeric: 'tabular-nums',
             }}
           >
@@ -251,11 +250,10 @@ export function TradingMask({
           <div className="flex flex-col items-start min-w-0">
             <span className="section-label mb-1">
               RANK:
-              <span style={{ color: userStats.isCapitalist ? 'var(--color-blue)' : 'var(--color-pink)' }}>
+              <span style={{ color: userStats.isCapitalist ? 'var(--color-gold)' : 'var(--color-purple)' }}>
                 {userStats.isCapitalist ? 'CAPITALIST' : 'SOCIALIST'}
               </span>
             </span>
-            
             <div className="xl:hidden"><PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="md" /></div>
             <div className="hidden xl:block"><PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="lg" /></div>
           </div>
@@ -264,25 +262,50 @@ export function TradingMask({
         )}
       </div>
 
-      {/* ── Buy / Sell seg control ── */}
-      <div className="seg" style={{ width: '100%' }}>
-        <button
-          disabled={isQueueLocked}
-          onClick={() => setIsBuy(true)}
-          className="seg-btn"
-          style={{ ...(isBuy ? buyActive : (isQueueLocked && !isBuy) ? { ...segInactive, opacity: 0.3 } : segInactive), flex: 1, textAlign: 'center' }}
-        >
-          Buy
-        </button>
-        <button
-          disabled={isQueueLocked}
-          onClick={() => setIsBuy(false)}
-          className="seg-btn"
-          style={{ ...(!isBuy ? sellActive : (isQueueLocked && isBuy) ? { ...segInactive, opacity: 0.3 } : segInactive), flex: 1, textAlign: 'center' }}
-        >
-          Sell
-        </button>
-      </div>
+      {/* ── Trading panel card ── */}
+      <div
+        className="rounded-4xl p-6 flex flex-col gap-4 flex-1 min-h-0 bg-card"
+        style={{ borderColor: 'var(--color-border)' }}
+      >
+
+        {/* ── Buy / Sell seg control ── */}
+        <div className="flex w-full bg-card2 border border-border rounded-[10px] gap-2">
+          
+          {/* BUY BUTTON */}
+          <button
+            disabled={isQueueLocked}
+            onClick={() => setIsBuy(true)}
+            className={`
+              flex-1 text-center font-mono text-[11px] font-semibold tracking-wider 
+              py-1.5 rounded-[7px] uppercase transition-all whitespace-nowrap
+              disabled:pointer-events-auto disabled:cursor-not-allowed
+              ${isBuy 
+                ? 'bg-(--color-green-35) text-text border border-(--color-green-70)'
+                : 'text-text2 hover:text-text border-transparent hover:bg-[var(--color-border)]'
+              }
+            `}
+          >
+            Buy
+          </button>
+
+          {/* SELL BUTTON */}
+          <button
+            disabled={isQueueLocked}
+            onClick={() => setIsBuy(false)}
+            className={`
+              flex-1 text-center font-mono text-[11px] font-semibold tracking-wider 
+              py-1.5 rounded-[7px] uppercase transition-all whitespace-nowrap
+              disabled:pointer-events-auto disabled:cursor-not-allowed
+              ${!isBuy 
+                ? 'bg-(--color-red-35) text-text border-(--color-red-70) border'
+                : 'text-text2 hover:text-text border-transparent hover:bg-[var(--color-border)]'
+              }
+            `}
+          >
+            Sell
+          </button>
+
+        </div>
 
       {/* ── Amount input ── */}
       <div
@@ -292,7 +315,7 @@ export function TradingMask({
         {/* Input area */}
         <div className="flex flex-col flex-1 p-4 gap-2">
           <div className="flex items-center justify-between">
-            <span className="mask-label">{isBuy ? 'Buy FIM with USDC' : 'Sell FIM for USDC'}</span>
+            <span className="mask-label">{isBuy ? 'Buy FIM' : 'Sell FIM'}</span>
             <span className="ml-2 mask-label">
               WALLET<span className="text-text font-semibold">{walletBalanceDisplay}</span>
             </span>
@@ -314,11 +337,15 @@ export function TradingMask({
               <button
                 key={mode}
                 onClick={() => setIsMaker(mode === 'Maker')}
-                className="flex-1 font-mono font-semibold uppercase flex items-center justify-center transition-all text-toggle-label"
+                className={`
+                  flex-1 font-mono font-semibold uppercase flex items-center justify-center transition-all text-toggle-label
+                  ${active 
+                    ? 'bg-[var(--color-gold)] text-[var(--color-bg)]' 
+                    : 'bg-[var(--color-card2)] text-[var(--color-text2)] hover:bg-[var(--color-border)]'
+                  }
+                `}
                 style={{
                   letterSpacing: '0.07em',
-                  background: active ? 'var(--color-gold)' : 'transparent',
-                  color: active ? 'var(--color-gold-pale)' : 'var(--color-text2)',
                   borderBottom: i === 0 ? '1px solid var(--color-border)' : undefined,
                 }}
               >
@@ -355,14 +382,17 @@ export function TradingMask({
                 <button
                   key={mode}
                   onClick={() => handlePriceModeSwitch(mode)}
-                  className="flex-1 font-mono font-semibold uppercase flex items-center justify-center transition-all text-center text-toggle-label"
-                  style={{
-                    letterSpacing: '0.07em',
-                    background: active ? 'var(--color-gold)' : 'transparent',
-                    color: active ? 'var(--color-gold-pale)' : 'var(--color-text2)',
-                    borderBottom: i === 0 ? '1px solid var(--color-border)' : undefined,
-                    padding: '0 4px', lineHeight: 1.3,
-                  }}
+                  className={`
+                  flex-1 font-mono font-semibold uppercase flex items-center justify-center transition-all text-toggle-label
+                  ${active 
+                    ? 'bg-[var(--color-gold)] text-[var(--color-bg)]' 
+                    : 'bg-[var(--color-card2)] text-[var(--color-text2)] hover:bg-[var(--color-border)]'
+                  }
+                `}
+                style={{
+                  letterSpacing: '0.07em',
+                  borderBottom: i === 0 ? '1px solid var(--color-border)' : undefined,
+                }}
                 >
                   {mode}
                 </button>
@@ -377,8 +407,8 @@ export function TradingMask({
         <div className="flex flex-col flex-1 min-h-0">
           <p className="section-label mb-2">Order Execution Queue</p>
           <div
-            className="flex-1 overflow-y-auto custom-scrollbar rounded-xl p-2 space-y-2"
-            style={{ background: 'var(--color-card2)', border: '1px solid var(--color-border)' }}
+            className="flex-1 overflow-y-auto custom-scrollbar rounded-xl p-2 space-y-2 border border-border bg-bg"
+            
           >
             {groupedQueue.length === 0 ? (
               <div className="h-full flex items-center justify-center py-10">
@@ -425,7 +455,7 @@ export function TradingMask({
               <span
                 className="font-mono font-bold text-summary-sub"
                 style={{
-                  color: isBuy ? 'var(--color-green)' : 'var(--color-pink)',
+                  color: isBuy ? 'var(--color-green)' : 'var(--color-red)',
                   fontVariantNumeric: 'tabular-nums',
                 }}
               >
@@ -439,7 +469,7 @@ export function TradingMask({
           <div
             className="rounded-xl px-4 py-2.5 flex items-center gap-2 surface-pink-warn"
           >
-            <span className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-pink)' }}>
+            <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-red">
               Cannot fill own order
             </span>
           </div>
@@ -451,7 +481,7 @@ export function TradingMask({
               className="absolute inset-y-0 left-0 transition-all duration-500"
               style={{
                 width: `${['approving', 'mining_approval', 'executing', 'mining_execute', 'success'].indexOf(workflowStatus) * 25}%`,
-                background: workflowStatus === 'success' ? 'var(--color-green)' : 'rgba(245,184,0,0.3)',
+                background: workflowStatus === 'success' ? 'var(--color-green)' : 'var(--color-gold-35)',
               }}
             />
           )}
@@ -465,6 +495,8 @@ export function TradingMask({
             {getStatusText()}
           </button>
         </div>
+      </div>
+
       </div>
     </div>
   );

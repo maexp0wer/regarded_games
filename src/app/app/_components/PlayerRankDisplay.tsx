@@ -27,7 +27,7 @@ const PlayerRankDisplay: React.FC<PlayerRankDisplayProps> = ({ seasonAddress, us
 
   if (percentileData) {
     factionName = percentileData.isCapitalist ? 'Bourgeoisie' : 'Proletariat';
-    factionColor = percentileData.isCapitalist ? 'var(--color-blue)' : 'var(--color-pink)';
+    factionColor = percentileData.isCapitalist ? 'var(--color-gold)' : 'var(--color-purple)';
     if (percentileData.isCapitalist) {
       displayFactionPercent = percentileData.factionPercentile;
       pointerPos = 50 + (percentileData.factionPercentile / 2);
@@ -39,11 +39,11 @@ const PlayerRankDisplay: React.FC<PlayerRankDisplayProps> = ({ seasonAddress, us
 
   if (loading) {
     return (
-      <div className="card-app flex flex-col gap-6" style={{ borderColor: 'var(--color-border-bright)' }}>
+      <div className="card-app flex flex-col gap-6 border border-border2">
         {[1, 2, 3].map(i => (
           <div key={i} className="space-y-2">
-            <div className="h-3 w-24 rounded animate-pulse" style={{ background: 'var(--color-border)' }} />
-            <div className="h-2 w-full rounded-full animate-pulse" style={{ background: 'var(--color-border)' }} />
+            <div className="h-3 w-24 rounded animate-pulse bg-border" />
+            <div className="h-2 w-full rounded-full animate-pulse bg-border" />
           </div>
         ))}
       </div>
@@ -59,29 +59,23 @@ const PlayerRankDisplay: React.FC<PlayerRankDisplayProps> = ({ seasonAddress, us
   };
 
   return (
-    <div
-      className="card-app flex flex-col gap-8 pb-10"
-      style={{ borderColor: 'var(--color-border-bright)' }}
-    >
-      <p
-        className="section-label pb-3"
-        style={{ borderBottom: '1px solid var(--color-border)' }}
-      >
+    <div className="card-app flex flex-col gap-8 pb-10 border border-border2">
+      <p className="section-label pb-3 border-b border-border">
         Your Season Stats
       </p>
 
-      {/* 1. Faction bar (pink → blue) */}
+      {/* 1. Faction bar (purple → gold) */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-pink)' }}>Proletariat</span>
-          <span className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-blue)' }}>Bourgeoisie</span>
+          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-purple">Proletariat</span>
+          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-gold">Bourgeoisie</span>
         </div>
-        <div className="relative rounded-full overflow-visible" style={{ height: 6, background: 'var(--color-card2)' }}>
+        <div className="relative rounded-full overflow-visible h-1.5 bg-card2">
           <div
-            className="absolute inset-0 rounded-full overflow-hidden"
-            style={{ background: 'linear-gradient(90deg, var(--color-pink), var(--color-blue))', opacity: 0.7 }}
+            className="absolute inset-0 rounded-full overflow-hidden opacity-70"
+            style={{ background: 'linear-gradient(90deg, var(--color-purple), var(--color-gold))' }}
           />
-          <div className="absolute top-0 bottom-0 left-1/2 w-px opacity-40" style={{ background: 'white' }} />
+          <div className="absolute top-0 bottom-0 left-1/2 w-px opacity-40 bg-white" />
           <div
             className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 transition-all duration-1000"
             style={{ left: `${pointerPos}%` }}
@@ -100,17 +94,17 @@ const PlayerRankDisplay: React.FC<PlayerRankDisplayProps> = ({ seasonAddress, us
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="section-label">Absolute PnL Rank</span>
-          <span className="font-mono text-[12px] font-bold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+          <span className="font-mono text-[12px] font-bold text-text tabular-nums">
             #{rank} <span className="text-text2 font-normal">of {totalPlayers}</span>
           </span>
         </div>
-        <div className="relative rounded-full overflow-visible" style={{ height: 6, background: 'var(--color-card2)' }}>
+        <div className="relative rounded-full overflow-visible h-1.5 bg-card2">
           <div className="absolute inset-0 rounded-full overflow-hidden">
             <div
               className="absolute inset-y-0 left-0 transition-all duration-700"
               style={{
                 width: `${100 - totalPercent}%`,
-                background: 'linear-gradient(90deg, var(--color-gold-a40), var(--color-gold))',
+                background: 'linear-gradient(90deg, var(--color-gold-35), var(--color-gold))',
               }}
             />
           </div>
@@ -118,9 +112,9 @@ const PlayerRankDisplay: React.FC<PlayerRankDisplayProps> = ({ seasonAddress, us
             className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 transition-all duration-700"
             style={{ left: `${100 - totalPercent}%` }}
           >
-            <div style={{ ...knobStyle, borderColor: 'var(--color-gold)', boxShadow: '0 0 10px var(--color-gold-a50)' }} />
+            <div style={{ ...knobStyle, borderColor: 'var(--color-gold)', boxShadow: '0 0 10px var(--color-gold-70)' }} />
             <div className="absolute top-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
-              <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-gold)' }}>
+              <span className="font-mono text-[10px] font-bold text-gold">
                 Top {totalPercent < 1 ? '<1' : totalPercent.toFixed(1)}%
               </span>
             </div>
@@ -132,17 +126,17 @@ const PlayerRankDisplay: React.FC<PlayerRankDisplayProps> = ({ seasonAddress, us
       <div className="space-y-2 pb-5">
         <div className="flex items-center justify-between">
           <span className="section-label">Relative PnL Rank</span>
-          <span className="font-mono text-[12px] font-bold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+          <span className="font-mono text-[12px] font-bold text-text tabular-nums">
             #{efficiencyRank} <span className="text-text2 font-normal">of {totalPlayers}</span>
           </span>
         </div>
-        <div className="relative rounded-full overflow-visible" style={{ height: 6, background: 'var(--color-card2)' }}>
+        <div className="relative rounded-full overflow-visible h-1.5 bg-card2">
           <div className="absolute inset-0 rounded-full overflow-hidden">
             <div
               className="absolute inset-y-0 left-0 transition-all duration-700"
               style={{
                 width: `${100 - relativePercent}%`,
-                background: 'linear-gradient(90deg, var(--color-gold-a40), var(--color-gold))',
+                background: 'linear-gradient(90deg, var(--color-gold-35), var(--color-gold))',
               }}
             />
           </div>
@@ -150,9 +144,9 @@ const PlayerRankDisplay: React.FC<PlayerRankDisplayProps> = ({ seasonAddress, us
             className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 transition-all duration-700"
             style={{ left: `${100 - relativePercent}%` }}
           >
-            <div style={{ ...knobStyle, borderColor: 'var(--color-gold)', boxShadow: '0 0 10px var(--color-gold-a50)' }} />
+            <div style={{ ...knobStyle, borderColor: 'var(--color-gold)', boxShadow: '0 0 10px var(--color-gold-70)' }} />
             <div className="absolute top-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
-              <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-gold)' }}>
+              <span className="font-mono text-[10px] font-bold text-gold">
                 Top {relativePercent < 1 ? '<1' : relativePercent.toFixed(1)}%
               </span>
             </div>

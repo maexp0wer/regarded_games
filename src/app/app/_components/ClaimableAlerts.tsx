@@ -67,17 +67,17 @@ function ClaimableCard({ season, playerAddress }: { season: any; playerAddress: 
       <div
         className="flex items-center gap-5 px-5 py-4 rounded-xl transition-all"
         style={{
-          background: 'linear-gradient(135deg, rgba(245,184,0,0.12), rgba(245,184,0,0.06))',
-          border: '1px solid rgba(245,184,0,0.3)',
-          boxShadow: '0 4px 20px -8px rgba(245,184,0,0.3)',
+          background: 'linear-gradient(135deg, var(--color-gold-15), var(--color-gold-15))',
+          border: '1px solid var(--color-gold-35)',
+          boxShadow: '0 4px 20px -8px var(--color-gold-35)',
         }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, rgba(245,184,0,0.18), rgba(245,184,0,0.1))'; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, rgba(245,184,0,0.12), rgba(245,184,0,0.06))'; }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, var(--color-gold-35), var(--color-gold-15))'; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, var(--color-gold-15), var(--color-gold-15))'; }}
       >
         {/* Bell icon */}
         <div
           className="shrink-0 flex items-center justify-center w-10 h-10 rounded-xl"
-          style={{ background: 'rgba(245,184,0,0.15)' }}
+          style={{ background: 'var(--color-gold-15)' }}
         >
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" style={{ color: 'var(--color-gold)' }}>
             <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
@@ -92,12 +92,12 @@ function ClaimableCard({ season, playerAddress }: { season: any; playerAddress: 
             </span>
             <span
               className="font-mono text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-widest"
-              style={{ background: 'rgba(245,184,0,0.15)', color: 'var(--color-gold)' }}
+              style={{ background: 'var(--color-gold-15)', color: 'var(--color-gold)' }}
             >
               {season.phase}
             </span>
           </div>
-          <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'rgba(245,184,0,0.6)' }}>
+          <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--color-gold-70)' }}>
             Claimable Payout
           </span>
         </div>
@@ -121,7 +121,7 @@ function ClaimableCard({ season, playerAddress }: { season: any; playerAddress: 
           >
             ${payout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
-          <span className="font-mono text-[9px] uppercase tracking-widest mt-0.5" style={{ color: 'rgba(245,184,0,0.6)' }}>
+          <span className="font-mono text-[9px] uppercase tracking-widest mt-0.5" style={{ color: 'var(--color-gold-70)' }}>
             USDC Ready
           </span>
         </div>
@@ -130,7 +130,7 @@ function ClaimableCard({ season, playerAddress }: { season: any; playerAddress: 
         <svg
           className="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-1"
           fill="none" viewBox="0 0 24 24" stroke="currentColor"
-          style={{ color: 'rgba(245,184,0,0.5)' }}
+          style={{ color: 'var(--color-gold-70)' }}
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
         </svg>

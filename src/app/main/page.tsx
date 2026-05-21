@@ -36,11 +36,11 @@ const tableData = [
     parentColor: "var(--color-card3)",
     name: "Growth & Ecosystem",         // Tier 2
     percentage: 20,
-    color: "var(--color-gold-soft)",
+    color: "var(--color-gold-70)",
     explanation: "Funds Active Incentives and marketing. Released based on DAO-approved milestones.",
     subChildren: [               // Tier 3
       { name: "Merkl Rewards", percentage: 5, color: "var(--color-gold)" },
-      { name: "User Acquisition", percentage: 15, color: "var(--color-gold-soft)" }
+      { name: "User Acquisition", percentage: 15, color: "var(--color-gold-70)" }
     ]
   },
   {
@@ -49,12 +49,12 @@ const tableData = [
     parentColor: "var(--color-card3)",
     name: "Market Formation",         // Tier 2
     percentage: 15,
-    color: "var(--color-gold-pale)",
+    color: "var(--color-gold-35)",
     explanation: "Distributed to early community participants and used to provide initial exchange liquidity to ensure Day 1 market stability.",
     subChildren: [               // Tier 3
       { name: "Genesis Program", percentage: 3, color: "var(--color-gold)" },
-      { name: "Capital Auction", percentage: 6, color: "var(--color-gold-soft)" },
-      { name: "Liquidity Pool", percentage: 6, color: "var(--color-gold-pale)" },
+      { name: "Capital Auction", percentage: 6, color: "var(--color-gold-70)" },
+      { name: "Liquidity Pool", percentage: 6, color: "var(--color-gold-35)" },
     ]
   },
   {
@@ -64,7 +64,7 @@ const tableData = [
     parentExplanation: "only 25% of the initial $RGD supply is not directly controlled by you, but distributed to the non-profit DAO LLC and vested among the founding Team for longterm alignment.",
     name: "Operational Reserve",         // Tier 2
     percentage: 10,
-    color: "var(--color-blue)",
+    color: "var(--color-gold)",
     explanation: "Allocated to the non-profit Regarded DAO LLC to cover real-world costs (legal compliance, audits, hosting). Managed via multi-sig with strict spending rules.",
     subChildren: [               // Tier 3
     ]
@@ -75,7 +75,7 @@ const tableData = [
     parentColor: "var(--color-card3)",
     name: "Team",         // Tier 2
     percentage: 15,
-    color: "var(--color-blue-soft)",
+    color: "var(--color-gold)",
     explanation: "Incentivizes the founding team. Subject to a 4-year vesting schedule with a 12-month cliff.",
     subChildren: [
     ]
@@ -160,38 +160,44 @@ export default function Home() {
           {/* Hero Section */}
           <section className="hero-section min-h-screen flex items-center justify-center">
             
-            <div className="text-center max-w-4xl px-4">
-              <h1 className="text-4xl md:text-6xl font-bold mb-2 text-gold">
-                Class Warfare
-              </h1>
-              <h1 className="text-4xl md:text-6xl font-bold mb-6 text-gold">
-                The Game 
-              </h1>
-              <h2 className="text-xl md:text-2xl mb-8">
-                <CyclingSubheading />
-              </h2>
+            <div className="hero-blur-backdrop" />
+  
+  <div className="hero-container">
+    {/* Main Header Display - Single block for perfect scaling */}
+    <h1 className="hero-title">
+      Class Warfare<br />
+      <span className="hero-gradient-text">The Game</span>
+    </h1>
 
-              <div className="flex flex-col sm:flex-row justify-center gap-4">
-                <button 
-                  onClick={() => scrollToSection('sectionHero')}
-                  className="btn-secondary">
-                  Learn More
-                </button>
-                
-                <button 
-                  onClick={() => navigateToDocs('intro')}
-                  className="btn-secondary">
-                  Read Docs
-                </button>
+    {/* Dynamic Cycling Subheading Container */}
+    <div className="hero-subtitle">
+      <CyclingSubheading />
+    </div>
 
-                <button 
-                  onClick={() => scrollToSection('sectionSecureStake')}
-                  className="btn-primary">
-                  Secure Your Stake
-                </button>
+    {/* Action Block Spacing Container */}
+    <div className="hero-actions">
+      <button 
+        onClick={() => scrollToSection('sectionHero')}
+        className="btn-game-secondary"
+      >
+        Learn More
+      </button>
+      
+      <button 
+        onClick={() => navigateToDocs('intro')}
+        className="btn-game-secondary"
+      >
+        Read Docs
+      </button>
 
-              </div>
-            </div>
+      <button 
+        onClick={() => scrollToSection('sectionSecureStake')}
+        className="btn-game-primary"
+      >
+        Secure Your Stake
+      </button>
+    </div>
+  </div>
           </section>
           
 
@@ -203,7 +209,7 @@ export default function Home() {
               
               <div className="grid md:grid-cols-2 gap-8">
                 
-                <div className="flex flex-col items-center text-center bg-card p-8 rounded-xl shadow-md max-h-screen">
+                <div className="flex flex-col items-center text-center landing-card max-h-screen">
                   <Regardo className="w-full h-auto max-h-70 transition-transform duration-200 ease-in-out hover:scale-110" viewBox="0 0 500 800" onClick={openRegardoModal}/>
                   <h3 className="text-xl font-bold mt-8 m-3">Regardo, the Capitalist</h3>
                   <p className='text-sm'>Play the game of accumulation. Use your capital to concentrate power, outmaneuver rivals, and push the economy towards a state of perfect inequality. If you win, the Bourgeoisie - the select few controlling 50% of the supply - splits the entire prize pool. The rest get nothing.</p>

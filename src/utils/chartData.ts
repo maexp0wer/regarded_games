@@ -26,64 +26,6 @@ export interface ChordData {
 
 const DECIMALS = 1e18;
 
-function tradePrice(t: SeasonTrade): number {
-  const fim = Number(BigInt(t.fimAmount));
-  const usdc = Number(BigInt(t.usdcAmount));
-  if (fim === 0) return 0;
-  // usdcAmount is in 6-decimal USDC, fimAmount in 18-decimal FIM
-  return (usdc / 1e6) / (fim / DECIMALS);
-}
-
-export function buildCandles(
-  trades: SeasonTrade[],
-  timeframeMs: number,
-): CandleData[] {
-  if (trades.length === 0) return [];
-
-  const buckets = new Map<number, {
-    prices: number[];
-    capVol: number;
-    socVol: number;
-    lastGiniBps: number;
-  }>();
-
-  for (const t of trades) {
-    const ts = Number(BigInt(t.timestamp)) * 1000;
-    const bucket = Math.floor(ts / timeframeMs) * timeframeMs;
-    const price = tradePrice(t);
-    if (price <= 0) continue;
-
-    const fim = Number(BigInt(t.fimAmount)) / DECIMALS;
-    const isCapBuyer = t.buyerIsCapitalist;
-
-    if (!buckets.has(bucket)) {
-      buckets.set(bucket, { prices: [], capVol: 0, socVol: 0, lastGiniBps: 0 });
-    }
-    const b = buckets.get(bucket)!;
-    b.prices.push(price);
-    b.lastGiniBps = t.giniBps;
-    if (isCapBuyer) {
-      b.capVol += fim;
-    } else {
-      b.socVol += fim;
-    }
-  }
-
-  return Array.from(buckets.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([bucket, { prices, capVol, socVol, lastGiniBps }]) => ({
-      time: bucket / 1000,
-      open: prices[0],
-      high: Math.max(...prices),
-      low: Math.min(...prices),
-      close: prices[prices.length - 1],
-      capBuyerVolume: capVol,
-      socBuyerVolume: socVol,
-      giniBps: lastGiniBps,
-    }));
-}
-
-
 export function buildChordData(
   trades: SeasonTrade[],
   timeStart: number,
@@ -94,7 +36,7 @@ export function buildChordData(
 
   const windowTrades = trades.filter((t) => {
     const ts = Number(BigInt(t.timestamp));
-    return ts >= startSec && ts < endSec;
+    return ts >= startSec && ts <= endSec;
   });
 
   if (windowTrades.length === 0) {

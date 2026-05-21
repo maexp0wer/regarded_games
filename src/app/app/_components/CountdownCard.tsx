@@ -36,6 +36,7 @@ export function CountdownCard({
   isTimeLimitExpired = false,
   winningSide,
   progressPercent,
+  variant = 'card',
 }: {
   tradingStart: number;
   seasonEnd: number;
@@ -46,6 +47,7 @@ export function CountdownCard({
   isTimeLimitExpired?: boolean;
   winningSide: 'cap' | 'soc' | 'none';
   progressPercent: number;
+  variant?: 'card' | 'sidebar';
 }) {
   const showBootstrapWarning = isBootstrap && !isAuction;
   const targetTime = isAuction || isBootstrap ? tradingStart : seasonEnd;
@@ -65,28 +67,80 @@ export function CountdownCard({
     : 'Season Ends In';
 
   const winnerLabel = winningSide === 'cap' ? 'Bourgeoisie' : winningSide === 'soc' ? 'Proletariat' : 'Tie';
-  const winnerColor = winningSide === 'cap' ? 'var(--color-blue)' : winningSide === 'soc' ? 'var(--color-pink)' : 'var(--color-text2)';
+  const winnerColor = winningSide === 'cap' ? 'var(--color-gold)' : winningSide === 'soc' ? 'var(--color-purple)' : 'var(--color-text2)';
 
   const factionBgClass = winningSide === 'cap' ? 'faction-bg-cap' : winningSide === 'soc' ? 'faction-bg-soc' : 'faction-bg-none';
   const factionTextShadow = winningSide === 'cap'
-    ? '0 0 40px var(--color-blue-a25)'
+    ? '0 0 40px var(--color-gold-35)'
     : winningSide === 'soc'
-    ? '0 0 40px var(--color-pink-a25)'
+    ? '0 0 40px var(--color-purple-35)'
     : 'none';
 
-  // Apply payout faction background OR default to proletarian background (faction-bg-soc) for pending/bootstrap 
+  // Apply payout faction background OR default to proletarian background (faction-bg-soc) for pending/bootstrap
   const activeBgClass = isPayout && winnerLabel
     ? factionBgClass
     : (showBootstrapWarning || isVictoryPending)
     ? 'faction-bg-soc'
     : '';
 
-  const tickColor = isPayout ? winnerColor : 'var(--color-pink)';
+  const tickColor = isPayout ? winnerColor : 'var(--color-purple)';
+
+  if (variant === 'sidebar') {
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <span
+            className="shrink-0 rounded-full"
+            style={{ width: 5, height: 5, background: tickColor }}
+          />
+          <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-text2 font-semibold">
+            {labelText}
+          </span>
+        </div>
+
+        {isPayout ? (
+          <p
+            className="font-display font-extrabold leading-none tracking-tight text-2xl m-0"
+            style={{ color: winnerColor }}
+          >
+            {winnerLabel}
+          </p>
+        ) : showBootstrapWarning || isVictoryPending ? (
+          <p
+            className="font-display font-extrabold leading-none text-xl m-0"
+            style={{ color: 'var(--color-purple)' }}
+          >
+            {showBootstrapWarning ? 'Bootstrapping' : 'Settlement Pending'}
+          </p>
+        ) : (
+          <div className="grid grid-cols-4 gap-1.5">
+            {[
+              { label: 'Days', v: days },
+              { label: 'Hrs',  v: hours },
+              { label: 'Min',  v: minutes },
+              { label: 'Sec',  v: seconds },
+            ].map((b) => (
+              <div
+                key={b.label}
+                className="flex flex-col items-center gap-1 py-2 px-1 rounded-lg border border-border"
+              >
+                <span className="font-mono font-semibold leading-none text-[18px] text-text">
+                  {pad(b.v)}
+                </span>
+                <span className="font-mono text-[8.5px] tracking-[0.16em] text-text2/60 font-medium uppercase">
+                  {b.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
-      className={`card-app relative flex flex-col overflow-hidden text-center justify-between ${activeBgClass}`}
-      style={isPayout && winnerLabel ? { borderColor: 'var(--color-border-bright)' } : {}}
+      className={`card-app relative flex flex-col overflow-hidden text-center justify-between ${activeBgClass} ${isPayout && winnerLabel ? 'border border-border2' : ''}`}
     >
       {/* Universally centered label text */}
       <div className="relative section-label justify-center">
@@ -110,11 +164,10 @@ export function CountdownCard({
       ) : showBootstrapWarning ? (
         <div className="flex flex-col items-center justify-center h-full gap-1">
           <p
-            className="font-display font-extrabold m-0 text-display-counter"
+            className="font-display font-extrabold m-0 text-display-counter leading-none"
             style={{
-              color: 'var(--color-pink)',
-              lineHeight: '1',
-              textShadow: '0 0 40px var(--color-pink-a25)',
+              color: 'var(--color-purple)',
+              textShadow: '0 0 40px var(--color-purple-35)',
             }}
           >
             Bootstrapping
@@ -126,11 +179,10 @@ export function CountdownCard({
       ) : isVictoryPending ? (
         <div className="flex flex-col items-center justify-center h-full gap-1">
           <p
-            className="font-display font-extrabold m-0 text-display-counter"
+            className="font-display font-extrabold m-0 text-display-counter leading-none"
             style={{
-              color: 'var(--color-pink)',
-              lineHeight: '1',
-              textShadow: '0 0 40px var(--color-pink-a25)',
+              color: 'var(--color-purple)',
+              textShadow: '0 0 40px var(--color-purple-35)',
             }}
           >
             Settlement Pending

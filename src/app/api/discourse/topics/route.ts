@@ -56,16 +56,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Resolve category ID
-    const categorySlug = buildCategorySlug(seasonSlug, isCapitalist === true);
-    const catRes = await fetch(`${discourseUrl}/c/${categorySlug}.json`, {
+    // Resolve category ID via /site.json (same approach as setup-season)
+    const seasonNum = seasonSlug.match(/\d+/)?.[0] || '1';
+    const subcategorySlug = isCapitalist === true
+      ? `s${seasonNum}-bourgeoisie-strategy`
+      : `s${seasonNum}-proletariat-strategy`;
+    const siteRes = await fetch(`${discourseUrl}/site.json`, {
       headers: { 'Api-Key': apiKey, 'Api-Username': 'system' },
     });
-    if (!catRes.ok) {
-      return NextResponse.json({ error: `Failed to resolve category (${catRes.status})` }, { status: catRes.status });
+    if (!siteRes.ok) {
+      return NextResponse.json({ error: `Failed to fetch site config (${siteRes.status})` }, { status: siteRes.status });
     }
-    const catData = await catRes.json();
-    const categoryId = catData.category?.id;
+    const siteData = await siteRes.json();
+    const categoryId = (siteData?.categories as any[] ?? []).find((c: any) => c.slug === subcategorySlug)?.id;
     if (!categoryId) {
       return NextResponse.json({ error: 'Could not resolve category ID' }, { status: 500 });
     }

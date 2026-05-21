@@ -274,17 +274,16 @@ export function IcoMask() {
   const phasePill = {
     loading:               { label: 'LOADING',   color: 'var(--color-text2)', bg: 'var(--color-card2)' },
     pending:               { label: 'PENDING',   color: 'var(--color-text2)', bg: 'var(--color-card2)' },
-    live:                  { label: 'LIVE',      color: 'var(--color-green)', bg: 'rgba(107,203,110,0.1)' },
+    live:                  { label: 'LIVE',      color: 'var(--color-green)', bg: 'var(--color-green-15)' },
     awaiting_finalization: { label: 'ENDED',     color: 'var(--color-text2)', bg: 'var(--color-card2)' },
-    claimable:             { label: 'CLAIMABLE', color: 'var(--color-gold)',  bg: 'var(--color-gold-a25)' },
+    claimable:             { label: 'CLAIMABLE', color: 'var(--color-gold)',  bg: 'var(--color-gold-35)' },
     no_deposit:            { label: 'ENDED',     color: 'var(--color-text2)', bg: 'var(--color-card2)' },
   }[phase];
 
   // ── Disconnected ───────────────────────────────────────────────────
   if (!isConnected) {
     return (
-      <div className="card-app flex flex-col items-center justify-center gap-4 w-full max-w-lg py-12"
-        style={{ borderColor: 'var(--color-border-bright)' }}>
+      <div className="card-app flex flex-col items-center justify-center gap-4 w-full max-w-lg py-12 border-border2">
         <div className="text-center">
           <p className="section-label mb-2">Capital Auction</p>
           <p className="font-mono text-sm" style={{ color: 'var(--color-text2)' }}>
@@ -297,8 +296,7 @@ export function IcoMask() {
   }
 
   return (
-    <div className="card-app flex flex-col gap-4 w-full max-w-lg"
-      style={{ borderColor: 'var(--color-border-bright)' }}>
+    <div className="card-app flex flex-col gap-4 w-full max-w-lg border-border2">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between pb-1">
@@ -439,7 +437,7 @@ export function IcoMask() {
 
           {errorReason && (
             <div className="rounded-lg px-3 py-2 font-mono text-[11px] break-all"
-              style={{ background: 'var(--color-pink-a10)', color: 'var(--color-pink)', border: '1px solid var(--color-pink-a25)' }}>
+              style={{ background: 'var(--color-red-15)', color: 'var(--color-red)', border: '1px solid var(--color-red-35)' }}>
               {errorReason}
             </div>
           )}
@@ -449,7 +447,7 @@ export function IcoMask() {
               <div className="absolute inset-y-0 left-0 transition-all duration-500"
                 style={{
                   width: getDepositProgress(),
-                  background: depositIsSuccess ? 'var(--color-green)' : 'var(--color-gold-a30)',
+                  background: depositIsSuccess ? 'var(--color-green)' : 'var(--color-gold-35)',
                 }} />
             )}
             <button
@@ -487,7 +485,7 @@ export function IcoMask() {
             <div className="flex items-center justify-between">
               <span className="section-label">Your RGD</span>
               <span className="font-display font-bold text-xl"
-                style={{ color: 'var(--color-gold)', textShadow: '0 0 20px var(--color-gold-a25)', fontVariantNumeric: 'tabular-nums' }}>
+                style={{ color: 'var(--color-gold)', textShadow: '0 0 20px var(--color-gold-35)', fontVariantNumeric: 'tabular-nums' }}>
                 {Number(formatUnits(userRgdShare, 18)).toLocaleString(undefined, { maximumFractionDigits: 4 })}
                 <span className="font-mono font-medium text-text2 ml-1.5 text-sm">RGD</span>
               </span>
@@ -505,7 +503,7 @@ export function IcoMask() {
 
           {errorReason && (
             <div className="rounded-lg px-3 py-2 font-mono text-[11px] break-all"
-              style={{ background: 'var(--color-pink-a10)', color: 'var(--color-pink)', border: '1px solid var(--color-pink-a25)' }}>
+              style={{ background: 'var(--color-red-15)', color: 'var(--color-red)', border: '1px solid var(--color-red-35)' }}>
               {errorReason}
             </div>
           )}
@@ -515,7 +513,7 @@ export function IcoMask() {
               <div className="absolute inset-y-0 left-0 transition-all duration-500"
                 style={{
                   width: claimIsSuccess ? '100%' : claimIsBusy ? '60%' : '0%',
-                  background: claimIsSuccess ? 'var(--color-green)' : 'var(--color-gold-a30)',
+                  background: claimIsSuccess ? 'var(--color-green)' : 'var(--color-gold-35)',
                 }} />
             )}
             <button

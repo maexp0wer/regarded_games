@@ -15,18 +15,19 @@ import { usePayout } from '@/hooks/usePayout';
 // Components
 import { SeasonHeader } from '../_components/SeasonHeader';
 import { GiniDisplay } from '../_components/GiniDisplay';
-import { SeasonDetails } from '../_components/SeasonDetails';
+import { ProtocolCard } from '../_components/ProtocolCard';
+import { PolicyCard } from '../_components/PolicyCard';
+import { ScheduleCard } from '../_components/ScheduleCard';
+import { LendingDistributionCard } from '../_components/LendingDistributionCard';
 import { AuctionMask } from '../_components/AuctionMask';
 import { AuctionActivityFeed } from '../_components/AuctionActivityFeed';
 import { TradingMask } from '../_components/TradingMask';
-import { OpenOrders } from '../_components/OpenOrders';
 import { PayoutMask } from '../_components/PayoutMask';
 import PlayerRankDisplay from '../_components/PlayerRankDisplay';
 import { FactionDiscussionBoard } from '../_components/FactionDiscussionBoard';
 import { FactionChat } from '../_components/FactionChat';
 import { CountdownCard } from '../_components/CountdownCard';
 import { PrizePoolCard } from '../_components/PrizePoolCard';
-import { CandlestickChart } from '../_components/CandlestickChart';
 import { TradingPanelMenu } from '../_components/TradingPanelMenu';
 import { useSeasonChart } from '@/hooks/useSeasonChart';
 
@@ -141,29 +142,34 @@ export default function SeasonDetailPage() {
     progressPercent,
   };
 
+  // ─── Shared sidebar for GiniDisplay ──────────────────────────────────────
+  const giniSidebar = (
+    <>
+      <SeasonHeader
+        seasonAddress={seasonAddress}
+        seasonName={formattedName}
+        playerCount={giniData?.playerCount || 0}
+        currentPhase={currentPhase}
+        isBootstrap={isAuctionOrBootstrap}
+        isPayout={isPayout}
+        variant="sidebar"
+      />
+      <div style={{ height: 1, background: 'var(--color-border)' }} />
+      <PrizePoolCard
+        seasonAddress={seasonAddress}
+        prizePool={giniData?.prizePool || 0}
+        currentPhase={currentPhase}
+        variant="sidebar"
+      />
+      <div style={{ height: 1, background: 'var(--color-border)' }} />
+      <CountdownCard {...heroProps} variant="sidebar" />
+    </>
+  );
+
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <main className="pt-4 pb-16 space-y-2 animate-in fade-in duration-700">
+    <main className="pt-4 pb-16 animate-in fade-in duration-700">
 
-      {/* ═══════════════════════════════════════════
-          HERO ROW — always 3 equal cards
-          ═══════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-        <SeasonHeader
-          seasonAddress={seasonAddress}
-          seasonName={formattedName}
-          playerCount={giniData?.playerCount || 0}
-          currentPhase={currentPhase}
-          isBootstrap={isAuctionOrBootstrap}
-          isPayout={isPayout}
-        />
-        <PrizePoolCard
-          seasonAddress={seasonAddress}
-          prizePool={giniData?.prizePool || 0}
-          currentPhase={currentPhase}
-        />
-        <CountdownCard {...heroProps} />
-      </div>
 
       {/* ═══════════════════════════════════════════
           AUCTION / BOOTSTRAP LAYOUT
@@ -171,17 +177,25 @@ export default function SeasonDetailPage() {
       {isAuctionOrBootstrap && (
         <>
           {/* Main row: buy widget (3) | gini gauge (5) | all-players chat (2) */}
-          <div className="grid grid-cols-1 xl:grid-cols-10 gap-2">
-            <div className="xl:col-span-3">
+          <div className="grid grid-cols-1 xl:grid-cols-10 gap-5">
+            <div className="xl:col-span-3 relative">
               <AuctionMask
                 seasonAddress={seasonAddress}
                 auctionAddress={auctionAddress}
                 fimAddress={fimAddress}
                 currentPhase={currentPhase}
               />
+              {/* Vertical: h-[80%] and top-[10%] */}
+              
+              {/* Horizontal: w-[80%] and left-[10%] */}
+              
             </div>
-            <div className="xl:col-span-5">
-              <GiniDisplay seasonAddress={seasonAddress} />
+            <div className="xl:col-span-5 relative">
+              <GiniDisplay seasonAddress={seasonAddress} sidebar={giniSidebar} />
+              {/* Vertical: h-[80%] and top-[10%] */}
+              
+              {/* Horizontal: w-[80%] and left-[10%] */}
+              
             </div>
             <div className="xl:col-span-2">
               <FactionChat
@@ -191,24 +205,34 @@ export default function SeasonDetailPage() {
             </div>
           </div>
 
-          {/* Bottom row: activity | season details */}
-          <div className="grid grid-cols-1 xl:grid-cols-10 gap-2">
-            <div className="xl:col-span-3">
+          {/* Bottom row: activity | season detail cards */}
+          <div className="grid grid-cols-1 xl:grid-cols-10 gap-5">
+            <div className="xl:col-span-3 relative">
               <AuctionActivityFeed seasonAddress={seasonAddress} />
+              {/* Vertical: h-[80%] and top-[10%] */}
+              
+              {/* Horizontal: w-[80%] and left-[10%] */}
+              
             </div>
-            <div className="xl:col-span-7">
-              <SeasonDetails
-                tradingStart={tradingStart}
-                seasonEnd={seasonEnd}
-                M_dynamic={M_dynamic}
-                config={config}
-                seasonAddress={seasonAddress}
-                fimAddress={fimAddress}
-                auctionAddress={auctionAddress}
-                exchangeAddress={exchangeAddress}
-                isAuction
-                xlWeighted
-              />
+            <div className="xl:col-span-7 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+              <div className="relative p-0">
+                <ProtocolCard
+                  seasonAddress={seasonAddress}
+                  fimAddress={fimAddress}
+                  auctionAddress={auctionAddress}
+                  exchangeAddress={exchangeAddress}
+                  isAuction
+                />
+              </div>
+              <div className="relative p-0">
+                <PolicyCard M_dynamic={M_dynamic} config={config} />                
+              </div>
+              <div className="relative p-0">
+                <ScheduleCard tradingStart={tradingStart} seasonEnd={seasonEnd} config={config} />
+              </div>
+              <div className="relative">
+                <LendingDistributionCard seasonAddress={seasonAddress} config={config} />
+              </div>
             </div>
           </div>
         </>
@@ -219,61 +243,48 @@ export default function SeasonDetailPage() {
       ═══════════════════════════════════════════ */}
   {isTrading && (
     <>
-      {/* Row 1: Gini (full width) */}
-      <GiniDisplay seasonAddress={seasonAddress} />
+      {/* Row 1: Gini with integrated sidebar */}
+      <GiniDisplay seasonAddress={seasonAddress} sidebar={giniSidebar} />
 
-      {/* Discussion board — large screens only, slides in below row 1 */}
-      {factionData && showBoard && (
-        <div className="hidden md:block animate-in slide-in-from-top-4 fade-in duration-300">
-          <FactionDiscussionBoard
-            seasonSlug={seasonSlug}
-            isCapitalist={factionData.isCapitalist}
-          />
+      {/* Separator + optional discussion board — large screens only */}
+      {factionData && showBoard ? (
+        <div className="hidden md:block">
+          <div className="animate-in slide-in-from-top-4 fade-in duration-300">
+            <FactionDiscussionBoard
+              seasonSlug={seasonSlug}
+              isCapitalist={factionData.isCapitalist}
+            />
+          </div>
         </div>
+      ) : (
+        <div/>
       )}
 
-      {/* Row 2: Chart+OpenOrders | PanelMenu | TradingMask */}
-      <div className="flex gap-2 items-stretch">
-        {/* Chart column grows/shrinks as panels open */}
-        <div className="flex-1 flex flex-col gap-2 min-w-0">
-          <CandlestickChart
-            candles={chart.candles}
-            timeframe={chart.timeframe}
-            onTimeframeChange={chart.onTimeframeChange}
-            onCandleClick={chart.onCandleClick}
-            selectedRange={chart.selectedRange}
-            capTargetBps={chart.capTargetBps}
-            socTargetBps={chart.socTargetBps}
-          />
-          {userAddress && (
-            <OpenOrders
-              seasonAddress={seasonAddress}
-              userAddress={userAddress}
-              exchangeAddress={exchangeAddress}
-            />
-          )}
-        </div>
-
-        {/* Panel menu: vertical toggle bar + sliding panel area */}
-        <TradingPanelMenu
-          seasonAddress={seasonAddress}
-          isBuy={isBuy}
-          isMaker={isMaker}
-          onSelectOrder={handleSelectOrder}
-          selectedOrderIds={selectedOrders.map(o => o.id)}
-          trades={chart.trades}
-          timeWindowMs={chart.timeWindowMs}
-          selectedRange={chart.selectedRange}
-          onClearSelection={chart.onClearSelection}
-          isLive={chart.isLive}
-          seasonSlug={seasonSlug}
-          isCapitalist={factionData?.isCapitalist}
-          showBoard={showBoard}
-          onToggleBoard={() => setShowBoard((v) => !v)}
-        />
-
-        {/* Trading mask — fixed width */}
-        <div className="shrink-0 w-90">
+      {/* Trading panel: single component handles both mobile and desktop layouts */}
+      <TradingPanelMenu
+        seasonAddress={seasonAddress}
+        isBuy={isBuy}
+        isMaker={isMaker}
+        onSelectOrder={handleSelectOrder}
+        selectedOrderIds={selectedOrders.map(o => o.id)}
+        trades={chart.trades}
+        timeWindowMs={chart.timeWindowMs}
+        selectedRange={chart.selectedRange}
+        onClearSelection={chart.onClearSelection}
+        isLive={chart.isLive}
+        seasonSlug={seasonSlug}
+        isCapitalist={factionData?.isCapitalist}
+        showBoard={showBoard}
+        onToggleBoard={() => setShowBoard((v) => !v)}
+        candles={chart.candles}
+        timeframe={chart.timeframe}
+        onTimeframeChange={chart.onTimeframeChange}
+        onCandleClick={chart.onCandleClick}
+        capTargetBps={chart.capTargetBps}
+        socTargetBps={chart.socTargetBps}
+        userAddress={userAddress}
+        exchangeAddress={exchangeAddress}
+        tradingMask={
           <TradingMask
             seasonSlug={seasonSlug}
             seasonAddress={seasonAddress}
@@ -291,22 +302,43 @@ export default function SeasonDetailPage() {
             onReorderOrders={handleReorderOrders}
             isOnHold={effectiveVictoryPending}
           />
+        }
+      />
+
+      {/* Horizontal divider - full width */}
+      <div className="h-px bg-border" />
+
+      {/* Row 3: Season detail cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div className="relative p-0">
+          <ProtocolCard
+            seasonAddress={seasonAddress}
+            fimAddress={fimAddress}
+            auctionAddress={auctionAddress}
+            exchangeAddress={exchangeAddress}
+          />
+          {/* Vertical: h-[80%] and top-[10%] */}
+          
+          {/* Horizontal: w-[80%] and left-[10%] */}
+          
+        </div>
+
+        <div className="relative p-0">
+          <PolicyCard M_dynamic={M_dynamic} config={config} />
+          {/* Vertical: h-[80%] and top-[10%] */}
+          
+          {/* Horizontal: w-[80%] and left-[10%] */}
+          
+        </div>
+
+        <div className="relative p-0">
+          <ScheduleCard tradingStart={tradingStart} seasonEnd={seasonEnd} config={config} />
+        </div>
+
+        <div className="relative">
+          <LendingDistributionCard seasonAddress={seasonAddress} config={config} />
         </div>
       </div>
-
-      {/* Row 3: SeasonDetails */}
-      <SeasonDetails
-        tradingStart={tradingStart}
-        seasonEnd={seasonEnd}
-        M_dynamic={M_dynamic}
-        config={config}
-        seasonAddress={seasonAddress}
-        fimAddress={fimAddress}
-        auctionAddress={auctionAddress}
-        exchangeAddress={exchangeAddress}
-        isAuction={false}
-        xlWeighted
-      />
     </>
   )}
 
@@ -315,31 +347,60 @@ export default function SeasonDetailPage() {
           ═══════════════════════════════════════════ */}
       {isPayout && (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-            <PayoutMask seasonAddress={seasonAddress} />
-            <div className="lg:col-span-2 flex flex-col gap-2">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div className="relative">
+              <PayoutMask seasonAddress={seasonAddress} />
+            </div>
+            <div className="lg:col-span-2 flex flex-col gap-5">
               <PlayerRankDisplay
                 seasonAddress={seasonAddress}
                 userAddress={userAddress || ''}
               />
+              {isPayoutActionable && (
+                <>
+                  {/* Horizontal: w-[80%] and left-[10%] */}
+                  <div className="h-px bg-border mx-[10%]" />
+                  <GiniDisplay seasonAddress={seasonAddress} sidebar={giniSidebar} />
+                </>
+              )}
+            </div>
+          </div>          
 
-              {isPayoutActionable && <GiniDisplay seasonAddress={seasonAddress} />}
+          {!isPayoutActionable && (
+            <>
+              <GiniDisplay seasonAddress={seasonAddress} sidebar={giniSidebar} />
+              {/* Horizontal: w-[80%] and left-[10%] */}
+              <div className="h-px bg-border mx-[10%]" />
+            </>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+            <div className="relative p-0">
+              <ProtocolCard
+                seasonAddress={seasonAddress}
+                fimAddress={fimAddress}
+                auctionAddress={auctionAddress}
+                exchangeAddress={exchangeAddress}
+              />
+              {/* Vertical: h-[80%] and top-[10%] */}
+              
+              {/* Horizontal: w-[80%] and left-[10%] */}
+              
+            </div>
+            <div className="relative p-0">
+              <PolicyCard M_dynamic={M_dynamic} config={config} />
+              {/* Vertical: h-[80%] and top-[10%] */}
+              
+              {/* Horizontal: w-[80%] and left-[10%] */}
+              
+            </div>
+            <div className="relative p-0">
+              <ScheduleCard tradingStart={tradingStart} seasonEnd={seasonEnd} config={config} />
+            </div>
+            <div className="relative">
+              <LendingDistributionCard seasonAddress={seasonAddress} config={config} />
             </div>
           </div>
-
-          {!isPayoutActionable && <GiniDisplay seasonAddress={seasonAddress} />}
-
-          <SeasonDetails
-            tradingStart={tradingStart}
-            seasonEnd={seasonEnd}
-            M_dynamic={M_dynamic}
-            config={config}
-            seasonAddress={seasonAddress}
-            fimAddress={fimAddress}
-            auctionAddress={auctionAddress}
-            exchangeAddress={exchangeAddress}
-            isAuction={false}
-          />
         </>
       )}
 

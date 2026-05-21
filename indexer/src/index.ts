@@ -22,6 +22,13 @@ function computeGiniBps(bals: Map<string, bigint>): number {
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
+const CANDLE_TIMEFRAMES = [
+  { key: "5m",  seconds: 300n },
+  { key: "1h",  seconds: 3_600n },
+  { key: "4h",  seconds: 14_400n },
+  { key: "1d",  seconds: 86_400n },
+] as const;
+
 // 1. Listen for Season Deployment
 ponder.on("GameController:SeasonDeployed", async ({ event, context }) => {
   await context.db.insert(schema.seasons).values({
@@ -382,7 +389,44 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
     giniBps,
   });
 
-  // 7. ==========================================
+  // 8. Upsert pre-computed candle buckets for all timeframes
+  const tradePrice = fimAmount > 0n ? (usdcPrice * 10n ** 18n) / fimAmount : 0n;
+  if (tradePrice > 0n) {
+    const capVol = buyerIsCapitalist ? fimAmount : 0n;
+    const socVol = buyerIsCapitalist ? 0n : fimAmount;
+    await Promise.all(
+      CANDLE_TIMEFRAMES.map(({ key, seconds }) => {
+        const bucketTs = (event.block.timestamp / seconds) * seconds;
+        return context.db
+          .insert(schema.candles)
+          .values({
+            seasonAddress,
+            timeframe: key,
+            bucketTs,
+            openPrice:      tradePrice,
+            highPrice:      tradePrice,
+            lowPrice:       tradePrice,
+            closePrice:     tradePrice,
+            capBuyerVolume: capVol,
+            socBuyerVolume: socVol,
+            giniBps,
+            tradeCount:     1,
+          })
+          .onConflictDoUpdate((row) => ({
+            // openPrice intentionally omitted — first trade in bucket wins
+            highPrice:      row.highPrice < tradePrice ? tradePrice : row.highPrice,
+            lowPrice:       row.lowPrice  > tradePrice ? tradePrice : row.lowPrice,
+            closePrice:     tradePrice,
+            capBuyerVolume: row.capBuyerVolume + capVol,
+            socBuyerVolume: row.socBuyerVolume + socVol,
+            giniBps,
+            tradeCount:     row.tradeCount + 1,
+          }));
+      })
+    );
+  }
+
+  // 9. ==========================================
   // NEW: TRIGGER DISCOURSE SYNC ON TRADE
   // ==========================================
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://127.0.0.1:3000";

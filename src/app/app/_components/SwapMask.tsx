@@ -54,16 +54,16 @@ function TokenDropdown({
       {/* backdrop */}
       <div className="fixed inset-0 z-10" onClick={onClose} />
       <div className="absolute right-0 top-10 z-20 rounded-xl p-3 flex flex-col gap-2 min-w-52.5"
-        style={{ background: 'var(--color-card)', border: '1px solid var(--color-border-bright)', boxShadow: '0 8px 24px rgba(0,0,0,0.35)' }}>
+        style={{ background: 'var(--color-card)', border: '1px solid var(--color-border2)', boxShadow: '0 8px 24px rgba(0,0,0,0.35)' }}>
         <span className="section-label">Select Token</span>
         {knownTokens.map(t => (
           <button key={t.address}
             onClick={() => { onSelect(t); onClose(); }}
             className="font-mono text-sm font-bold px-3 py-2 rounded-lg text-left transition-all hover:opacity-80"
             style={{
-              background: selected.address === t.address ? 'var(--color-primary-a10)' : 'var(--color-card2)',
+              background: selected.address === t.address ? 'var(--color-gold-15)' : 'var(--color-card2)',
               color: 'var(--color-text)',
-              border: '1px solid ' + (selected.address === t.address ? 'var(--color-primary-a25)' : 'var(--color-border)'),
+              border: '1px solid ' + (selected.address === t.address ? 'var(--color-gold-35)' : 'var(--color-border)'),
             }}>
             {t.symbol}
             <span className="font-normal text-[10px] ml-2" style={{ color: 'var(--color-text2)' }}>
@@ -89,7 +89,7 @@ function TokenDropdown({
             </button>
           </div>
           {customError && (
-            <p className="font-mono text-[10px]" style={{ color: 'var(--color-danger)' }}>{customError}</p>
+            <p className="font-mono text-[10px] text-red">{customError}</p>
           )}
         </div>
       </div>
@@ -379,12 +379,12 @@ export function SwapMask() {
   const btnStyle = isSuccess
     ? { background: 'var(--color-green)', color: 'var(--color-bg)', cursor: 'not-allowed' }
     : isError
-    ? { background: 'var(--color-pink)', color: 'var(--color-bg)', cursor: 'not-allowed' }
+    ? { background: 'var(--color-red)', color: 'var(--color-bg)', cursor: 'not-allowed' }
     : isButtonDisabled
     ? { background: 'var(--color-card2)', color: 'var(--color-text2)', cursor: 'not-allowed' }
     : isBuying
-    ? { background: 'linear-gradient(135deg, #6bcb6e, #4daa50)', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-green-a50)' }
-    : { background: 'linear-gradient(135deg, #ff7ab0, #ff3d8a)', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-pink-a50)' };
+    ? { background: 'linear-gradient(135deg, var(--color-green-hover), var(--color-green))', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-green-70)' }
+    : { background: 'linear-gradient(135deg, var(--color-red-hover), var(--color-red))', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-red-70)' };
 
   const TokenBadge = ({ token, onClick, disabled }: { token: TokenInfo; onClick?: () => void; disabled?: boolean }) => (
     <button
@@ -413,8 +413,7 @@ export function SwapMask() {
   // ── Disconnected state ────────────────────────────────────────────
   if (!isConnected) {
     return (
-      <div className="card-app flex flex-col items-center justify-center gap-4 w-full max-w-lg py-12"
-        style={{ borderColor: 'var(--color-border-bright)' }}>
+      <div className="card-app flex flex-col items-center justify-center gap-4 w-full max-w-lg py-12 border-border2">
         <p className="font-mono text-sm" style={{ color: 'var(--color-text2)' }}>Connect your wallet to swap</p>
         <WalletButton />
       </div>
@@ -422,8 +421,7 @@ export function SwapMask() {
   }
 
   return (
-    <div className="card-app flex flex-col gap-3 w-full max-w-lg"
-      style={{ borderColor: 'var(--color-border-bright)' }}>
+    <div className="card-app flex flex-col gap-3 w-full max-w-lg border-border2">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between pb-1">
@@ -518,8 +516,7 @@ export function SwapMask() {
         <button
           onClick={handleFlip}
           disabled={isBusy || isSuccess || isError}
-          className="w-9 h-9 rounded-full flex items-center justify-center font-mono text-base font-bold transition-all hover:brightness-110 disabled:opacity-40"
-          style={{ background: 'var(--color-card2)', border: '2px solid var(--color-border-bright)', color: 'var(--color-text2)' }}>
+          className="w-9 h-9 rounded-full flex items-center justify-center font-mono text-base font-bold transition-all hover:brightness-110 disabled:opacity-40 bg-card2 border-2 border-border2 text-text2">
           ↕
         </button>
       </div>
@@ -537,8 +534,8 @@ export function SwapMask() {
           <div className={`flex-1 font-mono font-bold text-2xl ${quoteLoading && amountInBigInt > 0n ? 'animate-pulse' : ''}`}
             style={{
               color: estimatedOutput > 0n
-                ? (isBuying ? 'var(--color-green)' : 'var(--color-pink)')
-                : noRoute ? 'var(--color-danger)' : 'var(--color-text2)',
+                ? (isBuying ? 'var(--color-green)' : 'var(--color-red)')
+                : noRoute ? 'var(--color-red)' : 'var(--color-text2)',
               fontVariantNumeric: 'tabular-nums',
             }}>
             {quoteLoading && amountInBigInt > 0n
@@ -581,17 +578,17 @@ export function SwapMask() {
               <span className="font-mono text-[11px]" style={{ color: 'var(--color-text2)' }}>Price Impact</span>
               <span className="font-mono text-[11px] font-semibold" style={{
                 color: priceImpact < 1
-                  ? 'var(--color-success)'
+                  ? 'var(--color-green)'
                   : priceImpact < 3
                   ? 'var(--color-gold)'
-                  : 'var(--color-pink)',
+                  : 'var(--color-red)',
               }}>
                 {priceImpact < 0.01 ? '< 0.01%' : `${priceImpact.toFixed(2)}%`}
               </span>
             </div>
           )}
           {priceImpact !== null && priceImpact >= 5 && (
-            <p className="font-mono text-[11px]" style={{ color: 'var(--color-pink)' }}>
+            <p className="font-mono text-[11px] text-red">
               Very high price impact — you may receive significantly less than expected
             </p>
           )}
@@ -617,7 +614,7 @@ export function SwapMask() {
       {/* ── Error reason ── */}
       {errorReason && (
         <div className="rounded-lg px-3 py-2 font-mono text-[11px] break-all"
-          style={{ background: 'var(--color-pink-a10)', color: 'var(--color-pink)', border: '1px solid var(--color-pink-a25)' }}>
+          style={{ background: 'var(--color-red-15)', color: 'var(--color-red)', border: '1px solid var(--color-red-35)' }}>
           {errorReason}
         </div>
       )}
@@ -630,7 +627,7 @@ export function SwapMask() {
               width: getProgressWidth(),
               background: status === 'success'
                 ? 'var(--color-green)'
-                : isBuying ? 'rgba(107,203,110,0.3)' : 'rgba(255,122,176,0.3)',
+                : isBuying ? 'var(--color-green-35)' : 'var(--color-red-35)',
             }} />
         )}
         <button

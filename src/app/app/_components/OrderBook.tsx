@@ -15,31 +15,31 @@ interface OrderBookProps {
 
 type AggregatedOrder = Order & { subOrders: Order[] };
 
-const BTN_BASE = 'rounded-lg flex items-center justify-center font-mono font-semibold uppercase tracking-widest transition-all px-3';
+const BTN_BASE = 'bg-card2 flex items-center justify-center font-mono font-semibold uppercase tracking-widest transition-all px-3';
 const BTN_H = 28;
 const BTN_FONT = 11;
 
 function FilterBtn({ label, active, onClick, className = '', activeBg, activeBorder }: { label: string; active: boolean; onClick: () => void; className?: string; activeBg?: string; activeBorder?: string }) {
-  const defaultActiveBg = activeBg || 'var(--color-gold-a10)';
-  const defaultActiveBorder = activeBorder || 'var(--color-gold-a25)';
+  const defaultActiveBg = activeBg || 'var(--color-gold-15)';
+  const defaultActiveBorder = activeBorder || 'var(--color-gold-35)';
 
   return (
     <button
-  onClick={onClick}
-  className={`${BTN_BASE} ${className} ${
-    !active ? 'bg-card2 hover: color-text hover:bg-card transition-colors' : ''
-  }`}
-  style={{
-    fontSize: BTN_FONT,
-    letterSpacing: '0.1em',
-    height: BTN_H,
-    color: active ? 'var(--color-text)' : 'var(--color-text2)',
-    background: active ? defaultActiveBg : undefined,
-    border: `1px solid ${active ? defaultActiveBorder : 'var(--color-border)'}`,
-  }}
->
-  {label}
-</button>
+      onClick={onClick}
+      className={`${BTN_BASE} ${className} ${
+        !active ? 'bg-card hover:bg-border transition-colors' : ''
+      }`}
+      style={{
+        fontSize: BTN_FONT,
+        letterSpacing: '0.1em',
+        height: BTN_H,
+        color: active ? 'var(--color-text)' : 'var(--color-text2)',
+        background: active ? defaultActiveBg : undefined,
+        border: `1px solid ${active ? defaultActiveBorder : 'var(--color-border)'}`,
+      }}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -48,10 +48,10 @@ export function OrderBook({
 }: OrderBookProps) {
   const { data } = useOrderBook(seasonAddress);
 
-  const [showAsks, setShowAsks] = useState(true);
-  const [showBids, setShowBids] = useState(true);
-  const [showBourgeoisie, setShowBourgeoisie] = useState(true);
-  const [showProletariat, setShowProletariat] = useState(true);
+  const [showAsks, setShowAsks] = useState(false);
+  const [showBids, setShowBids] = useState(false);
+  const [showBourgeoisie, setShowBourgeoisie] = useState(false);
+  const [showProletariat, setShowProletariat] = useState(false);
   const [rankFilterEnabled, setRankFilterEnabled] = useState(false);
   const [minPercentile, setMinPercentile] = useState<number | ''>(0);
   const [maxPercentile, setMaxPercentile] = useState<number | ''>(100);
@@ -197,14 +197,15 @@ export function OrderBook({
   const bothSidesOff = !showAsks && !showBids;
   const displayAsks = showAsks || bothSidesOff;
   const displayBids = showBids || bothSidesOff;
-  const gridColsClass = displayAsks && displayBids ? 'grid-cols-8' : 'grid-cols-4';
+  const showBoth = displayAsks && displayBids;
+  const gridColsClass = showBoth ? 'grid-cols-6' : 'grid-cols-4';
 
   const rankInputStyle = (active: boolean): React.CSSProperties => ({
     fontSize: BTN_FONT,
-    height: BTN_H,
+    height: 28,
     width: 44,
     background: 'var(--color-card2)',
-    borderColor: active ? 'var(--color-gold-a25)' : 'var(--color-border)',
+    borderColor: active ? 'var(--color-gold-35)' : 'var(--color-border)',
     color: active ? 'var(--color-text)' : 'var(--color-text2)',
     opacity: active ? 1 : 0.45,
     outline: 'none',
@@ -212,7 +213,7 @@ export function OrderBook({
   });
 
   return (
-    <div className="flex flex-col h-full gap-1">
+    <div className="flex flex-col h-full">
       {/* Dynamic Style Injection to hide inputs' spin arrows globally */}
       <style dangerouslySetInnerHTML={{__html: `
         .no-spinners::-webkit-outer-spin-button,
@@ -220,75 +221,43 @@ export function OrderBook({
         .no-spinners { -moz-appearance: textfield; }
       `}} />
 
-      {/* Floating filter rows — sit above the card, not part of it */}
-      <div className="flex flex-col gap-1 shrink-0">
-        {/* Row 1: Side */}
-        <div className="flex gap-1 w-full">
-          <FilterBtn label="Ask" active={showAsks} onClick={() => setShowAsks(v => !v)} className="flex-1" activeBg="var(--color-pink-a10)" activeBorder="var(--color-pink-a25)" />
-          <FilterBtn label="Bid" active={showBids} onClick={() => setShowBids(v => !v)} className="flex-1" activeBg="var(--color-green-a10)" activeBorder="var(--color-green-a25)" />
-        </div>
-
-        {/* Row 2: Faction */}
-        <div className="flex gap-1 w-full">
-          <FilterBtn label="Bourgeoisie" active={showBourgeoisie} onClick={() => setShowBourgeoisie(v => !v)} className="flex-1" activeBg="var(--color-blue-a10)" activeBorder="var(--color-blue-a25)" />
-          <FilterBtn label="Proletariat" active={showProletariat} onClick={() => setShowProletariat(v => !v)} className="flex-1" activeBg="var(--color-pink-a10)" activeBorder="var(--color-pink-a25)" />
-        </div>
-
-        {/* Row 3: Rank range */}
-        <div className="flex items-center gap-1 w-full">
-          <FilterBtn label="Rank %" active={rankFilterEnabled} onClick={() => setRankFilterEnabled(v => !v)} className="flex-1" />
-          <input
-            type="number" min="0" max="100" placeholder="0"
-            disabled={!rankFilterEnabled}
-            value={minPercentile}
-            onChange={(e) => {
-              const raw = e.target.value;
-              setMinPercentile(raw === '' ? '' : Math.min(100, Math.max(0, parseInt(raw) || 0)));
-            }}
-            className="rounded-lg font-mono font-semibold text-center border transition-all no-spinners"
-            style={rankInputStyle(rankFilterEnabled)}
-          />
-          <span className="font-mono opacity-40" style={{ fontSize: BTN_FONT, color: 'var(--color-text2)' }}>—</span>
-          <input
-            type="number" min="0" max="100" placeholder="100"
-            disabled={!rankFilterEnabled}
-            value={maxPercentile}
-            onChange={(e) => {
-              const raw = e.target.value;
-              setMaxPercentile(raw === '' ? '' : Math.min(100, Math.max(0, parseInt(raw) || 0)));
-            }}
-            className="rounded-lg font-mono font-semibold text-center border transition-all no-spinners"
-            style={rankInputStyle(rankFilterEnabled)}
-          />
-        </div>
-      </div>
-
       {/* Order book card */}
       <div
-        className="card-app flex flex-col flex-1 min-h-0 overflow-hidden max-h-200"
-        style={{ padding: 0, borderColor: 'var(--color-border-bright)' }}
+        className="card-app flex flex-col flex-1 min-h-0 overflow-hidden max-h-200 border-border2 p-0"
       >
         {/* Column headers */}
         <div
           className={`grid ${gridColsClass} px-4 py-2 shrink-0`}
-          style={{ background: 'var(--color-card2)', borderBottom: '1px solid var(--color-border)' }}
+          style={{ background: 'var(--color-card3)', borderBottom: '1px solid var(--color-border)' }}
         >
-          {displayAsks && (
+          {displayAsks && (showBoth ? (
             <>
               <span className="section-label text-right pr-2">Rank</span>
               <span className="section-label text-right pr-2">Amount</span>
-              <span className="section-label text-right pr-2">Total</span>
               <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-right pr-4 flex items-center justify-end" style={{ color: 'var(--color-red)' }}>Ask</span>
             </>
-          )}
-          {displayBids && (
+          ) : (
+            <>
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-widest pl-4 flex items-center" style={{ color: 'var(--color-red)' }}>Ask</span>
+              <span className="section-label pl-2">Total</span>
+              <span className="section-label pl-2">Amount</span>
+              <span className="section-label pl-2">Rank</span>
+            </>
+          ))}
+          {displayBids && (showBoth ? (
+            <>
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-widest pl-4 flex items-center" style={{ color: 'var(--color-green)' }}>Bid</span>
+              <span className="section-label pl-2">Amount</span>
+              <span className="section-label pl-2">Rank</span>
+            </>
+          ) : (
             <>
               <span className="font-mono text-[10px] font-semibold uppercase tracking-widest pl-4 flex items-center" style={{ color: 'var(--color-green)' }}>Bid</span>
               <span className="section-label pl-2">Total</span>
               <span className="section-label pl-2">Amount</span>
               <span className="section-label pl-2">Rank</span>
             </>
-          )}
+          ))}
         </div>
 
         {/* Rows viewport */}
@@ -308,68 +277,129 @@ export function OrderBook({
                   key={row.uniqueKey}
                   ref={isClosestToOne ? targetRowRef : undefined}
                   className={`grid ${gridColsClass} px-4 items-stretch`}
-                  style={{ borderBottom: '1px solid rgba(42,37,32,0.6)' }}
+                  style={{ borderBottom: '1px solid var(--color-border)' }}
                 >
                   {displayAsks && (
                     <div
                       onClick={() => isAskActive && row.ask && handleOrderClick(row.ask)}
-                      className="col-span-4 grid grid-cols-4 items-center py-2 transition-colors"
+                      className={`${showBoth ? 'col-span-3 grid grid-cols-3' : 'col-span-4 grid grid-cols-4'} items-center py-2 transition-colors`}
                       style={{
                         borderRight: displayBids ? '1px solid var(--color-border)' : undefined,
                         cursor: isAskActive && row.ask ? 'pointer' : 'default',
-                        background: askSelected ? 'rgba(107,203,110,0.08)' : undefined,
+                        background: askSelected ? 'var(--color-green-15)' : undefined,
                       }}
-                      onMouseEnter={(e) => { if (isAskActive && row.ask) (e.currentTarget as HTMLElement).style.background = 'rgba(107,203,110,0.05)'; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = askSelected ? 'rgba(107,203,110,0.08)' : ''; }}
+                      onMouseEnter={(e) => { if (isAskActive && row.ask) (e.currentTarget as HTMLElement).style.background = 'var(--color-green-15)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = askSelected ? 'var(--color-green-15)' : ''; }}
                     >
-                      {row.ask ? (
+                      {row.ask ? (showBoth ? (
                         <>
                           <div className="flex justify-end pr-2">{renderRank(row.ask.maker, 'end')}</div>
                           <span className="font-mono text-[11px] text-text text-right pr-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                            {row.ask.amount.toLocaleString()}
-                          </span>
-                          <span className="font-mono font-semibold text-[11px] text-text text-right pr-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                            ${(row.ask.pricePerFim * row.ask.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            {row.ask.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                           <span className="font-mono font-semibold text-[11px] text-right pr-3" style={{ color: 'var(--color-red)', fontVariantNumeric: 'tabular-nums' }}>
                             ${parseFloat(row.price).toFixed(4)}
                           </span>
                         </>
-                      ) : <div className="col-span-4" />}
+                      ) : (
+                        <>
+                          <span className="font-mono font-semibold text-[11px] pl-3" style={{ color: 'var(--color-red)', fontVariantNumeric: 'tabular-nums' }}>
+                            ${parseFloat(row.price).toFixed(4)}
+                          </span>
+                          <span className="font-mono font-semibold text-[11px] text-text pl-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            ${(parseFloat(row.price) * row.ask.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          <span className="font-mono text-[11px] text-text pl-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            {row.ask.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          <div className="pl-2">{renderRank(row.ask.maker, 'start')}</div>
+                        </>
+                      )) : <div className={showBoth ? 'col-span-3' : 'col-span-4'} />}
                     </div>
                   )}
 
                   {displayBids && (
                     <div
                       onClick={() => isBidActive && row.bid && handleOrderClick(row.bid)}
-                      className="col-span-4 grid grid-cols-4 items-center py-2 transition-colors"
+                      className={`${showBoth ? 'col-span-3 grid grid-cols-3' : 'col-span-4 grid grid-cols-4'} items-center py-2 transition-colors`}
                       style={{
                         cursor: isBidActive && row.bid ? 'pointer' : 'default',
-                        background: bidSelected ? 'rgba(255,61,138,0.08)' : undefined,
+                        background: bidSelected ? 'var(--color-red-15)' : undefined,
                       }}
-                      onMouseEnter={(e) => { if (isBidActive && row.bid) (e.currentTarget as HTMLElement).style.background = 'rgba(255,61,138,0.05)'; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = bidSelected ? 'rgba(255,61,138,0.08)' : ''; }}
+                      onMouseEnter={(e) => { if (isBidActive && row.bid) (e.currentTarget as HTMLElement).style.background = 'var(--color-red-15)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = bidSelected ? 'var(--color-red-15)' : ''; }}
                     >
-                      {row.bid ? (
+                      {row.bid ? (showBoth ? (
+                        <>
+                          <span className="font-mono font-semibold text-[11px] pl-3" style={{ color: 'var(--color-green)', fontVariantNumeric: 'tabular-nums' }}>
+                            ${parseFloat(row.price).toFixed(4)}
+                          </span>
+                          <span className="font-mono text-[11px] text-text pl-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            {row.bid.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          <div className="pl-2">{renderRank(row.bid.maker, 'start')}</div>
+                        </>
+                      ) : (
                         <>
                           <span className="font-mono font-semibold text-[11px] pl-3" style={{ color: 'var(--color-green)', fontVariantNumeric: 'tabular-nums' }}>
                             ${parseFloat(row.price).toFixed(4)}
                           </span>
                           <span className="font-mono font-semibold text-[11px] text-text pl-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                            ${(row.bid.pricePerFim * row.bid.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            ${(parseFloat(row.price) * row.bid.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                           <span className="font-mono text-[11px] text-text pl-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                            {row.bid.amount.toLocaleString()}
+                            {row.bid.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                           <div className="pl-2">{renderRank(row.bid.maker, 'start')}</div>
                         </>
-                      ) : <div className="col-span-4" />}
+                      )) : <div className={showBoth ? 'col-span-3' : 'col-span-4'} />}
                     </div>
                   )}
                 </div>
               );
             })
           )}
+        </div>
+
+        {/* Filter rows at the bottom of the card */}
+        <div className="flex flex-col gap- p-0 shrink-0 bg-card2">
+          {/* Row 1: Side */}
+          <div className="flex gap-0 w-full">
+            <FilterBtn label="Ask" active={showAsks} onClick={() => setShowAsks(v => !v)} className="flex-1" activeBg="var(--color-red-15)" activeBorder="var(--color-red-35)" />
+            <FilterBtn label="Bid" active={showBids} onClick={() => setShowBids(v => !v)} className="flex-1" activeBg="var(--color-green-15)" activeBorder="var(--color-green-35)" />
+          </div>
+          {/* Row 2: Faction */}
+          <div className="flex gap-0 w-full">
+            <FilterBtn label="Bourgeoisie" active={showBourgeoisie} onClick={() => setShowBourgeoisie(v => !v)} className="flex-1" activeBg="var(--color-gold-15)" activeBorder="var(--color-gold-35)" />
+            <FilterBtn label="Proletariat" active={showProletariat} onClick={() => setShowProletariat(v => !v)} className="flex-1" activeBg="var(--color-purple-15)" activeBorder="var(--color-purple-35)" />
+          </div>
+          {/* Row 3: Rank range */}
+          <div className="flex items-center gap-0 w-full">
+            <FilterBtn label="Rank %" active={rankFilterEnabled} onClick={() => setRankFilterEnabled(v => !v)} className="flex-1" />
+            <input
+              type="number" min="0" max="100" placeholder="0"
+              disabled={!rankFilterEnabled}
+              value={minPercentile}
+              onChange={(e) => {
+                const raw = e.target.value;
+                setMinPercentile(raw === '' ? '' : Math.min(100, Math.max(0, parseInt(raw) || 0)));
+              }}
+              className="  font-mono font-semibold text-center border transition-all no-spinners"
+              style={rankInputStyle(rankFilterEnabled)}
+            />
+            <span className="font-mono opacity-40" style={{ fontSize: BTN_FONT, color: 'var(--color-text2)' }}>—</span>
+            <input
+              type="number" min="0" max="100" placeholder="100"
+              disabled={!rankFilterEnabled}
+              value={maxPercentile}
+              onChange={(e) => {
+                const raw = e.target.value;
+                setMaxPercentile(raw === '' ? '' : Math.min(100, Math.max(0, parseInt(raw) || 0)));
+              }}
+              className=" font-mono font-semibold text-center border transition-all no-spinners"
+              style={rankInputStyle(rankFilterEnabled)}
+            />
+          </div>
         </div>
       </div>
     </div>

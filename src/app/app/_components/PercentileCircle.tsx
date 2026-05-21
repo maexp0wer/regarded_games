@@ -37,8 +37,8 @@ export const PercentileCircle: React.FC<PercentileCircleProps> = ({
 }) => {
   const s = sizeMap[size];
   
-  const colorClass = isCapitalist ? "stroke-blue" : "stroke-pink";
-  const bgClass = isCapitalist ? "stroke-blue/20" : "stroke-pink/20";
+  const colorClass = isCapitalist ? "stroke-gold" : "stroke-purple";
+  const bgClass = isCapitalist ? "stroke-(--color-gold-35)" : "stroke-(--color-purple-35)";
   
   const radius = 15.9155; // Circumference = 100
   const dashArray = `${percentage} ${100 - percentage}`;
@@ -78,7 +78,7 @@ export const PercentileCircle: React.FC<PercentileCircleProps> = ({
       
       {/* 3. PERCENTAGE TEXT */}
       {showText && (
-        <span className={`font-mono font-black whitespace-nowrap ${s.font} ${isCapitalist ? 'text-blue' : 'text-pink'}`}>
+        <span className={`font-mono font-black whitespace-nowrap ${s.font} ${isCapitalist ? 'text-gold' : 'text-purple'}`}>
           {Math.round(percentage)}%
         </span>
       )}

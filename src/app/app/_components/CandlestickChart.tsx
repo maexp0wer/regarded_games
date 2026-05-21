@@ -1,22 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
-import {
-  createChart,
-  IChartApi,
-  ISeriesApi,
-  IPriceLine,
-  CandlestickSeries,
-  HistogramSeries,
-  LineSeries,
-  LineStyle,
-  LineType,
-  CrosshairMode,
-  Time,
-} from 'lightweight-charts';
+import { useMemo } from 'react';
+import ReactECharts from 'echarts-for-react';
+import type { ECElementEvent } from 'echarts';
 import { CandleData } from '@/utils/chartData';
 
-export type Timeframe = '1h' | '4h' | '1d';
+export type Timeframe = '5m' | '1h' | '4h' | '1d';
 
 interface CandlestickChartProps {
   candles: CandleData[];
@@ -28,16 +17,21 @@ interface CandlestickChartProps {
   socTargetBps: number;
 }
 
-const TIMEFRAMES: Timeframe[] = ['1h', '4h', '1d'];
+const TIMEFRAMES: Timeframe[] = ['5m', '1h', '4h', '1d'];
 const TIMEFRAME_MS: Record<Timeframe, number> = {
-  '1h': 3_600_000,
+  '5m':    300_000,
+  '1h':  3_600_000,
   '4h': 14_400_000,
   '1d': 86_400_000,
 };
 
-// Fallback hex values — overridden at init time by getCSSVar
-const CAP_COLOR_FALLBACK = '#4d9fff62';
-const SOC_COLOR_FALLBACK = '#e7282862';
+function hexToRgba(hex: string, alpha: number): string {
+  if (!hex.startsWith('#') || hex.length < 7) return `rgba(255,255,255,${alpha})`;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 export function CandlestickChart({
   candles,
@@ -48,214 +42,192 @@ export function CandlestickChart({
   capTargetBps,
   socTargetBps,
 }: CandlestickChartProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
-  const capVolSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
-  const socVolSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
-  const giniSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
-  const capGoalLineRef = useRef<IPriceLine | null>(null);
-  const socGoalLineRef = useRef<IPriceLine | null>(null);
-  const capColorRef = useRef(CAP_COLOR_FALLBACK);
-  const socColorRef = useRef(SOC_COLOR_FALLBACK);
-  const timeframeRef = useRef(timeframe);
+  const option = useMemo(() => {
+    if (typeof window === 'undefined') return {};
 
-  const getCSSVar = useCallback((name: string) => {
-    if (typeof window === 'undefined') return '#ffffff';
-    return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#ffffff';
-  }, []);
+    const s = getComputedStyle(document.documentElement);
+    const v = (n: string) => s.getPropertyValue(n).trim();
 
-  // Keep timeframeRef current so the stale click-handler closure can read it
-  useEffect(() => { timeframeRef.current = timeframe; }, [timeframe]);
+    const bgColor   = v('--color-card')      || '#15120f';
+    const gridColor = v('--color-border')    || '#2a2520';
+    const textColor = v('--color-text2')     || '#8a8378';
+    const upColor   = v('--color-green-soft')|| '#6bcb6e';
+    const downColor = v('--color-red-soft')  || '#ff5454';
+    const capColor  = v('--color-gold')      || '#D4AF37';
+    const socColor  = v('--color-purple')    || '#9D4EDD';
 
-  // Initialise chart once
-  useEffect(() => {
-    if (!containerRef.current) return;
+    const candleData = candles.map(c => [c.time * 1000, c.open, c.close, c.low, c.high]);
+    const capVolData = candles.map(c => [c.time * 1000, c.capBuyerVolume]);
+    const socVolData = candles.map(c => [c.time * 1000, -c.socBuyerVolume]);
+    const giniData   = candles.filter(c => c.giniBps > 0).map(c => [c.time * 1000, c.giniBps]);
 
-    // Resolve CSS variables to actual hex strings (lightweight-charts can't read CSS vars)
-    const bgColor     = getCSSVar('--color-card')   || '#15120f';
-    const gridColor   = getCSSVar('--color-border') || '#2a2520';
-    const textColor   = getCSSVar('--color-text2')  || '#8a8378';
-    const upColor     = getCSSVar('--color-green')  || '#6bcb6e';
-    const downColor   = getCSSVar('--color-red')    || '#ff5454';
-    const capColor    = getCSSVar('--color-blue-a50')   || CAP_COLOR_FALLBACK;
-    const socColor    = getCSSVar('--color-pink-a50')   || SOC_COLOR_FALLBACK;
-    const giniColor   = getCSSVar('--color-gold') || '#CC4713';
+    return {
+      animation: false,
+      backgroundColor: bgColor,
+      textStyle: { fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: textColor },
 
-    capColorRef.current = capColor;
-    socColorRef.current = socColor;
+      grid: [
+        { left: 60, right: 60, top: 20, height: '52%' },
+        { left: 60, right: 60, top: '62%', bottom: 30 },
+      ],
 
-    const { offsetWidth: w, offsetHeight: h } = containerRef.current;
-    const chart = createChart(containerRef.current, {
-      width: w,
-      height: h,
-      layout: {
-        background: { color: bgColor },
-        textColor,
-        fontFamily: 'JetBrains Mono, monospace',
-        fontSize: 11,
-        attributionLogo: false,
+      xAxis: [
+        {
+          gridIndex: 0,
+          type: 'time',
+          axisLine: { lineStyle: { color: gridColor } },
+          axisLabel: { show: false },
+          splitLine: { lineStyle: { color: gridColor } },
+        },
+        {
+          gridIndex: 1,
+          type: 'time',
+          axisLine: { lineStyle: { color: gridColor } },
+          axisLabel: { color: textColor, fontSize: 10 },
+          splitLine: { lineStyle: { color: gridColor } },
+        },
+      ],
+
+      yAxis: [
+        {
+          gridIndex: 0,
+          scale: true,
+          axisLine: { show: true, lineStyle: { color: gridColor } },
+          axisLabel: { color: textColor, fontSize: 10 },
+          splitLine: { lineStyle: { color: gridColor } },
+        },
+        {
+          gridIndex: 1,
+          scale: true,
+          position: 'right',
+          axisLine: { show: true, lineStyle: { color: gridColor } },
+          axisLabel: { color: textColor, fontSize: 10 },
+          splitLine: { show: false },
+        },
+        {
+          gridIndex: 1,
+          scale: true,
+          position: 'left',
+          axisLine: { show: true, lineStyle: { color: gridColor } },
+          axisLabel: { color: textColor, fontSize: 10 },
+          splitLine: { show: false },
+          ...(capTargetBps > 0 && socTargetBps > 0 ? {
+            min: socTargetBps - 100,
+            max: capTargetBps + 100,
+          } : {}),
+        },
+      ],
+
+      dataZoom: [
+        { type: 'inside', xAxisIndex: [0, 1], filterMode: 'weakFilter' },
+      ],
+
+      axisPointer: {
+        link: [{ xAxisIndex: 'all' }],
       },
-      grid: {
-        vertLines: { color: gridColor },
-        horzLines: { color: gridColor },
+
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'cross' },
+        backgroundColor: bgColor,
+        borderColor: gridColor,
+        textStyle: { color: textColor, fontFamily: 'JetBrains Mono, monospace', fontSize: 11 },
       },
-      crosshair: { mode: CrosshairMode.Normal },
-      rightPriceScale: { borderColor: gridColor },
-      leftPriceScale: { borderColor: gridColor, visible: true },
-      timeScale: { borderColor: gridColor, timeVisible: true, rightBarStaysOnScroll: true },
-      handleScroll: true,
-      handleScale: true,
-    });
 
-    // Price pane — candlesticks (pane 0)
-    const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor,
-      downColor,
-      borderUpColor: upColor,
-      borderDownColor: downColor,
-      wickUpColor: upColor,
-      wickDownColor: downColor,
-    });
+      series: [
+        {
+          type: 'candlestick',
+          xAxisIndex: 0,
+          yAxisIndex: 0,
+          data: candleData,
+          itemStyle: {
+            color: upColor,
+            color0: downColor,
+            borderColor: upColor,
+            borderColor0: downColor,
+          },
+          ...(selectedRange ? {
+            markArea: {
+              silent: true,
+              itemStyle: { color: 'rgba(255,255,255,0.06)' },
+              data: [[{ xAxis: selectedRange.start }, { xAxis: selectedRange.end }]],
+            },
+          } : {}),
+        },
+        {
+          type: 'bar',
+          xAxisIndex: 1,
+          yAxisIndex: 1,
+          data: capVolData,
+          barMaxWidth: 8,
+          itemStyle: { color: hexToRgba(capColor, 0.7) },
+        },
+        {
+          type: 'bar',
+          xAxisIndex: 1,
+          yAxisIndex: 1,
+          data: socVolData,
+          barMaxWidth: 8,
+          itemStyle: { color: hexToRgba(socColor, 0.7) },
+        },
+        {
+          type: 'line',
+          xAxisIndex: 1,
+          yAxisIndex: 2,
+          data: giniData,
+          smooth: true,
+          symbol: 'none',
+          lineStyle: { color: capColor, width: 2 },
+          ...(capTargetBps > 0 && socTargetBps > 0 ? {
+            markLine: {
+              silent: true,
+              symbol: ['none', 'none'],
+              data: [
+                {
+                  yAxis: capTargetBps,
+                  lineStyle: { color: capColor, type: 'dashed', width: 1 },
+                  label: { formatter: 'Bourgeois Goal', color: capColor, fontSize: 10 },
+                },
+                {
+                  yAxis: socTargetBps,
+                  lineStyle: { color: socColor, type: 'dashed', width: 1 },
+                  label: { formatter: 'Proletariat Goal', color: socColor, fontSize: 10 },
+                },
+              ],
+            },
+          } : {}),
+        },
+      ],
+    };
+  }, [candles, selectedRange, capTargetBps, socTargetBps]);
 
-    // Volume pane — capitalist buyers (positive, pane 1)
-    const capVolSeries = chart.addSeries(HistogramSeries, {
-      color: capColor,
-      priceFormat: { type: 'volume' },
-    }, 1);
-    capVolSeries.priceScale().applyOptions({ scaleMargins: { top: 0.1, bottom: 0.1 } });
-
-    // Volume pane — socialist buyers (negative, same pane)
-    const socVolSeries = chart.addSeries(HistogramSeries, {
-      color: socColor,
-      priceFormat: { type: 'volume' },
-    }, 1);
-
-    // Gini line — overlaid on volume pane, left scale
-    const giniSeries = chart.addSeries(LineSeries, {
-      color: giniColor,
-      lineWidth: 2,
-      lineType: LineType.Curved,
-      priceScaleId: 'left',
-      priceFormat: { type: 'price', precision: 0, minMove: 1 },
-      title: 'Gini BPS',
-      lastValueVisible: true,
-    }, 1);
-    giniSeries.priceScale().applyOptions({ scaleMargins: { top: 0.1, bottom: 0.1 } });
-
-    chartRef.current = chart;
-    giniSeriesRef.current = giniSeries;
-    candleSeriesRef.current = candleSeries;
-    capVolSeriesRef.current = capVolSeries;
-    socVolSeriesRef.current = socVolSeries;
-
-    // Candle click → derive time range from timeframe
-    chart.subscribeClick((param) => {
-      if (!param.time) {
+  const onEvents = useMemo(() => ({
+    click: (params: ECElementEvent) => {
+      if (params.componentType !== 'series') {
         onCandleClick(null);
         return;
       }
-      const t = (param.time as number) * 1000;
-      const tfMs = TIMEFRAME_MS[timeframeRef.current];
-      const bucketStart = Math.floor(t / tfMs) * tfMs;
-      onCandleClick({ start: bucketStart, end: bucketStart + tfMs });
-    });
-
-    const ro = new ResizeObserver(() => {
-      if (!containerRef.current) return;
-      chart.resize(containerRef.current.offsetWidth, containerRef.current.offsetHeight);
-    });
-    ro.observe(containerRef.current);
-
-    return () => {
-      ro.disconnect();
-      chart.remove();
-      chartRef.current = null;
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Update series data when candles change
-  useEffect(() => {
-    if (!candleSeriesRef.current || !capVolSeriesRef.current || !socVolSeriesRef.current || !giniSeriesRef.current) return;
-    if (candles.length === 0) return;
-
-    candleSeriesRef.current.setData(
-      candles.map((c) => ({
-        time: c.time as Time,
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close,
-      }))
-    );
-
-    capVolSeriesRef.current.setData(
-      candles.map((c) => ({ time: c.time as Time, value: c.capBuyerVolume, color: capColorRef.current }))
-    );
-
-    socVolSeriesRef.current.setData(
-      candles.map((c) => ({ time: c.time as Time, value: -c.socBuyerVolume, color: socColorRef.current }))
-    );
-
-    giniSeriesRef.current.setData(
-      candles
-        .filter((c) => c.giniBps > 0)
-        .map((c) => ({ time: c.time as Time, value: c.giniBps }))
-    );
-  }, [candles]);
-
-  // Goal lines + fixed scale — re-runs when on-chain targets arrive or change
-  useEffect(() => {
-    const series = giniSeriesRef.current;
-    if (!series || capTargetBps <= 0 || socTargetBps <= 0) return;
-
-    if (capGoalLineRef.current) { series.removePriceLine(capGoalLineRef.current); capGoalLineRef.current = null; }
-    if (socGoalLineRef.current) { series.removePriceLine(socGoalLineRef.current); socGoalLineRef.current = null; }
-
-    capGoalLineRef.current = series.createPriceLine({
-      price: capTargetBps,
-      color: capColorRef.current,
-      lineWidth: 1,
-      lineStyle: LineStyle.Dashed,
-      axisLabelVisible: true,
-      title: 'Bourgeois Goal',
-    });
-    socGoalLineRef.current = series.createPriceLine({
-      price: socTargetBps,
-      color: socColorRef.current,
-      lineWidth: 1,
-      lineStyle: LineStyle.Dashed,
-      axisLabelVisible: true,
-      title: 'Proletariat Goal',
-    });
-
-    series.applyOptions({
-      autoscaleInfoProvider: () => ({
-        priceRange: { minValue: socTargetBps - 100, maxValue: capTargetBps + 100 },
-      }),
-    });
-  }, [capTargetBps, socTargetBps]);
-
-  // Highlight selected candle
-  useEffect(() => {
-    if (!chartRef.current || !selectedRange) return;
-    chartRef.current.timeScale().scrollToPosition(0, false);
-  }, [selectedRange]);
+      const tsMs = (params.value as number[])[0];
+      if (!tsMs) { onCandleClick(null); return; }
+      const tfMs = TIMEFRAME_MS[timeframe];
+      const start = Math.floor(tsMs / tfMs) * tfMs;
+      onCandleClick({ start, end: start + tfMs });
+    },
+  }), [timeframe, onCandleClick]);
 
   return (
-    <div className="card-app flex flex-col gap-2 min-w-0 overflow-hidden h-full "
-    >
-      <div className="flex items-center justify-between">
+    <div className="rounded-3xl py-6 flex flex-col overflow-hidden h-full bg-[linear-gradient(to_bottom,var(--color-purple-15),var(--color-card)_2%),linear-gradient(to_right,var(--color-purple-15),var(--color-gold-15)_60%)]">
+      <div className="flex items-center justify-between px-6">
         <div className="flex items-center gap-3">
           <span className="h4-app">Price Chart</span>
           {candles.length > 0 && (
             <div className="flex items-center gap-2 text-xs font-mono text-text2">
               <span className="flex items-center gap-1">
-                <span className="inline-block w-2 h-2 rounded-sm" style={{ background: 'var(--color-blue)' }} />
+                <span className="inline-block w-2 h-2 rounded-sm bg-gold" />
                 Cap buying
               </span>
               <span className="flex items-center gap-1">
-                <span className="inline-block w-2 h-2 rounded-sm" style={{ background: 'var(--color-pink)' }} />
+                <span className="inline-block w-2 h-2 rounded-sm bg-purple" />
                 Soc buying
               </span>
               <span className="flex items-center gap-1">
@@ -277,14 +249,19 @@ export function CandlestickChart({
           <TimeframeSelector value={timeframe} onChange={onTimeframeChange} />
         </div>
       </div>
-      {/* containerRef must always be in the DOM so the chart initialisation effect
-          ([] deps) finds it on first mount, before candle data arrives. */}
       <div className="relative w-full h-110">
-        <div ref={containerRef} className="w-full h-full pt-5" />
-        {candles.length === 0 && (
+        {candles.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center text-sm text-text2 animate-pulse">
             Reading Ledger…
           </div>
+        ) : (
+          <ReactECharts
+            option={option}
+            onEvents={onEvents}
+            style={{ height: '100%', width: '100%' }}
+            notMerge={false}
+            lazyUpdate
+          />
         )}
       </div>
     </div>

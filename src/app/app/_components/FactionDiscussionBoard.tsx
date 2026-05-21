@@ -66,10 +66,10 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isAtBottom = useRef(true);
 
-  const factionColor = isCapitalist ? 'var(--color-blue)' : 'var(--color-pink)';
+  const factionColor = isCapitalist ? 'var(--color-gold)' : 'var(--color-purple)';
   const factionLabel = isCapitalist ? 'THE BOURGEOISIE' : 'THE PROLETARIAT';
   const pillClass = isCapitalist ? 'pill-faction-cap' : 'pill-faction-soc';
-  const hoverBorderColor = isCapitalist ? 'var(--color-blue-a40)' : 'var(--color-pink-a40)';
+  const hoverBorderColor = isCapitalist ? 'var(--color-gold-35)' : 'var(--color-purple-35)';
   const seasonNum = seasonSlug.match(/\d+/)?.[0] || '1';
   const discourseNewTopicUrl = `${process.env.NEXT_PUBLIC_DISCOURSE_URL}/c/season-${seasonNum}/${isCapitalist ? `s${seasonNum}-bourgeoisie-strategy` : `s${seasonNum}-proletariat-strategy`}`;
 
@@ -252,15 +252,12 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
       className={embedded ? 'flex flex-col h-full overflow-hidden' : 'flex flex-col max-h-screen overflow-hidden'}
       style={embedded ? {} : {
         background: 'var(--color-card)',
-        border: '1px solid var(--color-border-bright)',
+        border: '1px solid var(--color-border2)',
         borderRadius: 20,
       }}
     >
       {/* ── Header ── */}
-      <div
-        className="flex items-center justify-between px-5 py-3 shrink-0"
-        style={{ background: 'var(--color-card2)', borderBottom: '1px solid var(--color-border)' }}
-      >
+      <div className="flex items-center justify-between px-5 py-3 shrink-0 bg-card2 border-b border-border">
         <div className="flex items-center gap-2 min-w-0">
           {embedded && onClose && !selectedTopic && !isCreating && (
             <button
@@ -529,7 +526,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
                     <div
                       className="px-4 py-3 rounded-xl text-[13px] leading-relaxed discourse-post"
                       style={{
-                        background: isOwn ? (isCapitalist ? 'var(--color-blue-a10)' : 'var(--color-pink-a10)') : 'var(--color-card2)',
+                        background: isOwn ? (isCapitalist ? 'var(--color-gold-15)' : 'var(--color-purple-15)') : 'var(--color-card2)',
                         border: `1px solid ${isOwn ? hoverBorderColor : 'var(--color-border)'}`,
                         color: 'var(--color-text)',
                       }}
