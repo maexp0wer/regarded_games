@@ -284,18 +284,19 @@ export function ChordDiagram({
         d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
       return `${fmt(start)} – ${fmt(end)} • ${tradeCount} trade${tradeCount !== 1 ? 's' : ''}`;
     }
+    const mins = timeWindowMs / 60_000;
     const hours = timeWindowMs / 3_600_000;
-    const label = hours < 24 ? `${hours}h` : `${hours / 24}d`;
+    const label = mins < 60 ? `${mins}m` : hours < 24 ? `${hours}h` : `${hours / 24}d`;
     return `Last ${label} • live`;
   }, [selectedRange, timeWindowMs, tradeCount]);
 
   return (
     <div
-      className="p-6 rounded-3xl bg-[image:var(--subtle-glow)] flex flex-col gap-2 h-full"
+      className="p-6 rounded-lg bg-card flex flex-col gap-2 h-full"
     >
       <div className="flex items-center justify-between">
         <span className="h4-app">Trade Flows</span>
-        <div className="flex items-center gap-2 text-xs font-mono text-text2">
+        <div className="flex items-center gap-2 text-xs font-mono text-text2 ">
           <span>{modeLabel}</span>
           {isLive && !selectedRange && (
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />

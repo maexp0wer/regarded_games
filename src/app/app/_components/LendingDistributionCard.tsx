@@ -35,8 +35,10 @@ export function LendingDistributionCard({ seasonAddress, config }: LendingDistri
   : [];
 
   return (
-    <div className="p-6 rounded-3xl flex flex-col gap-3 h-full bg-linear-to-b from-[var(--color-card)] from-95%  to-[var(--color-bg)]">
-      <p className="section-label pb-2" >Lending Distribution</p>
+    <div className="terminal-pane h-full">
+      <div className="terminal-pane-header">
+        <span className="terminal-pane-title">Lending Distribution</span>
+      </div>
 
       {economicItems.length === 0 ? (
         <p className="section-label opacity-30 text-center pt-4">No active distribution</p>

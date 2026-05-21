@@ -151,16 +151,17 @@ export default function Home() {
           : 'relative mx-auto md:transform md:-translate-x-16.25'
       }`}>
 
+        <div className="hero-blur-backdrop" />
+
         <div className="w-full max-w-6xl p-8 text-text">
           <div className='text-gold flex justify-center items-center '>
             <Logo className='w-40 text-white'/>
           </div>
 
-        
+
           {/* Hero Section */}
-          <section className="hero-section min-h-screen flex items-center justify-center">
-            
-            <div className="hero-blur-backdrop" />
+          <section className="hero-section relative overflow-hidden min-h-screen flex items-center justify-center">
+
   
   <div className="hero-container">
     {/* Main Header Display - Single block for perfect scaling */}
@@ -238,7 +239,7 @@ export default function Home() {
                   </div>
                 </GenericModal>
 
-                <div className="flex flex-col items-center text-center bg-card p-8 rounded-xl shadow-md max-h-screen">
+                <div className="flex flex-col items-center text-center bg-card p-8 rounded-lg shadow-md max-h-screen">
                   <Carlo className="w-full h-auto max-h-70  transition-transform duration-200 ease-in-out hover:scale-110 pt-8" viewBox="0 0 500 800" onClick={openCarloModal}/>
                   <h3 className="text-xl font-bold mt-8 m-3">Carlo, the Socialist</h3>
                   <p className='text-sm'>Play the game of coordination. Organize with the masses to resist the pull of capital and drive the economy towards perfect distribution.

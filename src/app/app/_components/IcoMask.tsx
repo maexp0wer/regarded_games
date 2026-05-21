@@ -316,7 +316,7 @@ export function IcoMask() {
 
       {/* ── Countdown ── */}
       {phase === 'live' && secondsToEnd > 0 && (
-        <div className="rounded-xl px-4 py-3 flex items-center justify-between"
+        <div className="rounded-lg px-4 py-3 flex items-center justify-between"
           style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}>
           <span className="section-label">Auction Ends In</span>
           <span className="font-mono font-bold text-sm"
@@ -326,7 +326,7 @@ export function IcoMask() {
         </div>
       )}
       {/* ── Stats grid ── */}
-      <div className="grid grid-cols-2 gap-0 rounded-xl overflow-hidden"
+      <div className="grid grid-cols-2 gap-0 rounded-lg overflow-hidden"
         style={{ border: '1px solid var(--color-border)' }}>
         <div className="flex flex-col gap-1 p-3"
           style={{ background: 'var(--color-card2)', borderRight: '1px solid var(--color-border)' }}>
@@ -394,7 +394,7 @@ export function IcoMask() {
 
       {/* ── PENDING: RGD not linked yet ── */}
       {phase === 'pending' && (
-        <div className="rounded-xl px-4 py-5 text-center"
+        <div className="rounded-lg px-4 py-5 text-center"
           style={{ background: 'var(--color-card2)', border: '1px solid var(--color-border)' }}>
           <p className="section-label mb-1">Auction Not Yet Open</p>
           <p className="font-mono text-[12px]" style={{ color: 'var(--color-text2)' }}>
@@ -406,7 +406,7 @@ export function IcoMask() {
       {/* ── LIVE: deposit form ── */}
       {phase === 'live' && (
         <>
-          <div className="rounded-xl p-4 flex flex-col gap-3"
+          <div className="rounded-lg p-4 flex flex-col gap-3"
             style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}>
             <div className="flex items-center justify-between">
               <span className="section-label">Deposit USDC</span>
@@ -442,7 +442,7 @@ export function IcoMask() {
             </div>
           )}
 
-          <div className="relative rounded-xl overflow-hidden">
+          <div className="relative rounded-lg overflow-hidden">
             {depositStatus !== 'idle' && !depositIsError && (
               <div className="absolute inset-y-0 left-0 transition-all duration-500"
                 style={{
@@ -453,7 +453,7 @@ export function IcoMask() {
             <button
               disabled={depositDisabled}
               onClick={handleDeposit}
-              className={`relative z-10 w-full py-4 font-mono font-bold text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all rounded-xl
+              className={`relative z-10 w-full py-4 font-mono font-bold text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all rounded-lg
                 ${depositIsSuccess ? 'bg-green! text-card!' : ''}
                 ${depositIsError   ? 'bg-red! text-white!' : ''}
                 ${!depositDisabled && !depositIsSuccess && !depositIsError ? 'btn-primary' : ''}
@@ -468,7 +468,7 @@ export function IcoMask() {
 
       {/* ── AWAITING FINALIZATION ── */}
       {phase === 'awaiting_finalization' && (
-        <div className="rounded-xl px-4 py-5 text-center"
+        <div className="rounded-lg px-4 py-5 text-center"
           style={{ background: 'var(--color-card2)', border: '1px solid var(--color-border)' }}>
           <p className="section-label mb-1">Auction Ended</p>
           <p className="font-mono text-[12px]" style={{ color: 'var(--color-text2)' }}>
@@ -480,7 +480,7 @@ export function IcoMask() {
       {/* ── CLAIMABLE ── */}
       {phase === 'claimable' && (
         <>
-          <div className="rounded-xl px-4 py-4 flex flex-col gap-2"
+          <div className="rounded-lg px-4 py-4 flex flex-col gap-2"
             style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}>
             <div className="flex items-center justify-between">
               <span className="section-label">Your RGD</span>
@@ -508,7 +508,7 @@ export function IcoMask() {
             </div>
           )}
 
-          <div className="relative rounded-xl overflow-hidden">
+          <div className="relative rounded-lg overflow-hidden">
             {claimStatus !== 'idle' && !claimIsError && (
               <div className="absolute inset-y-0 left-0 transition-all duration-500"
                 style={{
@@ -519,7 +519,7 @@ export function IcoMask() {
             <button
               disabled={claimDisabled}
               onClick={handleClaim}
-              className={`relative z-10 w-full py-4 font-mono font-bold text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all rounded-xl
+              className={`relative z-10 w-full py-4 font-mono font-bold text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all rounded-lg
                 ${claimIsSuccess ? 'bg-green! text-card!' : ''}
                 ${claimIsError   ? 'bg-red! text-white!' : ''}
                 ${!claimDisabled && !claimIsSuccess && !claimIsError ? 'btn-primary' : ''}
@@ -534,7 +534,7 @@ export function IcoMask() {
 
       {/* ── NO DEPOSIT ── */}
       {phase === 'no_deposit' && (
-        <div className="rounded-xl px-4 py-5 text-center"
+        <div className="rounded-lg px-4 py-5 text-center"
           style={{ background: 'var(--color-card2)', border: '1px solid var(--color-border)' }}>
           <p className="font-mono font-bold text-[12px] uppercase tracking-widest"
             style={{ color: 'var(--color-text2)' }}>

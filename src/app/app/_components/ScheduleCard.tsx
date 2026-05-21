@@ -15,20 +15,24 @@ interface ScheduleCardProps {
 
 export function ScheduleCard({ tradingStart, seasonEnd, config }: ScheduleCardProps) {
   return (
-    <div className="card-app flex flex-col gap-3 h-full border-border2">
-      <p className="section-label pb-2">Schedule</p>
-      {[
-        { label: 'Season Start',  value: formatDate(config?.auctionStartTime || 0) },
-        { label: 'Trading Start', value: formatDate(tradingStart) },
-        { label: 'Season End',    value: formatDate(seasonEnd) },
-      ].map(({ label, value }) => (
-        <div key={label} className="kv-row">
-          <span className="font-mono text-[11px] text-text2">{label}</span>
-          <span className="font-mono text-[12px] font-semibold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {value}
-          </span>
-        </div>
-      ))}
+    <div className="terminal-pane h-full">
+      <div className="terminal-pane-header">
+        <span className="terminal-pane-title">Schedule</span>
+      </div>
+      <div className="flex flex-col gap-3">
+        {[
+          { label: 'Season Start',  value: formatDate(config?.auctionStartTime || 0) },
+          { label: 'Trading Start', value: formatDate(tradingStart) },
+          { label: 'Season End',    value: formatDate(seasonEnd) },
+        ].map(({ label, value }) => (
+          <div key={label} className="kv-row">
+            <span className="font-mono text-[11px] text-text2">{label}</span>
+            <span className="font-mono text-[12px] font-semibold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {value}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

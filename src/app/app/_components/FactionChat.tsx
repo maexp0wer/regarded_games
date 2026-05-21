@@ -4,30 +4,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { FactionDiscussionBoard } from './FactionDiscussionBoard';
 
-function TabBtn({ label, active, onClick, className = '', activeBg, activeBorder }: { label: string; active: boolean; onClick: () => void; className?: string; activeBg?: string; activeBorder?: string }) {
-  const defaultActiveBg = activeBg || 'var(--color-gold-15)';
-  const defaultActiveBorder = activeBorder || 'var(--color-gold-35)';
-
-  return (
-    <button
-      onClick={onClick}
-      className={`rounded-md flex px-2.5 py-1 items-center justify-center font-mono text-[10px] font-semibold uppercase tracking-widest transition-all border text-text2 ${
-        active ? '' : 'bg-card2 border-border hover:bg-card'
-      } ${className}`}
-      style={{
-        fontSize: 11,
-        letterSpacing: '0.1em',
-        ...(active && {
-          background: defaultActiveBg,
-          borderColor: defaultActiveBorder,
-        }),
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
 interface DiscourseMessage {
   id: number;
   message: string;
@@ -61,29 +37,40 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [discovering, setDiscovering] = useState(true);
-  const [connected, setConnected] = useState(false);
   const messageListRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isAtBottom = useRef(true);
   const tabCache = useRef<Partial<Record<'faction' | 'general', { channelId: number | null; messages: DiscourseMessage[] }>>>({});
+  const activeAddressRef = useRef<string | undefined>(undefined);
 
-  const factionColor = auctionMode ? 'var(--color-gold-70)' : isCapitalist ? 'var(--color-gold-70)' : 'var(--color-purple-70)';
   const factionLabel = isCapitalist ? 'BOURGEOISIE' : 'PROLETARIAT';
 
-  // Discover channel + fetch initial messages in one shot to avoid intermediate empty states
+  // Discover channel + fetch initial messages in one shot to avoid intermediate empty states.
+  // When the wallet address changes (switch or disconnect), flush the tab cache so the new
+  // wallet always gets a fresh channel lookup rather than inheriting the old wallet's session.
   useEffect(() => {
+    if (activeAddressRef.current !== address) {
+      activeAddressRef.current = address;
+      tabCache.current = {};
+      setChannelId(null);
+      setMessages([]);
+    }
+
+    if (!address) {
+      setDiscovering(false);
+      return;
+    }
+
     const cached = tabCache.current[tab];
     if (cached) {
       setChannelId(cached.channelId);
       setMessages(cached.messages);
-      setConnected(cached.messages.length > 0);
       setDiscovering(false);
       return;
     }
 
     async function discover() {
       setDiscovering(true);
-      setConnected(false);
       try {
         const chanRes = await fetch('/api/discourse/discover-channel', {
           method: 'POST',
@@ -99,7 +86,6 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
           const msgData = await msgRes.json();
           if (Array.isArray(msgData.messages)) {
             newMessages = msgData.messages;
-            setConnected(true);
           }
         }
 
@@ -116,7 +102,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
       }
     }
     discover();
-  }, [seasonSlug, isCapitalist, tab]);
+  }, [seasonSlug, isCapitalist, tab, address]);
 
   // Fetch messages (used by the polling interval and after sending)
   const fetchMessages = useCallback(async () => {
@@ -127,11 +113,9 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
       if (Array.isArray(data.messages)) {
         setMessages(data.messages);
         tabCache.current[tab] = { channelId, messages: data.messages };
-        setConnected(true);
       }
     } catch (e) {
       console.error('Message fetch failed', e);
-      setConnected(false);
     }
   }, [channelId, tab]);
 
@@ -213,168 +197,113 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
   }
 
-  const dotColor = connected ? 'var(--color-green)' : 'var(--color-red)';
-
   return (
-    <div className="flex flex-col h-full">
-      {/* Main card container */}
-      <div className="flex flex-col h-full flex-1 overflow-hidden card-app bg-card">
-        {/* Tab buttons header — part of the card */}
-        {!auctionMode && (
-          <div className="flex items-center justify-between pb-2 shrink-0 border-b border-border">
-            <div className="flex items-center gap-1">
-              <TabBtn
-                label={factionLabel}
-                active={tab === 'faction'}
-                onClick={() => switchTab('faction')}
-                activeBg={isCapitalist ? 'var(--color-gold-15)' : 'var(--color-purple-15)'}
-                activeBorder={isCapitalist ? 'var(--color-gold-35)' : 'var(--color-purple-35)'}
-              />
-              <TabBtn
-                label="All Players"
-                active={tab === 'general'}
-                onClick={() => switchTab('general')}
-                activeBg="var(--color-green-15)"
-                activeBorder="var(--color-green-35)"
-              />
-            </div>
-            {/* Right side: board toggle + live dot */}
-            <div className="flex items-center gap-2">
-              {onToggleBoard && (
-                <button
-                  onClick={onToggleBoard}
-                  aria-label="Toggle discussion board"
-                  className={`rounded-md flex p-1.5 items-center justify-center transition-all shrink-0 border text-text2 ${
-                    showBoard ? '' : 'bg-card2 border-border hover:bg-card'
-                  }`}
-                  style={showBoard ? { background: factionColor, borderColor: factionColor, color: '#fff' } : undefined}
-                >
-                  {/* Forum/list icon */}
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="8" y1="6" x2="21" y2="6" />
-                    <line x1="8" y1="12" x2="21" y2="12" />
-                    <line x1="8" y1="18" x2="21" y2="18" />
-                    <line x1="3" y1="6" x2="3.01" y2="6" />
-                    <line x1="3" y1="12" x2="3.01" y2="12" />
-                    <line x1="3" y1="18" x2="3.01" y2="18" />
-                  </svg>
-                </button>
-              )}
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: dotColor }} />
-                <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: dotColor }} />
-              </span>
-            </div>
-          </div>
-        )}
-        {/* Auction mode header */}
-        {auctionMode && (
-          <div className="flex items-center justify-between shrink-0 px-4 py-2">
-            <span
-              className="font-display font-extrabold uppercase tracking-tight text-[11px] section-label text-text2"
-            >
-              Chat
-            </span>
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: dotColor }} />
-              <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: dotColor }} />
-            </span>
-          </div>
-        )}
-
-        {/* Board slot — small screens only, replaces chat when showBoard */}
-        {!auctionMode && showBoard && (
-          <div className="flex-1 min-h-0 overflow-hidden lg:hidden">
-            <FactionDiscussionBoard
-              seasonSlug={seasonSlug}
-              isCapitalist={isCapitalist}
-              embedded
-              onClose={onToggleBoard}
-            />
-          </div>
-        )}
-
-        {/* Message list — hidden on small screens when board is showing */}
-        <div
-          ref={messageListRef}
-          onScroll={onMessageScroll}
-          className={`flex-1 overflow-y-auto custom-scrollbar pl-1 py-2 flex flex-col gap-1 ${!auctionMode && showBoard ? 'hidden lg:flex' : ''}`}
-        >
-          {discovering && messages.length === 0 ? (
-            <p className="section-label animate-pulse text-center mt-8">Connecting…</p>
-          ) : !channelId && !discovering ? (
-            <p className="font-mono text-[9px] text-center mt-8" style={{ color: 'var(--color-red)' }}>
-              Comms Offline · Channel not found
-            </p>
-          ) : messages.length === 0 ? (
-            <p className="section-label text-center mt-8">No transmissions yet. Be the first.</p>
-          ) : (
-            messages.map((msg) => {
-              const isOwn = address && msg.user.username.toLowerCase() === address.toLowerCase();
-              return (
-                <div key={msg.id} className={`flex flex-col gap-0.5 ${isOwn ? 'items-end' : 'items-start'}`}>
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-[10px]" style={{ color: tab === 'general' ? 'var(--color-text2)' : factionColor }}>
-                      {isOwn ? 'YOU' : shortAddr(msg.user.username)}
-                    </span>
-                    <span className="font-mono text-[9px] text-text2">{formatTime(msg.created_at)}</span>
-                  </div>
-                  <div
-                    className="px-3 py-1.5 text-xs max-w-[85%] wrap-break-word"
-                    style={{
-                      background: isOwn ? (tab === 'general' ? 'var(--color-green-70)' : factionColor) : 'var(--color-card3)',
-                      color: isOwn ? '#fff' : 'var(--color-text)',
-                      borderRadius: isOwn ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-                    }}
-                  >
-                    {msg.message}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Send error + input — hidden on small screens when board is showing */}
-        {sendError && (
-          <p className={`shrink-0 font-mono text-[10px] px-4 py-1 ${!auctionMode && showBoard ? 'hidden lg:block' : ''}`} style={{ color: 'var(--color-red)' }}>
-            {sendError}
-          </p>
-        )}
-        {channelId && (
-          <div
-            className={`shrink-0 flex items-end gap-2 px-2 pb-2 pt-2 border-t border-border ${!auctionMode && showBoard ? 'hidden lg:flex' : ''}`}
+    <div className="comms-panel">
+      {/* Tab selector */}
+      {!auctionMode && (
+        <div className="terminal-view-selector-bar">
+          <button
+            onClick={() => switchTab('faction')}
+            className={`terminal-view-btn${tab === 'faction' ? ' active' : ''}`}
           >
+            {factionLabel}
+          </button>
+          <button
+            onClick={() => switchTab('general')}
+            className={`terminal-view-btn${tab === 'general' ? ' active' : ''}`}
+          >
+            All Players
+          </button>
+        </div>
+      )}
+
+      {/* Auction mode top banner */}
+      {auctionMode && (
+        <div className="flex items-center justify-between p-3 border-b border-[var(--color-border)] bg-card">
+          <span className="font-mono text-xs font-bold uppercase tracking-wider text-text2">
+            Secure Comms · General Channel
+          </span>
+          <span className="h-2 w-2 rounded-full bg-[var(--color-green)] animate-pulse" />
+        </div>
+      )}
+
+      {/* Board slot — small screens only, replaces chat when showBoard */}
+      {!auctionMode && showBoard && (
+        <div className="flex-1 min-h-0 overflow-hidden lg:hidden">
+          <FactionDiscussionBoard
+            seasonSlug={seasonSlug}
+            isCapitalist={isCapitalist}
+            embedded
+            onClose={onToggleBoard}
+          />
+        </div>
+      )}
+
+      {/* Message stream */}
+      <div
+        ref={messageListRef}
+        onScroll={onMessageScroll}
+        className={`comms-stream custom-scrollbar ${!auctionMode && showBoard ? 'hidden lg:flex' : ''}`}
+      >
+        {discovering && messages.length === 0 ? (
+          <p className="section-label animate-pulse text-center mt-8">Connecting…</p>
+        ) : !channelId && !discovering ? (
+          <p className="font-mono text-[9px] text-center mt-8" style={{ color: 'var(--color-red)' }}>
+            Comms Offline · Channel not found
+          </p>
+        ) : messages.length === 0 ? (
+          <p className="section-label text-center mt-8">No transmissions yet. Be the first.</p>
+        ) : (
+          messages.map((msg) => {
+            const isOwn = address && msg.user.username.toLowerCase() === address.toLowerCase();
+            return (
+              <div key={msg.id} className={`comms-msg-row ${isOwn ? 'comms-msg-internal' : 'comms-msg-external'}`}>
+                <div className="flex items-center justify-between gap-4 msg-meta">
+                  <span>{isOwn ? 'YOU' : shortAddr(msg.user.username)}</span>
+                  <span className="opacity-60 font-normal">{formatTime(msg.created_at)}</span>
+                </div>
+                <div>{msg.message}</div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Send error */}
+      {sendError && (
+        <p
+          className={`shrink-0 font-mono text-[10px] px-3 py-1 ${!auctionMode && showBoard ? 'hidden lg:block' : ''}`}
+          style={{ color: 'var(--color-red)' }}
+        >
+          {sendError}
+        </p>
+      )}
+
+      {/* Input deck */}
+      {channelId && (
+        <div className={`comms-input-deck ${!auctionMode && showBoard ? 'hidden lg:block' : ''}`}>
+          <div className="relative flex items-center">
             <textarea
               ref={textareaRef}
               rows={1}
-              className="flex-1 font-mono text-xs outline-none placeholder:text-text2 resize-none overflow-y-auto custom-scrollbar rounded-xl px-3 py-2 leading-relaxed bg-bg text-text"
+              className="terminal-input pr-16 resize-none overflow-y-auto custom-scrollbar leading-relaxed"
               style={{ maxHeight: '8rem' }}
-              placeholder={address ? 'Chat…' : 'Connect wallet to chat'}
+              placeholder={address ? 'Transmit message…' : 'Connect wallet to chat'}
               value={input}
               onChange={onInputChange}
               onKeyDown={onKeyDown}
               disabled={!address || sending}
             />
             <button
-              className="shrink-0 flex items-center justify-center rounded-full w-8 h-8 mb-0.5 transition-opacity disabled:opacity-30"
-              style={{ background: tab === 'general' ? 'var(--color-green)' : factionColor }}
+              className="absolute right-2 px-3 py-1 font-mono text-[10px] font-bold text-text bg-card hover:bg-[var(--color-card2)] border border-[var(--color-border)] rounded transition-colors uppercase disabled:opacity-30"
               onClick={sendMessageAndReset}
               disabled={!input.trim() || !address || sending}
-              aria-label="Send"
             >
-              {sending ? (
-                <span className="font-mono text-[10px] text-white">…</span>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
-              )}
+              {sending ? '…' : 'Send'}
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

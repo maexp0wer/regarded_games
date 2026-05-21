@@ -97,7 +97,7 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
 
       {/* ── Stats 2×2 grid ── */}
       <div
-        className="grid grid-cols-2 rounded-xl overflow-hidden"
+        className="grid grid-cols-2 rounded-lg overflow-hidden"
         style={{ border: '1px solid var(--color-border)' }}
       >
         {/* Your Holdings */}
@@ -150,7 +150,7 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
       {/* ── CTA ── */}
       <div className="mt-auto">
         {showSuccessToast ? (
-          <div className="btn-success w-full text-center py-4 animate-pulse rounded-xl font-mono font-bold text-[11px] uppercase tracking-widest">
+          <div className="btn-success w-full text-center py-4 animate-pulse rounded-lg font-mono font-bold text-[11px] uppercase tracking-widest">
             Payout Claimed Successfully ✓
           </div>
         ) : canClaim ? (
@@ -163,7 +163,7 @@ export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
           </button>
         ) : !hasClaimed ? (
           <div
-            className="px-5 py-4 rounded-xl text-center"
+            className="px-5 py-4 rounded-lg text-center"
             style={{ background: 'var(--color-card2)', border: '1px dashed var(--color-border2)' }}
           >
             <p className="font-mono text-[11px] uppercase font-bold tracking-widest text-text2">Ineligible</p>

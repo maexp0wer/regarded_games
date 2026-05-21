@@ -74,7 +74,7 @@ const GenericModal: FC<GenericModalProps> = ({
       <div
         className={`
           flex flex-col
-          relative overflow-auto rounded-xl bg-card p-6 shadow-xl
+          relative overflow-auto rounded-lg bg-card p-6 shadow-xl
           
           // --- Mobile-first styles (default) ---
           // On small screens, it takes up most of the viewport

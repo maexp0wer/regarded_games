@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { ECElementEvent } from 'echarts';
 import { CandleData } from '@/utils/chartData';
+import { useTheme } from '@/context/ThemeContext';
 
 export type Timeframe = '5m' | '1h' | '4h' | '1d';
 
@@ -42,6 +43,7 @@ export function CandlestickChart({
   capTargetBps,
   socTargetBps,
 }: CandlestickChartProps) {
+  const { darkMode } = useTheme();
   const option = useMemo(() => {
     if (typeof window === 'undefined') return {};
 
@@ -51,14 +53,14 @@ export function CandlestickChart({
     const bgColor   = v('--color-card')      || '#15120f';
     const gridColor = v('--color-border')    || '#2a2520';
     const textColor = v('--color-text2')     || '#8a8378';
-    const upColor   = v('--color-green-soft')|| '#6bcb6e';
-    const downColor = v('--color-red-soft')  || '#ff5454';
+    const upColor   = v('--color-green') || '#6bcb6e';
+    const downColor = v('--color-red')   || '#ff5454';
     const capColor  = v('--color-gold')      || '#D4AF37';
     const socColor  = v('--color-purple')    || '#9D4EDD';
 
     const candleData = candles.map(c => [c.time * 1000, c.open, c.close, c.low, c.high]);
     const capVolData = candles.map(c => [c.time * 1000, c.capBuyerVolume]);
-    const socVolData = candles.map(c => [c.time * 1000, -c.socBuyerVolume]);
+    const socVolData = candles.map(c => [c.time * 1000, c.socBuyerVolume]);
     const giniData   = candles.filter(c => c.giniBps > 0).map(c => [c.time * 1000, c.giniBps]);
 
     return {
@@ -67,15 +69,15 @@ export function CandlestickChart({
       textStyle: { fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: textColor },
 
       grid: [
-        { left: 60, right: 60, top: 20, height: '52%' },
-        { left: 60, right: 60, top: '62%', bottom: 30 },
+        { left: 4, right: 75, top: 20, height: '52%' },
+        { left: 4, right: 75, top: '62%', bottom: 30 },
       ],
 
       xAxis: [
         {
           gridIndex: 0,
           type: 'time',
-          axisLine: { lineStyle: { color: gridColor } },
+          axisLine: { show: true, lineStyle: { color: textColor, width: 1, opacity: 0.5 } },
           axisLabel: { show: false },
           splitLine: { lineStyle: { color: gridColor } },
         },
@@ -92,6 +94,7 @@ export function CandlestickChart({
         {
           gridIndex: 0,
           scale: true,
+          position: 'right',
           axisLine: { show: true, lineStyle: { color: gridColor } },
           axisLabel: { color: textColor, fontSize: 10 },
           splitLine: { lineStyle: { color: gridColor } },
@@ -106,14 +109,12 @@ export function CandlestickChart({
         },
         {
           gridIndex: 1,
+          show: false,
           scale: true,
-          position: 'left',
-          axisLine: { show: true, lineStyle: { color: gridColor } },
-          axisLabel: { color: textColor, fontSize: 10 },
-          splitLine: { show: false },
+          position: 'right',
           ...(capTargetBps > 0 && socTargetBps > 0 ? {
-            min: socTargetBps - 100,
-            max: capTargetBps + 100,
+            min: socTargetBps - 300,
+            max: capTargetBps + 300,
           } : {}),
         },
       ],
@@ -132,11 +133,34 @@ export function CandlestickChart({
         backgroundColor: bgColor,
         borderColor: gridColor,
         textStyle: { color: textColor, fontFamily: 'JetBrains Mono, monospace', fontSize: 11 },
+        position: () => [8, 8],
+        formatter: (params: any) => {
+          const arr: any[] = Array.isArray(params) ? params : [params];
+          const first = arr.find(p => p.value != null);
+          if (!first) return '';
+          const ts = Array.isArray(first.value) ? first.value[0] : first.axisValue;
+          const d = new Date(typeof ts === 'string' ? parseInt(ts) : ts);
+          const dateStr = d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+          const lines: string[] = [`<span style="color:${textColor};font-weight:600">${dateStr}</span>`];
+          for (const p of arr) {
+            if (p.value == null) continue;
+            if (p.seriesType === 'candlestick') {
+              const [, o, c, lo, hi] = p.value as number[];
+              lines.push(`${p.marker} O:${o}&nbsp;&nbsp;C:${c}&nbsp;&nbsp;L:${lo}&nbsp;&nbsp;H:${hi}`);
+            } else if (p.seriesType === 'bar' && p.value[1] != null) {
+              lines.push(`${p.marker} ${p.seriesName}: ${Number(p.value[1]).toLocaleString()}`);
+            } else if (p.seriesType === 'line' && p.value[1] != null) {
+              lines.push(`${p.marker} Gini: ${p.value[1]} bps`);
+            }
+          }
+          return `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8">${lines.join('<br/>')}</div>`;
+        },
       },
 
       series: [
         {
           type: 'candlestick',
+          name: 'Price',
           xAxisIndex: 0,
           yAxisIndex: 0,
           data: candleData,
@@ -156,28 +180,34 @@ export function CandlestickChart({
         },
         {
           type: 'bar',
+          name: 'Cap Vol',
           xAxisIndex: 1,
           yAxisIndex: 1,
           data: capVolData,
-          barMaxWidth: 8,
-          itemStyle: { color: hexToRgba(capColor, 0.7) },
+          barMaxWidth: 16,
+          stack: 'vol',
+          itemStyle: { color: hexToRgba(capColor, 0.75) },
         },
         {
           type: 'bar',
+          name: 'Soc Vol',
           xAxisIndex: 1,
           yAxisIndex: 1,
           data: socVolData,
-          barMaxWidth: 8,
-          itemStyle: { color: hexToRgba(socColor, 0.7) },
+          barMaxWidth: 16,
+          stack: 'vol',
+          itemStyle: { color: hexToRgba(socColor, 0.75) },
         },
         {
           type: 'line',
+          name: 'Gini',
           xAxisIndex: 1,
           yAxisIndex: 2,
           data: giniData,
           smooth: true,
           symbol: 'none',
-          lineStyle: { color: capColor, width: 2 },
+          itemStyle: { color: textColor },
+          lineStyle: { color: textColor, width: 2 },
           ...(capTargetBps > 0 && socTargetBps > 0 ? {
             markLine: {
               silent: true,
@@ -199,7 +229,7 @@ export function CandlestickChart({
         },
       ],
     };
-  }, [candles, selectedRange, capTargetBps, socTargetBps]);
+  }, [candles, selectedRange, capTargetBps, socTargetBps, darkMode]);
 
   const onEvents = useMemo(() => ({
     click: (params: ECElementEvent) => {
@@ -216,7 +246,7 @@ export function CandlestickChart({
   }), [timeframe, onCandleClick]);
 
   return (
-    <div className="rounded-3xl py-6 flex flex-col overflow-hidden h-full bg-[linear-gradient(to_bottom,var(--color-purple-15),var(--color-card)_2%),linear-gradient(to_right,var(--color-purple-15),var(--color-gold-15)_60%)]">
+    <div className="rounded-lg py-6 flex flex-col overflow-hidden h-full bg-card">
       <div className="flex items-center justify-between px-6">
         <div className="flex items-center gap-3">
           <span className="h4-app">Price Chart</span>

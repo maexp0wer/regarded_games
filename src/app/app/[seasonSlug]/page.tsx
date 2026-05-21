@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useAccount } from 'wagmi';
 
@@ -44,6 +44,7 @@ export default function SeasonDetailPage() {
   const fimAddress      = metadata?.fimAddress      as `0x${string}` | undefined;
 
   // 2. Trading state (lifted)
+  const openOrderBookRef = useRef<() => void>(() => {});
   const [showBoard, setShowBoard] = useState(false);
   const [isBuy, setIsBuy] = useState(true);
   const [isMaker, setIsMaker] = useState(false);
@@ -154,14 +155,14 @@ export default function SeasonDetailPage() {
         isPayout={isPayout}
         variant="sidebar"
       />
-      <div style={{ height: 1, background: 'var(--color-border)' }} />
+      <div className="h-px bg-bg" />
       <PrizePoolCard
         seasonAddress={seasonAddress}
         prizePool={giniData?.prizePool || 0}
         currentPhase={currentPhase}
         variant="sidebar"
       />
-      <div style={{ height: 1, background: 'var(--color-border)' }} />
+      <div className="h-px bg-bg" />
       <CountdownCard {...heroProps} variant="sidebar" />
     </>
   );
@@ -261,55 +262,56 @@ export default function SeasonDetailPage() {
       )}
 
       {/* Trading panel: single component handles both mobile and desktop layouts */}
-      <TradingPanelMenu
-        seasonAddress={seasonAddress}
-        isBuy={isBuy}
-        isMaker={isMaker}
-        onSelectOrder={handleSelectOrder}
-        selectedOrderIds={selectedOrders.map(o => o.id)}
-        trades={chart.trades}
-        timeWindowMs={chart.timeWindowMs}
-        selectedRange={chart.selectedRange}
-        onClearSelection={chart.onClearSelection}
-        isLive={chart.isLive}
-        seasonSlug={seasonSlug}
-        isCapitalist={factionData?.isCapitalist}
-        showBoard={showBoard}
-        onToggleBoard={() => setShowBoard((v) => !v)}
-        candles={chart.candles}
-        timeframe={chart.timeframe}
-        onTimeframeChange={chart.onTimeframeChange}
-        onCandleClick={chart.onCandleClick}
-        capTargetBps={chart.capTargetBps}
-        socTargetBps={chart.socTargetBps}
-        userAddress={userAddress}
-        exchangeAddress={exchangeAddress}
-        tradingMask={
-          <TradingMask
-            seasonSlug={seasonSlug}
-            seasonAddress={seasonAddress}
-            exchangeAddress={exchangeAddress}
-            fimAddress={fimAddress}
-            isBuy={isBuy}
-            setIsBuy={setIsBuy}
-            isMaker={isMaker}
-            setIsMaker={setIsMaker}
-            targetAmount={targetAmount}
-            setTargetAmount={setTargetAmount}
-            selectedOrders={selectedOrders}
-            onRemoveOrder={handleRemoveOrder}
-            onMoveOrder={handleMoveOrder}
-            onReorderOrders={handleReorderOrders}
-            isOnHold={effectiveVictoryPending}
-          />
-        }
-      />
-
-      {/* Horizontal divider - full width */}
-      <div className="h-px bg-border" />
+      <div className="mt-5">
+        <TradingPanelMenu
+          seasonAddress={seasonAddress}
+          isBuy={isBuy}
+          isMaker={isMaker}
+          onSelectOrder={handleSelectOrder}
+          selectedOrderIds={selectedOrders.map(o => o.id)}
+          trades={chart.trades}
+          timeWindowMs={chart.timeWindowMs}
+          selectedRange={chart.selectedRange}
+          onClearSelection={chart.onClearSelection}
+          isLive={chart.isLive}
+          seasonSlug={seasonSlug}
+          isCapitalist={factionData?.isCapitalist}
+          showBoard={showBoard}
+          onToggleBoard={() => setShowBoard((v) => !v)}
+          candles={chart.candles}
+          timeframe={chart.timeframe}
+          onTimeframeChange={chart.onTimeframeChange}
+          onCandleClick={chart.onCandleClick}
+          capTargetBps={chart.capTargetBps}
+          socTargetBps={chart.socTargetBps}
+          userAddress={userAddress}
+          exchangeAddress={exchangeAddress}
+          openOrderBookRef={openOrderBookRef}
+          tradingMask={
+            <TradingMask
+              seasonSlug={seasonSlug}
+              seasonAddress={seasonAddress}
+              exchangeAddress={exchangeAddress}
+              fimAddress={fimAddress}
+              isBuy={isBuy}
+              setIsBuy={setIsBuy}
+              isMaker={isMaker}
+              setIsMaker={setIsMaker}
+              targetAmount={targetAmount}
+              setTargetAmount={setTargetAmount}
+              selectedOrders={selectedOrders}
+              onRemoveOrder={handleRemoveOrder}
+              onMoveOrder={handleMoveOrder}
+              onReorderOrders={handleReorderOrders}
+              isOnHold={effectiveVictoryPending}
+              onOpenOrderBook={() => openOrderBookRef.current()}
+            />
+          }
+        />
+      </div>
 
       {/* Row 3: Season detail cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+      <div className="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
         <div className="relative p-0">
           <ProtocolCard
             seasonAddress={seasonAddress}

@@ -65,7 +65,7 @@ function ClaimableCard({ season, playerAddress }: { season: any; playerAddress: 
   return (
     <Link href={`/season_${season.id}`} className="block group">
       <div
-        className="flex items-center gap-5 px-5 py-4 rounded-xl transition-all"
+        className="flex items-center gap-5 px-5 py-4 rounded-lg transition-all"
         style={{
           background: 'linear-gradient(135deg, var(--color-gold-15), var(--color-gold-15))',
           border: '1px solid var(--color-gold-35)',
@@ -76,7 +76,7 @@ function ClaimableCard({ season, playerAddress }: { season: any; playerAddress: 
       >
         {/* Bell icon */}
         <div
-          className="shrink-0 flex items-center justify-center w-10 h-10 rounded-xl"
+          className="shrink-0 flex items-center justify-center w-10 h-10 rounded-lg"
           style={{ background: 'var(--color-gold-15)' }}
         >
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" style={{ color: 'var(--color-gold)' }}>

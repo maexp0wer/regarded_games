@@ -153,7 +153,7 @@ const NestedPieChart: React.FC<NestedPieChartProps> = ({ data }) => {
   }), [data]);
 
   return (
-    <div className="flex flex-col lg:flex-row items-start justify-between w-full max-w-7xl p-8 bg-[var(--color-card)] rounded-xl shadow-2xl font-[family-name:var(--font-display)] overflow-visible">
+    <div className="flex flex-col lg:flex-row items-start justify-between w-full max-w-7xl p-8 bg-[var(--color-card)] rounded-lg shadow-2xl font-[family-name:var(--font-display)] overflow-visible">
       {/* List section */}
       <div className="w-full lg:w-1/3 mt-8 lg:mt-0 px-4">
         <div className="mb-6">

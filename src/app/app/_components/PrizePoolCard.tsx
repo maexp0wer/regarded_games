@@ -31,12 +31,9 @@ export function PrizePoolCard({
     return (
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <span
-            className="shrink-0 rounded-full"
-            style={{ width: 5, height: 5, background: 'var(--color-gold)' }}
-          />
+          
           <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-text2 font-semibold">
-            {hasYield ? 'Prize Pool + Yield' : 'Total Prize Pool'}
+            {hasYield ? 'Prize Pool + Yield' : 'Prize Pool'}
           </span>
         </div>
         <div className="flex items-baseline gap-1">

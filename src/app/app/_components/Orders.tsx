@@ -60,7 +60,7 @@ function useLastTradePrice(seasonAddress: string | undefined) {
 }
 
 export function Orders({ seasonAddress, userAddress, exchangeAddress }: OrdersProps) {
-  const [activeTab, setActiveTab] = useState<TabType | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>('position');
 
   const { data: openOrders = [], refetch: refetchOpen } = useOpenOrders(seasonAddress, userAddress, 'open');
   const { data: filledOrders = [], refetch: refetchFilled } = useOpenOrders(seasonAddress, userAddress, 'filled');
@@ -89,43 +89,26 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress }: OrdersPr
     });
   };
 
-  const toggle = (tab: TabType) => setActiveTab(prev => prev === tab ? null : tab);
+  const toggle = (tab: TabType) => setActiveTab(tab);
 
   return (
     <div className="flex flex-col">
 
       {/* Button bar */}
-      <div className="flex gap-0">
-        {TABS.map(({ key, label }) => {
-          const isActive = activeTab === key;
-          return (
-            <button
-              key={key}
-              onClick={() => toggle(key)}
-              className={`px-3 py-1.5 font-mono font-semibold uppercase tracking-widest border transition-all ${
-                isActive
-                  ? 'text-text2 bg-(--color-gold-15) border-(--color-gold-35)'
-                  : 'text-text2 bg-card2 border-border hover:bg-border'
-              }`}
-              style={{ fontSize: 11, letterSpacing: '0.1em' }}
-            >
-              {label}
-            </button>
-          );
-        })}
+      <div className="terminal-view-selector-bar">
+        {TABS.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => toggle(key)}
+            className={`terminal-view-btn${activeTab === key ? ' active' : ''}`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* Sliding content */}
-      <div
-        className="card-app"
-        style={{
-          maxHeight: activeTab ? '200px' : '0',
-          overflow: 'hidden',
-          transition: 'max-height 0.25s ease-in-out',
-          padding: 0,
-          ...(activeTab ? {} : { border: 'none', background: 'transparent' }),
-        }}
-      >
+      {/* Content */}
+      <div className="card-app" style={{ padding: 0 }}>
         {activeTab === 'openOrders' && (
           <OpenOrdersView
             orders={openOrders}
@@ -153,7 +136,7 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress }: OrdersPr
 
 // ── Open Orders ────────────────────────────────────────────────────────────────
 
-const OPEN_COL = '1.6fr 0.7fr 0.9fr 1fr 1fr 1fr 44px';
+const OPEN_COL = '1.6fr 0.7fr 0.9fr 1fr 1fr 1fr 1fr 72px';
 
 interface OpenOrdersViewProps {
   orders: MyOrder[];
@@ -163,36 +146,31 @@ interface OpenOrdersViewProps {
 
 function OpenOrdersView({ orders, isPending, onCancel }: OpenOrdersViewProps) {
   return (
-    <>
-      <div
-        className="grid items-center px-3 py-1"
-        style={{
-          gridTemplateColumns: OPEN_COL,
-          borderBottom: '1px solid var(--color-border)',
-          background: 'var(--color-card3)',
-        }}
-      >
-        <span className="section-label">Time</span>
-        <span className="section-label">Direction</span>
-        <span className="section-label">Size</span>
-        <span className="section-label">Original Size</span>
-        <span className="section-label">Order Value</span>
-        <span className="section-label">Price</span>
-        <div />
-      </div>
-
-      <div className="flex flex-col overflow-y-auto custom-scrollbar" style={{ height: '132px' }}>
-        {orders.length === 0 ? (
-          <div className="flex items-center justify-center py-6">
-            <p className="section-label opacity-30">No open orders</p>
+    <div className="p-2 bg-card">
+      <div className="bg-bg overflow-hidden">
+        <div className="overflow-y-auto custom-scrollbar relative" style={{ height: '160px' }}>
+          <div className="ledger-header sticky top-0 z-10" style={{ gridTemplateColumns: OPEN_COL }}>
+            <div>Time</div>
+            <div>Direction</div>
+            <div className="text-right">Size</div>
+            <div className="text-right">Original Size</div>
+            <div className="text-right">Order Value</div>
+            <div className="text-right">Price</div>
+            <div />
+            <div />
           </div>
-        ) : (
-          orders.map((order) => (
-            <OpenOrderRow key={order.id} order={order} isPending={isPending} onCancel={onCancel} />
-          ))
-        )}
+          {orders.length === 0 ? (
+            <div className="flex items-center justify-center py-6">
+              <p className="section-label opacity-30">No open orders</p>
+            </div>
+          ) : (
+            orders.map((order) => (
+              <OpenOrderRow key={order.id} order={order} isPending={isPending} onCancel={onCancel} />
+            ))
+          )}
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -209,21 +187,15 @@ function OpenOrderRow({ order, isPending, onCancel }: OpenOrderRowProps) {
   const direction = isBuy ? 'Buy' : 'Sell';
   const size = Math.round(remainingAmount).toLocaleString();
   const originalSize = Math.round(initialAmount).toLocaleString();
-  const orderValue = `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const pricePerFim = initialAmount > 0 ? `$${(price / initialAmount).toFixed(4)}` : '$0.0000';
+  const orderValue = `$${(price * initialAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const pricePerFim = `$${price.toFixed(4)}`;
 
   return (
-    <div
-      className="grid items-center px-3 py-1.5"
-      style={{
-        gridTemplateColumns: OPEN_COL,
-        borderBottom: '1px solid var(--color-border)',
-      }}
-    >
-      <span className="font-mono text-[10px] text-text">{displayTime}</span>
+    <div className="ledger-row items-center" style={{ gridTemplateColumns: OPEN_COL }}>
+      <span className="ledger-cell-secondary">{displayTime}</span>
 
       <span
-        className="font-mono text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded w-fit"
+        className="font-mono text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded w-fit"
         style={{
           background: isBuy ? 'var(--color-green-15)' : 'var(--color-red-15)',
           color: isBuy ? 'var(--color-green)' : 'var(--color-red)',
@@ -232,12 +204,14 @@ function OpenOrderRow({ order, isPending, onCancel }: OpenOrderRowProps) {
         {direction}
       </span>
 
-      <span className="font-mono text-[10px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>{size}</span>
-      <span className="font-mono text-[10px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>{originalSize}</span>
-      <span className="font-mono text-[10px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>{orderValue}</span>
-      <span className="font-mono text-[10px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>{pricePerFim}</span>
+      <span className="ledger-cell-metric">{size}</span>
+      <span className="ledger-cell-metric">{originalSize}</span>
+      <span className="ledger-cell-metric">{orderValue}</span>
+      <span className="ledger-cell-metric">{pricePerFim}</span>
 
-      <div className="flex justify-end">
+      <div />
+
+      <div className="flex justify-end pr-2">
         <button
           onClick={() => onCancel(order.orderId)}
           disabled={isPending}
@@ -308,32 +282,26 @@ function PositionView({ trades, auctionMints, currentPrice }: PositionViewProps)
   const position = computePosition(trades, auctionMints);
 
   return (
-    <>
-      <div
-        className="grid items-center px-3 py-1"
-        style={{
-          gridTemplateColumns: POS_COL,
-          borderBottom: '1px solid var(--color-border)',
-          background: 'var(--color-card3)',
-        }}
-      >
-        <span className="section-label">Size</span>
-        <span className="section-label">Position Value</span>
-        <span className="section-label">Entry Price</span>
-        <span className="section-label">Current Price</span>
-        <span className="section-label">PNL</span>
-      </div>
-
-      <div className="flex flex-col overflow-y-auto custom-scrollbar" style={{ height: '132px' }}>
-        {!position ? (
-          <div className="flex items-center justify-center py-6">
-            <p className="section-label opacity-30">No position</p>
+    <div className="p-2 bg-card">
+      <div className="bg-bg overflow-hidden">
+        <div className="overflow-y-auto custom-scrollbar relative" style={{ height: '160px' }}>
+          <div className="ledger-header sticky top-0 z-10" style={{ gridTemplateColumns: POS_COL }}>
+            <div>Size</div>
+            <div className="text-right">Position Value</div>
+            <div className="text-right">Entry Price</div>
+            <div className="text-right">Current Price</div>
+            <div className="text-right">PNL</div>
           </div>
-        ) : (
-          <PositionRow position={position} currentPrice={currentPrice} />
-        )}
+          {!position ? (
+            <div className="flex items-center justify-center py-6">
+              <p className="section-label opacity-30">No position</p>
+            </div>
+          ) : (
+            <PositionRow position={position} currentPrice={currentPrice} />
+          )}
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -349,35 +317,20 @@ function PositionRow({ position, currentPrice }: PositionRowProps) {
   const pnlPositive = pnl >= 0;
 
   return (
-    <div
-      className="grid items-center px-3 py-1.5"
-      style={{
-        gridTemplateColumns: POS_COL,
-        borderBottom: '1px solid var(--color-border)',
-      }}
-    >
-      <span className="font-mono text-[10px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-        {Math.round(Math.abs(netSize)).toLocaleString()}
-      </span>
+    <div className="ledger-row items-center" style={{ gridTemplateColumns: POS_COL }}>
+      <span className="ledger-cell-metric" style={{ textAlign: 'left' }}>{Math.round(Math.abs(netSize)).toLocaleString()}</span>
 
-      <span className="font-mono text-[10px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+      <span className="ledger-cell-metric">
         ${positionValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </span>
 
-      <span className="font-mono text-[10px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-        ${entryPrice.toFixed(4)}
-      </span>
+      <span className="ledger-cell-metric">${entryPrice.toFixed(4)}</span>
 
-      <span className="font-mono text-[10px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-        ${currentPrice.toFixed(4)}
-      </span>
+      <span className="ledger-cell-metric">${currentPrice.toFixed(4)}</span>
 
       <span
-        className="font-mono text-[10px] font-semibold"
-        style={{
-          fontVariantNumeric: 'tabular-nums',
-          color: pnlPositive ? 'var(--color-green)' : 'var(--color-red)',
-        }}
+        className="ledger-cell-metric"
+        style={{ color: pnlPositive ? 'var(--color-green)' : 'var(--color-red)' }}
       >
         {pnlPositive ? '+' : ''}${pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </span>
@@ -409,38 +362,32 @@ function TradeHistoryView({ orders, auctionMints }: TradeHistoryViewProps) {
   });
 
   return (
-    <>
-      <div
-        className="grid items-center px-3 py-1"
-        style={{
-          gridTemplateColumns: HIST_COL,
-          borderBottom: '1px solid var(--color-border)',
-          background: 'var(--color-card3)',
-        }}
-      >
-        <span className="section-label">Time</span>
-        <span className="section-label">Direction</span>
-        <span className="section-label">Price</span>
-        <span className="section-label">Size</span>
-        <span className="section-label">Trade Value</span>
-      </div>
-
-      <div className="flex flex-col overflow-y-auto custom-scrollbar" style={{ height: '132px' }}>
-        {entries.length === 0 ? (
-          <div className="flex items-center justify-center py-6">
-            <p className="section-label opacity-30">No history</p>
+    <div className="p-2 bg-card">
+      <div className="bg-bg overflow-hidden">
+        <div className="overflow-y-auto custom-scrollbar relative" style={{ height: '160px' }}>
+          <div className="ledger-header sticky top-0 z-10" style={{ gridTemplateColumns: HIST_COL }}>
+            <div>Time</div>
+            <div>Direction</div>
+            <div className="text-right">Price</div>
+            <div className="text-right">Size</div>
+            <div className="text-right">Trade Value</div>
           </div>
-        ) : (
-          entries.map((entry) =>
-            entry.kind === 'order' ? (
-              <TradeHistoryOrderRow key={entry.data.id} order={entry.data} />
-            ) : (
-              <TradeHistoryAuctionRow key={entry.data.id} mint={entry.data} />
+          {entries.length === 0 ? (
+            <div className="flex items-center justify-center py-6">
+              <p className="section-label opacity-30">No history</p>
+            </div>
+          ) : (
+            entries.map((entry) =>
+              entry.kind === 'order' ? (
+                <TradeHistoryOrderRow key={entry.data.id} order={entry.data} />
+              ) : (
+                <TradeHistoryAuctionRow key={entry.data.id} mint={entry.data} />
+              )
             )
-          )
-        )}
+          )}
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -455,14 +402,8 @@ function TradeHistoryOrderRow({ order }: { order: MyOrder }) {
   const displayValue = `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
-    <div
-      className="grid items-center px-3 py-2"
-      style={{
-        gridTemplateColumns: HIST_COL,
-        borderBottom: '1px solid var(--color-border)',
-      }}
-    >
-      <span className="font-mono text-[10px] text-text">{displayTime}</span>
+    <div className="ledger-row items-center" style={{ gridTemplateColumns: HIST_COL }}>
+      <span className="ledger-cell-secondary">{displayTime}</span>
 
       <span
         className="font-mono text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded w-fit"
@@ -474,17 +415,9 @@ function TradeHistoryOrderRow({ order }: { order: MyOrder }) {
         {direction}
       </span>
 
-      <span className="font-mono text-[10px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-        ${pricePerFim}
-      </span>
-
-      <span className="font-mono text-[10px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-        {displaySize}
-      </span>
-
-      <span className="font-mono text-[10px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-        {displayValue}
-      </span>
+      <span className="ledger-cell-metric">${pricePerFim}</span>
+      <span className="ledger-cell-metric">{displaySize}</span>
+      <span className="ledger-cell-metric">{displayValue}</span>
     </div>
   );
 }
@@ -499,14 +432,13 @@ function TradeHistoryAuctionRow({ mint }: { mint: AuctionMint }) {
 
   return (
     <div
-      className="grid items-center px-3 py-2"
+      className="ledger-row items-center"
       style={{
         gridTemplateColumns: HIST_COL,
-        borderBottom: '1px solid var(--color-border)',
-        borderLeft: '3px solid var(--color-gold)',
+        boxShadow: 'inset 3px 0 0 0 var(--color-gold)',
       }}
     >
-      <span className="font-mono text-[10px] text-text">{displayTime}</span>
+      <span className="ledger-cell-secondary">{displayTime}</span>
 
       <span
         className="font-mono text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded w-fit"
@@ -518,17 +450,9 @@ function TradeHistoryAuctionRow({ mint }: { mint: AuctionMint }) {
         Auction
       </span>
 
-      <span className="font-mono text-[10px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-        ${pricePerFim}
-      </span>
-
-      <span className="font-mono text-[10px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-        {displaySize}
-      </span>
-
-      <span className="font-mono text-[10px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-        {displayValue}
-      </span>
+      <span className="ledger-cell-metric">${pricePerFim}</span>
+      <span className="ledger-cell-metric">{displaySize}</span>
+      <span className="ledger-cell-metric">{displayValue}</span>
     </div>
   );
 }

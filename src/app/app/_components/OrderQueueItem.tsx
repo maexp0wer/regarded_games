@@ -39,55 +39,56 @@ export function OrderQueueItem({
       onDragStart={() => onDragStart(groupIdx)}
       onDragOver={(e) => onDragOver(e, groupIdx)}
       onDragEnd={onDragEnd}
-      className={`bg-card2 p-3 rounded-lg border flex justify-between items-center cursor-grab active:cursor-grabbing transition-all
-        ${draggedGroupIdx === groupIdx ? 'opacity-40 border-text ring-1 ring-primary/20' : 'border-none shadow-sm'}
-        ${localFill === 0 ? 'grayscale opacity-40' : 'opacity-100'}
+      className={`order-queue-row cursor-grab active:cursor-grabbing transition-all
+        ${draggedGroupIdx === groupIdx ? 'opacity-40 ring-1 ring-primary/20' : ''}
+        ${localFill === 0 ? 'grayscale opacity-40' : ''}
       `}
     >
-      <div className="flex items-center gap-3">
-        <div className="text-text text-[10px]">☰</div>
-        <div className="flex flex-col text-left">
-          <div className="flex items-center gap-2">
-            <span className={`text-[11px] font-bold ${group.isBuy ? 'text-green' : 'text-pink'}`}>
-              ${parseFloat(group.unitPrice).toFixed(4)}
-            </span>
-          </div>
-          <span className="text-[11px] text-text2 font-bold uppercase mt-0.5">
-            Fill: {localFill.toLocaleString()} / {group.amount.toLocaleString()} FIM
-          </span>
-        </div>
+      {/* Col 1: Drag Handle */}
+      <div className="drag-handle-texture">
+        <span /><span /><span />
       </div>
 
-      {stats ? (
-        <PercentileCircle
-          percentage={stats.factionPercentile}
-          isCapitalist={stats.isCapitalist}
-          size="md"
-        />
-      ) : (
-        <span className="text-[8px] bg-card2 px-1.5 py-0.5 rounded text-text2 animate-pulse">
-          Loading...
+      {/* Col 2: Price + Maker rank */}
+      <div className="flex flex-col gap-1.5">
+        <span className={`text-[11px] font-mono font-bold ${group.isBuy ? 'text-green' : 'text-red'}`}>
+          ${parseFloat(group.unitPrice).toFixed(4)}
         </span>
-      )}
+        {stats ? (
+          <PercentileCircle percentage={stats.factionPercentile} isCapitalist={stats.isCapitalist} size="sm" />
+        ) : (
+          <span className="text-[8px] text-text2 animate-pulse">Loading...</span>
+        )}
+      </div>
 
+      {/* Col 3: Fill amounts */}
+      <div className="flex flex-col justify-center">
+        <span className="text-[11px] font-mono font-bold text-text tabular-nums">
+          {localFill.toLocaleString()}
+          <span className="text-text2/60"> / {group.amount.toLocaleString()}</span>
+        </span>
+        <span className="text-[9px] font-mono uppercase text-text2/50 mt-0.5">FIM Fill</span>
+      </div>
+
+      {/* Col 4: Shift controls + remove */}
       <div className="flex items-center gap-1">
         {groupCount > 1 && (
           <>
             <button
               onClick={() => onMoveGroup(groupIdx, -1)}
               disabled={groupIdx === 0}
-              className="bg-text/50 p-1 px-2 rounded text-bg text-[8px] hover:bg-gold hover:text-bg transition-colors"
+              className="bg-text/50 p-1 px-1.5 rounded text-bg text-[8px] hover:bg-gold hover:text-bg transition-colors disabled:opacity-30"
             >▲</button>
             <button
               onClick={() => onMoveGroup(groupIdx, 1)}
               disabled={groupIdx === groupCount - 1}
-              className="bg-text/50 p-1 px-2 rounded text-bg text-[8px] hover:bg-gold hover:text-bg transition-colors"
+              className="bg-text/50 p-1 px-1.5 rounded text-bg text-[8px] hover:bg-gold hover:text-bg transition-colors disabled:opacity-30"
             >▼</button>
           </>
         )}
         <button
           onClick={() => onRemoveGroup(group)}
-          className="text-text2 hover:text-gold ml-1 p-1"
+          className="text-text2 hover:text-red ml-1 p-1 text-base leading-none transition-colors"
         >×</button>
       </div>
     </div>

@@ -333,7 +333,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
               </label>
               <input
                 type="text"
-                className="w-full font-mono text-sm outline-none placeholder:text-text2 rounded-xl px-3 py-2"
+                className="w-full font-mono text-sm outline-none placeholder:text-text2 rounded-lg px-3 py-2"
                 style={{ background: 'var(--color-bg)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
                 placeholder="State your directive…"
                 value={newTitle}
@@ -355,7 +355,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
               <textarea
                 ref={newBodyRef}
                 rows={6}
-                className="w-full font-mono text-sm outline-none placeholder:text-text2 resize-none rounded-xl px-3 py-2 leading-relaxed custom-scrollbar"
+                className="w-full font-mono text-sm outline-none placeholder:text-text2 resize-none rounded-lg px-3 py-2 leading-relaxed custom-scrollbar"
                 style={{
                   background: 'var(--color-bg)',
                   color: 'var(--color-text)',
@@ -411,7 +411,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
             [1, 2, 3].map(i => (
               <div
                 key={i}
-                className="h-20 rounded-xl animate-pulse"
+                className="h-20 rounded-lg animate-pulse"
                 style={{ background: 'var(--color-card2)', border: '1px solid var(--color-border)' }}
               />
             ))
@@ -430,7 +430,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
             topics.map((topic) => (
               <div
                 key={topic.id}
-                className="relative rounded-xl transition-all overflow-hidden"
+                className="relative rounded-lg transition-all overflow-hidden"
                 style={{
                   background: 'var(--color-card2)',
                   border: '1px solid var(--color-border)',
@@ -497,7 +497,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
               [1, 2, 3].map(i => (
                 <div key={i} className="flex flex-col gap-2">
                   <div className="h-4 w-32 rounded animate-pulse" style={{ background: 'var(--color-card2)' }} />
-                  <div className="h-16 rounded-xl animate-pulse" style={{ background: 'var(--color-card2)' }} />
+                  <div className="h-16 rounded-lg animate-pulse" style={{ background: 'var(--color-card2)' }} />
                 </div>
               ))
             ) : postsError ? (
@@ -524,7 +524,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
                     </div>
                     {/* Post body */}
                     <div
-                      className="px-4 py-3 rounded-xl text-[13px] leading-relaxed discourse-post"
+                      className="px-4 py-3 rounded-lg text-[13px] leading-relaxed discourse-post"
                       style={{
                         background: isOwn ? (isCapitalist ? 'var(--color-gold-15)' : 'var(--color-purple-15)') : 'var(--color-card2)',
                         border: `1px solid ${isOwn ? hoverBorderColor : 'var(--color-border)'}`,
@@ -551,7 +551,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
             <textarea
               ref={textareaRef}
               rows={1}
-              className="flex-1 font-mono text-sm outline-none placeholder:text-text2 resize-none overflow-y-auto custom-scrollbar rounded-xl px-3 py-2 leading-relaxed"
+              className="flex-1 font-mono text-sm outline-none placeholder:text-text2 resize-none overflow-y-auto custom-scrollbar rounded-lg px-3 py-2 leading-relaxed"
               style={{ background: 'var(--color-bg)', color: 'var(--color-text)', maxHeight: '8rem' }}
               placeholder={address ? 'Write a reply…' : 'Connect wallet to reply'}
               value={reply}
@@ -587,7 +587,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
         >
           {/* Split button: left = in-app form, right = open Discourse category */}
           <div
-            className="relative flex rounded-xl overflow-hidden"
+            className="relative flex rounded-lg overflow-hidden"
             style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)' }}
             onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = hoverBorderColor; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-border)'; }}

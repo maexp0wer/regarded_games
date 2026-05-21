@@ -53,7 +53,7 @@ function TokenDropdown({
     <>
       {/* backdrop */}
       <div className="fixed inset-0 z-10" onClick={onClose} />
-      <div className="absolute right-0 top-10 z-20 rounded-xl p-3 flex flex-col gap-2 min-w-52.5"
+      <div className="absolute right-0 top-10 z-20 rounded-lg p-3 flex flex-col gap-2 min-w-52.5"
         style={{ background: 'var(--color-card)', border: '1px solid var(--color-border2)', boxShadow: '0 8px 24px rgba(0,0,0,0.35)' }}>
         <span className="section-label">Select Token</span>
         {knownTokens.map(t => (
@@ -440,7 +440,7 @@ export function SwapMask() {
 
       {/* ── Slippage settings panel ── */}
       {showSettings && (
-        <div className="rounded-xl p-3 flex flex-col gap-2"
+        <div className="rounded-lg p-3 flex flex-col gap-2"
           style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}>
           <span className="section-label">Slippage Tolerance</span>
           <div className="flex items-center gap-2 flex-wrap">
@@ -478,7 +478,7 @@ export function SwapMask() {
       )}
 
       {/* ── You Pay ── */}
-      <div className="rounded-xl p-4 flex flex-col gap-3"
+      <div className="rounded-lg p-4 flex flex-col gap-3"
         style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}>
         <div className="flex items-center justify-between">
           <span className="section-label">You Pay</span>
@@ -522,7 +522,7 @@ export function SwapMask() {
       </div>
 
       {/* ── You Receive ── */}
-      <div className="rounded-xl p-4 flex flex-col gap-3"
+      <div className="rounded-lg p-4 flex flex-col gap-3"
         style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}>
         <div className="flex items-center justify-between">
           <span className="section-label">You Receive</span>
@@ -620,7 +620,7 @@ export function SwapMask() {
       )}
 
       {/* ── CTA Button ── */}
-      <div className="relative rounded-xl overflow-hidden mt-1">
+      <div className="relative rounded-lg overflow-hidden mt-1">
         {status !== 'idle' && !isError && (
           <div className="absolute inset-y-0 left-0 transition-all duration-500"
             style={{
@@ -633,7 +633,7 @@ export function SwapMask() {
         <button
           disabled={isButtonDisabled}
           onClick={handleStartFlow}
-          className="relative z-10 w-full py-4 font-display font-bold text-[15px] uppercase tracking-wide flex items-center justify-center gap-2 transition-all rounded-xl"
+          className="relative z-10 w-full py-4 font-display font-bold text-[15px] uppercase tracking-wide flex items-center justify-center gap-2 transition-all rounded-lg"
           style={btnStyle}>
           {isBusy && <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />}
           {getButtonText()}

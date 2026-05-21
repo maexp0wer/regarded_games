@@ -21,7 +21,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen bg-bg transition-colors duration-300">
         <DiscourseHandshake />
         <Navbar />
-        <div className={isSeasonPage ? 'w-full px-6 pb-16' : 'mx-auto max-w-7xl px-6 pb-16'}>
+        <div className={isSeasonPage ? 'w-full px-6 pb-16 pt-18' : 'mx-auto max-w-7xl px-6 pb-16 pt-18'}>
           {children}
         </div>
       </div>

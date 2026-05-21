@@ -251,7 +251,7 @@ export function Stake() {
 
       {/* ── Amount input ── */}
       <div
-        className="rounded-xl flex overflow-hidden"
+        className="rounded-lg flex overflow-hidden"
         style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
       >
         {/* Input area */}
@@ -309,7 +309,7 @@ export function Stake() {
       </div>
 
       {/* ── CTA Button ── */}
-      <div className="mt-2 relative rounded-xl overflow-hidden">
+      <div className="mt-2 relative rounded-lg overflow-hidden">
         {status !== 'idle' && !isError && (
           <div
             className="absolute inset-y-0 left-0 transition-all duration-500"
@@ -322,7 +322,7 @@ export function Stake() {
         <button
           disabled={isButtonDisabled}
           onClick={handleStartFlow}
-          className="relative z-10 w-full py-4 font-display font-bold text-[15px] uppercase tracking-wide flex items-center justify-center gap-2 transition-all rounded-xl"
+          className="relative z-10 w-full py-4 font-display font-bold text-[15px] uppercase tracking-wide flex items-center justify-center gap-2 transition-all rounded-lg"
           style={ctaBtnStyle}
         >
           {isBusy && <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />}

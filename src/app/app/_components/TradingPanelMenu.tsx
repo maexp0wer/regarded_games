@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Order } from '@/hooks/useOrderBook';
 import { SeasonTrade } from '@/hooks/useSeasonTrades';
 import { OrderBook } from './OrderBook';
@@ -13,23 +13,20 @@ import { CandleData } from '@/utils/chartData';
 
 type PanelId = 'chart-orders' | 'orderbook' | 'trades' | 'chord' | 'chat';
 
-const DESKTOP_BUTTONS: { id: PanelId; label: string }[] = [
-  { id: 'orderbook', label: 'Order Book' },
-  { id: 'trades',    label: 'trades' },
-  { id: 'chord',     label: 'Trade Flows' },
-  { id: 'chat',      label: 'Chat' },
-];
-
-const MOBILE_BUTTONS: { id: PanelId; label: string }[] = [
+const BUTTONS: { id: PanelId; label: string }[] = [
   { id: 'chart-orders', label: 'Chart' },
-  ...DESKTOP_BUTTONS,
+  { id: 'orderbook',    label: 'Order Book' },
+  { id: 'trades',       label: 'Trades' },
+  { id: 'chord',        label: 'Trade Flows' },
+  { id: 'chat',         label: 'Chat' },
 ];
 
-// Highest priority first
-const DESKTOP_PRIORITY: PanelId[] = ['orderbook', 'trades', 'chord', 'chat'];
-const MOBILE_PRIORITY:  PanelId[] = ['chart-orders', 'orderbook', 'trades', 'chord', 'chat'];
+const PRIORITY: PanelId[] = ['chart-orders', 'orderbook', 'trades', 'chord', 'chat'];
 
 const W_PANEL = 400;
+
+const chunk = <T,>(arr: T[], size: number): T[][] =>
+  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) => arr.slice(i * size, i * size + size));
 
 export interface TradingPanelMenuProps {
   seasonAddress: string;
@@ -58,52 +55,55 @@ export interface TradingPanelMenuProps {
   exchangeAddress: string;
   // Trading mask is rendered by the parent and positioned here
   tradingMask: React.ReactNode;
+  openOrderBookRef?: { current: () => void };
 }
 
 export function TradingPanelMenu(props: TradingPanelMenuProps) {
-  const [open, setOpen] = useState<Set<PanelId>>(new Set(['chart-orders']));
-  const [isXl, setIsXl] = useState(false);
+  const [open, setOpen] = useState<Set<PanelId>>(new Set());
   const [isMd, setIsMd] = useState(false);
+  const didInit = useRef(false);
 
   useEffect(() => {
-    const xl = window.matchMedia('(min-width: 1280px)');
     const md = window.matchMedia('(min-width: 768px)');
-    setIsXl(xl.matches);
-    setIsMd(md.matches);
-    const xlH = (e: MediaQueryListEvent) => setIsXl(e.matches);
+    const matches = md.matches;
+    setIsMd(matches);
+
+    if (!didInit.current) {
+      didInit.current = true;
+      setOpen(
+        matches
+          ? new Set<PanelId>(['chart-orders', 'orderbook'])
+          : new Set<PanelId>(['chart-orders'])
+      );
+    }
+
     const mdH = (e: MediaQueryListEvent) => setIsMd(e.matches);
-    xl.addEventListener('change', xlH);
     md.addEventListener('change', mdH);
-    return () => {
-      xl.removeEventListener('change', xlH);
-      md.removeEventListener('change', mdH);
-    };
+    return () => md.removeEventListener('change', mdH);
   }, []);
 
-  // Remove chart-orders when switching to desktop (it's always visible there)
+  // Enforce single-panel on small mobile
   useEffect(() => {
-    if (isXl) {
+    if (!isMd) {
       setOpen(prev => {
-        if (!prev.has('chart-orders')) return prev;
-        const next = new Set(prev);
-        next.delete('chart-orders');
-        return next;
-      });
-    }
-  }, [isXl]);
-
-  // Enforce single-panel on mobile sm
-  useEffect(() => {
-    if (!isXl && !isMd) {
-      setOpen(prev => {
-        const visible = MOBILE_PRIORITY.filter(p => prev.has(p));
+        const visible = PRIORITY.filter(p => prev.has(p));
         if (visible.length <= 1) return prev;
         return new Set([visible[0]]);
       });
     }
-  }, [isMd, isXl]);
+  }, [isMd]);
 
-  const maxPanels = isMd ? 2 : 1;
+  // md+: chart open → max 2 non-chart panels (3 total); chart closed → max 4 non-chart panels
+  const NON_CHART = PRIORITY.filter(p => p !== 'chart-orders');
+
+  const trimNonChart = (next: Set<PanelId>, limit: number) => {
+    const excess = NON_CHART.filter(p => next.has(p));
+    // remove lowest-priority first (reverse of PRIORITY = lowest last)
+    while (excess.length > limit) {
+      const toRemove = excess.pop()!;
+      next.delete(toRemove);
+    }
+  };
 
   const toggle = (id: PanelId) => {
     setOpen(prev => {
@@ -112,19 +112,15 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
         next.delete(id);
         return next;
       }
-      if (isXl) {
-        if (id === 'chart-orders') return prev;
-        if (next.size >= 2) {
-          const lowest = [...DESKTOP_PRIORITY].reverse().find(p => next.has(p));
-          if (lowest) next.delete(lowest);
-        }
+      if (!isMd) {
+        return new Set<PanelId>([id]);
+      }
+      if (id === 'chart-orders') {
+        // opening chart reduces non-chart limit from 4 → 2
+        trimNonChart(next, 2);
       } else {
-        if (id === 'chart-orders') return new Set<PanelId>(['chart-orders']);
-        next.delete('chart-orders');
-        if (next.size >= maxPanels) {
-          const lowest = [...MOBILE_PRIORITY].reverse().find(p => next.has(p));
-          if (lowest) next.delete(lowest);
-        }
+        const limit = next.has('chart-orders') ? 2 : 4;
+        trimNonChart(next, limit - 1);
       }
       next.add(id);
       return next;
@@ -135,13 +131,9 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
     setOpen(prev => {
       if (prev.has('chord')) return prev;
       const next = new Set(prev);
-      const priority = isXl ? DESKTOP_PRIORITY : MOBILE_PRIORITY;
-      const max = isXl ? 2 : maxPanels;
-      if (!isXl) next.delete('chart-orders');
-      if (next.size >= max) {
-        const lowest = [...priority].reverse().find(p => next.has(p));
-        if (lowest) next.delete(lowest);
-      }
+      if (!isMd) return new Set<PanelId>(['chord']);
+      const limit = next.has('chart-orders') ? 2 : 4;
+      trimNonChart(next, limit - 1);
       next.add('chord');
       return next;
     });
@@ -156,7 +148,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
     switch (id) {
       case 'chart-orders':
         return (
-          <div className="flex flex-col gap-5 h-full">
+          <div className="flex flex-col h-full">
             <div className="flex-1 min-h-0">
               <CandlestickChart
                 candles={props.candles}
@@ -169,7 +161,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
               />
             </div>
             {props.userAddress && (
-              <div className="shrink-0">
+              <div className="shrink-0 border-t border-border">
                 <Orders
                   seasonAddress={props.seasonAddress}
                   userAddress={props.userAddress}
@@ -213,108 +205,77 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
     }
   };
 
-  const btnBase = 'font-mono font-semibold uppercase tracking-widest transition-all';
-  const btnActive = 'text-text bg-linear-to-b to-card from-(--color-gold-70) to-20% hover:from-(--color-gold-15) rounded-r-xl';
-  const btnInactive = 'rounded-xl text-text2 bg-linear-to-b to-card from-(--color-gold-15) to-10% hover:from-(--color-gold-70) hover:text-text';
-
-  // ─── Desktop layout ───────────────────────────────────────────────────────
-  if (isXl) {
-    const openPanels = DESKTOP_PRIORITY.filter(id => open.has(id));
-    const hasAnyOpen = openPanels.length > 0;
-    const totalWidth = hasAnyOpen ? W_PANEL + 36 : 36;
-
-    return (
-      <div className="flex gap-5 items-stretch h-200 my-5">
-        {/* Chart + Orders */}
-        <div className="flex-1 flex flex-col gap-5 min-w-0 h-full">
-          <CandlestickChart
-            candles={props.candles}
-            timeframe={props.timeframe}
-            onTimeframeChange={props.onTimeframeChange}
-            onCandleClick={handleCandleClick}
-            selectedRange={props.selectedRange}
-            capTargetBps={props.capTargetBps}
-            socTargetBps={props.socTargetBps}
-          />
-          {props.userAddress && (
-            <Orders
-              seasonAddress={props.seasonAddress}
-              userAddress={props.userAddress}
-              exchangeAddress={props.exchangeAddress}
-            />
-          )}
-        </div>
-
-        {/* Vertical panel sidebar */}
-        <div
-          className="self-stretch relative shrink-0 overflow-hidden transition-[width] duration-200"
-          style={{ width: totalWidth }}
-        >
-          {hasAnyOpen && (
-            <div
-              className="absolute top-0 bottom-0 right-9 overflow-hidden"
-              style={{ width: W_PANEL }}
-            >
-              {openPanels.length === 1 ? (
-                <div className="h-full">{renderPanel(openPanels[0])}</div>
-              ) : (
-                <div className="flex flex-col gap-5 h-full">
-                  {openPanels.map(id => (
-                    <div key={id} className="flex-1 min-h-0 overflow-hidden">{renderPanel(id)}</div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          <div className="absolute top-0 bottom-0 right-0 flex flex-col gap-5" style={{ width: 36 }}>
-            {DESKTOP_BUTTONS.map(({ id, label }) => (
-              <button
-                key={id}
-                onClick={() => toggle(id)}
-                className={`${btnBase} flex-1 flex items-center justify-center [writing-mode:vertical-rl] ${open.has(id) ? btnActive : btnInactive}`}
-                style={{ fontSize: 11, letterSpacing: '0.1em' }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Trading mask */}
-        <div className="shrink-0 w-91">{props.tradingMask}</div>
-      </div>
-    );
+  if (props.openOrderBookRef) {
+    props.openOrderBookRef.current = () => {
+      setOpen(prev => {
+        if (prev.has('orderbook')) return prev;
+        const next = new Set(prev);
+        if (!isMd) return new Set<PanelId>(['orderbook']);
+        const limit = next.has('chart-orders') ? 2 : 4;
+        trimNonChart(next, limit - 1);
+        next.add('orderbook');
+        return next;
+      });
+    };
   }
 
-  // ─── Mobile layout ────────────────────────────────────────────────────────
-  const openPanels = MOBILE_PRIORITY.filter(id => open.has(id));
+  const chartOpen = open.has('chart-orders');
+  const otherPanels = PRIORITY.filter(id => id !== 'chart-orders' && open.has(id));
+  const hasAnyOpen = chartOpen || otherPanels.length > 0;
 
   return (
     <div className="flex flex-col md:flex-row gap-5 items-stretch">
       {/* Panel area: left on md+, below mask on sm */}
       <div className="w-full md:flex-1 md:min-w-0 order-2 md:order-1">
-        <div className="h-full max-h-[95vh] flex flex-col gap-5 overflow-hidden">
+        <div className="h-full max-h-[95vh] flex flex-col overflow-hidden rounded-lg border border-border bg-card">
+
           {/* Horizontal tab bar */}
-          <div className="shrink-0 flex gap-5">
-            {MOBILE_BUTTONS.map(({ id, label }) => (
-              <button
-                key={id}
-                onClick={() => toggle(id)}
-                className={`${btnBase} flex-1 py-2 ${open.has(id) ? btnActive : btnInactive}`}
-                style={{ fontSize: 11, letterSpacing: '0.1em' }}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="shrink-0 overflow-x-auto">
+            <div className="terminal-view-selector-bar">
+              {BUTTONS.map(({ id, label }) => (
+                <button
+                  key={id}
+                  onClick={() => toggle(id)}
+                  className={`terminal-view-btn${open.has(id) ? ' active' : ''}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
-          {openPanels.length > 0 && (
-            <div className="flex-1 min-h-0 flex flex-col gap-5">
-              {openPanels.length === 1 ? (
-                <div className="h-full">{renderPanel(openPanels[0])}</div>
-              ) : (
-                openPanels.map(id => (
-                  <div key={id} className="flex-1 min-h-0 overflow-hidden">{renderPanel(id)}</div>
-                ))
+
+          {/* Panel content */}
+          {hasAnyOpen && (
+            <div className="flex-1 min-h-0 flex flex-row">
+              {chartOpen && (
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  {renderPanel('chart-orders')}
+                </div>
+              )}
+              {otherPanels.length > 0 && (
+                chartOpen ? (
+                  /* Chart visible: others stack vertically in fixed-width column */
+                  <div className="shrink-0 flex flex-col border-l border-border" style={{ width: W_PANEL }}>
+                    {otherPanels.map((id, i) => (
+                      <div key={id} className={`flex-1 min-h-0 overflow-hidden${i > 0 ? ' border-t border-border' : ''}`}>
+                        {renderPanel(id)}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  /* No chart: grid — horizontal first, then vertical (rows of 2) */
+                  <div className="flex-1 min-w-0 flex flex-col">
+                    {chunk(otherPanels, 2).map((row, i) => (
+                      <div key={i} className={`flex-1 min-h-0 flex flex-row${i > 0 ? ' border-t border-border' : ''}`}>
+                        {row.map((id, j) => (
+                          <div key={id} className={`flex-1 min-w-0 overflow-hidden${j > 0 ? ' border-l border-border' : ''}`}>
+                            {renderPanel(id)}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )
               )}
             </div>
           )}

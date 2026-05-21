@@ -35,7 +35,7 @@ const Card: React.FC<CardProps> = ({
   }
 
   return (
-    <div className="flex flex-col bg-card rounded-xl shadow-md overflow-hidden h-full">
+    <div className="flex flex-col bg-card rounded-lg shadow-md overflow-hidden h-full">
       <div className="h-48 bg-card2 flex justify-center items-center shrink-0 p-8">
         {sizedIcon}
       </div>

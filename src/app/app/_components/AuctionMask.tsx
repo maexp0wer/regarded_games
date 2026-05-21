@@ -231,11 +231,11 @@ function AuctionMaskInner({
       {isPhaseLoading ? (
         <p className="section-label animate-pulse">Loading Phase…</p>
       ) : isPhaseError || currentPhase == null ? (
-        <div className="rounded-xl px-4 py-3 text-center surface-red-warn">
+        <div className="rounded-lg px-4 py-3 text-center surface-red-warn">
           <p className="font-mono text-[10px] uppercase font-bold tracking-widest" style={{ color: 'var(--color-red)' }}>Phase data unavailable</p>
         </div>
       ) : !isAuctionPhase ? (
-        <div className="rounded-xl px-4 py-3 text-center" style={{ background: 'var(--color-card2)', border: '1px solid var(--color-border)' }}>
+        <div className="rounded-lg px-4 py-3 text-center" style={{ background: 'var(--color-card2)', border: '1px solid var(--color-border)' }}>
           <p className="section-label">Season on Hold</p>
         </div>
       ) : (
@@ -244,7 +244,7 @@ function AuctionMaskInner({
           {!hasStakedAnything && (
             <Link href="/stake">
               <div
-                className="rounded-xl px-4 py-3 text-center cursor-pointer transition-opacity hover:opacity-80 surface-pink-warn"
+                className="rounded-lg px-4 py-3 text-center cursor-pointer transition-opacity hover:opacity-80 surface-pink-warn"
               >
                 <p className="font-mono text-[10px] uppercase font-bold tracking-widest text-red">
                   No Collateral Staked
@@ -258,7 +258,7 @@ function AuctionMaskInner({
 
           {/* ── Buy widget ── */}
           <div
-            className={`rounded-xl p-4 flex flex-col gap-3 transition-opacity ${widgetDisabled ? 'opacity-40 pointer-events-none' : ''}`}
+            className={`rounded-lg p-4 flex flex-col gap-3 transition-opacity ${widgetDisabled ? 'opacity-40 pointer-events-none' : ''}`}
             style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
           >
             {/* Widget header */}
@@ -284,7 +284,7 @@ function AuctionMaskInner({
           </div>
 
           {/* ── CTA button ── */}
-          <div className="relative rounded-xl overflow-hidden">
+          <div className="relative rounded-lg overflow-hidden">
             {/* Progress track */}
             {!isError && status !== 'idle' && (
               <div
@@ -311,7 +311,7 @@ function AuctionMaskInner({
 
       {/* ── Stats grid ── */}
       <div
-        className="grid grid-cols-2 gap-0 rounded-xl overflow-hidden mt-auto"
+        className="grid grid-cols-2 gap-0 rounded-lg overflow-hidden mt-auto"
         style={{ border: '1px solid var(--color-border)' }}
       >
         {/* Eligible FIM Remaining (Total) */}

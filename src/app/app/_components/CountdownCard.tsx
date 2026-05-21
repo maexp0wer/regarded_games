@@ -64,7 +64,7 @@ export function CountdownCard({
     ? 'Auction Ends In'
     : isBootstrap || isVictoryPending
     ? 'On Hold'
-    : 'Season Ends In';
+    : 'Season End';
 
   const winnerLabel = winningSide === 'cap' ? 'Bourgeoisie' : winningSide === 'soc' ? 'Proletariat' : 'Tie';
   const winnerColor = winningSide === 'cap' ? 'var(--color-gold)' : winningSide === 'soc' ? 'var(--color-purple)' : 'var(--color-text2)';
@@ -89,10 +89,6 @@ export function CountdownCard({
     return (
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
-          <span
-            className="shrink-0 rounded-full"
-            style={{ width: 5, height: 5, background: tickColor }}
-          />
           <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-text2 font-semibold">
             {labelText}
           </span>
@@ -122,7 +118,7 @@ export function CountdownCard({
             ].map((b) => (
               <div
                 key={b.label}
-                className="flex flex-col items-center gap-1 py-2 px-1 rounded-lg border border-border"
+                className="flex flex-col items-center gap-1 py-2 px-1 rounded-lg"
               >
                 <span className="font-mono font-semibold leading-none text-[18px] text-text">
                   {pad(b.v)}

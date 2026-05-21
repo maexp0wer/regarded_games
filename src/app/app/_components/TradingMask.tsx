@@ -27,6 +27,7 @@ interface TradingMaskProps {
   onMoveOrder: (index: number, direction: -1 | 1) => void;
   onReorderOrders: (newOrders: Order[]) => void;
   isOnHold?: boolean;
+  onOpenOrderBook?: () => void;
 }
 
 export function TradingMask({
@@ -35,22 +36,22 @@ export function TradingMask({
   targetAmount, setTargetAmount,
   selectedOrders, onRemoveOrder, onReorderOrders,
   isOnHold = false,
+  onOpenOrderBook,
 }: TradingMaskProps) {
   const { address, isConnected } = useAccount();
   const [price, setPrice] = useState('1.00');
   const [isPricePerFim, setIsPricePerFim] = useState(true);
+  const [draggedGroupIdx, setDraggedGroupIdx] = useState<number | null>(null);
 
   const handlePriceModeSwitch = (mode: 'Per FIM' | 'Total') => {
     const perFim = mode === 'Per FIM';
     setIsPricePerFim(perFim);
     setPrice(perFim ? '1.00' : targetAmount || '');
   };
-  const [draggedGroupIdx, setDraggedGroupIdx] = useState<number | null>(null);
 
   const spendingToken  = isBuy ? Core.USDC : fimAddress;
   const spendingSymbol = isBuy ? 'USDC' : 'FIM';
 
-  // --- Balance reads ---
   const { data: fimBalance } = useReadContract({
     address: fimAddress as `0x${string}`, abi: erc20Abi, functionName: 'balanceOf',
     args: [address as `0x${string}`], query: { enabled: !!address, refetchInterval: 5000 },
@@ -60,7 +61,6 @@ export function TradingMask({
     args: [address as `0x${string}`], query: { enabled: !!address, refetchInterval: 5000 },
   });
 
-  // --- Grouped queue ---
   const groupedQueue = useMemo(() => {
     const groups: GroupedOrder[] = [];
     if (!selectedOrders.length) return groups;
@@ -85,7 +85,6 @@ export function TradingMask({
   );
   const { data: percentileMap } = useBatchPlayerPercentiles(seasonAddress, queueMakers, exchangeAddress);
 
-  // --- Execution payload ---
   const executionPayload = useMemo<ExecutionPayload>(() => {
     if (isMaker) return { ids: [], amounts: [], totalCostRaw: 0n, totalFimRaw: 0n };
     const targetAmountRaw = targetAmount ? parseUnits(targetAmount, 18) : maxUint256;
@@ -128,9 +127,15 @@ export function TradingMask({
     return v.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
   };
 
-  // --- Amount slider ---
-  const maxForSlider = isBuy ? (usdcBalance || 0n) : (fimBalance || 0n);
-  const maxDecimals  = isBuy ? 6 : 18;
+  const maxQueueFim = useMemo(() =>
+    !isMaker ? selectedOrders.reduce((acc, o) => acc + o.rawAmount, 0n) : 0n,
+    [isMaker, selectedOrders]
+  );
+
+  const maxForSlider = isMaker
+    ? (isBuy ? (usdcBalance || 0n) : (fimBalance || 0n))
+    : maxQueueFim;
+  const maxDecimals = isMaker ? (isBuy ? 6 : 18) : 18;
 
   const sliderPct = useMemo(() => {
     if (!targetAmount || maxForSlider === 0n) return 0;
@@ -144,11 +149,28 @@ export function TradingMask({
     setTargetAmount(formatUnits((maxForSlider * BigInt(pct)) / 100n, maxDecimals));
   };
 
+  const handleTargetAmountChange = (val: string) => {
+    if (val !== '' && Number(val) < 0) return;
+    if (!isMaker && maxQueueFim > 0n && val !== '') {
+      try {
+        if (parseUnits(val, 18) > maxQueueFim) {
+          setTargetAmount(formatUnits(maxQueueFim, 18));
+          return;
+        }
+      } catch { /* invalid parse, fall through */ }
+    }
+    setTargetAmount(val);
+  };
+
+  const handlePriceChange = (val: string) => {
+    if (val !== '' && Number(val) < 0) return;
+    setPrice(val);
+  };
+
   const walletBalanceDisplay = isBuy
     ? `${Number(formatUnits(usdcBalance || 0n, 6)).toLocaleString()} USDC`
     : `${Number(formatUnits(fimBalance || 0n, 18)).toLocaleString()} FIM`;
 
-  // --- Drag handlers ---
   const handleRemoveGroup = (group: GroupedOrder) => group.ids.forEach(id => onRemoveOrder(id));
   const handleMoveGroupButton = (groupIdx: number, direction: -1 | 1) => {
     const newGroups = [...groupedQueue];
@@ -166,8 +188,7 @@ export function TradingMask({
     onReorderOrders(newGroups.flatMap(g => g.orders));
   };
 
-  // --- Trade execution ---
-  const { workflowStatus, handleStartFlow, getStatusText, isBusy } = useTradeExecution({
+  const { workflowStatus, handleStartFlow, isBusy } = useTradeExecution({
     isMaker, isBuy, targetAmount, makerTotalUsdcRaw, executionPayload,
     spendingToken: spendingToken as `0x${string}`, spendingSymbol,
     exchangeAddress: exchangeAddress as `0x${string}`,
@@ -175,7 +196,7 @@ export function TradingMask({
   });
 
   const isButtonDisabled = isBusy || workflowStatus === 'success'
-    || (isMaker ? (!targetAmount || !price) : selectedOrders.length === 0)
+    || (isMaker ? makerTotalUsdcRaw === 0n : (selectedOrders.length === 0 || executionPayload.totalCostRaw === 0n))
     || isSelfFill;
 
   const userMakers = useMemo(() => (address ? [address.toLowerCase()] : []), [address]);
@@ -184,7 +205,7 @@ export function TradingMask({
 
   const isQueueLocked = !isMaker && selectedOrders.length > 0;
 
-  const inputBase = 'bg-transparent border-none p-0 w-full font-mono font-bold text-text outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none';
+  const showModal = workflowStatus !== 'idle' && workflowStatus !== 'canceled';
 
   if (!isConnected) {
     return (
@@ -214,33 +235,16 @@ export function TradingMask({
     );
   }
 
-  const buyActive  = { background: 'var(--color-green-15)', color: 'var(--color-green)', boxShadow: '0 1px 4px #00000033' };
-  const sellActive = { background: 'var(--color-red-15)',   color: 'var(--color-red)',   boxShadow: '0 1px 4px #00000033' };
-  const segInactive = { color: 'var(--color-text2)', background: 'transparent' };
-
-  const ctaBtnStyle = isBusy || workflowStatus !== 'idle'
-    ? {}
-    : isButtonDisabled
-    ? { background: 'var(--color-card2)', color: 'var(--color-text2)', cursor: 'not-allowed' }
-    : isBuy
-    ? { background: 'linear-gradient(135deg, var(--color-green-hover), var(--color-green))', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-green-70)' }
-    : { background: 'linear-gradient(135deg, var(--color-red-hover), var(--color-red))', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-red-70)' };
-
   return (
-    <div className="flex flex-col gap-5 h-full">
+    <div className="flex flex-col gap-5 h-full relative">
+
       {/* ── Wallet balances card ── */}
-      <div
-        className="p-6 rounded-3xl flex items-start justify-between bg-linear-to-b from-(--color-gold-15) to-card to-10% border border-border2"
-      >
+      <div className="p-6 rounded-lg flex items-start justify-between bg-linear-to-b from-(--color-gold-15) to-card to-10% border border-border2">
         <div>
           <p className="section-label mb-1">FIM Balance</p>
           <div
             className="font-display font-extrabold leading-none text-display-trading mr-4"
-            style={{
-              color: 'var(--color-gold)',
-              textShadow: '0 0 40px var(--color-gold-35)',
-              fontVariantNumeric: 'tabular-nums',
-            }}
+            style={{ color: 'var(--color-gold)', textShadow: '0 0 40px var(--color-gold-35)', fontVariantNumeric: 'tabular-nums' }}
           >
             {Number(formatUnits(fimBalance || 0n, 18)).toLocaleString()}
             <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
@@ -249,7 +253,7 @@ export function TradingMask({
         {userStats ? (
           <div className="flex flex-col items-start min-w-0">
             <span className="section-label mb-1">
-              RANK:
+              RANK:&nbsp;
               <span style={{ color: userStats.isCapitalist ? 'var(--color-gold)' : 'var(--color-purple)' }}>
                 {userStats.isCapitalist ? 'CAPITALIST' : 'SOCIALIST'}
               </span>
@@ -263,241 +267,267 @@ export function TradingMask({
       </div>
 
       {/* ── Trading panel card ── */}
-      <div
-        className="rounded-4xl p-6 flex flex-col gap-4 flex-1 min-h-0 bg-card"
-        style={{ borderColor: 'var(--color-border)' }}
-      >
+      <div className="rounded-lg p-6 flex flex-col gap-4 flex-1 min-h-0 bg-card border border-border">
 
-        {/* ── Buy / Sell seg control ── */}
-        <div className="flex w-full bg-card2 border border-border rounded-[10px] gap-2">
-          
-          {/* BUY BUTTON */}
+        {/* ── Buy / Sell toggle ── */}
+        <div className="flex rounded-lg overflow-hidden border border-border bg-card2 p-1 gap-1">
           <button
             disabled={isQueueLocked}
             onClick={() => setIsBuy(true)}
-            className={`
-              flex-1 text-center font-mono text-[11px] font-semibold tracking-wider 
-              py-1.5 rounded-[7px] uppercase transition-all whitespace-nowrap
-              disabled:pointer-events-auto disabled:cursor-not-allowed
-              ${isBuy 
-                ? 'bg-(--color-green-35) text-text border border-(--color-green-70)'
-                : 'text-text2 hover:text-text border-transparent hover:bg-[var(--color-border)]'
-              }
-            `}
+            className="flex-1 py-2 rounded font-display font-bold text-sm uppercase tracking-wide transition-all disabled:opacity-50"
+            style={isBuy ? {
+              background: 'linear-gradient(180deg, var(--color-green-hover), var(--color-green))',
+              color: '#0a1e0b',
+              boxShadow: '0 2px 8px -2px var(--color-green-35)',
+            } : { color: 'var(--color-text2)' }}
           >
             Buy
           </button>
-
-          {/* SELL BUTTON */}
           <button
             disabled={isQueueLocked}
             onClick={() => setIsBuy(false)}
-            className={`
-              flex-1 text-center font-mono text-[11px] font-semibold tracking-wider 
-              py-1.5 rounded-[7px] uppercase transition-all whitespace-nowrap
-              disabled:pointer-events-auto disabled:cursor-not-allowed
-              ${!isBuy 
-                ? 'bg-(--color-red-35) text-text border-(--color-red-70) border'
-                : 'text-text2 hover:text-text border-transparent hover:bg-[var(--color-border)]'
-              }
-            `}
+            className="flex-1 py-2 rounded font-display font-bold text-sm uppercase tracking-wide transition-all disabled:opacity-50"
+            style={!isBuy ? {
+              background: 'linear-gradient(180deg, var(--color-red-hover), var(--color-red))',
+              color: 'white',
+              boxShadow: '0 2px 8px -2px var(--color-red-35)',
+            } : { color: 'var(--color-text2)' }}
           >
             Sell
           </button>
-
         </div>
 
-      {/* ── Amount input ── */}
-      <div
-        className="rounded-xl flex overflow-hidden"
-        style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
-      >
-        {/* Input area */}
-        <div className="flex flex-col flex-1 p-4 gap-2">
-          <div className="flex items-center justify-between">
-            <span className="mask-label">{isBuy ? 'Buy FIM' : 'Sell FIM'}</span>
-            <span className="ml-2 mask-label">
-              WALLET<span className="text-text font-semibold">{walletBalanceDisplay}</span>
-            </span>
+        {/* ── Amount input with embedded Maker/Taker rail ── */}
+        <div>
+          <div className="input-embedded-rail">
+            <button
+              disabled={isQueueLocked}
+              onClick={() => setIsMaker(false)}
+              className={`btn-input-switch ${!isMaker ? 'active' : ''}`}
+            >
+              Taker
+            </button>
+            <button
+              disabled={isQueueLocked}
+              onClick={() => setIsMaker(true)}
+              className={`btn-input-switch ${isMaker ? 'active' : ''}`}
+            >
+              Maker
+            </button>
           </div>
-          <input
-            type="number"
-            value={targetAmount}
-            onChange={(e) => setTargetAmount(e.target.value)}
-            className={`${inputBase} text-input`}
-            placeholder={isMaker ? '0.00' : 'MAX'}
-          />
-          <PercentSlider value={sliderPct} onChange={handleSliderChange} disabled={isBusy} />
-        </div>
-        {/* Vertical Maker/Taker toggle — right side */}
-        <div className="flex flex-col shrink-0" style={{ width: 64, borderLeft: '1px solid var(--color-border)' }}>
-          {(['Maker', 'Taker'] as const).map((mode, i) => {
-            const active = (mode === 'Maker') === isMaker;
-            return (
-              <button
-                key={mode}
-                onClick={() => setIsMaker(mode === 'Maker')}
-                className={`
-                  flex-1 font-mono font-semibold uppercase flex items-center justify-center transition-all text-toggle-label
-                  ${active 
-                    ? 'bg-[var(--color-gold)] text-[var(--color-bg)]' 
-                    : 'bg-[var(--color-card2)] text-[var(--color-text2)] hover:bg-[var(--color-border)]'
-                  }
-                `}
-                style={{
-                  letterSpacing: '0.07em',
-                  borderBottom: i === 0 ? '1px solid var(--color-border)' : undefined,
-                }}
-              >
-                {mode}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── Maker price input ── */}
-      {isMaker && (
-        <div
-          className="rounded-xl flex overflow-hidden"
-          style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
-        >
-          {/* Input area */}
-          <div className="flex flex-col flex-1 p-4 gap-1">
-            <span className="mask-label">{isPricePerFim ? 'Price per FIM (USDC)' : 'Total Order (USDC)'}</span>
+          <div className="bg-card2 border border-border rounded-b px-3 pt-2 pb-3 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="mask-label">{isBuy ? 'Buy FIM' : 'Sell FIM'}</span>
+              <span className="mask-label">WALLET&nbsp;<span className="text-text font-semibold">{walletBalanceDisplay}</span></span>
+            </div>
             <input
               type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className={inputBase}
-              style={{ fontSize: 28 }}
-              placeholder="0.00"
+              min="0"
+              value={targetAmount}
+              onChange={(e) => handleTargetAmountChange(e.target.value)}
+              className="w-full bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums"
+              placeholder={isMaker ? '0.00' : 'MAX'}
             />
-          </div>
-          {/* Vertical Per FIM/Total toggle — right side */}
-          <div className="flex flex-col shrink-0" style={{ width: 64, borderLeft: '1px solid var(--color-border)' }}>
-            {(['Per FIM', 'Total'] as const).map((mode, i) => {
-              const active = (mode === 'Per FIM') === isPricePerFim;
-              return (
-                <button
-                  key={mode}
-                  onClick={() => handlePriceModeSwitch(mode)}
-                  className={`
-                  flex-1 font-mono font-semibold uppercase flex items-center justify-center transition-all text-toggle-label
-                  ${active 
-                    ? 'bg-[var(--color-gold)] text-[var(--color-bg)]' 
-                    : 'bg-[var(--color-card2)] text-[var(--color-text2)] hover:bg-[var(--color-border)]'
-                  }
-                `}
-                style={{
-                  letterSpacing: '0.07em',
-                  borderBottom: i === 0 ? '1px solid var(--color-border)' : undefined,
-                }}
-                >
-                  {mode}
-                </button>
-              );
-            })}
+            <PercentSlider value={sliderPct} onChange={handleSliderChange} disabled={isBusy} />
           </div>
         </div>
-      )}
 
-      {/* ── Taker: order queue ── */}
-      {!isMaker && (
-        <div className="flex flex-col flex-1 min-h-0">
-          <p className="section-label mb-2">Order Execution Queue</p>
-          <div
-            className="flex-1 overflow-y-auto custom-scrollbar rounded-xl p-2 space-y-2 border border-border bg-bg"
-            
-          >
-            {groupedQueue.length === 0 ? (
-              <div className="h-full flex items-center justify-center py-10">
-                <p className="section-label opacity-50">Select orders from Order Book</p>
+        {/* ── Maker price input with embedded Per FIM / Total rail ── */}
+        {isMaker && (
+          <div>
+            <div className="input-embedded-rail">
+              <button
+                onClick={() => handlePriceModeSwitch('Per FIM')}
+                className={`btn-input-switch ${isPricePerFim ? 'active' : ''}`}
+              >
+                Per FIM
+              </button>
+              <button
+                onClick={() => handlePriceModeSwitch('Total')}
+                className={`btn-input-switch ${!isPricePerFim ? 'active' : ''}`}
+              >
+                Total
+              </button>
+            </div>
+            <div className="bg-card2 border border-border rounded-b px-3 pt-2 pb-3 flex flex-col gap-1">
+              <span className="mask-label">{isPricePerFim ? 'Price per FIM (USDC)' : 'Total Order (USDC)'}</span>
+              <input
+                type="number"
+                min="0"
+                value={price}
+                onChange={(e) => handlePriceChange(e.target.value)}
+                className="w-full bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums"
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ── Taker: order queue ── */}
+        {!isMaker && (
+          <div className="flex flex-col flex-1 min-h-0">
+            <p className="section-label mb-2">Order Execution Queue</p>
+            <div className="flex-1 overflow-y-auto custom-scrollbar rounded-lg p-2 border border-border bg-bg">
+              {groupedQueue.length === 0 ? (
+                <button
+                  onClick={onOpenOrderBook}
+                  disabled={!onOpenOrderBook}
+                  className="h-full w-full flex flex-col items-center justify-center py-10 gap-1.5 rounded-lg transition-colors hover:bg-card2/60 disabled:pointer-events-none"
+                >
+                  <p className="section-label opacity-50">Select orders from Order Book</p>
+                  {onOpenOrderBook && (
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-text2/30">Click to open →</p>
+                  )}
+                </button>
+              ) : (
+                groupedQueue.map((group, groupIdx) => {
+                  const filledBefore = groupedQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
+                  return (
+                    <OrderQueueItem
+                      key={group.ids[0]}
+                      group={group} groupIdx={groupIdx} groupCount={groupedQueue.length}
+                      draggedGroupIdx={draggedGroupIdx} targetAmount={targetAmount}
+                      filledBefore={filledBefore} stats={percentileMap?.[group.maker?.toLowerCase()]}
+                      onMoveGroup={handleMoveGroupButton} onRemoveGroup={handleRemoveGroup}
+                      onDragStart={setDraggedGroupIdx} onDragOver={handleGroupDragOver}
+                      onDragEnd={() => setDraggedGroupIdx(null)}
+                    />
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Summary + CTA ── */}
+        <div className="mt-auto pt-4 flex flex-col gap-4" style={{ borderTop: '1px solid var(--color-border)' }}>
+          <div className="flex justify-between items-end">
+            <div>
+              <p className="section-label mb-1">{isMaker ? 'Total' : 'Total'}</p>
+              <span className="font-mono font-bold text-summary-value" style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}>
+                ${formatDynamicUsdc(isMaker ? makerTotalUsdcRaw : executionPayload.totalCostRaw)}
+              </span>
+            </div>
+            {!isMaker && (
+              <div className="text-right">
+                <p className="section-label mb-1">{isBuy ? 'Buying' : 'Selling'}</p>
+                <span
+                  className="font-mono font-bold text-summary-sub tabular-nums"
+                  style={{ color: isBuy ? 'var(--color-green)' : 'var(--color-red)' }}
+                >
+                  {Number(formatUnits(executionPayload.totalFimRaw, 18)).toLocaleString()} FIM
+                </span>
               </div>
-            ) : (
-              groupedQueue.map((group, groupIdx) => {
-                const filledBefore = groupedQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
-                return (
-                  <OrderQueueItem
-                    key={group.ids[0]}
-                    group={group} groupIdx={groupIdx} groupCount={groupedQueue.length}
-                    draggedGroupIdx={draggedGroupIdx} targetAmount={targetAmount}
-                    filledBefore={filledBefore} stats={percentileMap?.[group.maker?.toLowerCase()]}
-                    onMoveGroup={handleMoveGroupButton} onRemoveGroup={handleRemoveGroup}
-                    onDragStart={setDraggedGroupIdx} onDragOver={handleGroupDragOver}
-                    onDragEnd={() => setDraggedGroupIdx(null)}
-                  />
-                );
-              })
+            )}
+          </div>
+
+          {isSelfFill && (
+            <div className="rounded-lg px-4 py-2.5 flex items-center gap-2 surface-pink-warn">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-red">
+                Cannot fill own order
+              </span>
+            </div>
+          )}
+
+          <button
+            disabled={isButtonDisabled}
+            onClick={handleStartFlow}
+            className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-lg font-display font-bold text-[15px] uppercase tracking-wide transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={!isButtonDisabled ? {
+              background: isBuy
+                ? 'linear-gradient(180deg, var(--color-green-hover), var(--color-green))'
+                : 'linear-gradient(180deg, var(--color-red-hover), var(--color-red))',
+              color: isBuy ? '#0a1e0b' : 'white',
+              boxShadow: isBuy
+                ? '0 8px 24px -10px var(--color-green-35)'
+                : '0 8px 24px -10px var(--color-red-35)',
+            } : { background: 'var(--color-card3)', color: 'var(--color-text2)' }}
+          >
+            {isBusy && <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+            <span>{isBuy ? 'Buy FIM' : 'Sell FIM'}</span>
+          </button>
+        </div>
+
+      </div>
+
+      {/* ── Transaction Journey Modal ── */}
+      {showModal && (
+        <div className="modal-overlay-blur">
+          <div className="bg-card3 border border-border2 rounded-xl p-6 flex flex-col gap-6 w-full max-w-sm shadow-2xl">
+            <div>
+              <h3 className="font-display font-bold text-lg text-text">
+                {workflowStatus === 'success' ? 'Trade Confirmed' : workflowStatus === 'failed' ? 'Transaction Failed' : 'Execute Transaction'}
+              </h3>
+              <p className="font-mono text-xs text-text2 mt-1">
+                {workflowStatus === 'success'
+                  ? 'Your trade has been confirmed on-chain.'
+                  : workflowStatus === 'failed'
+                  ? 'Something went wrong. Check your wallet and retry.'
+                  : 'Follow the steps in your connected wallet'}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {/* Step 1: Approve */}
+              <div className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${['approving', 'mining_approval'].includes(workflowStatus) ? 'bg-card2' : ''}`}>
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold font-mono shrink-0 transition-all"
+                  style={
+                    ['executing', 'mining_execute', 'success'].includes(workflowStatus)
+                      ? { background: 'var(--color-green)', color: '#0a1e0b' }
+                      : ['approving', 'mining_approval'].includes(workflowStatus)
+                      ? { background: 'var(--color-primary)', color: 'white' }
+                      : { background: 'var(--color-card)', border: '1px solid var(--color-border2)', color: 'var(--color-text2)' }
+                  }
+                >
+                  {['executing', 'mining_execute', 'success'].includes(workflowStatus) ? '✓' : '1'}
+                </div>
+                <div>
+                  <p className="font-mono text-xs font-semibold text-text">Approve Spending Allowance</p>
+                  <p className="font-mono text-[11px] text-text2">Allow contract to use your {spendingSymbol}</p>
+                </div>
+              </div>
+
+              {/* Step 2: Execute */}
+              <div className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${['executing', 'mining_execute'].includes(workflowStatus) ? 'bg-card2' : ''}`}>
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold font-mono shrink-0 transition-all"
+                  style={
+                    workflowStatus === 'success'
+                      ? { background: 'var(--color-green)', color: '#0a1e0b' }
+                      : ['executing', 'mining_execute'].includes(workflowStatus)
+                      ? { background: 'var(--color-primary)', color: 'white' }
+                      : { background: 'var(--color-card)', border: '1px solid var(--color-border2)', color: 'var(--color-text2)' }
+                  }
+                >
+                  {workflowStatus === 'success' ? '✓' : '2'}
+                </div>
+                <div>
+                  <p className="font-mono text-xs font-semibold text-text">Confirm Trade Execution</p>
+                  <p className="font-mono text-[11px] text-text2">Sign final trade payload structure</p>
+                </div>
+              </div>
+            </div>
+
+            {['success', 'failed'].includes(workflowStatus) && (
+              <button
+                onClick={() => setTargetAmount('')}
+                className="w-full inline-flex items-center justify-center py-3 rounded-lg font-display font-bold text-sm uppercase tracking-wide transition-all hover:brightness-105"
+                style={workflowStatus === 'success' ? {
+                  background: 'linear-gradient(180deg, var(--color-green-hover), var(--color-green))',
+                  color: '#0a1e0b',
+                } : {
+                  background: 'linear-gradient(180deg, var(--color-red-hover), var(--color-red))',
+                  color: 'white',
+                }}
+              >
+                {workflowStatus === 'success' ? 'Done' : 'Close & Retry'}
+              </button>
             )}
           </div>
         </div>
       )}
 
-      {/* ── Summary + CTA ── */}
-      <div
-        className="mt-auto pt-4 flex flex-col gap-4"
-        style={{ borderTop: '1px solid var(--color-border)' }}
-      >
-        <div className="flex justify-between items-end">
-          <div>
-            <p className="section-label mb-1">{isMaker ? 'Order Total' : 'Total Cost'}</p>
-            <span
-              className="font-mono font-bold text-summary-value"
-              style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}
-            >
-              ${formatDynamicUsdc(isMaker ? makerTotalUsdcRaw : executionPayload.totalCostRaw)}
-            </span>
-          </div>
-          {!isMaker && (
-            <div className="text-right">
-              <p className="section-label mb-1">{isBuy ? 'Buying' : 'Selling'}</p>
-              <span
-                className="font-mono font-bold text-summary-sub"
-                style={{
-                  color: isBuy ? 'var(--color-green)' : 'var(--color-red)',
-                  fontVariantNumeric: 'tabular-nums',
-                }}
-              >
-                {Number(formatUnits(executionPayload.totalFimRaw, 18)).toLocaleString()} FIM
-              </span>
-            </div>
-          )}
-        </div>
-
-        {isSelfFill && (
-          <div
-            className="rounded-xl px-4 py-2.5 flex items-center gap-2 surface-pink-warn"
-          >
-            <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-red">
-              Cannot fill own order
-            </span>
-          </div>
-        )}
-
-        <div className="relative rounded-xl overflow-hidden">
-          {workflowStatus !== 'idle' && !['canceled', 'failed'].includes(workflowStatus) && (
-            <div
-              className="absolute inset-y-0 left-0 transition-all duration-500"
-              style={{
-                width: `${['approving', 'mining_approval', 'executing', 'mining_execute', 'success'].indexOf(workflowStatus) * 25}%`,
-                background: workflowStatus === 'success' ? 'var(--color-green)' : 'var(--color-gold-35)',
-              }}
-            />
-          )}
-          <button
-            disabled={isButtonDisabled}
-            onClick={handleStartFlow}
-            className="relative z-10 w-full py-4 font-display font-bold text-[15px] uppercase tracking-wide flex items-center justify-center gap-2 transition-all rounded-xl"
-            style={ctaBtnStyle}
-          >
-            {isBusy && <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />}
-            {getStatusText()}
-          </button>
-        </div>
-      </div>
-
-      </div>
     </div>
   );
 }
