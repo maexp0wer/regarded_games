@@ -196,7 +196,7 @@ export function GiniBpsBar({
         className="gini-marker transition-all duration-700 ease-out"
         style={{ left: toScalePct(gCurrent), top: -11 }}
       >
-        <div style={{ position: 'absolute', width: 60, height: 60, borderRadius: '50%', background: 'radial-gradient(circle, var(--color-gold-15) 45%, transparent 70%)', top: 14, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', width: 60, height: 60, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.1) 45%, transparent 70%)', top: 14, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
         <div className="gini-knob gold" />
         <div className="flex flex-col items-center" style={{ marginTop: 10, gap: 3 }}>
           <span

@@ -128,15 +128,20 @@ def ssh_rails_delete_categories():
         print("  Install with: pip install paramiko")
         return
 
-    script = (
+    import base64
+
+    ruby_script = (
         'Category.where.not(id: SiteSetting.uncategorized_category_id).each do |c|; '
         'begin; c.destroy!; puts "Deleted: " + c.name; '
         'rescue => e; puts "Error: " + c.name + " -> " + e.message; end; end; '
         'puts "Done"'
     )
+    encoded = base64.b64encode(ruby_script.encode()).decode()
+    # Base64 contains no shell-special characters, so quoting is unambiguous.
+    # `rails runner -` reads the script from stdin (Rails 5.1+).
     cmd = (
         f"echo '{SSH_PASS}' | sudo -S docker exec -u discourse app bash -c "
-        f"'cd /var/www/discourse && RAILS_ENV=production bundle exec rails runner \"{script}\"'"
+        f"'cd /var/www/discourse && echo {encoded} | base64 -d | RAILS_ENV=production bundle exec rails runner -'"
         f" 2>&1"
     )
 

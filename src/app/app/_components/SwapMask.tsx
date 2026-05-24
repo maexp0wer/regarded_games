@@ -10,6 +10,8 @@ import PercentSlider from '@/components/PercentSlider';
 
 import UniswapV2RouterAbi from '@/deployments/abis/UniswapV2Router.json';
 import Core from '@/deployments/local/core.json';
+import { TxModal } from './TxModal';
+import { extractRevertReason } from '@/utils/txErrors';
 
 type WorkflowStep = 'idle' | 'approving' | 'mining_approval' | 'swapping' | 'mining_swap' | 'success' | 'canceled' | 'failed' | 'no_gas';
 type TokenInfo = { address: `0x${string}`; symbol: string; decimals: number };
@@ -25,12 +27,6 @@ const SLIPPAGE_PRESETS: { label: string; bps: bigint }[] = [
 
 const RGD_TOKEN:  TokenInfo = { address: Core.RGD  as `0x${string}`, symbol: 'RGD',  decimals: 18 };
 const USDC_TOKEN: TokenInfo = { address: Core.USDC as `0x${string}`, symbol: 'USDC', decimals: 6  };
-
-function extractRevertReason(err: any): string {
-  const raw: string = err?.shortMessage ?? err?.cause?.reason ?? err?.message ?? String(err);
-  const match = raw.match(/reason:\s*(.+?)(?:\n|$)/i) ?? raw.match(/reverted with reason string '(.+?)'/i);
-  return match ? match[1].trim() : raw.slice(0, 120);
-}
 
 // ── Token dropdown ────────────────────────────────────────────────────────────
 interface TokenDropdownProps {
@@ -107,6 +103,7 @@ export function SwapMask() {
   const [isBuying, setIsBuying]   = useState(true); // true = otherToken→RGD, false = RGD→otherToken
   const [status, setStatus]       = useState<WorkflowStep>('idle');
   const [errorReason, setErrorReason] = useState<string | null>(null);
+  const [txHashes, setTxHashes]   = useState<(string | null)[]>([null, null]);
 
   // ── Slippage ──────────────────────────────────────────────────────
   const [slippageBps, setSlippageBps]   = useState(50n);
@@ -273,13 +270,13 @@ export function SwapMask() {
     if (!amountIn || walletBalanceIn === 0n) return 0;
     try {
       const raw = parseUnits(amountIn, tokenIn.decimals);
-      return Math.min(100, Math.max(0, Math.round(Number((raw * 100n) / walletBalanceIn))));
+      return Math.min(100, Math.max(0, Number((raw * 10000n) / walletBalanceIn) / 100));
     } catch { return 0; }
   }, [amountIn, walletBalanceIn, tokenIn.decimals]);
 
   const handleSliderChange = (pct: number) => {
     if (walletBalanceIn === 0n) return;
-    setAmountIn(formatUnits((walletBalanceIn * BigInt(pct)) / 100n, tokenIn.decimals));
+    setAmountIn(formatUnits((walletBalanceIn * BigInt(Math.round(pct * 100))) / 10000n, tokenIn.decimals));
   };
 
   const handleMax  = () => setAmountIn(formatUnits(walletBalanceIn, tokenIn.decimals));
@@ -289,19 +286,22 @@ export function SwapMask() {
   const handleStartFlow = async () => {
     if (!publicClient || !address || !amountInBigInt || !activePath) return;
     setErrorReason(null);
+    setTxHashes([null, null]);
     try {
       const liveAllowance = await publicClient.readContract({
         address: tokenIn.address, abi: erc20Abi, functionName: 'allowance', args: [address, routerAddr],
       }) as bigint;
 
+      let approveHash: string | null = null;
       if (liveAllowance < amountInBigInt) {
         setStatus('approving');
-        const approveHash = await writeContractAsync({
+        approveHash = await writeContractAsync({
           address: tokenIn.address, abi: erc20Abi, functionName: 'approve', args: [routerAddr, MAX_UINT256],
         });
         setStatus('mining_approval');
-        const approveReceipt = await publicClient.waitForTransactionReceipt({ hash: approveHash });
+        const approveReceipt = await publicClient.waitForTransactionReceipt({ hash: approveHash as `0x${string}` });
         if (approveReceipt.status === 'reverted') throw new Error('Approval transaction reverted');
+        setTxHashes([approveHash, null]);
         refetchAllowance();
       }
 
@@ -318,23 +318,23 @@ export function SwapMask() {
       setStatus('mining_swap');
       const swapReceipt = await publicClient.waitForTransactionReceipt({ hash: swapHash });
       if (swapReceipt.status === 'reverted') throw new Error('Swap transaction reverted on-chain');
+      setTxHashes([approveHash, swapHash]);
 
       setStatus('success');
       refetchRgd(); refetchOther(); refetchAllowance();
-      setTimeout(() => { setAmountIn(''); setStatus('idle'); }, 2500);
+      setTimeout(() => { setAmountIn(''); setStatus('idle'); setTxHashes([null, null]); }, 2500);
 
     } catch (err: any) {
       console.error('Swap error:', err);
-      const reason = extractRevertReason(err);
       if (err.shortMessage?.includes('rejected') || err.message?.includes('User rejected')) {
         setStatus('canceled');
+        setTimeout(() => setStatus('idle'), 2000);
       } else if (err.message?.includes('insufficient funds') || err.name === 'InsufficientFundsError') {
         setStatus('no_gas');
       } else {
-        setErrorReason(reason);
+        setErrorReason(extractRevertReason(err));
         setStatus('failed');
       }
-      setTimeout(() => { setStatus('idle'); setErrorReason(null); }, 6000);
     }
   };
 
@@ -348,26 +348,7 @@ export function SwapMask() {
 
   const slippagePct = (Number(slippageBps) / 100).toString().replace(/\.?0+$/, '');
 
-  const getProgressWidth = () => {
-    switch (status) {
-      case 'approving':       return '15%';
-      case 'mining_approval': return '40%';
-      case 'swapping':        return '60%';
-      case 'mining_swap':     return '85%';
-      case 'success':         return '100%';
-      default:                return '0%';
-    }
-  };
-
   const getButtonText = () => {
-    if (status === 'approving')        return `Step 1/2: Approve ${tokenIn.symbol}…`;
-    if (status === 'mining_approval')  return 'Step 1/2: Confirming…';
-    if (status === 'swapping')         return 'Step 2/2: Confirm Swap…';
-    if (status === 'mining_swap')      return 'Finalizing…';
-    if (status === 'success')          return 'Swap Successful!';
-    if (status === 'canceled')         return 'Canceled';
-    if (status === 'no_gas')           return 'Insufficient Gas';
-    if (status === 'failed')           return errorReason ? 'Transaction Failed — See Below' : 'Transaction Failed';
     if (!amountIn || amountInBigInt === 0n) return 'Enter an Amount';
     if (insufficientBalance)           return `Insufficient ${tokenIn.symbol}`;
     if (noRoute)                       return 'No Route Found';
@@ -376,15 +357,6 @@ export function SwapMask() {
 
   const inputBase = 'bg-transparent border-none p-0 w-full font-mono font-bold text-text outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none';
 
-  const btnStyle = isSuccess
-    ? { background: 'var(--color-green)', color: 'var(--color-bg)', cursor: 'not-allowed' }
-    : isError
-    ? { background: 'var(--color-red)', color: 'var(--color-bg)', cursor: 'not-allowed' }
-    : isButtonDisabled
-    ? { background: 'var(--color-card2)', color: 'var(--color-text2)', cursor: 'not-allowed' }
-    : isBuying
-    ? { background: 'linear-gradient(135deg, var(--color-green-hover), var(--color-green))', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-green-70)' }
-    : { background: 'linear-gradient(135deg, var(--color-red-hover), var(--color-red))', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-red-70)' };
 
   const TokenBadge = ({ token, onClick, disabled }: { token: TokenInfo; onClick?: () => void; disabled?: boolean }) => (
     <button
@@ -413,7 +385,7 @@ export function SwapMask() {
   // ── Disconnected state ────────────────────────────────────────────
   if (!isConnected) {
     return (
-      <div className="card-app flex flex-col items-center justify-center gap-4 w-full max-w-lg py-12 border-border2">
+      <div className="terminal-pane flex flex-col items-center justify-center gap-4 w-full max-w-lg py-12 border-border2">
         <p className="font-mono text-sm" style={{ color: 'var(--color-text2)' }}>Connect your wallet to swap</p>
         <WalletButton />
       </div>
@@ -421,7 +393,7 @@ export function SwapMask() {
   }
 
   return (
-    <div className="card-app flex flex-col gap-3 w-full max-w-lg border-border2">
+    <div className="terminal-pane flex flex-col gap-3 w-full max-w-lg border-border2">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between pb-1">
@@ -611,34 +583,39 @@ export function SwapMask() {
         </div>
       )}
 
-      {/* ── Error reason ── */}
-      {errorReason && (
-        <div className="rounded-lg px-3 py-2 font-mono text-[11px] break-all"
-          style={{ background: 'var(--color-red-15)', color: 'var(--color-red)', border: '1px solid var(--color-red-35)' }}>
-          {errorReason}
-        </div>
-      )}
-
       {/* ── CTA Button ── */}
-      <div className="relative rounded-lg overflow-hidden mt-1">
-        {status !== 'idle' && !isError && (
-          <div className="absolute inset-y-0 left-0 transition-all duration-500"
-            style={{
-              width: getProgressWidth(),
-              background: status === 'success'
-                ? 'var(--color-green)'
-                : isBuying ? 'var(--color-green-35)' : 'var(--color-red-35)',
-            }} />
-        )}
-        <button
-          disabled={isButtonDisabled}
-          onClick={handleStartFlow}
-          className="relative z-10 w-full py-4 font-display font-bold text-[15px] uppercase tracking-wide flex items-center justify-center gap-2 transition-all rounded-lg"
-          style={btnStyle}>
-          {isBusy && <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />}
-          {getButtonText()}
-        </button>
-      </div>
+      <button
+        disabled={isButtonDisabled}
+        onClick={handleStartFlow}
+        className={`btn-terminal-action ${isBuying ? 'action-buy' : 'action-sell'} mt-1 gap-2`}
+      >
+        {isBusy && <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />}
+        {getButtonText()}
+      </button>
+
+      {/* ── Transaction Modal ── */}
+      <TxModal
+        status={status}
+        txHashes={txHashes}
+        title={isBuying ? 'Buying RGD' : 'Selling RGD'}
+        successTitle={isBuying ? 'RGD Purchased' : 'RGD Sold'}
+        errorReason={errorReason}
+        steps={[
+          {
+            label: 'Approve Spending',
+            description: `Allow contract to use your ${tokenIn.symbol}`,
+            activeStatuses: ['approving', 'mining_approval'],
+            completeStatuses: ['swapping', 'mining_swap', 'success'],
+          },
+          {
+            label: 'Confirm Swap',
+            description: 'Sign the swap transaction',
+            activeStatuses: ['swapping', 'mining_swap'],
+            completeStatuses: ['success'],
+          },
+        ]}
+        onClose={() => { setAmountIn(''); setStatus('idle'); setErrorReason(null); setTxHashes([null, null]); }}
+      />
     </div>
   );
 }

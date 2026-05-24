@@ -3,10 +3,10 @@
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract, usePublicClient } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
-import { useQueryClient } from '@tanstack/react-query';
 
 import { WalletButton } from './WalletButton';
-import PercentSlider from '@/components/PercentSlider';
+import AmountInput from '@/components/AmountInput';
+import { TxModal } from './TxModal';
 
 // ABIs
 import ERC20AbiRaw from '@/deployments/abis/MockUSDC.json'; 
@@ -21,12 +21,12 @@ type WorkflowStep = 'idle' | 'approving' | 'mining_approval' | 'executing' | 'mi
 export function Stake() {
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
-  const queryClient = useQueryClient();
   const { writeContractAsync } = useWriteContract();
 
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState<'stake' | 'unstake'>('stake');
   const [status, setStatus] = useState<WorkflowStep>('idle');
+  const [txHashes, setTxHashes] = useState<(string | null)[]>([]);
 
   const stakingAddr = coreAddresses.Staking as `0x${string}`;
   const rgdAddr = coreAddresses.RGD as `0x${string}`;
@@ -41,7 +41,7 @@ export function Stake() {
   const { data: walletBalance, refetch: refetchWallet } = useReadContract({
     address: rgdAddr, abi: ERC20Abi, functionName: 'balanceOf', args: address ? [address] : undefined,
   });
-  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+  const { refetch: refetchAllowance } = useReadContract({
     address: rgdAddr, abi: ERC20Abi, functionName: 'allowance', args: address ? [address, stakingAddr] : undefined,
   });
 
@@ -49,7 +49,7 @@ export function Stake() {
   const amountBigInt = amount ? parseUnits(amount, 18) : 0n;
   const currentStaked = (stakedBalances as bigint) ?? 0n;
   const currentLocked = (requiredRegStake as bigint) ?? 0n;
-  const currentAllowance = (allowance as bigint) ?? 0n;
+
   const currentWallet = (walletBalance as bigint) ?? 0n;
 
   const withdrawable = currentStaked > currentLocked ? currentStaked - currentLocked : 0n;
@@ -61,22 +61,18 @@ export function Stake() {
 
   const maxForSlider = isStakeMode ? currentWallet : withdrawable;
 
-  const handleMax = () => {
-    setAmount(formatUnits(maxForSlider, 18));
-  };
-
   // --- Slider Logic ---
   const sliderPct = useMemo(() => {
     if (!amount || maxForSlider === 0n) return 0;
     try {
       const raw = parseUnits(amount, 18);
-      return Math.min(100, Math.max(0, Math.round(Number((raw * 100n) / maxForSlider))));
+      return Math.min(100, Math.max(0, Number((raw * 10000n) / maxForSlider) / 100));
     } catch { return 0; }
   }, [amount, maxForSlider]);
 
   const handleSliderChange = (pct: number) => {
     if (maxForSlider === 0n) return;
-    setAmount(formatUnits((maxForSlider * BigInt(pct)) / 100n, 18));
+    setAmount(formatUnits((maxForSlider * BigInt(Math.round(pct * 100))) / 10000n, 18));
   };
 
   const resetData = () => {
@@ -89,8 +85,11 @@ export function Stake() {
   // --- 3. THE ORCHESTRATOR ---
   const handleStartFlow = async () => {
     if (!publicClient || !address || !amountBigInt) return;
+    setTxHashes([]);
 
     try {
+      let approveHash: string | null = null;
+
       if (isStakeMode) {
         const liveAllowance = await publicClient.readContract({
           address: rgdAddr, abi: ERC20Abi, functionName: 'allowance', args: [address, stakingAddr]
@@ -98,17 +97,18 @@ export function Stake() {
 
         if (liveAllowance < amountBigInt) {
           setStatus('approving');
-          const approveHash = await writeContractAsync({
+          approveHash = await writeContractAsync({
             address: rgdAddr, abi: ERC20Abi, functionName: 'approve', args: [stakingAddr, amountBigInt],
           });
           setStatus('mining_approval');
-          await publicClient.waitForTransactionReceipt({ hash: approveHash });
+          await publicClient.waitForTransactionReceipt({ hash: approveHash as `0x${string}` });
+          setTxHashes([approveHash, null]);
           refetchAllowance();
         }
       }
 
       setStatus('executing');
-      
+
       const functionName = isStakeMode ? 'stake' : 'unstake';
       const actionHash = await writeContractAsync({
         address: stakingAddr, abi: StakingAbi, functionName: functionName, args: [amountBigInt],
@@ -116,88 +116,46 @@ export function Stake() {
 
       setStatus('mining_execution');
       await publicClient.waitForTransactionReceipt({ hash: actionHash });
+      setTxHashes(isStakeMode ? [approveHash, actionHash] : [actionHash]);
 
       setStatus('success');
       resetData();
 
-      setTimeout(() => {
-        setAmount("");
-        setStatus('idle');
-      }, 2500);
-
     } catch (err: any) {
       console.error("Workflow Error:", err);
-      
+
       const isRejection = err.shortMessage?.includes("rejected") || err.message?.includes("User rejected");
       const isInsufficientGas = err.message?.includes("insufficient funds") || err.name === 'InsufficientFundsError';
-      
+
       if (isRejection) {
         setStatus('canceled');
+        setTimeout(() => setStatus('idle'), 2000);
       } else if (isInsufficientGas) {
         setStatus('no_gas');
       } else {
         setStatus('failed');
       }
-      
-      setTimeout(() => setStatus('idle'), 2000);
     }
-  };
-
-  // --- 4. UI Helpers ---
-  const getProgressWidth = () => {
-    switch (status) {
-      case 'idle': return '0%';
-      case 'approving': return '15%';
-      case 'mining_approval': return '40%';
-      case 'executing': return isStakeMode ? '60%' : '50%';
-      case 'mining_execution': return '85%';
-      case 'success': return '100%';
-      default: return '0%';
-    }
-  };
-
-  const getButtonText = () => {
-    if (status === 'approving') return "Step 1/2: Approve RGD...";
-    if (status === 'mining_approval') return "Step 1/2: Confirming...";
-    if (status === 'executing') return isStakeMode ? "Step 2/2: Sign Stake..." : "Sign Unstake...";
-    if (status === 'mining_execution') return "Finalizing...";
-    if (status === 'success') return "Success!";
-    if (status === 'canceled') return "Canceled";
-    if (status === 'no_gas') return "Insufficient Gas";
-    if (status === 'failed') return "Transaction Failed";
-
-    if (!amount || amountBigInt === 0n) return isStakeMode ? "Stake" : "Unstake";
-    if (isStakeMode && currentWallet < amountBigInt) return "Insufficient Balance";
-    if (!isStakeMode && withdrawable < amountBigInt) return "Amount Locked";
-    
-    return isStakeMode ? "Stake RGD" : "Unstake RGD";
   };
 
   const isBusy = status !== 'idle' && status !== 'canceled' && status !== 'failed' && status !== 'success' && status !== 'no_gas';
-  const isSuccess = status === 'success';
-  const isError = status === 'canceled' || status === 'failed' || status === 'no_gas';
-  const isButtonDisabled = isBusy || isSuccess || isError || !amount || !canPerformAction;
+  const showModal = status !== 'idle' && status !== 'canceled';
 
-  // Shared Design Constants
-  const inputBase = 'bg-transparent border-none p-0 w-full font-mono font-bold text-text outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none';
-  const activeStyle = { background: 'var(--color-gold-15)', color: 'var(--color-gold)', boxShadow: '0 1px 4px #00000033' };
-  const segInactive = { color: 'var(--color-text2)', background: 'transparent' };
+  const ctaLabel = (() => {
+    if (!amount || amountBigInt === 0n) return isStakeMode ? 'Stake' : 'Unstake';
+    if (isStakeMode && currentWallet < amountBigInt) return 'Insufficient Balance';
+    if (!isStakeMode && withdrawable < amountBigInt) return 'Amount Locked';
+    return isStakeMode ? 'Stake RGD' : 'Unstake RGD';
+  })();
 
-  const ctaBtnStyle = isBusy || (status !== 'idle' && !isError && !isSuccess)
-    ? {}
-    : isButtonDisabled && !isSuccess && !isError
-    ? { background: 'var(--color-card2)', color: 'var(--color-text2)', cursor: 'not-allowed' }
-    : isError
-    ? { background: 'var(--color-red)', color: 'var(--color-bg)', cursor: 'not-allowed' }
-    : isSuccess
-    ? { background: 'var(--color-green)', color: 'var(--color-bg)', cursor: 'not-allowed' }
-    : { background: 'var(--color-gold)', color: 'var(--color-bg)', boxShadow: '0 4px 20px -6px var(--color-gold-70)' };
+  const isButtonDisabled = isBusy || showModal || !amount || !canPerformAction;
+
 
 
   if (!isConnected) {
     return (
       <div 
-        className="card-app flex flex-col items-center justify-center gap-4 w-full max-w-lg py-12 border-border2"
+        className="bg-card flex flex-col items-center justify-center gap-4 w-full max-w-lg py-12 border-border2"
       >
         <p className="font-mono text-sm text-text2">Please connect wallet to stake</p>
         <WalletButton />
@@ -206,8 +164,9 @@ export function Stake() {
   }
 
   return (
-    <div 
-      className="card-app flex flex-col gap-4 w-full max-w-lg border-border2"
+    <>
+    <div
+      className="terminal-pane flex flex-col gap-4 w-full max-w-lg border-border2"
     >
       {/* ── Balances Header ── */}
       <div className="flex flex-col pb-2">
@@ -229,61 +188,44 @@ export function Stake() {
         </div>
       </div>
 
-      {/* ── Mode seg control ── */}
-      <div className="seg" style={{ width: '100%' }}>
+      {/* ── Mode toggle ── */}
+      <div className="flex rounded-lg overflow-hidden border border-border bg-card2 p-1 gap-1">
         <button
           disabled={isBusy}
           onClick={() => { setMode('stake'); setAmount(""); }}
-          className="seg-btn"
-          style={{ ...(isStakeMode ? activeStyle : segInactive), flex: 1, textAlign: 'center' }}
+          className="flex-1 py-2 rounded font-display font-bold text-sm uppercase tracking-wide transition-all disabled:opacity-50"
+          style={isStakeMode ? {
+            background: 'linear-gradient(180deg, var(--color-green-hover), var(--color-green))',
+            color: '#0a1e0b',
+            boxShadow: '0 2px 8px -2px var(--color-green-35)',
+          } : { color: 'var(--color-text2)' }}
         >
           Stake
         </button>
         <button
           disabled={isBusy}
           onClick={() => { setMode('unstake'); setAmount(""); }}
-          className="seg-btn"
-          style={{ ...(!isStakeMode ? activeStyle : segInactive), flex: 1, textAlign: 'center' }}
+          className="flex-1 py-2 rounded font-display font-bold text-sm uppercase tracking-wide transition-all disabled:opacity-50"
+          style={!isStakeMode ? {
+            background: 'linear-gradient(180deg, var(--color-red-hover), var(--color-red))',
+            color: 'white',
+            boxShadow: '0 2px 8px -2px var(--color-red-35)',
+          } : { color: 'var(--color-text2)' }}
         >
           Unstake
         </button>
       </div>
 
       {/* ── Amount input ── */}
-      <div
-        className="rounded-lg flex overflow-hidden"
-        style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
-      >
-        {/* Input area */}
-        <div className="flex flex-col flex-1 p-4 gap-2">
-          <div className="flex items-center justify-between">
-            <span className="section-label">{isStakeMode ? 'Stake Amount' : 'Unstake Amount'}</span>
-            <span className="font-mono text-[11px] text-text2 ml-2">
-              MAX · <span className="text-text font-semibold">
-                {isStakeMode 
-                  ? Number(formatUnits(currentWallet, 18)).toLocaleString()
-                  : Number(formatUnits(withdrawable, 18)).toLocaleString()
-                }
-              </span>
-            </span>
-          </div>
-          <input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className={`${inputBase} text-input`}
-            placeholder="0.00"
-            disabled={isBusy || isSuccess || isError}
-          />
-          <PercentSlider 
-            value={sliderPct} 
-            onChange={handleSliderChange} 
-            disabled={isBusy || isSuccess || isError} 
-          />
-        </div>
-        {/* Vertical Max button — right side */}
-        
-      </div>
+      <AmountInput
+        label="RGD"
+        value={amount}
+        onChange={setAmount}
+        sliderValue={sliderPct}
+        onSliderChange={handleSliderChange}
+        disabled={showModal}
+        balance={`${Number(formatUnits(isStakeMode ? currentWallet : withdrawable, 18)).toLocaleString()} RGD`}
+      />
 
       {/* ── Sub-stats ── */}
       <div className="grid grid-cols-2 gap-2 pt-2 mt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
@@ -309,26 +251,40 @@ export function Stake() {
       </div>
 
       {/* ── CTA Button ── */}
-      <div className="mt-2 relative rounded-lg overflow-hidden">
-        {status !== 'idle' && !isError && (
-          <div
-            className="absolute inset-y-0 left-0 transition-all duration-500"
-            style={{
-              width: getProgressWidth(),
-              background: status === 'success' ? 'var(--color-green)' : 'var(--color-gold-35)',
-            }}
-          />
-        )}
+      <div className="mt-2">
         <button
           disabled={isButtonDisabled}
           onClick={handleStartFlow}
-          className="relative z-10 w-full py-4 font-display font-bold text-[15px] uppercase tracking-wide flex items-center justify-center gap-2 transition-all rounded-lg"
-          style={ctaBtnStyle}
+          className="btn-game-primary w-full disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
         >
-          {isBusy && <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />}
-          {getButtonText()}
+          {ctaLabel}
         </button>
       </div>
+
     </div>
+
+    {/* ── Transaction Modal ── */}
+    <TxModal
+      status={status}
+      txHashes={txHashes}
+      title={isStakeMode ? 'Staking RGD' : 'Unstaking RGD'}
+      successTitle={isStakeMode ? 'Stake Confirmed' : 'Unstake Confirmed'}
+      steps={[
+        ...(isStakeMode ? [{
+          label: 'Approve Spending Allowance',
+          description: 'Allow contract to use your RGD',
+          activeStatuses: ['approving', 'mining_approval'],
+          completeStatuses: ['executing', 'mining_execution', 'success'],
+        }] : []),
+        {
+          label: isStakeMode ? 'Confirm Stake' : 'Confirm Unstake',
+          description: isStakeMode ? 'Sign the stake transaction' : 'Sign the unstake transaction',
+          activeStatuses: ['executing', 'mining_execution'],
+          completeStatuses: ['success'],
+        },
+      ]}
+      onClose={() => { setAmount(''); setStatus('idle'); setTxHashes([]); }}
+    />
+    </>
   );
 }

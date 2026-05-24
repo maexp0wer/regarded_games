@@ -9,7 +9,9 @@ import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
 import { useTradeExecution, ExecutionPayload } from '@/hooks/useTradeExecution';
 import { PercentileCircle } from './PercentileCircle';
 import { GroupedOrder, OrderQueueItem } from './OrderQueueItem';
+import { WalletButton } from './WalletButton';
 import PercentSlider from '@/components/PercentSlider';
+import { TxModal } from './TxModal';
 
 interface TradingMaskProps {
   seasonSlug: string;
@@ -120,6 +122,12 @@ export function TradingMask({
     [selectedOrders, address, isMaker]
   );
 
+  const hasAsksInQueue = !isMaker && selectedOrders.some(o => !o.isBuy);
+  const hasBidsInQueue = !isMaker && selectedOrders.some(o => o.isBuy);
+  const isMixedQueue = hasAsksInQueue && hasBidsInQueue;
+  const buyButtonActive = isMaker ? isBuy : hasAsksInQueue || (selectedOrders.length === 0 && isBuy);
+  const sellButtonActive = isMaker ? !isBuy : hasBidsInQueue || (selectedOrders.length === 0 && !isBuy);
+
   const formatDynamicUsdc = (raw: bigint) => {
     const v = Number(formatUnits(raw, 6));
     if (v === 0 && raw > 0n) return '< 0.000001';
@@ -141,12 +149,12 @@ export function TradingMask({
     if (!targetAmount || maxForSlider === 0n) return 0;
     try {
       const raw = parseUnits(targetAmount, maxDecimals);
-      return Math.min(100, Math.round(Number((raw * 100n) / maxForSlider)));
+      return Math.min(100, Number((raw * 10000n) / maxForSlider) / 100);
     } catch { return 0; }
   }, [targetAmount, maxForSlider, maxDecimals]);
 
   const handleSliderChange = (pct: number) => {
-    setTargetAmount(formatUnits((maxForSlider * BigInt(pct)) / 100n, maxDecimals));
+    setTargetAmount(formatUnits((maxForSlider * BigInt(Math.round(pct * 100))) / 10000n, maxDecimals));
   };
 
   const handleTargetAmountChange = (val: string) => {
@@ -165,6 +173,20 @@ export function TradingMask({
   const handlePriceChange = (val: string) => {
     if (val !== '' && Number(val) < 0) return;
     setPrice(val);
+  };
+
+  const handleSideSwitch = (newIsBuy: boolean) => {
+    setIsBuy(newIsBuy);
+    if (!targetAmount || !isMaker) return;
+    const newMax = newIsBuy ? (usdcBalance || 0n) : (fimBalance || 0n);
+    const newDecimals = newIsBuy ? 6 : 18;
+    try {
+      if (parseUnits(targetAmount, newDecimals) > newMax) {
+        setTargetAmount(formatUnits(newMax, newDecimals));
+      }
+    } catch {
+      setTargetAmount('');
+    }
   };
 
   const walletBalanceDisplay = isBuy
@@ -188,7 +210,7 @@ export function TradingMask({
     onReorderOrders(newGroups.flatMap(g => g.orders));
   };
 
-  const { workflowStatus, handleStartFlow, isBusy } = useTradeExecution({
+  const { workflowStatus, txHashes, handleStartFlow, isBusy } = useTradeExecution({
     isMaker, isBuy, targetAmount, makerTotalUsdcRaw, executionPayload,
     spendingToken: spendingToken as `0x${string}`, spendingSymbol,
     exchangeAddress: exchangeAddress as `0x${string}`,
@@ -205,12 +227,14 @@ export function TradingMask({
 
   const isQueueLocked = !isMaker && selectedOrders.length > 0;
 
-  const showModal = workflowStatus !== 'idle' && workflowStatus !== 'canceled';
-
   if (!isConnected) {
     return (
-      <div className="card-app flex items-center justify-center h-full">
-        <p className="font-mono text-sm text-text2">Please connect wallet</p>
+      <div className="card-app flex flex-col items-center justify-center gap-5 text-center h-full">
+        <div>
+          <p className="section-label mb-2">Trading</p>
+          <p className="font-mono text-[13px] text-text2">Connect your wallet to participate.</p>
+        </div>
+        <WalletButton />
       </div>
     );
   }
@@ -273,11 +297,11 @@ export function TradingMask({
         <div className="flex rounded-lg overflow-hidden border border-border bg-card2 p-1 gap-1">
           <button
             disabled={isQueueLocked}
-            onClick={() => setIsBuy(true)}
+            onClick={() => handleSideSwitch(true)}
             className="flex-1 py-2 rounded font-display font-bold text-sm uppercase tracking-wide transition-all disabled:opacity-50"
-            style={isBuy ? {
+            style={buyButtonActive ? {
               background: 'linear-gradient(180deg, var(--color-green-hover), var(--color-green))',
-              color: '#0a1e0b',
+              color: 'var(--color-bg)',
               boxShadow: '0 2px 8px -2px var(--color-green-35)',
             } : { color: 'var(--color-text2)' }}
           >
@@ -285,11 +309,11 @@ export function TradingMask({
           </button>
           <button
             disabled={isQueueLocked}
-            onClick={() => setIsBuy(false)}
+            onClick={() => handleSideSwitch(false)}
             className="flex-1 py-2 rounded font-display font-bold text-sm uppercase tracking-wide transition-all disabled:opacity-50"
-            style={!isBuy ? {
+            style={sellButtonActive ? {
               background: 'linear-gradient(180deg, var(--color-red-hover), var(--color-red))',
-              color: 'white',
+              color: 'var(--color-bg)',
               boxShadow: '0 2px 8px -2px var(--color-red-35)',
             } : { color: 'var(--color-text2)' }}
           >
@@ -323,6 +347,7 @@ export function TradingMask({
             <input
               type="number"
               min="0"
+              max={maxForSlider > 0n ? formatUnits(maxForSlider, maxDecimals) : undefined}
               value={targetAmount}
               onChange={(e) => handleTargetAmountChange(e.target.value)}
               className="w-full bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums"
@@ -421,6 +446,14 @@ export function TradingMask({
             )}
           </div>
 
+          {isMixedQueue && (
+            <div className="rounded-lg px-4 py-2.5 flex items-center gap-2" style={{ background: 'var(--color-gold-15)', border: '1px solid var(--color-gold-35)' }}>
+              <span className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-gold)' }}>
+                Warning: buying &amp; selling in same transaction
+              </span>
+            </div>
+          )}
+
           {isSelfFill && (
             <div className="rounded-lg px-4 py-2.5 flex items-center gap-2 surface-pink-warn">
               <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-red">
@@ -432,101 +465,38 @@ export function TradingMask({
           <button
             disabled={isButtonDisabled}
             onClick={handleStartFlow}
-            className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-lg font-display font-bold text-[15px] uppercase tracking-wide transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            style={!isButtonDisabled ? {
-              background: isBuy
-                ? 'linear-gradient(180deg, var(--color-green-hover), var(--color-green))'
-                : 'linear-gradient(180deg, var(--color-red-hover), var(--color-red))',
-              color: isBuy ? '#0a1e0b' : 'white',
-              boxShadow: isBuy
-                ? '0 8px 24px -10px var(--color-green-35)'
-                : '0 8px 24px -10px var(--color-red-35)',
-            } : { background: 'var(--color-card3)', color: 'var(--color-text2)' }}
+            className={`btn-terminal-action ${isMixedQueue ? '' : isBuy ? 'action-buy' : 'action-sell'} gap-2`}
+            style={isMixedQueue ? { background: 'linear-gradient(180deg, var(--color-gold-35), var(--color-gold-15))', color: 'var(--color-gold)', border: '1px solid var(--color-gold-35)' } : undefined}
           >
             {isBusy && <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}
-            <span>{isBuy ? 'Buy FIM' : 'Sell FIM'}</span>
+            <span>{isMixedQueue ? 'Execute Mixed Trade' : isBuy ? 'Buy FIM' : 'Sell FIM'}</span>
           </button>
         </div>
 
       </div>
 
       {/* ── Transaction Journey Modal ── */}
-      {showModal && (
-        <div className="modal-overlay-blur">
-          <div className="bg-card3 border border-border2 rounded-xl p-6 flex flex-col gap-6 w-full max-w-sm shadow-2xl">
-            <div>
-              <h3 className="font-display font-bold text-lg text-text">
-                {workflowStatus === 'success' ? 'Trade Confirmed' : workflowStatus === 'failed' ? 'Transaction Failed' : 'Execute Transaction'}
-              </h3>
-              <p className="font-mono text-xs text-text2 mt-1">
-                {workflowStatus === 'success'
-                  ? 'Your trade has been confirmed on-chain.'
-                  : workflowStatus === 'failed'
-                  ? 'Something went wrong. Check your wallet and retry.'
-                  : 'Follow the steps in your connected wallet'}
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              {/* Step 1: Approve */}
-              <div className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${['approving', 'mining_approval'].includes(workflowStatus) ? 'bg-card2' : ''}`}>
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold font-mono shrink-0 transition-all"
-                  style={
-                    ['executing', 'mining_execute', 'success'].includes(workflowStatus)
-                      ? { background: 'var(--color-green)', color: '#0a1e0b' }
-                      : ['approving', 'mining_approval'].includes(workflowStatus)
-                      ? { background: 'var(--color-primary)', color: 'white' }
-                      : { background: 'var(--color-card)', border: '1px solid var(--color-border2)', color: 'var(--color-text2)' }
-                  }
-                >
-                  {['executing', 'mining_execute', 'success'].includes(workflowStatus) ? '✓' : '1'}
-                </div>
-                <div>
-                  <p className="font-mono text-xs font-semibold text-text">Approve Spending Allowance</p>
-                  <p className="font-mono text-[11px] text-text2">Allow contract to use your {spendingSymbol}</p>
-                </div>
-              </div>
-
-              {/* Step 2: Execute */}
-              <div className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${['executing', 'mining_execute'].includes(workflowStatus) ? 'bg-card2' : ''}`}>
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold font-mono shrink-0 transition-all"
-                  style={
-                    workflowStatus === 'success'
-                      ? { background: 'var(--color-green)', color: '#0a1e0b' }
-                      : ['executing', 'mining_execute'].includes(workflowStatus)
-                      ? { background: 'var(--color-primary)', color: 'white' }
-                      : { background: 'var(--color-card)', border: '1px solid var(--color-border2)', color: 'var(--color-text2)' }
-                  }
-                >
-                  {workflowStatus === 'success' ? '✓' : '2'}
-                </div>
-                <div>
-                  <p className="font-mono text-xs font-semibold text-text">Confirm Trade Execution</p>
-                  <p className="font-mono text-[11px] text-text2">Sign final trade payload structure</p>
-                </div>
-              </div>
-            </div>
-
-            {['success', 'failed'].includes(workflowStatus) && (
-              <button
-                onClick={() => setTargetAmount('')}
-                className="w-full inline-flex items-center justify-center py-3 rounded-lg font-display font-bold text-sm uppercase tracking-wide transition-all hover:brightness-105"
-                style={workflowStatus === 'success' ? {
-                  background: 'linear-gradient(180deg, var(--color-green-hover), var(--color-green))',
-                  color: '#0a1e0b',
-                } : {
-                  background: 'linear-gradient(180deg, var(--color-red-hover), var(--color-red))',
-                  color: 'white',
-                }}
-              >
-                {workflowStatus === 'success' ? 'Done' : 'Close & Retry'}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      <TxModal
+        status={workflowStatus}
+        txHashes={txHashes}
+        title="Execute Transaction"
+        successTitle="Trade Confirmed"
+        steps={[
+          {
+            label: 'Approve Spending Allowance',
+            description: `Allow contract to use your ${spendingSymbol}`,
+            activeStatuses: ['approving', 'mining_approval'],
+            completeStatuses: ['executing', 'mining_execute', 'success'],
+          },
+          {
+            label: 'Confirm Trade Execution',
+            description: 'Sign final trade payload structure',
+            activeStatuses: ['executing', 'mining_execute'],
+            completeStatuses: ['success'],
+          },
+        ]}
+        onClose={() => setTargetAmount('')}
+      />
 
     </div>
   );

@@ -9,6 +9,7 @@ interface OrderBookProps {
   seasonAddress: string;
   isBuy: boolean;
   isMaker: boolean;
+  userAddress?: string;
   onSelectOrder: (o: Order) => void;
   selectedOrderIds?: string[];
 }
@@ -17,7 +18,7 @@ type AggregatedOrder = Order & { subOrders: Order[] };
 
 
 export function OrderBook({
-  seasonAddress, isBuy, isMaker, onSelectOrder, selectedOrderIds = [],
+  seasonAddress, isMaker, userAddress, onSelectOrder, selectedOrderIds = [],
 }: OrderBookProps) {
   const { data } = useOrderBook(seasonAddress);
 
@@ -143,8 +144,10 @@ export function OrderBook({
     }
   }, [closestRowKey]);
 
-  const isAskActive = !isMaker && isBuy;
-  const isBidActive = !isMaker && !isBuy;
+  const isOwnOrder = (order: AggregatedOrder) =>
+    !!userAddress && order.maker.toLowerCase() === userAddress.toLowerCase();
+  const isClickable = (order: AggregatedOrder | undefined): order is AggregatedOrder =>
+    !isMaker && !!order && !isOwnOrder(order);
   const handleOrderClick = (order: AggregatedOrder) => order.subOrders.forEach(sub => onSelectOrder(sub));
 
   const renderRank = (makerAddress: string, align: 'start' | 'end') => {
@@ -171,7 +174,6 @@ export function OrderBook({
   const displayAsks = showAsks || bothSidesOff;
   const displayBids = showBids || bothSidesOff;
   const showBoth = displayAsks && displayBids;
-  const gridColsClass = showBoth ? 'grid-cols-6' : 'grid-cols-4';
 
 
   return (
@@ -227,7 +229,7 @@ export function OrderBook({
         </div>
 
         {/* Rows viewport — header is sticky inside so both share the same scrollbar-adjusted width */}
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar relative">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scrollbar-on-hover relative">
           <div
             className="ledger-header sticky top-0 z-10"
             style={{ gridTemplateColumns: showBoth ? 'repeat(6, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))' }}
@@ -284,14 +286,14 @@ export function OrderBook({
                 >
                   {displayAsks && (
                     <div
-                      onClick={() => isAskActive && row.ask && handleOrderClick(row.ask)}
+                      onClick={() => isClickable(row.ask) && handleOrderClick(row.ask)}
                       className={`${showBoth ? 'col-span-3 grid grid-cols-3' : 'col-span-4 grid grid-cols-4'} items-center py-2 transition-colors`}
                       style={{
                         borderRight: displayBids ? '1px solid var(--color-border)' : undefined,
-                        cursor: isAskActive && row.ask ? 'pointer' : 'default',
+                        cursor: isClickable(row.ask) ? 'pointer' : 'default',
                         background: askSelected ? 'var(--color-green-15)' : undefined,
                       }}
-                      onMouseEnter={(e) => { if (isAskActive && row.ask) (e.currentTarget as HTMLElement).style.background = 'var(--color-green-15)'; }}
+                      onMouseEnter={(e) => { if (isClickable(row.ask)) (e.currentTarget as HTMLElement).style.background = 'var(--color-green-15)'; }}
                       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = askSelected ? 'var(--color-green-15)' : ''; }}
                     >
                       {row.ask ? (showBoth ? (
@@ -323,13 +325,13 @@ export function OrderBook({
 
                   {displayBids && (
                     <div
-                      onClick={() => isBidActive && row.bid && handleOrderClick(row.bid)}
+                      onClick={() => isClickable(row.bid) && handleOrderClick(row.bid)}
                       className={`${showBoth ? 'col-span-3 grid grid-cols-3' : 'col-span-4 grid grid-cols-4'} items-center py-2 transition-colors`}
                       style={{
-                        cursor: isBidActive && row.bid ? 'pointer' : 'default',
+                        cursor: isClickable(row.bid) ? 'pointer' : 'default',
                         background: bidSelected ? 'var(--color-red-15)' : undefined,
                       }}
-                      onMouseEnter={(e) => { if (isBidActive && row.bid) (e.currentTarget as HTMLElement).style.background = 'var(--color-red-15)'; }}
+                      onMouseEnter={(e) => { if (isClickable(row.bid)) (e.currentTarget as HTMLElement).style.background = 'var(--color-red-15)'; }}
                       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = bidSelected ? 'var(--color-red-15)' : ''; }}
                     >
                       {row.bid ? (showBoth ? (

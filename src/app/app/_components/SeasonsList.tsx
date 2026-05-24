@@ -100,7 +100,7 @@ function SeasonCard({ season }: { season: SeasonRegistry }) {
   return (
     <Link href={`/${slug}`} className="block group">
       <div
-        className="card-app transition-all group-hover:border-border-bright"
+        className="terminal-pane transition-all group-hover:border-border-bright"
         style={{ borderColor: 'var(--color-border)' }}
       >
         <div className="flex items-start gap-6">

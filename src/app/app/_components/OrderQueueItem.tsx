@@ -55,7 +55,7 @@ export function OrderQueueItem({
           ${parseFloat(group.unitPrice).toFixed(4)}
         </span>
         {stats ? (
-          <PercentileCircle percentage={stats.factionPercentile} isCapitalist={stats.isCapitalist} size="sm" />
+          <PercentileCircle percentage={stats.factionPercentile} isCapitalist={stats.isCapitalist} size="xxs" />
         ) : (
           <span className="text-[8px] text-text2 animate-pulse">Loading...</span>
         )}
@@ -63,11 +63,12 @@ export function OrderQueueItem({
 
       {/* Col 3: Fill amounts */}
       <div className="flex flex-col justify-center">
+        <span className="text-[9px] font-mono uppercase text-text2/50 mt-0.5">Amount</span>
         <span className="text-[11px] font-mono font-bold text-text tabular-nums">
           {localFill.toLocaleString()}
           <span className="text-text2/60"> / {group.amount.toLocaleString()}</span>
         </span>
-        <span className="text-[9px] font-mono uppercase text-text2/50 mt-0.5">FIM Fill</span>
+        
       </div>
 
       {/* Col 4: Shift controls + remove */}

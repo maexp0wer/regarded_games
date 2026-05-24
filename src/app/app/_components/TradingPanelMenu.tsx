@@ -23,8 +23,6 @@ const BUTTONS: { id: PanelId; label: string }[] = [
 
 const PRIORITY: PanelId[] = ['chart-orders', 'orderbook', 'trades', 'chord', 'chat'];
 
-const W_PANEL = 400;
-
 const chunk = <T,>(arr: T[], size: number): T[][] =>
   Array.from({ length: Math.ceil(arr.length / size) }, (_, i) => arr.slice(i * size, i * size + size));
 
@@ -60,13 +58,14 @@ export interface TradingPanelMenuProps {
 
 export function TradingPanelMenu(props: TradingPanelMenuProps) {
   const [open, setOpen] = useState<Set<PanelId>>(new Set());
-  const [isMd, setIsMd] = useState(false);
+  const [isXl, setIsXl] = useState(false);
   const didInit = useRef(false);
+  const tabBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const md = window.matchMedia('(min-width: 768px)');
-    const matches = md.matches;
-    setIsMd(matches);
+    const xl = window.matchMedia('(min-width: 1280px)');
+    const matches = xl.matches;
+    setIsXl(matches);
 
     if (!didInit.current) {
       didInit.current = true;
@@ -77,21 +76,26 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
       );
     }
 
-    const mdH = (e: MediaQueryListEvent) => setIsMd(e.matches);
-    md.addEventListener('change', mdH);
-    return () => md.removeEventListener('change', mdH);
+    const xlH = (e: MediaQueryListEvent) => setIsXl(e.matches);
+    xl.addEventListener('change', xlH);
+    return () => xl.removeEventListener('change', xlH);
   }, []);
 
-  // Enforce single-panel on small mobile
   useEffect(() => {
-    if (!isMd) {
+    const el = tabBarRef.current;
+    if (el) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+  }, []);
+
+  // Enforce single-panel on lg and below
+  useEffect(() => {
+    if (!isXl) {
       setOpen(prev => {
         const visible = PRIORITY.filter(p => prev.has(p));
         if (visible.length <= 1) return prev;
         return new Set([visible[0]]);
       });
     }
-  }, [isMd]);
+  }, [isXl]);
 
   // md+: chart open → max 2 non-chart panels (3 total); chart closed → max 4 non-chart panels
   const NON_CHART = PRIORITY.filter(p => p !== 'chart-orders');
@@ -112,7 +116,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
         next.delete(id);
         return next;
       }
-      if (!isMd) {
+      if (!isXl) {
         return new Set<PanelId>([id]);
       }
       if (id === 'chart-orders') {
@@ -131,7 +135,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
     setOpen(prev => {
       if (prev.has('chord')) return prev;
       const next = new Set(prev);
-      if (!isMd) return new Set<PanelId>(['chord']);
+      if (!isXl) return new Set<PanelId>(['chord']);
       const limit = next.has('chart-orders') ? 2 : 4;
       trimNonChart(next, limit - 1);
       next.add('chord');
@@ -177,6 +181,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
             seasonAddress={props.seasonAddress}
             isBuy={props.isBuy}
             isMaker={props.isMaker}
+            userAddress={props.userAddress}
             onSelectOrder={props.onSelectOrder}
             selectedOrderIds={props.selectedOrderIds}
           />
@@ -210,7 +215,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
       setOpen(prev => {
         if (prev.has('orderbook')) return prev;
         const next = new Set(prev);
-        if (!isMd) return new Set<PanelId>(['orderbook']);
+        if (!isXl) return new Set<PanelId>(['orderbook']);
         const limit = next.has('chart-orders') ? 2 : 4;
         trimNonChart(next, limit - 1);
         next.add('orderbook');
@@ -224,29 +229,27 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
   const hasAnyOpen = chartOpen || otherPanels.length > 0;
 
   return (
-    <div className="flex flex-col md:flex-row gap-5 items-stretch">
-      {/* Panel area: left on md+, below mask on sm */}
-      <div className="w-full md:flex-1 md:min-w-0 order-2 md:order-1">
+    <div className="flex flex-col xl:flex-row gap-5 items-stretch">
+      {/* Panel area: left on xl+, below mask on lg and smaller */}
+      <div className="w-full xl:flex-1 xl:min-w-0 order-2 xl:order-1">
         <div className="h-full max-h-[95vh] flex flex-col overflow-hidden rounded-lg border border-border bg-card">
 
           {/* Horizontal tab bar */}
-          <div className="shrink-0 overflow-x-auto">
-            <div className="terminal-view-selector-bar">
-              {BUTTONS.map(({ id, label }) => (
-                <button
-                  key={id}
-                  onClick={() => toggle(id)}
-                  className={`terminal-view-btn${open.has(id) ? ' active' : ''}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+          <div ref={tabBarRef} className="terminal-view-selector-bar shrink-0">
+            {BUTTONS.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => toggle(id)}
+                className={`terminal-view-btn text-[0.6rem] sm:text-[0.8rem] md:text-[0.6rem] lg:text-[0.8rem] ${open.has(id) ? ' active' : ''}`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
           {/* Panel content */}
           {hasAnyOpen && (
-            <div className="flex-1 min-h-0 flex flex-row">
+            <div className="flex-1 min-h-0 flex flex-col xl:flex-row">
               {chartOpen && (
                 <div className="flex-1 min-w-0 overflow-hidden">
                   {renderPanel('chart-orders')}
@@ -255,7 +258,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
               {otherPanels.length > 0 && (
                 chartOpen ? (
                   /* Chart visible: others stack vertically in fixed-width column */
-                  <div className="shrink-0 flex flex-col border-l border-border" style={{ width: W_PANEL }}>
+                  <div className="shrink-0 flex flex-col border-t xl:border-t-0 xl:border-l border-border xl:w-100">
                     {otherPanels.map((id, i) => (
                       <div key={id} className={`flex-1 min-h-0 overflow-hidden${i > 0 ? ' border-t border-border' : ''}`}>
                         {renderPanel(id)}
@@ -282,8 +285,8 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
         </div>
       </div>
 
-      {/* Trading mask: above on sm, right on md+ */}
-      <div className="w-full md:w-90 md:shrink-0 order-1 md:order-2">
+      {/* Trading mask: above on lg and smaller, right on xl+ */}
+      <div className="w-full xl:w-90 xl:shrink-0 order-1 xl:order-2">
         {props.tradingMask}
       </div>
     </div>

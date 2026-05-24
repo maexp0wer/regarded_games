@@ -83,6 +83,12 @@ export const protocolStats = onchainTable("protocol_stats", (t) => ({
   totalBuybacks: t.bigint(),
 }));
 
+export const capitalAuctionParticipant = onchainTable("capital_auction_participant", (t) => ({
+  id: t.hex().primaryKey(),       // lowercased depositor address
+  totalDeposited: t.bigint().notNull().default(0n),  // sum of all Deposited events (USDC, 6 decimals)
+  rgdClaimed: t.bigint(),         // null until Claimed event; RGD amount (18 decimals)
+}));
+
 export const candles = onchainTable("candles", (t) => ({
   seasonAddress:  t.hex().notNull(),
   timeframe:      t.text().notNull(),    // "5m" | "1h" | "4h" | "1d"

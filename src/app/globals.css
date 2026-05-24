@@ -610,8 +610,8 @@ html, body {
 .gini-knob.gold {
   width: 28px;
   height: 28px;
-  background: var(--color-gold);
-  box-shadow: 0 0 0 1px var(--color-gold), 0 0 5px var(--color-gold-15);
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.6), 0 0 5px rgba(255,255,255,0.15);
 }
 .gini-knob.soc {
   background: var(--color-purple);
@@ -685,6 +685,22 @@ html, body {
   background: var(--color-text2);
 }
 
+.scrollbar-on-hover {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.scrollbar-on-hover:hover {
+  scrollbar-color: var(--color-text2) transparent;
+}
+.scrollbar-on-hover::-webkit-scrollbar { width: 6px; }
+.scrollbar-on-hover::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-on-hover::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+.scrollbar-on-hover:hover::-webkit-scrollbar-thumb { background: var(--color-text2); }
+
 /* ================================================================
    ANIMATIONS
    ================================================================ */
@@ -722,7 +738,6 @@ html, body {
 
 
 
-
 .btn-game-primary {
   position: relative;
   display: inline-flex;
@@ -735,7 +750,7 @@ html, body {
   letter-spacing: 0.05em;
   
   /* Hardcoded white guarantees a flawless contrast rating across dark and light variants */
-  color: #FFFFFF; 
+  color: var(--color-white);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   
   /* References our responsive theme variables */
@@ -759,6 +774,14 @@ html, body {
   transform: translateY(1px);
   filter: brightness(0.95);
   box-shadow: 0 2px 8px color-mix(in srgb, var(--color-purple) 25%, transparent);
+}
+
+.btn-game-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+  filter: none !important;
+  box-shadow: none !important;
 }
 
 
@@ -1051,37 +1074,44 @@ html, body {
 .terminal-view-selector-bar {
   display: flex;
   width: 100%;
-  align-items: center;
+  align-items: flex-end;
   justify-content: flex-start;
-  padding: 0 1rem; /* Padding inside the rail before buttons start */
-  background-color: var(--color-card); /* Grounds it into the panel stack */
-  
-  /* The continuous, full-width structural frame line */
-  border-bottom: 1px solid var(--color-border); 
+  padding: 0 1rem;
+  background-color: var(--color-card);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.terminal-view-selector-bar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 
 /* Individual Selector Buttons */
-.terminal-view-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem 1.25rem; /* Tall padding ensures the hit area reaches the border line */
-  
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-text2); /* Default muted label */
-  
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent; /* Allocates space for the lighting bar early */
-  
-  /* Pulls the button down 1px so its bottom edge overlaps the parent border perfectly */
-  margin-bottom: -1px; 
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
+@layer components {
+  .terminal-view-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 1.25rem; /* Tall padding ensures the hit area reaches the border line */
+    
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text2); /* Default muted label */
+    
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent; /* Allocates space for the lighting bar early */
+    
+    /* Pulls the button down 1px so its bottom edge overlaps the parent border perfectly */
+    margin-bottom: -1px; 
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+
+  }
 }
 
 /* Smooth color drift for inactive items */
@@ -1749,4 +1779,155 @@ html, body {
   border-color: color-mix(in srgb, var(--color-purple) 40%, transparent);
   background-color: color-mix(in srgb, var(--color-purple) 8%, transparent);
   box-shadow: inset 0 -2px 0 0 var(--color-purple); /* Soft bottom-edge highlight */
+}
+
+
+/* ==========================================================================
+   HIGH-CONTRAST TERMINAL EXECUTION ACTIONS (UPDATED)
+   ========================================================================= */
+.btn-terminal-action {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 1.5rem;
+  
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  
+  /* FIXED: Dynamically matches your light/dark base theme canvas */
+  color: var(--color-bg); 
+  
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+/* 1. THE BUY ENGINE ACTION BUTTON */
+.btn-terminal-action.action-buy {
+  background-color: var(--color-green);
+  border-color: color-mix(in srgb, var(--color-green) 20%, #000);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-green) 20%, transparent);
+}
+
+.btn-terminal-action.action-buy:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--color-green) 85%, #FFF);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-green) 35%, transparent);
+  transform: translateY(-1px);
+}
+
+.btn-terminal-action.action-buy:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 4px color-mix(in srgb, var(--color-green) 20%, transparent);
+}
+
+/* 2. THE SELL ENGINE ACTION BUTTON */
+.btn-terminal-action.action-sell {
+  background-color: var(--color-red);
+  border-color: color-mix(in srgb, var(--color-red) 20%, #000);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-red) 20%, transparent);
+}
+
+.btn-terminal-action.action-sell:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--color-red) 85%, #FFF);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-red) 35%, transparent);
+  transform: translateY(-1px);
+}
+
+.btn-terminal-action.action-sell:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 4px color-mix(in srgb, var(--color-red) 20%, transparent);
+}
+
+/* ==========================================================================
+   THE DISABLED STATE (Kills actions, fades fills, keeps scannability)
+   ========================================================================= */
+.btn-terminal-action:disabled {
+  background-color: var(--color-card2);
+  border-color: var(--color-border);
+  color: var(--color-text2);
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ==========================================================================
+   INITIAL TOKEN LAUNCHPAD MODULES
+   ========================================================================= */
+
+/* The Master Split Frame for the ICO Dashboard Grid */
+.ico-grid-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .ico-grid-layout {
+    grid-template-columns: 3fr 2fr; /* Metrics on left, execution masks on right */
+  }
+}
+
+/* Hardened Stats Grid */
+.ico-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Micro Tactical Countdown Grid */
+.countdown-rail {
+  display: flex;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+}
+
+.countdown-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  min-width: 3.5rem;
+  background-color: var(--color-card2);
+  border: 1px solid var(--color-border);
+  border-radius: 0.25rem;
+}
+
+.countdown-val {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--color-purple);
+}
+
+.countdown-lbl {
+  font-size: 0.6rem;
+  color: var(--color-text2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Linear Global Funding Progress bar */
+.funding-progress-bar {
+  position: relative;
+  width: 100%;
+  height: 0.75rem;
+  background-color: var(--color-card3);
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.funding-progress-fill {
+  height: 100%;
+  background: var(--cyber-sunset); /* Pulls your signature variable gradient */
+  border-radius: 9999px;
+  transition: width 0.4s ease-out;
 }

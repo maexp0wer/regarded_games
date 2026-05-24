@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useAccount } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Hooks
 import { useSeasonGini, useSeasonById } from '@/hooks/useSeasonGini';
@@ -82,6 +83,15 @@ export default function SeasonDetailPage() {
     isTradingTimeExpired,
     config,
   } = phase;
+
+  const queryClient = useQueryClient();
+  const prevPhaseRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevPhaseRef.current !== null && currentPhase !== null && prevPhaseRef.current !== currentPhase) {
+      queryClient.invalidateQueries();
+    }
+    if (currentPhase !== null) prevPhaseRef.current = currentPhase;
+  }, [currentPhase]);
 
   const {
     M_dynamic,
@@ -176,67 +186,38 @@ export default function SeasonDetailPage() {
           AUCTION / BOOTSTRAP LAYOUT
           ═══════════════════════════════════════════ */}
       {isAuctionOrBootstrap && (
-        <>
-          {/* Main row: buy widget (3) | gini gauge (5) | all-players chat (2) */}
-          <div className="grid grid-cols-1 xl:grid-cols-10 gap-5">
-            <div className="xl:col-span-3 relative">
-              <AuctionMask
-                seasonAddress={seasonAddress}
-                auctionAddress={auctionAddress}
-                fimAddress={fimAddress}
-                currentPhase={currentPhase}
-              />
-              {/* Vertical: h-[80%] and top-[10%] */}
-              
-              {/* Horizontal: w-[80%] and left-[10%] */}
-              
-            </div>
-            <div className="xl:col-span-5 relative">
-              <GiniDisplay seasonAddress={seasonAddress} sidebar={giniSidebar} />
-              {/* Vertical: h-[80%] and top-[10%] */}
-              
-              {/* Horizontal: w-[80%] and left-[10%] */}
-              
-            </div>
-            <div className="xl:col-span-2">
-              <FactionChat
-                seasonSlug={seasonSlug}
-                auctionMode
-              />
-            </div>
-          </div>
+        <div className="flex flex-col gap-5">
+          <GiniDisplay seasonAddress={seasonAddress} sidebar={giniSidebar} />
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+          {/* Col 1: AuctionMask */}
+          <AuctionMask
+            seasonAddress={seasonAddress}
+            auctionAddress={auctionAddress}
+            fimAddress={fimAddress}
+            currentPhase={currentPhase}
+          />
 
-          {/* Bottom row: activity | season detail cards */}
-          <div className="grid grid-cols-1 xl:grid-cols-10 gap-5">
-            <div className="xl:col-span-3 relative">
-              <AuctionActivityFeed seasonAddress={seasonAddress} />
-              {/* Vertical: h-[80%] and top-[10%] */}
-              
-              {/* Horizontal: w-[80%] and left-[10%] */}
-              
-            </div>
-            <div className="xl:col-span-7 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-              <div className="relative p-0">
-                <ProtocolCard
-                  seasonAddress={seasonAddress}
-                  fimAddress={fimAddress}
-                  auctionAddress={auctionAddress}
-                  exchangeAddress={exchangeAddress}
-                  isAuction
-                />
-              </div>
-              <div className="relative p-0">
-                <PolicyCard M_dynamic={M_dynamic} config={config} />                
-              </div>
-              <div className="relative p-0">
-                <ScheduleCard tradingStart={tradingStart} seasonEnd={seasonEnd} config={config} />
-              </div>
-              <div className="relative">
-                <LendingDistributionCard seasonAddress={seasonAddress} config={config} />
-              </div>
-            </div>
+          {/* Col 2: Recent Activity */}
+          <AuctionActivityFeed seasonAddress={seasonAddress} />
+
+          {/* Col 3: Chat */}
+          <FactionChat seasonSlug={seasonSlug} auctionMode />
+
+          {/* Col 4: Protocol / Policy / Schedule / Lending stacked */}
+          <div className="flex flex-col gap-5">
+            <ProtocolCard
+              seasonAddress={seasonAddress}
+              fimAddress={fimAddress}
+              auctionAddress={auctionAddress}
+              exchangeAddress={exchangeAddress}
+              isAuction
+            />
+            <PolicyCard M_dynamic={M_dynamic} config={config} />
+            <ScheduleCard tradingStart={tradingStart} seasonEnd={seasonEnd} config={config} />
+            <LendingDistributionCard seasonAddress={seasonAddress} config={config} />
           </div>
-        </>
+          </div>
+        </div>
       )}
 
       {/* ═══════════════════════════════════════════

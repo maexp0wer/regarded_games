@@ -221,9 +221,8 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
       {auctionMode && (
         <div className="flex items-center justify-between p-3 border-b border-[var(--color-border)] bg-card">
           <span className="font-mono text-xs font-bold uppercase tracking-wider text-text2">
-            Secure Comms · General Channel
+            Season Chat
           </span>
-          <span className="h-2 w-2 rounded-full bg-[var(--color-green)] animate-pulse" />
         </div>
       )}
 

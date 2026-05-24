@@ -43,6 +43,7 @@ export function useTradeExecution({
   const { writeContractAsync } = useWriteContract();
 
   const [workflowStatus, setWorkflowStatus] = useState<WorkflowStep>('idle');
+  const [txHashes, setTxHashes] = useState<(string | null)[]>([null, null]);
 
   const { refetch: refetchAllowance } = useReadContract({
     address: spendingToken,
@@ -53,6 +54,7 @@ export function useTradeExecution({
 
   const handleStartFlow = async () => {
     if (!publicClient || !address) return;
+    setTxHashes([null, null]);
     try {
       const liveAllowance = await publicClient.readContract({
         address: spendingToken,
@@ -63,14 +65,15 @@ export function useTradeExecution({
 
       if (liveAllowance < amountNeeded) {
         setWorkflowStatus('approving');
-        const hash = await writeContractAsync({
+        const approveHash = await writeContractAsync({
           address: spendingToken,
           abi: erc20Abi,
           functionName: 'approve',
           args: [exchangeAddress, amountNeeded]
         });
         setWorkflowStatus('mining_approval');
-        await publicClient.waitForTransactionReceipt({ hash });
+        await publicClient.waitForTransactionReceipt({ hash: approveHash });
+        setTxHashes([approveHash, null]);
         await refetchAllowance();
       }
 
@@ -91,6 +94,7 @@ export function useTradeExecution({
 
       setWorkflowStatus('mining_execute');
       await publicClient.waitForTransactionReceipt({ hash: txHash });
+      setTxHashes(prev => [prev[0], txHash]);
 
       setWorkflowStatus('success');
 
@@ -99,11 +103,12 @@ export function useTradeExecution({
         setTargetAmount("");
         setPrice("");
         setWorkflowStatus('idle');
+        setTxHashes([null, null]);
         queryClient.invalidateQueries();
       }, 2000);
     } catch (err: any) {
       setWorkflowStatus(err.shortMessage?.includes("rejected") ? 'canceled' : 'failed');
-      setTimeout(() => setWorkflowStatus('idle'), 2000);
+      setTimeout(() => { setWorkflowStatus('idle'); setTxHashes([null, null]); }, 2000);
     }
   };
 
@@ -119,5 +124,5 @@ export function useTradeExecution({
 
   const isBusy = workflowStatus !== 'idle' && !['success', 'canceled', 'failed'].includes(workflowStatus);
 
-  return { workflowStatus, handleStartFlow, getStatusText, isBusy };
+  return { workflowStatus, txHashes, handleStartFlow, getStatusText, isBusy };
 }

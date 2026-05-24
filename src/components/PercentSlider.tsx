@@ -4,12 +4,13 @@ interface PercentSliderProps {
   value: number;
   onChange: (pct: number) => void;
   disabled?: boolean;
+  step?: number;
 }
 
 const PRESETS = [25, 50, 75, 100];
 
-export default function PercentSlider({ value, onChange, disabled = false }: PercentSliderProps) {
-  const clamped = Math.max(0, Math.min(100, Math.round(value)));
+export default function PercentSlider({ value, onChange, disabled = false, step = 0.1 }: PercentSliderProps) {
+  const clamped = Math.max(0, Math.min(100, value));
 
   return (
     <div className={`terminal-slider-container select-none ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
@@ -18,6 +19,7 @@ export default function PercentSlider({ value, onChange, disabled = false }: Per
         type="range"
         min={0}
         max={100}
+        step={step}
         value={clamped}
         onChange={(e) => onChange(Number(e.target.value))}
         className="terminal-range-slider"

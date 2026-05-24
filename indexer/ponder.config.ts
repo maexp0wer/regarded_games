@@ -10,10 +10,12 @@ import { FimAbi } from "./abis/FimAbi";
 import { ExchangeAbi } from "./abis/ExchangeAbi";
 import { AuctionAbi } from "./abis/AuctionAbi";
 import { TreasuryAbi } from "./abis/TreasuryAbi";
+import { CapitalAuctionAbi } from "./abis/CapitalAuctionAbi";
 import coreDeployment from "../src/deployments/local/core.json";
 
 const CONTROLLER_ADDRESS = coreDeployment.Controller as `0x${string}`;
 const TREASURY_ADDRESS = coreDeployment.Treasury as `0x${string}`;
+const CAPITAL_AUCTION_ADDRESS = coreDeployment.CapitalAuction as `0x${string}`;
 const START_BLOCK = parseInt(process.env.PONDER_START_BLOCK ?? "0");
 
 export default createConfig({
@@ -86,6 +88,12 @@ export default createConfig({
       abi: TreasuryAbi,
       chain: "anvil",
       address: TREASURY_ADDRESS,
+      startBlock: START_BLOCK,
+    },
+    CapitalAuction: {
+      abi: CapitalAuctionAbi,
+      chain: "anvil",
+      address: CAPITAL_AUCTION_ADDRESS,
       startBlock: START_BLOCK,
     },
   },

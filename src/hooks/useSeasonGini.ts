@@ -1,11 +1,40 @@
 'use client';
 
 import { useQuery } from "@tanstack/react-query";
-import { useReadContract } from 'wagmi';
-import { formatUnits } from "viem";
+import { useReadContract, useChainId, usePublicClient } from 'wagmi';
+import { formatUnits, Address, getAddress } from "viem";
+import { base, baseSepolia, foundry } from 'wagmi/chains';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
+import coreDeployment from '@/deployments/local/core.json';
 
 const PONDER_URL = "http://127.0.0.1:42069/graphql";
+
+const CONTROLLER_SEASONS_ABI = [
+  {
+    type: "function",
+    name: "seasons",
+    inputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+    outputs: [
+      { name: "season", type: "address" },
+      { name: "auction", type: "address" },
+      { name: "exchange", type: "address" },
+      { name: "fim", type: "address" },
+    ],
+    stateMutability: "view",
+  },
+] as const;
+
+function getControllerAddress(chainId: number): Address | undefined {
+  const map: Record<number, string> = {
+    [foundry.id]: 'Controller',
+    [baseSepolia.id]: 'Controller',
+    [base.id]: 'Controller',
+  };
+  const key = map[chainId];
+  if (!key) return undefined;
+  const addr = (coreDeployment as Record<string, string>)[key];
+  return addr ? getAddress(addr) : undefined;
+}
 
 // --- Types ---
 export interface SeasonLiveStats {

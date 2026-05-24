@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import React, { useState } from 'react';
+import { useWriteContract, usePublicClient } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
 import { formatUnits } from 'viem';
 import ExchangeAbi from '@/deployments/abis/Exchange.json';
@@ -59,8 +59,11 @@ function useLastTradePrice(seasonAddress: string | undefined) {
   });
 }
 
+type CancelStatus = 'idle' | 'executing' | 'mining' | 'success' | 'canceled' | 'failed';
+
 export function Orders({ seasonAddress, userAddress, exchangeAddress }: OrdersProps) {
   const [activeTab, setActiveTab] = useState<TabType>('position');
+  const [cancelStatus, setCancelStatus] = useState<CancelStatus>('idle');
 
   const { data: openOrders = [], refetch: refetchOpen } = useOpenOrders(seasonAddress, userAddress, 'open');
   const { data: filledOrders = [], refetch: refetchFilled } = useOpenOrders(seasonAddress, userAddress, 'filled');
@@ -69,25 +72,38 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress }: OrdersPr
   const { data: myTrades = [] } = useMyTrades(seasonAddress, userAddress);
   const { data: lastTradePrice = 0 } = useLastTradePrice(seasonAddress);
 
-  const { writeContract, data: hash, isPending } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
 
-  useEffect(() => {
-    if (isSuccess) {
+  const handleCancel = async (contractOrderId: bigint) => {
+    if (!publicClient) return;
+    try {
+      setCancelStatus('executing');
+      const hash = await writeContractAsync({
+        address: exchangeAddress as `0x${string}`,
+        abi: ExchangeAbi as any,
+        functionName: 'cancelOrder',
+        args: [contractOrderId],
+      });
+      setCancelStatus('mining');
+      await publicClient.waitForTransactionReceipt({ hash });
+      setCancelStatus('success');
       refetchOpen();
       refetchFilled();
       refetchCancelled();
+    } catch (err: any) {
+      const isRejection = err.shortMessage?.includes('rejected') || err.message?.includes('User rejected');
+      if (isRejection) {
+        setCancelStatus('canceled');
+        setTimeout(() => setCancelStatus('idle'), 2000);
+      } else {
+        setCancelStatus('failed');
+      }
     }
-  }, [isSuccess, refetchOpen, refetchFilled, refetchCancelled]);
-
-  const handleCancel = (contractOrderId: bigint) => {
-    writeContract({
-      address: exchangeAddress as `0x${string}`,
-      abi: ExchangeAbi as any,
-      functionName: 'cancelOrder',
-      args: [contractOrderId],
-    });
   };
+
+  const isBusy = cancelStatus === 'executing' || cancelStatus === 'mining';
+  const showModal = cancelStatus !== 'idle' && cancelStatus !== 'canceled';
 
   const toggle = (tab: TabType) => setActiveTab(tab);
 
@@ -100,7 +116,7 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress }: OrdersPr
           <button
             key={key}
             onClick={() => toggle(key)}
-            className={`terminal-view-btn${activeTab === key ? ' active' : ''}`}
+            className={`terminal-view-btn text-[0.7rem]${activeTab === key ? ' active' : ''}`}
           >
             {label}
           </button>
@@ -112,7 +128,7 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress }: OrdersPr
         {activeTab === 'openOrders' && (
           <OpenOrdersView
             orders={openOrders}
-            isPending={isPending || isConfirming}
+            isPending={isBusy}
             onCancel={handleCancel}
           />
         )}
@@ -130,6 +146,64 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress }: OrdersPr
           />
         )}
       </div>
+
+      {/* Cancel Order Transaction Modal */}
+      {showModal && (
+        <div className="modal-overlay-blur">
+          <div className="bg-card3 border border-border2 rounded-xl p-6 flex flex-col gap-6 w-full max-w-sm shadow-2xl">
+            <div>
+              <h3 className="font-display font-bold text-lg text-text">
+                {cancelStatus === 'success' ? 'Order Cancelled' : cancelStatus === 'failed' ? 'Transaction Failed' : 'Cancelling Order'}
+              </h3>
+              <p className="font-mono text-xs text-text2 mt-1">
+                {cancelStatus === 'success'
+                  ? 'Your order has been cancelled on-chain.'
+                  : cancelStatus === 'failed'
+                  ? 'Something went wrong. Check your wallet and retry.'
+                  : 'Follow the steps in your connected wallet'}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <div className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${['executing', 'mining'].includes(cancelStatus) ? 'bg-card2' : ''}`}>
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold font-mono shrink-0 transition-all"
+                  style={
+                    cancelStatus === 'success'
+                      ? { background: 'var(--color-green)', color: '#0a1e0b' }
+                      : ['executing', 'mining'].includes(cancelStatus)
+                      ? { background: 'var(--color-primary)', color: 'white' }
+                      : { background: 'var(--color-card)', border: '1px solid var(--color-border2)', color: 'var(--color-text2)' }
+                  }
+                >
+                  {cancelStatus === 'success' ? '✓' : '1'}
+                </div>
+                <div>
+                  <p className="font-mono text-xs font-semibold text-text">Confirm Cancellation</p>
+                  <p className="font-mono text-[11px] text-text2">Sign the cancel transaction in your wallet</p>
+                </div>
+              </div>
+            </div>
+
+            {['success', 'failed'].includes(cancelStatus) && (
+              <button
+                onClick={() => setCancelStatus('idle')}
+                className="w-full inline-flex items-center justify-center py-3 rounded-lg font-display font-bold text-sm uppercase tracking-wide transition-all hover:brightness-105"
+                style={cancelStatus === 'success' ? {
+                  background: 'linear-gradient(180deg, var(--color-green-hover), var(--color-green))',
+                  color: '#0a1e0b',
+                } : {
+                  background: 'linear-gradient(180deg, var(--color-red-hover), var(--color-red))',
+                  color: 'white',
+                }}
+              >
+                {cancelStatus === 'success' ? 'Done' : 'Close & Retry'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

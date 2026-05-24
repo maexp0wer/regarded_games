@@ -1,5 +1,5 @@
 import { ponder } from "ponder:registry";
-import { seasons, playerSeasonStats, yieldEvents, protocolStats } from "ponder:schema";
+import { seasons, playerSeasonStats, yieldEvents, protocolStats, capitalAuctionParticipant } from "ponder:schema";
 import { eq, and } from "ponder";
 import * as schema from "../ponder.schema";
 
@@ -556,6 +556,26 @@ ponder.on("Treasury:YieldHarvested", async ({ event, context }) => {
     }));
 });
 
+
+ponder.on("CapitalAuction:Deposited", async ({ event, context }) => {
+  const address = event.args.user.toLowerCase() as `0x${string}`;
+  await context.db
+    .insert(capitalAuctionParticipant)
+    .values({ id: address, totalDeposited: event.args.usdcAmount, rgdClaimed: null })
+    .onConflictDoUpdate((row) => ({
+      totalDeposited: row.totalDeposited + event.args.usdcAmount,
+    }));
+});
+
+ponder.on("CapitalAuction:Claimed", async ({ event, context }) => {
+  const address = event.args.user.toLowerCase() as `0x${string}`;
+  await context.db
+    .insert(capitalAuctionParticipant)
+    .values({ id: address, totalDeposited: 0n, rgdClaimed: event.args.rgdAmount })
+    .onConflictDoUpdate(() => ({
+      rgdClaimed: event.args.rgdAmount,
+    }));
+});
 
 ponder.on("GameSeason:StateChanged", async ({ event, context }) => {
   const newState = event.args.newState;
