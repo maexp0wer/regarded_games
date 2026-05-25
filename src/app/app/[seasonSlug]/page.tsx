@@ -11,7 +11,6 @@ import { useSeasonPhase } from '@/hooks/useSeasonPhase';
 import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 import { Order } from '@/hooks/useOrderBook';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
-import { usePayout } from '@/hooks/usePayout';
 
 // Components
 import { SeasonHeader } from '../_components/SeasonHeader';
@@ -24,7 +23,7 @@ import { AuctionMask } from '../_components/AuctionMask';
 import { AuctionActivityFeed } from '../_components/AuctionActivityFeed';
 import { TradingMask } from '../_components/TradingMask';
 import { PayoutMask } from '../_components/PayoutMask';
-import PlayerRankDisplay from '../_components/PlayerRankDisplay';
+import { SeasonStats } from '../_components/SeasonStats';
 import { FactionDiscussionBoard } from '../_components/FactionDiscussionBoard';
 import { FactionChat } from '../_components/FactionChat';
 import { CountdownCard } from '../_components/CountdownCard';
@@ -107,9 +106,7 @@ export default function SeasonDetailPage() {
   );
   const factionData = userAddress ? percentilesMap?.[userAddress.toLowerCase()] : undefined;
 
-  const { payout, realizedPayout } = usePayout(seasonAddress, userAddress);
   const chart = useSeasonChart(seasonAddress);
-  const isPayoutActionable = !!userAddress && payout > 0 && realizedPayout === 0;
 
   // JIT faction sync
   useEffect(() => {
@@ -329,62 +326,37 @@ export default function SeasonDetailPage() {
           PAYOUT / CONCLUDED LAYOUT
           ═══════════════════════════════════════════ */}
       {isPayout && (
-        <>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            <div className="relative">
-              <PayoutMask seasonAddress={seasonAddress} />
-            </div>
-            <div className="lg:col-span-2 flex flex-col gap-5">
-              <PlayerRankDisplay
+        <div className="flex flex-col gap-5">
+          {/* Row 1: Gini with integrated sidebar */}
+          <GiniDisplay seasonAddress={seasonAddress} sidebar={giniSidebar} />
+
+          {/* Row 2: PayoutMask first in DOM (top on sm/xs), right on md+ */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_28rem] gap-5">
+            <div className="order-2 md:order-1">
+              <SeasonStats
                 seasonAddress={seasonAddress}
                 userAddress={userAddress || ''}
-              />
-              {isPayoutActionable && (
-                <>
-                  {/* Horizontal: w-[80%] and left-[10%] */}
-                  <div className="h-px bg-border mx-[10%]" />
-                  <GiniDisplay seasonAddress={seasonAddress} sidebar={giniSidebar} />
-                </>
-              )}
-            </div>
-          </div>          
-
-          {!isPayoutActionable && (
-            <>
-              <GiniDisplay seasonAddress={seasonAddress} sidebar={giniSidebar} />
-              {/* Horizontal: w-[80%] and left-[10%] */}
-              <div className="h-px bg-border mx-[10%]" />
-            </>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-            <div className="relative p-0">
-              <ProtocolCard
-                seasonAddress={seasonAddress}
-                fimAddress={fimAddress}
-                auctionAddress={auctionAddress}
                 exchangeAddress={exchangeAddress}
               />
-              {/* Vertical: h-[80%] and top-[10%] */}
-              
-              {/* Horizontal: w-[80%] and left-[10%] */}
-              
             </div>
-            <div className="relative p-0">
-              <PolicyCard M_dynamic={M_dynamic} config={config} />
-              {/* Vertical: h-[80%] and top-[10%] */}
-              
-              {/* Horizontal: w-[80%] and left-[10%] */}
-              
-            </div>
-            <div className="relative p-0">
-              <ScheduleCard tradingStart={tradingStart} seasonEnd={seasonEnd} config={config} />
-            </div>
-            <div className="relative">
-              <LendingDistributionCard seasonAddress={seasonAddress} config={config} />
+            <div className="order-1 md:order-2">
+              <PayoutMask seasonAddress={seasonAddress} className="h-full" />
             </div>
           </div>
-        </>
+
+          {/* Row 3: Protocol / Policy / Schedule / Lending */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+            <ProtocolCard
+              seasonAddress={seasonAddress}
+              fimAddress={fimAddress}
+              auctionAddress={auctionAddress}
+              exchangeAddress={exchangeAddress}
+            />
+            <PolicyCard M_dynamic={M_dynamic} config={config} />
+            <ScheduleCard tradingStart={tradingStart} seasonEnd={seasonEnd} config={config} />
+            <LendingDistributionCard seasonAddress={seasonAddress} config={config} />
+          </div>
+        </div>
       )}
 
     </main>

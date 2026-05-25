@@ -9,59 +9,38 @@ export function SeasonPhasePills({
   className?: string;
 }) {
   const isBootstrap = phase === 'BOOTSTRAP';
-  const isPayout = phase === 'PAYOUT' || phase === 'ENDED';
+  const isPayout = phase === 'PAYOUT' || phase === 'ENDED' || phase === 'DISTRIBUTION';
   const isAuction = phase === 'AUCTION';
+  const isTrading = phase === 'TRADING';
+  const isOnHold = isBootstrap || isVictoryPending;
+  const isActive = (isTrading || isAuction) && !isOnHold;
 
-  const phaseLabel = (isBootstrap || isVictoryPending)
+  const phaseLabel = isOnHold
     ? 'On Hold'
     : isPayout
       ? 'Payout'
       : phase.charAt(0) + phase.slice(1).toLowerCase();
 
-  const subPhaseLabel = isBootstrap
-    ? 'Bootstrap'
-    : isVictoryPending
-      ? 'Settlement'
-      : null;
+  const pillVariant = isPayout
+    ? 'phase-completed'
+    : isOnHold
+      ? 'phase-on-hold'
+      : 'phase-active';
 
-  const phaseColor = (isBootstrap || isVictoryPending)
-    ? 'var(--color-purple)'
-    : isAuction
-      ? 'var(--color-gold)'
-      : isPayout
-        ? 'var(--color-gold)'
-        : 'var(--color-green)';
-
-  const pillClass = (isBootstrap || isVictoryPending)
-    ? 'pill-phase-soc'
-    : isAuction
-      ? 'pill-phase-gold'
-      : isPayout
-        ? 'pill-phase-cap'
-        : 'pill-phase-green';
-
-  const phaseDotGlow = `0 0 8px ${phaseColor}`;
+  const subPhaseLabel = isBootstrap ? 'Bootstrap' : isVictoryPending ? 'Settlement' : null;
 
   return (
     <div className={className}>
-      <div className={`pill border ${pillClass}`}>
-        <span
-          className="w-1.5 h-1.5 rounded-full shrink-0"
-          style={{ background: phaseColor, boxShadow: phaseDotGlow }}
-        />
+      <span className={`phase-pill ${pillVariant}`}>
+        {isActive && (
+          <span className="h-1.5 w-1.5 rounded-full bg-green animate-pulse shrink-0" />
+        )}
         {phaseLabel}
-      </div>
-
+      </span>
       {subPhaseLabel && (
-        <div
-          className="pill border pill-phase-gold"
-        >
-          <span
-            className="w-1.5 h-1.5 rounded-full shrink-0 bg-gold"
-            style={{ boxShadow: '0 0 8px var(--color-gold)' }}
-          />
+        <span className="phase-pill phase-on-hold">
           {subPhaseLabel}
-        </div>
+        </span>
       )}
     </div>
   );

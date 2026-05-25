@@ -8,6 +8,7 @@ import Link from 'next/link';
 
 import { WalletButton } from './WalletButton';
 import AmountInput from '@/components/AmountInput';
+import { sliderPctToAmount } from '@/utils/sliderAmount';
 
 import ERC20Abi from '@/deployments/abis/MockUSDC.json';
 import StakingAbi from '@/deployments/abis/Staking.json';
@@ -137,7 +138,7 @@ function AuctionMaskInner({
     return Math.min(100, Number((usdcToBuyBigInt * 10000n) / maxUsdc) / 100);
   }, [buyAmount, usdcToBuyBigInt, maxUsdc]);
 
-  const handleSliderChange = (pct: number) => setBuyAmount(formatUnits((maxUsdc * BigInt(Math.round(pct * 100))) / 10000n, 6));
+  const handleSliderChange = (pct: number) => setBuyAmount(sliderPctToAmount(pct, Number(formatUnits(maxUsdc, 6))));
 
   // --- Transaction orchestrator ---
   const handleStartFlow = async () => {

@@ -7,6 +7,7 @@ import { parseUnits, formatUnits, erc20Abi } from 'viem';
 
 import { WalletButton } from './WalletButton';
 import AmountInput from '@/components/AmountInput';
+import { sliderPctToAmount } from '@/utils/sliderAmount';
 
 import CapitalAuctionAbi from '@/deployments/abis/CapitalAuction.json';
 import Core from '@/deployments/local/core.json';
@@ -197,7 +198,7 @@ export function IcoMask() {
 
   const handleSliderChange = (pct: number) => {
     if (usdcBalance === 0n) return;
-    setDepositAmount(formatUnits((usdcBalance * BigInt(Math.round(pct * 100))) / 10000n, 6));
+    setDepositAmount(sliderPctToAmount(pct, usdcBalNum));
   };
 
   // ── Deposit flow ───────────────────────────────────────────────────────────

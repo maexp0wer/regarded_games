@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { WalletButton } from './WalletButton';
 import PercentSlider from '@/components/PercentSlider';
+import { sliderPctToAmount } from '@/utils/sliderAmount';
 
 import UniswapV2RouterAbi from '@/deployments/abis/UniswapV2Router.json';
 import Core from '@/deployments/local/core.json';
@@ -276,7 +277,7 @@ export function SwapMask() {
 
   const handleSliderChange = (pct: number) => {
     if (walletBalanceIn === 0n) return;
-    setAmountIn(formatUnits((walletBalanceIn * BigInt(Math.round(pct * 100))) / 10000n, tokenIn.decimals));
+    setAmountIn(sliderPctToAmount(pct, Number(formatUnits(walletBalanceIn, tokenIn.decimals))));
   };
 
   const handleMax  = () => setAmountIn(formatUnits(walletBalanceIn, tokenIn.decimals));

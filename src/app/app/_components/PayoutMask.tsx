@@ -1,176 +1,216 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { usePayout } from '@/hooks/usePayout';
+import { TxModal } from './TxModal';
+
+type TxStatus = 'idle' | 'executing' | 'mining' | 'success' | 'canceled' | 'failed' | 'no_gas';
 
 interface PayoutMaskProps {
   seasonAddress: string;
+  className?: string;
 }
 
-export function PayoutMask({ seasonAddress }: PayoutMaskProps) {
+export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
   const { address, isConnected } = useAccount();
+  const publicClient = usePublicClient();
 
+  const [status, setStatus] = useState<TxStatus>('idle');
+  const [txHash, setTxHash] = useState<string | null>(null);
   const [snapshotPnL, setSnapshotPnL] = useState<number | null>(null);
-  const [transactionSent, setTransactionSent] = useState(false);
-  const [showSuccessToast, setShowSuccessToast] = useState(false);
 
-  const { writeContract, data: hash, isPending: isWritePending, reset } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
-
-  const { data: isOligarchyWin } = useReadContract({
-    address: seasonAddress as `0x${string}`, abi: GameSeasonAbi as any,
-    functionName: 'isOligarchyWin', query: { enabled: !!seasonAddress },
-  });
-  const { data: finalProgressBps } = useReadContract({
-    address: seasonAddress as `0x${string}`, abi: GameSeasonAbi as any,
-    functionName: 'finalProgressBps', query: { enabled: !!seasonAddress },
-  });
+  const { writeContractAsync } = useWriteContract();
 
   const { payout, pnl: livePnL, userFim, userNetContrib, fimBurned, realizedPayout, loading: calcLoading, refetch: refetchPayout } =
     usePayout(seasonAddress, address);
 
   const canClaim = payout > 0;
 
-  useEffect(() => {
-    if (isSuccess) {
-      setShowSuccessToast(true);
-      const t = setTimeout(() => setShowSuccessToast(false), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [isSuccess]);
-
-  useEffect(() => {
-    if (isWritePending) { setTransactionSent(true); setSnapshotPnL(livePnL); }
-    if (isSuccess) {
-      refetchPayout();
-      const t = setTimeout(() => { setSnapshotPnL(null); setTransactionSent(false); reset(); }, 10000);
-      return () => clearTimeout(t);
-    }
-    if (userFim > 0 && transactionSent) refetchPayout();
-  }, [isWritePending, isSuccess, refetchPayout, reset, transactionSent, livePnL, userFim]);
+  const hasClaimed = useMemo(() =>
+    realizedPayout > 0 || (status === 'success' && payout === 0),
+    [realizedPayout, status, payout]
+  );
 
   const displayPnL = useMemo(() => {
     if (snapshotPnL !== null && livePnL < snapshotPnL) return snapshotPnL;
     return livePnL;
   }, [snapshotPnL, livePnL]);
 
-  const hasClaimed = useMemo(() =>
-    realizedPayout > 0 || (transactionSent && payout === 0),
-    [realizedPayout, transactionSent, payout]
-  );
+  useEffect(() => {
+    if (status === 'success') refetchPayout();
+  }, [status, refetchPayout]);
 
-  const handleClaim = () => {
-    if (!canClaim || isWritePending || isConfirming) return;
-    setTransactionSent(true);
-    writeContract({ address: seasonAddress as `0x${string}`, abi: GameSeasonAbi as any, functionName: 'claimPayout', args: [] });
+  const handleClaim = async () => {
+    if (!canClaim || !publicClient || status !== 'idle') return;
+    setSnapshotPnL(livePnL);
+    setTxHash(null);
+
+    try {
+      setStatus('executing');
+      const hash = await writeContractAsync({
+        address: seasonAddress as `0x${string}`,
+        abi: GameSeasonAbi as any,
+        functionName: 'claimPayout',
+        args: [],
+      });
+      setTxHash(hash);
+      setStatus('mining');
+      await publicClient.waitForTransactionReceipt({ hash: hash as `0x${string}` });
+      setStatus('success');
+    } catch (err: any) {
+      const isRejection = err.shortMessage?.includes('rejected') || err.message?.includes('User rejected');
+      const isInsufficientGas = err.message?.includes('insufficient funds') || err.name === 'InsufficientFundsError';
+      if (isRejection) {
+        setStatus('canceled');
+        setTimeout(() => setStatus('idle'), 2000);
+      } else if (isInsufficientGas) {
+        setStatus('no_gas');
+      } else {
+        setStatus('failed');
+      }
+    }
+  };
+
+  const handleClose = () => {
+    setStatus('idle');
+    setTxHash(null);
+    setSnapshotPnL(null);
   };
 
   if (!isConnected) {
     return (
-      <div className="card-app flex items-center justify-center h-full text-center">
-        <p className="font-mono text-[13px] text-text2">Connect wallet to check payout eligibility.</p>
+      <div className={`settlement-card-layout mx-auto${className ? ` ${className}` : ''}`}>
+        <p className="font-mono text-[13px] text-text2 text-center py-8">Connect wallet to check payout eligibility.</p>
       </div>
     );
   }
 
-  const isButtonDisabled = isWritePending || isConfirming || !canClaim || hasClaimed;
-
-  const pnlPositive = displayPnL > 0;
-  const pnlColor    = pnlPositive ? 'var(--color-green)' : displayPnL < 0 ? 'var(--color-red)' : 'var(--color-text2)';
-  const netPositive = userNetContrib > 0;
-  const netColor    = netPositive ? 'var(--color-green)' : userNetContrib < 0 ? 'var(--color-red)' : 'var(--color-text2)';
+  const isBusy = status === 'executing' || status === 'mining';
+  const isButtonDisabled = isBusy || !canClaim || hasClaimed;
+  const pnlPositive = displayPnL >= 0;
+  const netPositive = userNetContrib >= 0;
+  const displayFim = hasClaimed ? fimBurned : userFim;
+  const displayPayout = canClaim && !hasClaimed ? payout : realizedPayout;
 
   return (
-    <div
-      className="card-app flex flex-col gap-5 h-full border-border2"
-    >
-      {/* ── Header ── */}
-      <div
-        className="flex items-center justify-between pb-3"
-        style={{ borderBottom: '1px solid var(--color-border)' }}
-      >
-        <p className="section-label">Payout</p>
-        
+    <>
+    <div className={`settlement-card-layout mx-auto${className ? ` ${className}` : ''}`}>
+
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
+        <h3 className="text-base font-black uppercase tracking-tight text-text">
+          Payout Settlement
+        </h3>
+        <span className="font-mono text-[10px] bg-[var(--color-card2)] border border-[var(--color-border)] px-2 py-0.5 rounded text-text2 uppercase tracking-wider flex items-center gap-1.5">
+          <span className={`h-1.5 w-1.5 rounded-full ${hasClaimed ? 'bg-[var(--color-text2)]' : 'bg-[var(--color-green)] animate-pulse'}`} />
+          {hasClaimed ? 'Settled' : 'Active'}
+        </span>
       </div>
 
-      {/* ── Stats 2×2 grid ── */}
-      <div
-        className="grid grid-cols-2 rounded-lg overflow-hidden"
-        style={{ border: '1px solid var(--color-border)' }}
-      >
-        {/* Your Holdings */}
-        <div className="flex flex-col gap-1 p-4" style={{ background: 'var(--color-card2)', borderRight: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>
-          <span className="section-label">{hasClaimed ? 'FIM Burned' : 'Your Holdings'}</span>
-          <span className="font-mono font-semibold text-[15px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {(hasClaimed ? fimBurned : userFim).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+      {/* Audit Matrix */}
+      <div className="audit-matrix-grid">
+        <div className="terminal-pane p-2.5">
+          <span className="terminal-pane-title block mb-0.5">{hasClaimed ? 'FIM Burned' : 'Your Holdings'}</span>
+          <span className="font-mono text-sm font-bold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {displayFim.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             <span className="ml-1 text-[10px] text-text2">FIM</span>
           </span>
         </div>
 
-        {/* Net Contribution */}
-        <div className="flex flex-col gap-1 p-4" style={{ background: 'var(--color-card2)', borderBottom: '1px solid var(--color-border)' }}>
-          <span className="section-label">Net Contribution</span>
-          <span className="font-mono font-semibold text-[15px]" style={{ color: netColor, fontVariantNumeric: 'tabular-nums' }}>
+        <div className="terminal-pane p-2.5">
+          <span className="terminal-pane-title block mb-0.5">Net Contribution</span>
+          <span
+            className="font-mono text-sm font-bold"
+            style={{ color: netPositive ? 'var(--color-green)' : 'var(--color-red)', fontVariantNumeric: 'tabular-nums' }}
+          >
             {userNetContrib > 0 ? '+' : ''}{userNetContrib.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             <span className="ml-1 text-[10px] text-text2">USDC</span>
           </span>
         </div>
 
-        {/* Claimable / Claimed */}
-        <div className="flex flex-col gap-1 p-4" style={{ background: 'var(--color-card2)', borderRight: '1px solid var(--color-border)' }}>
-          <span className="section-label" style={{ color: canClaim && !hasClaimed ? 'var(--color-gold)' : undefined }}>
-            {canClaim && !hasClaimed ? 'Claimable Now' : 'Total Claimed'}
-          </span>
+        <div className="terminal-pane p-2.5 col-span-2">
+          <div className="flex justify-between items-center">
+            <span className="terminal-pane-title">Season P / L</span>
+            {!calcLoading && (
+              <span
+                className="font-mono text-[10px] font-bold"
+                style={{ color: pnlPositive ? 'var(--color-green)' : 'var(--color-red)' }}
+              >
+                {pnlPositive ? '▲ SURPLUS' : '▼ DEFICIT'}
+              </span>
+            )}
+          </div>
           {calcLoading ? (
-            <div className="h-5 w-20 rounded animate-pulse" style={{ background: 'var(--color-border)' }} />
+            <div className="h-5 w-28 rounded animate-pulse mt-1" style={{ background: 'var(--color-border)' }} />
           ) : (
-            <span className="font-mono font-semibold text-[15px]" style={{ color: canClaim && !hasClaimed ? 'var(--color-gold)' : 'var(--color-text)', fontVariantNumeric: 'tabular-nums' }}>
-              ${(canClaim && !hasClaimed ? payout : realizedPayout).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              <span className="ml-1 text-[10px] text-text2">USDC</span>
-            </span>
-          )}
-        </div>
-
-        {/* Season PnL */}
-        <div className="flex flex-col gap-1 p-4" style={{ background: 'var(--color-card2)' }}>
-          <span className="section-label">Season PnL</span>
-          {calcLoading ? (
-            <div className="h-5 w-20 rounded animate-pulse" style={{ background: 'var(--color-border)' }} />
-          ) : (
-            <span className="font-mono font-semibold text-[15px]" style={{ color: pnlColor, fontVariantNumeric: 'tabular-nums' }}>
-              {pnlPositive ? '+' : '-'}{Math.abs(displayPnL).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <span
+              className="font-mono text-base font-black block mt-0.5"
+              style={{ color: pnlPositive ? 'var(--color-green)' : 'var(--color-red)', fontVariantNumeric: 'tabular-nums' }}
+            >
+              {pnlPositive ? '+' : '-'}${Math.abs(displayPnL).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               <span className="ml-1 text-[10px] text-text2">USDC</span>
             </span>
           )}
         </div>
       </div>
 
-      {/* ── CTA ── */}
-      <div className="mt-auto">
-        {showSuccessToast ? (
-          <div className="btn-success w-full text-center py-4 animate-pulse rounded-lg font-mono font-bold text-[11px] uppercase tracking-widest">
-            Payout Claimed Successfully ✓
-          </div>
-        ) : canClaim ? (
-          <button
-            onClick={handleClaim}
-            disabled={isButtonDisabled}
-            className={`w-full btn-primary py-4 ${isButtonDisabled ? 'opacity-60 cursor-not-allowed!' : ''}`}
-          >
-            {isWritePending || isConfirming ? 'Confirming on Chain…' : 'Claim Payout'}
-          </button>
-        ) : !hasClaimed ? (
+      {/* Checkout Vault */}
+      <div className="checkout-vault-pane">
+        <span className="font-mono text-[10px] font-bold text-text2 uppercase tracking-widest mb-1">
+          {canClaim && !hasClaimed ? 'Net Disbursable Balance' : hasClaimed ? 'Total Claimed' : 'No Payout Due'}
+        </span>
+        {calcLoading ? (
+          <div className="h-9 w-36 rounded animate-pulse" style={{ background: 'var(--color-border)' }} />
+        ) : (
           <div
-            className="px-5 py-4 rounded-lg text-center"
-            style={{ background: 'var(--color-card2)', border: '1px dashed var(--color-border2)' }}
+            className="font-mono text-3xl font-black tracking-tighter"
+            style={{ color: displayPayout > 0 ? 'var(--color-green)' : 'var(--color-text2)', fontVariantNumeric: 'tabular-nums' }}
           >
-            <p className="font-mono text-[11px] uppercase font-bold tracking-widest text-text2">Ineligible</p>
-            <p className="font-mono text-[10px] text-text2 mt-1 opacity-60">You did not participate in this season</p>
+            ${displayPayout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <span className="text-xs font-bold text-text2 ml-1">USDC</span>
           </div>
-        ) : null}
+        )}
       </div>
+
+      {/* CTA */}
+      {canClaim && !hasClaimed ? (
+        <button
+          onClick={handleClaim}
+          disabled={isButtonDisabled}
+          className={`btn-terminal-action action-buy py-3 text-sm font-black tracking-widest ${isButtonDisabled ? 'opacity-60 cursor-not-allowed!' : ''}`}
+        >
+          {isBusy ? 'Confirming on Chain…' : 'Claim'}
+        </button>
+      ) : !hasClaimed ? (
+        <div
+          className="px-5 py-4 rounded-lg text-center"
+          style={{ background: 'var(--color-card2)', border: '1px dashed var(--color-border2)' }}
+        >
+          <p className="font-mono text-[11px] uppercase font-bold tracking-widest text-text2">Ineligible</p>
+          <p className="font-mono text-[10px] text-text2 mt-1 opacity-60">You did not participate in this season</p>
+        </div>
+      ) : null}
+
     </div>
+
+    <TxModal
+      status={status}
+      txHashes={[txHash]}
+      title="Claiming Payout"
+      successTitle="Payout Claimed"
+      successMessage="Your USDC has been sent to your wallet."
+      steps={[
+        {
+          label: 'Claim Payout',
+          description: 'Sign the payout withdrawal transaction',
+          activeStatuses: ['executing', 'mining'],
+          completeStatuses: ['success'],
+        },
+      ]}
+      onClose={handleClose}
+    />
+    </>
   );
 }

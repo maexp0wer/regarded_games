@@ -11,6 +11,7 @@ import { PercentileCircle } from './PercentileCircle';
 import { GroupedOrder, OrderQueueItem } from './OrderQueueItem';
 import { WalletButton } from './WalletButton';
 import PercentSlider from '@/components/PercentSlider';
+import { sliderPctToAmount } from '@/utils/sliderAmount';
 import { TxModal } from './TxModal';
 
 interface TradingMaskProps {
@@ -154,7 +155,7 @@ export function TradingMask({
   }, [targetAmount, maxForSlider, maxDecimals]);
 
   const handleSliderChange = (pct: number) => {
-    setTargetAmount(formatUnits((maxForSlider * BigInt(Math.round(pct * 100))) / 10000n, maxDecimals));
+    setTargetAmount(sliderPctToAmount(pct, Number(formatUnits(maxForSlider, maxDecimals))));
   };
 
   const handleTargetAmountChange = (val: string) => {

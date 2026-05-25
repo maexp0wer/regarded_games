@@ -4,12 +4,11 @@ interface PercentSliderProps {
   value: number;
   onChange: (pct: number) => void;
   disabled?: boolean;
-  step?: number;
 }
 
 const PRESETS = [25, 50, 75, 100];
 
-export default function PercentSlider({ value, onChange, disabled = false, step = 0.1 }: PercentSliderProps) {
+export default function PercentSlider({ value, onChange, disabled = false }: PercentSliderProps) {
   const clamped = Math.max(0, Math.min(100, value));
 
   return (
@@ -19,7 +18,7 @@ export default function PercentSlider({ value, onChange, disabled = false, step 
         type="range"
         min={0}
         max={100}
-        step={step}
+        step={0.01}
         value={clamped}
         onChange={(e) => onChange(Number(e.target.value))}
         className="terminal-range-slider"

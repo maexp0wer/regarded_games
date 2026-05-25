@@ -285,7 +285,7 @@ html, body {
 .h4-app { font-family: var(--font-mono); font-size: 9px;  font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text2); }
 
 .text-display-hero    { @apply text-7xl}
-.text-display-season  { @apply text-5xl }
+.text-display-season  { @apply text-3xl }
 .text-display-prize   { @apply text-4xl}
 .text-display-counter { @apply text-xl }
 .text-display-trading { @apply text-3xl }
@@ -1930,4 +1930,320 @@ html, body {
   background: var(--cyber-sunset); /* Pulls your signature variable gradient */
   border-radius: 9999px;
   transition: width 0.4s ease-out;
+}
+
+
+
+
+/* ==========================================================================
+   STAKING & LIQUIDITY MATRIX UTILITIES
+   ========================================================================= */
+
+/* Primary Container Grid splitting Balance Cards and Interactive Form */
+.staking-matrix-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .staking-matrix-layout {
+    grid-template-columns: 4fr 3fr; /* Balance cards left, transaction panel right */
+  }
+}
+
+/* Layered Balance Registry Display Grid */
+.balance-registry-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 480px) {
+  .balance-registry-grid {
+    grid-template-columns: repeat(3, 1fr); /* Clean 3-column split for liquid, staked, locked */
+  }
+}
+
+/* Specific Treatment for the Vault Lock Highlight Card */
+.vault-lock-pane {
+  border: 1px dashed var(--color-border2);
+  background: linear-gradient(
+    135deg, 
+    var(--color-card2) 0%, 
+    var(--color-purple-15) 100%
+  );
+}
+
+
+
+
+/* ==========================================================================
+   SEASON ARCHIVE LEDGER COMPONENT
+   ========================================================================= */
+
+/* Main row container featuring layout transitions between states */
+.season-ledger-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.season-ledger-row:hover {
+  border-color: var(--color-purple);
+  background-color: var(--color-card2);
+}
+
+@media (min-width: 768px) {
+  .season-ledger-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+/* Phase Pill Variances */
+.phase-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-radius: 0.25rem;
+}
+
+.phase-active {
+  background-color: rgba(var(--color-green-rgb), 0.1);
+  color: var(--color-green);
+  border: 1px solid rgba(var(--color-green-rgb), 0.2);
+}
+
+.phase-completed {
+  background-color: var(--color-purple-15);
+  color: var(--color-purple);
+}
+
+.phase-upcoming {
+  background-color: var(--color-purple-15);
+  color: var(--color-purple);
+  border: 1px solid var(--color-purple-35);
+}
+
+.phase-on-hold {
+  color: var(--color-red);
+}
+
+/* Container for text groupings */
+.meta-data-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+/* Embedded Status Text inside Progress Bars */
+.progress-rail-container {
+  position: relative;
+  width: 100%;
+  height: 1.25rem;
+  background-color: var(--color-card3);
+  border: 1px solid var(--color-border2);
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+.progress-rail-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-purple) 0%, var(--color-purple-70) 100%);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-rail-overlay-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text);
+  text-shadow: none;
+}
+
+
+
+
+/* ==========================================================================
+   MINIATURE TIME EMBED UTILITIES
+   ========================================================================= */
+
+/* Inline wrapper to dock the countdown neatly inside the row layout */
+.inline-countdown-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Base style for individual time segment blocks */
+.time-segment-ticker {
+  color: var(--color-text);
+  background-color: var(--color-card3);
+  border: 1px solid var(--color-border2);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.125rem;
+  min-width: 1.5rem;
+  text-align: center;
+}
+
+/* State change: Critical time remaining (< 24 hours) */
+.time-urgency-critical .time-segment-ticker {
+  color: var(--color-red);
+  border-color: rgba(255, 74, 74, 0.3);
+  background-color: rgba(255, 74, 74, 0.05);
+}
+
+/* Subtle animation to pulse the spacer colons when urgent */
+.time-urgency-critical .ticker-colon {
+  color: var(--color-red);
+  animation: ticker-blink 1s steps(1) infinite;
+}
+
+@keyframes ticker-blink {
+  50% { opacity: 0; }
+}
+
+
+
+
+/* ==========================================================================
+   FINANCIAL SETTLEMENT & REWARDS LEDGER
+   ========================================================================= */
+
+/* Main layout wrapper grid */
+.settlement-card-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+}
+
+/* Auditing Metric Grid (2-column layout for baseline context) */
+.audit-matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+/* High-contrast highlight box exclusively for the final USDC claimable amount */
+.checkout-vault-pane {
+  background-color: var(--color-card2);
+  border: 1px solid var(--color-border2);
+  border-radius: 0.375rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Sharp left-edge accent line matching your signature design logic */
+.checkout-vault-pane::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: var(--color-green);
+}
+
+
+/* ==========================================================================
+   UNIFIED STATISTICAL RAIL COMPONENT
+   ========================================================================= */
+
+/* Uniform row card housing a title bar and a progress rail */
+.stat-rail-card {
+  background-color: var(--color-card2);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Base structural chassis for the rank tracking rails */
+.rank-track-chassis {
+  position: relative;
+  width: 100%;
+  height: 2.5rem;
+  background-color: var(--color-card3);
+  border: 1px solid var(--color-border2);
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+/* absolute performance fill (Green/Success themed) */
+.fill-absolute-rank {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-green) 0%, var(--color-green-70) 100%);
+  transition: width 0.5s ease-out;
+}
+
+/* Relative growth performance fill (Purple/Protocol themed) */
+.fill-relative-rank {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-purple) 0%, var(--color-purple-70) 100%);
+  transition: width 0.5s ease-out;
+}
+
+/* Faction Alignment Spectrum Rail */
+.ideology-rail {
+  position: relative;
+  width: 100%;
+  height: 1.25rem;
+  background-color: var(--color-card3);
+  border: 1px solid var(--color-border2);
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+.ideology-rail-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-purple) 0%, var(--color-gold) 100%);
+  position: relative;
+}
+
+.ideology-marker-pin {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: var(--color-text);
+  border: 1px solid var(--color-bg);
+  box-shadow: 0 0 6px var(--color-text);
+  transform: translateX(-50%);
+  z-index: 10;
 }

@@ -11,8 +11,8 @@ import { useSeasonPhase } from '@/hooks/useSeasonPhase';
 import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 import Link from 'next/link';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
-import { VictoryProgressBar } from './VictoryProgressBar';
 import { SeasonPhasePills } from './SeasonPhasePills';
+import { CountdownTicker } from './CountdownTicker';
 
 // --- ABI Definitions ---
 const GAME_CONTROLLER_SEASONS_ABI = [
@@ -52,14 +52,12 @@ const getControllerAddress = (chainId: number): Address | undefined => {
   return controllerAddress ? getAddress(controllerAddress) : undefined;
 };
 
-const formatDate = (timestamp: number) => {
-  if (!timestamp) return 'N/A';
+const formatDateShort = (timestamp: number) => {
+  if (!timestamp) return '—';
   return new Date(timestamp * 1000).toLocaleString(undefined, {
     month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
+    day: '2-digit',
+    year: 'numeric',
   });
 };
 
@@ -83,101 +81,93 @@ function SeasonCard({ season }: { season: SeasonRegistry }) {
     seasonEnd,
     config,
   } = phase;
-  const { gCurrent, effectiveVictoryPending } = victory;
+  const { gCurrent, effectiveVictoryPending, progressPercent, winningSide } = victory;
 
   if (!config || !currentPhase) return null;
 
-  const statusLabel = isTrading ? 'Ends' : 'Trading Starts';
-  const showTimeStat = isTrading || isBootstrap || isAuction;
-  const statusTime = (effectiveVictoryPending || isBootstrap)
-    ? 'SHORTLY'
-    : isTrading
-    ? formatDate(seasonEnd)
-    : formatDate(tradingStart);
-
   const num = String(seasonNumber).padStart(2, '0');
+
+  const showTimeStat = isTrading || isBootstrap || isAuction;
+  const statusLabel = isTrading ? 'Trading Ends' : 'Trading Starts';
+  const countdownTarget = (effectiveVictoryPending || isBootstrap) ? 0 : isTrading ? seasonEnd : tradingStart;
+
+  const multiplier = (config.baseBeta / 10000 + Math.pow(1 - (gCurrent / 10000), 2)).toFixed(2);
 
   return (
     <Link href={`/${slug}`} className="block group">
-      <div
-        className="terminal-pane transition-all group-hover:border-border-bright"
-        style={{ borderColor: 'var(--color-border)' }}
-      >
-        <div className="flex items-start gap-6">
-          {/* Left column: big season number + pills (desktop) */}
-          <div className="shrink-0 hidden sm:flex sm:flex-col sm:items-start sm:gap-2">
-            <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-display-season">
-              S<em className="not-italic font-medium" style={{ color: 'var(--color-text2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
-            </p>
+      <div className="season-ledger-row">
+
+        {/* Column 1: Identity */}
+        <div className="flex items-center gap-4 min-w-50">
+          <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-display-season shrink-0">
+            S<em className="not-italic font-medium" style={{ color: 'var(--color-text2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
+          </p>
+          <div className="meta-data-group">
             <SeasonPhasePills
               phase={currentPhase}
               isVictoryPending={effectiveVictoryPending}
-              className="flex flex-col gap-1.5"
+              className="flex items-center gap-2"
             />
+            <span className="font-mono text-[11px] text-text2">
+              {tradingStart ? formatDateShort(tradingStart) : '—'} — {seasonEnd ? formatDateShort(seasonEnd) : '—'}
+            </span>
           </div>
-
-          {/* Main content */}
-          <div className="flex-1 min-w-0 flex flex-col gap-4">
-            {/* Mobile header: small season number + pills */}
-            <div className="flex sm:hidden items-center flex-wrap gap-2">
-              <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-season-mobile">
-                S<em className="not-italic font-medium" style={{ color: 'var(--color-text2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
-              </p>
-              <SeasonPhasePills
-                phase={currentPhase}
-                isVictoryPending={effectiveVictoryPending}
-                className="flex items-center flex-wrap gap-2"
-              />
-            </div>
-
-            {/* Stats grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="section-label mb-1">Prize Pool</p>
-                <span className="font-mono font-bold text-[18px]" style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}>
-                  ${(giniData?.prizePool ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-              <div>
-                <p className="section-label mb-1">Participants</p>
-                <span className="font-mono font-bold text-[18px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                  {(giniData?.playerCount ?? 0).toLocaleString()}
-                </span>
-              </div>
-              <div>
-                <p className="section-label mb-1">Multiplier</p>
-                <span className="font-mono font-bold text-[18px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                  {(config.baseBeta / 10000 + Math.pow(1 - (gCurrent / 10000), 2)).toFixed(2)}×
-                </span>
-              </div>
-              {showTimeStat && (
-                <div>
-                  <p className="section-label mb-1">{statusLabel}</p>
-                  <span className="font-mono font-semibold text-[13px] text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                    {statusTime}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Progress bar */}
-            {!(isBootstrap || isAuction) && (
-              <div>
-                <p className="section-label mb-2">Victory Progress</p>
-                <VictoryProgressBar seasonAddress={season.season} />
-              </div>
-            )}
-          </div>
-
-          {/* Arrow */}
-          <svg
-            className="w-5 h-5 shrink-0 self-center transition-transform group-hover:translate-x-1"
-            fill="none" viewBox="0 0 24 24" stroke="currentColor"
-            style={{ color: 'var(--color-text2)', opacity: 0.4 }}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
         </div>
+
+        {/* Column 2: Metrics */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 flex-1 md:px-6">
+          <div className="meta-data-group">
+            <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Prize Pool</span>
+            <span className="font-mono text-sm font-bold text-gold" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              ${(giniData?.prizePool ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span className="text-[10px] text-text2 font-normal ml-1">USDC</span>
+            </span>
+          </div>
+          <div className="meta-data-group">
+            <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Players</span>
+            <span className="font-mono text-sm font-bold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {(giniData?.playerCount ?? 0).toLocaleString()}
+            </span>
+          </div>
+          <div className="meta-data-group">
+            <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Multiplier</span>
+            <span className="font-mono text-sm font-bold text-green" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {multiplier}×
+            </span>
+          </div>
+          {showTimeStat && (
+            <div className="meta-data-group">
+              <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">{statusLabel}</span>
+              <CountdownTicker targetTimestamp={countdownTarget} />
+            </div>
+          )}
+        </div>
+
+        {/* Column 3: Victory progress rail */}
+        {!(isAuction || isBootstrap) && (
+          <div className="w-full md:w-50 flex flex-col gap-1.5 shrink-0">
+            <span className="font-mono text-[9px] uppercase text-text2 tracking-wider md:text-right block">
+              Victory Progress
+            </span>
+            <div className="progress-rail-container">
+              <div
+                className="progress-rail-fill"
+                style={{
+                  width: `${progressPercent}%`,
+                  ...(winningSide === 'cap' && { background: 'linear-gradient(90deg, var(--color-gold) 0%, var(--color-gold-70) 100%)' }),
+                  ...(winningSide === 'soc' && { background: 'linear-gradient(90deg, var(--color-purple) 0%, var(--color-purple-70) 100%)' }),
+                }}
+              />
+              <div className="progress-rail-overlay-text">
+                {winningSide === 'none'
+                  ? 'BALANCED'
+                  : `${progressPercent.toFixed(1)}% ${winningSide === 'cap' ? 'BOURGEOIS' : 'PROLETARIAN'}`
+                }
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </Link>
   );
@@ -225,7 +215,7 @@ export function SeasonsList() {
 
   if (isLoading) return (
     <div className="w-full p-12 text-center">
-      <span className="section-label animate-pulse">Scanning Seasons…</span>
+      <span className="section-label animate-pulse">Reading Ledger…</span>
     </div>
   );
 
@@ -248,7 +238,7 @@ export function SeasonsList() {
       </div>
 
       {/* Cards */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         {filtered.map((s) => (
           <SeasonCard key={s.season} season={s} />
         ))}

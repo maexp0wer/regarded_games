@@ -1,10 +1,8 @@
 'use client';
 
-import { useReadContracts } from 'wagmi';
 import { formatUnits } from 'viem';
-import { useQuery } from '@tanstack/react-query'; 
-import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
-import { useMemo } from 'react'; // Import useMemo
+import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 
 const PONDER_URL = "http://127.0.0.1:42069/graphql";
 
@@ -17,12 +15,16 @@ interface PlayerSeasonStat {
 }
 
 export interface PlayerRankData {
-  rank: number;                 // absolute pnl rank
+  rank: number;
   totalPlayers: number;
 
-  efficiencyRank: number;       // relative pnl rank
-  efficiencyPercent: number;    // 0–100 position
+  efficiencyRank: number;
+  efficiencyPercent: number;    // 0–100 percentile position (0 = top)
   efficiencyValue: number;      // raw ratio (e.g. 0.16)
+
+  userPnl: number;              // USDC net P&L
+  userNetContribution: number;  // USDC net invested (trade volume proxy)
+  growthPercent: number;        // % growth relative to contribution
 
   loading: boolean;
 }
@@ -65,7 +67,7 @@ const calculatePnl = (stat: PlayerSeasonStat): number => {
 export function usePlayerRank(seasonAddress: string, userAddress: string | undefined): PlayerRankData {
   
   // 1. Fetch ALL Player Stats from Ponder
-  const { data: allStatsData, isLoading: statsLoading, refetch: refetchStats } = useQuery({
+  const { data: allStatsData, isLoading: statsLoading } = useQuery({
     queryKey: ["seasonRankings", seasonAddress],
     queryFn: async () => {
       if (!seasonAddress) return null;
@@ -112,6 +114,9 @@ export function usePlayerRank(seasonAddress: string, userAddress: string | undef
   efficiencyRank,
   efficiencyPercent,
   efficiencyValue,
+  userPnl,
+  userNetContribution,
+  growthPercent,
 } = useMemo(() => {
   if (!allStatsData || !userAddress) {
     return {
@@ -120,6 +125,9 @@ export function usePlayerRank(seasonAddress: string, userAddress: string | undef
       efficiencyRank: -1,
       efficiencyPercent: 0,
       efficiencyValue: 0,
+      userPnl: 0,
+      userNetContribution: 0,
+      growthPercent: 0,
     };
   }
 
@@ -138,18 +146,14 @@ export function usePlayerRank(seasonAddress: string, userAddress: string | undef
       addr: stat.playerAddress.toLowerCase(),
     }));
 
-  // ---- ABSOLUTE PNL RANK ----
   const pnlSorted = [...base].sort((a, b) => b.pnl - a.pnl);
-
-  // ---- EFFICIENCY RANK ----
-  const efficiencySorted = [...base].sort(
-    (a, b) => b.efficiency - a.efficiency
-  );
+  const efficiencySorted = [...base].sort((a, b) => b.efficiency - a.efficiency);
 
   const addr = userAddress.toLowerCase();
 
   const pnlIndex = pnlSorted.findIndex(p => p.addr === addr);
   const effIndex = efficiencySorted.findIndex(p => p.addr === addr);
+  const userStat = base.find(p => p.addr === addr);
 
   const total = base.length;
 
@@ -158,28 +162,37 @@ export function usePlayerRank(seasonAddress: string, userAddress: string | undef
       ? (effIndex / (total - 1)) * 100
       : 0;
 
+  const rawEfficiency = effIndex === -1 ? 0 : efficiencySorted[effIndex].efficiency;
+  const safeGrowthPercent = isFinite(rawEfficiency) ? rawEfficiency * 100 : 0;
+
+  const userNetContrib = userStat
+    ? Number(formatUnits(BigInt(userStat.netContribution || "0"), 6))
+    : 0;
+
   return {
     rank: pnlIndex === -1 ? -1 : pnlIndex + 1,
     totalPlayers: total,
 
     efficiencyRank: effIndex === -1 ? -1 : effIndex + 1,
     efficiencyPercent,
-    efficiencyValue:
-      effIndex === -1 ? 0 : efficiencySorted[effIndex].efficiency,
+    efficiencyValue: rawEfficiency,
+
+    userPnl: userStat ? userStat.pnl : 0,
+    userNetContribution: userNetContrib,
+    growthPercent: safeGrowthPercent,
   };
 }, [allStatsData, userAddress]);
 
 
-  const loading = statsLoading;
-  const refetch = () => { refetchStats(); };
-
-  // Return the determined rank and calculated PnL, along with loading state and refetch function
   return {
-  rank,
-  totalPlayers,
-  efficiencyRank,
-  efficiencyPercent,
-  efficiencyValue,
-  loading,
-};
+    rank,
+    totalPlayers,
+    efficiencyRank,
+    efficiencyPercent,
+    efficiencyValue,
+    userPnl,
+    userNetContribution,
+    growthPercent,
+    loading: statsLoading,
+  };
 }
