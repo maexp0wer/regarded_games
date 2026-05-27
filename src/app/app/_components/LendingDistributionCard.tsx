@@ -10,7 +10,7 @@ const formatUSDC = (val: string) => {
   } catch { return '0.00'; }
 };
 
-const DIST_COLORS = ['var(--color-gold)', 'var(--color-purple)', 'var(--color-green)', 'var(--color-red)'];
+const DIST_COLORS = ['var(--color-purple)', 'var(--color-gold)','var(--color-magenta)', 'var(--color-orange)'];
 
 interface LendingDistributionCardProps {
   seasonAddress: string;

@@ -24,16 +24,18 @@ export function SeasonPhasePills({
   const pillVariant = isPayout
     ? 'phase-completed'
     : isOnHold
-      ? 'phase-on-hold'
-      : 'phase-active';
+    ? 'phase-on-hold'
+    : isAuction
+    ? 'phase-auction'
+    : 'phase-active';
 
   const subPhaseLabel = isBootstrap ? 'Bootstrap' : isVictoryPending ? 'Settlement' : null;
 
   return (
     <div className={className}>
       <span className={`phase-pill ${pillVariant}`}>
-        {isActive && (
-          <span className="h-1.5 w-1.5 rounded-full bg-green animate-pulse shrink-0" />
+        {!isOnHold && !isPayout && (
+          <span className={`h-1.5 w-1.5 rounded-full animate-pulse shrink-0 ${isAuction ? 'bg-gold' : 'bg-green'}`} />
         )}
         {phaseLabel}
       </span>

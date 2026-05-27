@@ -89,7 +89,8 @@
 
   --cyber-sunset: linear-gradient(90deg, var(--color-purple) 0%, var(--color-magenta) 45%, var(--color-orange) 75%, var(--color-gold) 100%);
   --subtle-glow: linear-gradient(90deg, var(--color-purple-15) 0%, var(--color-magenta-15) 45%, var(--color-orange-15) 75%, var(--color-gold-15) 100%);
-  
+  --sunset-glow: linear-gradient(90deg, var(--color-purple-35) 0%, var(--color-magenta-35) 45%, var(--color-orange-35) 75%, var(--color-gold-35) 100%);
+
   /* Purple (Proletariat/Socialist) Transparencies */
   --color-purple-15: color-mix(in srgb, var(--color-purple) 15%, transparent);
   --color-purple-35: color-mix(in srgb, var(--color-purple) 35%, transparent);
@@ -283,6 +284,14 @@ html, body {
 .h2-app { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text2); }
 .h3-app { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text2); }
 .h4-app { font-family: var(--font-mono); font-size: 9px;  font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text2); }
+
+/* GiniDisplay panel — unified label typography
+   Used for all field/section labels: Proletarian Target, Capitalist Target,
+   BPS unit, Players, Prize Pool, Auction Ends In, countdown units,
+   from Proletariat/Bourgeoisie Target, Equilibrium Maintained */
+.gini-label {
+  @apply font-mono text-[10px] font-semibold tracking-[0.14em] uppercase text-text2;
+}
 
 .text-display-hero    { @apply text-7xl}
 .text-display-season  { @apply text-3xl }
@@ -1140,6 +1149,17 @@ html, body {
   text-shadow: 0 0 8px color-mix(in srgb, var(--color-purple) 30%, transparent);
 }
 
+/* Chat-panel compact variant — replaces the terminal-pane-header */
+.terminal-view-selector-bar--chat {
+  padding: 1.25rem 1.25rem 0;
+}
+
+.terminal-view-selector-bar--chat .terminal-view-btn {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 0 1.25rem 0.5rem;
+}
+
 /* ==========================================================================
    THE ACTIVE SELECTED STATE (DYNAMIC HIGHLIGHT)
    ========================================================================= */
@@ -1593,7 +1613,7 @@ html, body {
 /* Shared Input-Attached Toggle Switch Rail */
 .input-embedded-rail {
   display: flex;
-  background-color: var(--color-card2);
+  background-color: var(--color-bg);
   border: 1px solid var(--color-border);
   border-bottom: none; /* Merges flatly into the top of your input field */
   border-top-left-radius: 0.25rem;
@@ -2018,18 +2038,25 @@ html, body {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  border-radius: 0.25rem;
+  border-radius: 9999px;
 }
 
 .phase-active {
-  background-color: rgba(var(--color-green-rgb), 0.1);
+  background-color: var(--color-green-15);
   color: var(--color-green);
-  border: 1px solid rgba(var(--color-green-rgb), 0.2);
+  border: 1px solid var(--color-green-35);
+}
+
+.phase-auction {
+  background-color: var(--color-gold-15);
+  color: var(--color-gold);
+  border: 1px solid var(--color-gold-35);
 }
 
 .phase-completed {
   background-color: var(--color-purple-15);
   color: var(--color-purple);
+  border: 1px solid var(--color-purple-35);
 }
 
 .phase-upcoming {
@@ -2039,7 +2066,9 @@ html, body {
 }
 
 .phase-on-hold {
+  background-color: var(--color-red-15);
   color: var(--color-red);
+  border: 1px solid var(--color-red-35);
 }
 
 /* Container for text groupings */
@@ -2246,4 +2275,77 @@ html, body {
   box-shadow: 0 0 6px var(--color-text);
   transform: translateX(-50%);
   z-index: 10;
+}
+
+
+/* ==========================================================================
+   LIVE METRIC RAIL ARCHITECTURE (UPDATED TO CSS COLOR-MIX TOKENS)
+   ========================================================================= */
+
+/* Main layout wrapper containing the structural row stacks */
+.metric-bar-chassis {
+  position: relative;
+  width: 100%;
+  
+  padding: 1.5rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Master track container housing the progress line and absolute tick layout markers */
+.live-rail-container {
+  position: relative;
+  width: 100%;
+  height: 0.625rem; /* 10px height */
+  /* Replaced rgba() hacks with true CSS variable tokens */
+  background: var(--cyber-sunset); /* Your signature variable gradient */
+  border: 1px solid var(--color-bg);
+  border-radius: 9999px;
+  margin: 1rem 0;
+}
+
+/* Base formatting for absolute positioning pins on the track line */
+.track-absolute-pin {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 20;
+}
+
+/* Mini visual dial indicator dots */
+.dial-knob {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  border: 2px solid var(--color-bg);
+  box-shadow: 0 0 0 1px var(--color-border);
+}
+
+.dial-knob.purple { background-color: var(--color-purple); box-shadow: 0 0 8px var(--color-purple); }
+.dial-knob.gold { background-color: var(--color-gold); box-shadow: 0 0 8px var(--color-gold); }
+.dial-knob.current { background-color: var(--color-text); box-shadow: 0 0 10px var(--color-text); z-index: 30; }
+
+/* ==========================================================================
+   CONNECT GATE — disconnected state for interactive panels
+   ========================================================================= */
+
+.connect-gate {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.connect-gate-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  text-align: center;
+  padding: 2rem 1.25rem;
 }

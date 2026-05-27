@@ -27,16 +27,18 @@ export function GiniBpsBar({
   winningSide,
   progressPercent,
 }: GiniBpsBarProps) {
+  
+  // Scale engine logic matching underlying system thresholds
   const useCompressedScale = isTrading || isPayout;
   const scaleMin = useCompressedScale ? Math.max(0, socTargetBps - 200) : 0;
   const scaleMax = useCompressedScale ? Math.min(10000, capTargetBps + 200) : 10000;
 
   const toScalePct = (bps: number) => {
     const clamped = Math.min(Math.max(bps, scaleMin), scaleMax);
-    return `${((clamped - scaleMin) / (scaleMax - scaleMin)) * 100}%`;
+    return ((clamped - scaleMin) / (scaleMax - scaleMin)) * 100;
   };
 
-  const scaleTicks: { value: number; major: boolean }[] = useCompressedScale
+  const scaleTicks = useCompressedScale
     ? (() => {
         const ticks: { value: number; major: boolean }[] = [];
         const first = Math.ceil(scaleMin / 500) * 500;
@@ -60,212 +62,158 @@ export function GiniBpsBar({
   const capBpsAway = Math.round(Math.abs(capTargetBps - gCurrent));
 
   return (
-    <div
-      className="w-full rounded-full"
-      id="gini-bar"
-      style={{
-        position: 'absolute',
-        top: '66.67%',
-        left: 0,
-        right: 0,
-        height: 6,
-        background:
-          'linear-gradient(90deg, var(--color-purple-70) 0%, var(--color-border2) 40%, var(--color-border2) 60%, var(--color-gold-70) 100%)',
-      }}
-    >
-      {/* Scale ticks + labels */}
-      {scaleTicks.map(({ value: v, major }) => {
-        const pct = ((v - scaleMin) / (scaleMax - scaleMin)) * 100;
-        return (
-          <React.Fragment key={v}>
-            <div
-              className="absolute"
-              style={{
-                left: `${pct}%`,
-                top: major ? -4 : -1,
-                width: 1,
-                height: major ? 14 : 8,
-                background: 'var(--color-text)',
-                opacity: major ? 0.3 : 0.2,
-              }}
-            />
-            {major && (
-              <span
-                className="absolute font-mono text-text2/50 text-tick-label"
-                style={{
-                  left: `${pct}%`,
-                  top: 18,
-                  transform: 'translateX(-50%)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {formatTick(v)}
-              </span>
-            )}
-          </React.Fragment>
-        );
-      })}
-
-      {/* Proletariat (purple) marker */}
-      <div className="gini-marker" style={{ left: toScalePct(socTargetBps) }}>
-        <div style={{ position: 'absolute', width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, var(--color-purple-15) 0%, transparent 70%)', top: 12, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
-        <div
-          className="absolute flex flex-col items-center gap-1"
-          style={{
-            bottom: '100%',
-            left: '50%',
-            transform: 'translate(-50%, -8px)',
-            textAlign: 'center',
-          }}
-        >
-          <div
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: '50%',
-              background: 'var(--color-card2)',
-              border: '2px solid var(--color-purple-35)',
-              display: 'grid',
-              placeItems: 'center',
-              color: 'var(--color-purple)',
+    <div className="dark metric-bar-chassis">
+      
+      {/* ROW LAYER 1: ANCHORED FACTION TARGET IDENTITIES */}
+      <div className="flex justify-between items-center border-b border-text2 pb-3">
+        
+        {/* Left Faction Anchor: Proletariat */}
+        <div className="flex items-center gap-3">
+          <div 
+            className="w-10 h-10 rounded-full bg-[var(--color-card2)] grid place-items-center text-[var(--color-purple)]"
+            style={{ 
+              border: '2px solid var(--color-text2)',
+              boxShadow: '0 0 12px var(--color-purple-15)'
             }}
           >
-            <Carlo className="w-9 h-auto" viewBox="0 0 600 800" />
+            <Carlo className="w-7 h-auto" viewBox="0 0 600 800" />
           </div>
-          <span className="font-mono text-[10px] uppercase tracking-wider text-text2">
-            Proletariat
-          </span>
-          <span
-            className="font-mono text-sm font-semibold tabular-nums"
-            style={{ color: 'var(--color-purple)' }}
-          >
-            {Math.round(socTargetBps).toLocaleString()}
-          </span>
-          <span className="font-mono text-[10px] text-text2 whitespace-nowrap">
-            {socBpsAway.toLocaleString()} BPS away
+          <div className="flex flex-col">
+            <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Proletarian Target</span>
+            <span className="font-mono text-sm font-black text-[var(--color-purple)]">
+              {Math.round(socTargetBps).toLocaleString()} <span className="text-[9px] text-text2 font-normal">BPS</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Center Header */}
+        <div className="hidden sm:flex flex-col items-center text-center gap-0.5">
+          <span className="font-mono text-[9px] uppercase tracking-widest text-text2">Coefficient of Inequality</span>
+          <span className="font-mono text-xs font-bold uppercase text-text">
+            {isAuction ? 'Auction' : isTrading ? 'Live Gini' : 'Gini Score'}
           </span>
         </div>
-        <div className="gini-knob soc" />
+
+        {/* Right Faction Anchor: Bourgeoisie */}
+        <div className="flex items-center gap-3 text-right flex-row-reverse">
+          <div 
+            className="w-10 h-10 rounded-full bg-[var(--color-card2)] grid place-items-center text-[var(--color-gold)]"
+            style={{ 
+              border: '2px solid var(--color-text2)',
+              boxShadow: '0 0 12px var(--color-gold-15)'
+            }}
+          >
+            <Regardo className="w-7 h-auto" viewBox="0 0 600 800" />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Capitalist Target</span>
+            <span className="font-mono text-sm font-black text-[var(--color-gold)]">
+              {Math.round(capTargetBps).toLocaleString()} <span className="text-[9px] text-text2 font-normal">BPS</span>
+            </span>
+          </div>
+        </div>
+
       </div>
 
-      {/* Initial marker */}
-      {gInitial > 0 && !isAuction && (
-        <div
-          className="gini-marker"
-          style={{ left: toScalePct(gInitial), top: -3 }}
-        >
-          <div
-            className="absolute flex flex-col items-center"
-            style={{
-              bottom: '100%',
-              left: '50%',
-              transform: 'translate(-50%, -4px)',
-              textAlign: 'center',
-              gap: 2,
-            }}
-          >
+      {/* ROW LAYER 2: THE DATA PROGRESSION TRACK */}
+      <div className="px-2">
+        <div className="live-rail-container">
+          
+          {/* BACKGROUND LAYOUT HARD TICKS */}
+          {scaleTicks.map(({ value: v, major }) => {
+            const pct = ((v - scaleMin) / (scaleMax - scaleMin)) * 100;
+            return (
+              <React.Fragment key={v}>
+                <div
+                  className="absolute bg-text2"
+                  style={{
+                    left: `${pct}%`, 
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '1px', 
+                    height: major ? '16px' : '8px',
+                    opacity: major ? 0.3 : 0.15 
+                  }} 
+                />
+                {major && (
+                  <span 
+                    className="absolute font-mono text-[9px] text-text2/60 tracking-tighter"
+                    style={{ left: `${pct}%`, top: '16px', transform: 'translateX(-50%)' }}
+                  >
+                    {formatTick(v)}
+                  </span>
+                )}
+              </React.Fragment>
+            );
+          })}
+
+          {/* SYSTEM PIN 1: PROLETARIAT WIN ZONE TARGET */}
+          <div className="track-absolute-pin" style={{ left: `${toScalePct(socTargetBps)}%` }}>
+            <div className="dial-knob purple" />
             <span
-              className="font-mono uppercase text-marker-micro"
-              style={{ letterSpacing: '0.15em', color: 'var(--color-text2)', opacity: 0.6 }}
+              className="absolute top-full mt-1 font-mono text-[9px] text-purple font-bold bg-bg px-1 rounded whitespace-nowrap"
+              style={{ border: '1px solid var(--color-text2)' }}
             >
-              Initial
-            </span>
-            <span
-              className="font-mono text-[10px]"
-              style={{ color: 'var(--color-text2)', opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}
-            >
-              {gInitial.toLocaleString()}
+              SOC
             </span>
           </div>
-          <div
-            style={{
-              width: 12,
-              height: 12,
-              borderRadius: '50%',
-              background: 'var(--color-text2)',
-              border: '1.5px solid var(--color-bg)',
-              boxShadow: '0 0 0 1px var(--color-text2)',
-              opacity: 0.9,
-            }}
-          />
-        </div>
-      )}
 
-      {/* Current (gold) marker */}
-      <div
-        className="gini-marker transition-all duration-700 ease-out"
-        style={{ left: toScalePct(gCurrent), top: -11 }}
-      >
-        <div style={{ position: 'absolute', width: 60, height: 60, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.1) 45%, transparent 70%)', top: 14, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
-        <div className="gini-knob gold" />
-        <div className="flex flex-col items-center" style={{ marginTop: 10, gap: 3 }}>
-          <span
-            className="font-mono text-[10px] uppercase tracking-wider"
-            style={{ color: 'var(--color-text2)' }}
-          >
-            Current
-          </span>
-          <span
-            className="font-mono text-sm font-semibold"
-            style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
-          >
-            {gCurrent.toLocaleString()}
-          </span>
-          {winningSide !== 'none' && (
-            <span className="font-mono text-[10px] text-center text-text2 whitespace-nowrap">
-              {progressPercent.toFixed(1)}% to{' '}
-              <span
-                className="font-bold"
-                style={{ color: winningSide === 'soc' ? 'var(--color-purple)' : 'var(--color-gold)' }}
-              >
-                {winningSide === 'soc' ? 'Proletariat' : 'Bourgeoisie'}
+          {/* SYSTEM PIN 2: INITIAL SYSTEM STATE BASELINE */}
+          {gInitial > 0 && !isAuction && (
+            <div className="track-absolute-pin" style={{ left: `${toScalePct(gInitial)}%` }}>
+              <div className="w-2 h-2 rounded-full bg-text2/40 border border-text2" />
+              <span className="absolute top-full mt-1 font-mono text-[8px] text-text2/60 uppercase whitespace-nowrap">Init</span>
+            </div>
+          )}
+
+          {/* SYSTEM PIN 3: BOURGEOISIE WIN ZONE TARGET */}
+          <div className="track-absolute-pin" style={{ left: `${toScalePct(capTargetBps)}%` }}>
+            <div className="dial-knob gold" />
+            <span
+              className="absolute top-full mt-1 font-mono text-[9px] text-gold font-bold bg-bg px-1 rounded whitespace-nowrap"
+              style={{ border: '1px solid var(--color-text2)' }}
+            >
+              CAP
+            </span>
+          </div>
+
+          {/* SYSTEM PIN 4: LIVE RECORDED POSITION INDICATOR */}
+          <div className="track-absolute-pin transition-all duration-700 ease-out" style={{ left: `${toScalePct(gCurrent)}%` }}>
+            <div className="dial-knob current" />
+            <div className="absolute bottom-full mb-1 z-40 bg-text text-bg font-mono font-black text-xs px-1.5 py-0.5 rounded shadow-lg whitespace-nowrap">
+              {gCurrent.toLocaleString()}
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* ROW LAYER 3: VELOCITY DELTAS & REAL-TIME LEAN */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-[11px] text-text2 border-t border-text2 pt-3 mt-1 items-center">
+        
+        <div className="text-left">
+          <span className="text-[var(--color-purple)] font-bold">{socBpsAway.toLocaleString()} BPS</span>from Proletarian Target
+        </div>
+
+        <div className="text-center sm:border-x sm:border-text2 px-2">
+          {winningSide !== 'none' ? (
+            <span>
+              Dominance Matrix Leans:{' '}
+              <span className={`font-bold ${winningSide === 'soc' ? 'text-[var(--color-purple)]' : 'text-[var(--color-gold)]'}`}>
+                {winningSide === 'soc' ? 'Proletariat' : 'Bourgeoisie'} ({progressPercent.toFixed(1)}%)
               </span>
             </span>
+          ) : (
+            <span className="text-text2/50 uppercase tracking-wider text-[10px]">Equilibrium Maintained</span>
           )}
         </div>
+
+        <div className="text-right">
+          <span className="text-[var(--color-gold)] font-bold">{capBpsAway.toLocaleString()} BPS</span> from Capitalist Target
+        </div>
+
       </div>
 
-      {/* Bourgeoisie (gold) marker */}
-      <div className="gini-marker" style={{ left: toScalePct(capTargetBps) }}>
-        <div style={{ position: 'absolute', width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, var(--color-gold-15) 0%, transparent 70%)', top: 12, left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />
-        <div
-          className="absolute flex flex-col items-center gap-1"
-          style={{
-            bottom: '100%',
-            left: '50%',
-            transform: 'translate(-50%, -8px)',
-            textAlign: 'center',
-          }}
-        >
-          <div
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: '50%',
-              background: 'var(--color-card2)',
-              border: '2px solid var(--color-gold-35)',
-              display: 'grid',
-              placeItems: 'center',
-              color: 'var(--color-gold)',
-            }}
-          >
-            <Regardo className="w-9 h-auto" viewBox="0 0 600 800" />
-          </div>
-          <span className="font-mono text-[10px] uppercase tracking-wider text-text2">
-            Bourgeoisie
-          </span>
-          <span
-            className="font-mono text-sm font-semibold tabular-nums"
-            style={{ color: 'var(--color-gold)' }}
-          >
-            {Math.round(capTargetBps).toLocaleString()}
-          </span>
-          <span className="font-mono text-[10px] text-text2 whitespace-nowrap">
-            {capBpsAway.toLocaleString()} BPS away
-          </span>
-        </div>
-        <div className="gini-knob cap" />
-      </div>
     </div>
   );
 }

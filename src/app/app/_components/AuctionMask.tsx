@@ -50,12 +50,14 @@ export function AuctionMask({
 
   if (!isConnected) {
     return (
-      <div className="flex flex-col items-center justify-center gap-5 text-center h-full">
-        <div>
-          <p className="section-label mb-2">Auction</p>
-          <p className="font-mono text-[13px] text-text2">Connect your wallet to participate.</p>
+      <div className="terminal-pane connect-gate">
+        <div className="terminal-pane-header">
+          <span className="terminal-pane-title">Auction</span>
         </div>
-        <WalletButton />
+        <div className="connect-gate-body">
+          <span className="terminal-pane-title" style={{ color: 'var(--color-text2)' }}>Connect your wallet to participate</span>
+          <WalletButton />
+        </div>
       </div>
     );
   }
@@ -189,7 +191,7 @@ function AuctionMaskInner({
     if (!hasStakedAnything) return 'Stake REGARDS to Unlock';
     if (isMaxedOut) return 'Stake More REGARDS';
     if (isOverLimit) return 'Limit Exceeded';
-    return 'Buy FIM →';
+    return 'Buy FIM';
   };
 
   const isButtonDisabled = isBusy || showModal || !buyAmount || !hasStakedAnything || isMaxedOut || isOverLimit;
@@ -201,21 +203,24 @@ function AuctionMaskInner({
     <div className="flex flex-col gap-5 h-full relative">
 
       {/* ── FIM Balance card ── */}
-      <div className="p-6 rounded-lg flex items-start bg-linear-to-b from-(--color-gold-15) to-card to-10% border border-border2">
-        <div>
-          <p className="section-label mb-1">FIM Balance</p>
-          <div
-            className="font-display font-extrabold leading-none text-display-trading"
-            style={{ color: 'var(--color-gold)', textShadow: '0 0 40px var(--color-gold-35)', fontVariantNumeric: 'tabular-nums' }}
-          >
-            {fimDisplayValue}
-            <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
-          </div>
+      <div className="terminal-pane">
+        <div className="terminal-pane-header">
+          <span className="terminal-pane-title">FIM Balance</span>
+        </div>
+        <div
+          className="font-display font-extrabold leading-none text-display-trading"
+          style={{ color: 'var(--color-gold)', textShadow: '0 0 40px var(--color-gold-35)', fontVariantNumeric: 'tabular-nums' }}
+        >
+          {fimDisplayValue}
+          <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
         </div>
       </div>
 
       {/* ── Auction panel card ── */}
-      <div className="rounded-lg p-6 flex flex-col gap-4 flex-1 min-h-0 bg-card border border-border">
+      <div className="terminal-pane flex flex-col gap-4 flex-1 min-h-0">
+        <div className="terminal-pane-header">
+          <span className="terminal-pane-title">Auction</span>
+        </div>
 
         {/* ── Phase guards ── */}
         {isPhaseLoading ? (
@@ -260,7 +265,7 @@ function AuctionMaskInner({
         )}
 
         {/* ── CTA ── */}
-        <div className="mt-auto pt-4 flex flex-col gap-3" style={{ borderTop: '1px solid var(--color-border)' }}>
+        <div className="mt-auto pt-4 flex flex-col gap-3 border-t border-border">
           {isAuctionPhase && (
             <button
               onClick={handleStartFlow}

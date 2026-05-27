@@ -48,7 +48,7 @@ export function SeasonHeader({
             <b className="font-mono text-[13px] font-semibold normal-case tracking-normal text-text mr-1">
               {playerCount.toLocaleString()}
             </b>
-            Participants
+            Players
           </div>
         </div>
       </div>
@@ -82,7 +82,7 @@ export function SeasonHeader({
           <b className="font-mono text-[16px] font-semibold normal-case tracking-normal text-text mr-1">
             {playerCount.toLocaleString()}
           </b>
-          participants
+          Players
         </div>
       </div>
     </div>

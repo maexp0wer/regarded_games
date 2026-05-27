@@ -37,7 +37,10 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [discovering, setDiscovering] = useState(true);
+  const [discourseReady, setDiscourseReady] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const messageListRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isAtBottom = useRef(true);
   const tabCache = useRef<Partial<Record<'faction' | 'general', { channelId: number | null; messages: DiscourseMessage[] }>>>({});
@@ -54,6 +57,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
       tabCache.current = {};
       setChannelId(null);
       setMessages([]);
+      setDiscourseReady(false);
     }
 
     if (!address) {
@@ -66,17 +70,29 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
       setChannelId(cached.channelId);
       setMessages(cached.messages);
       setDiscovering(false);
+      // discourseReady stays true once set for this address
       return;
     }
 
     async function discover() {
       setDiscovering(true);
       try {
-        const chanRes = await fetch('/api/discourse/discover-channel', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ seasonSlug, isCapitalist, isGeneral: tab === 'general' }),
-        });
+        const seasonId = Number(seasonSlug.replace(/[^0-9]/g, '')) - 1;
+
+        // Register the user in Discourse and discover the channel concurrently
+        const [chanRes] = await Promise.all([
+          fetch('/api/discourse/discover-channel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ seasonSlug, isCapitalist, isGeneral: tab === 'general' }),
+          }),
+          fetch('/api/discourse/create-player', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ walletAddress: address, seasonId }),
+          }),
+        ]);
+
         const chanData = await chanRes.json();
         const newChannelId: number | null = chanData.channelId ?? null;
 
@@ -93,6 +109,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
         tabCache.current[tab] = { channelId: newChannelId, messages: newMessages };
         setChannelId(newChannelId);
         setMessages(newMessages);
+        setDiscourseReady(true);
       } catch (e) {
         console.error('Channel discovery failed', e);
         setChannelId(null);
@@ -102,7 +119,14 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
       }
     }
     discover();
-  }, [seasonSlug, isCapitalist, tab, address]);
+  }, [seasonSlug, isCapitalist, tab, address, refreshKey]);
+
+  function refresh() {
+    tabCache.current = {};
+    setChannelId(null);
+    setMessages([]);
+    setRefreshKey(k => k + 1);
+  }
 
   // Fetch messages (used by the polling interval and after sending)
   const fetchMessages = useCallback(async () => {
@@ -168,6 +192,8 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
+    const panelHeight = panelRef.current?.clientHeight ?? 0;
+    el.style.overflowY = panelHeight > 0 && el.scrollHeight > panelHeight / 3 ? 'auto' : 'hidden';
   }
 
   function onInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -198,10 +224,17 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
   }
 
   return (
-    <div className="comms-panel">
-      {/* Tab selector */}
+    <div className="comms-panel" ref={panelRef}>
+      {/* Header — only shown in auction mode; trading phase uses the selector bar instead */}
+      {auctionMode && (
+        <div className="terminal-pane-header mx-5 pt-5">
+          <span className="terminal-pane-title">Chat</span>
+        </div>
+      )}
+
+      {/* Tab selector — doubles as the header in trading phase */}
       {!auctionMode && (
-        <div className="terminal-view-selector-bar">
+        <div className="terminal-view-selector-bar terminal-view-selector-bar--chat">
           <button
             onClick={() => switchTab('faction')}
             className={`terminal-view-btn${tab === 'faction' ? ' active' : ''}`}
@@ -214,15 +247,6 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
           >
             All Players
           </button>
-        </div>
-      )}
-
-      {/* Auction mode top banner */}
-      {auctionMode && (
-        <div className="flex items-center justify-between p-3 border-b border-[var(--color-border)] bg-card">
-          <span className="font-mono text-xs font-bold uppercase tracking-wider text-text2">
-            Season Chat
-          </span>
         </div>
       )}
 
@@ -244,14 +268,23 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
         onScroll={onMessageScroll}
         className={`comms-stream custom-scrollbar ${!auctionMode && showBoard ? 'hidden lg:flex' : ''}`}
       >
-        {discovering && messages.length === 0 ? (
-          <p className="section-label animate-pulse text-center mt-8">Connecting…</p>
+        {!address ? (
+          <div className="flex flex-col items-center gap-3 mt-8">
+            <span className="terminal-pane-title text-center" style={{ color: 'var(--color-text2)' }}>Connect your wallet to participate</span>
+          </div>
+        ) : discovering && messages.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 mt-8">
+            <span className="terminal-pane-title animate-pulse">Connecting…</span>
+          </div>
         ) : !channelId && !discovering ? (
-          <p className="font-mono text-[9px] text-center mt-8" style={{ color: 'var(--color-red)' }}>
-            Comms Offline · Channel not found
-          </p>
+          <div className="flex flex-col items-center gap-3 mt-8">
+            <span className="terminal-pane-title" style={{ color: 'var(--color-red)' }}>Offline</span>
+            <button className="btn-game-secondary" onClick={refresh}>Refresh</button>
+          </div>
         ) : messages.length === 0 ? (
-          <p className="section-label text-center mt-8">No transmissions yet. Be the first.</p>
+          <div className="flex flex-col items-center gap-3 mt-8">
+            <span className="terminal-pane-title">No Chat messages yet</span>
+          </div>
         ) : (
           messages.map((msg) => {
             const isOwn = address && msg.user.username.toLowerCase() === address.toLowerCase();
@@ -279,26 +312,26 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
       )}
 
       {/* Input deck */}
-      {channelId && (
-        <div className={`comms-input-deck ${!auctionMode && showBoard ? 'hidden lg:block' : ''}`}>
-          <div className="relative flex items-center">
+      {channelId && address && (
+        <div className={`comms-input-deck p-3 ${!auctionMode && showBoard ? 'hidden lg:block' : ''}`}>
+          <div className="flex items-end gap-2">
             <textarea
               ref={textareaRef}
               rows={1}
-              className="terminal-input pr-16 resize-none overflow-y-auto custom-scrollbar leading-relaxed"
+              className="terminal-input flex-1 min-w-0 resize-none overflow-y-hidden custom-scrollbar leading-relaxed"
               style={{ maxHeight: '8rem' }}
-              placeholder={address ? 'Transmit message…' : 'Connect wallet to chat'}
+              placeholder={!discourseReady ? 'Connecting…' : 'Chat…'}
               value={input}
               onChange={onInputChange}
               onKeyDown={onKeyDown}
-              disabled={!address || sending}
+              disabled={!address || !discourseReady || sending}
             />
             <button
-              className="absolute right-2 px-3 py-1 font-mono text-[10px] font-bold text-text bg-card hover:bg-[var(--color-card2)] border border-[var(--color-border)] rounded transition-colors uppercase disabled:opacity-30"
+              className="shrink-0 inline-flex items-center justify-center py-[0.35rem] px-3 text-xs leading-relaxed font-bold text-text bg-card2 border border-border2 rounded-lg shadow-[0_2px_4px_rgba(0,0,0,0.05)] transition-all duration-200 ease-in-out hover:bg-card3 hover:border-purple hover:shadow-[0_0_12px_var(--color-purple-15)] disabled:opacity-30"
               onClick={sendMessageAndReset}
-              disabled={!input.trim() || !address || sending}
+              disabled={!input.trim() || !address || !discourseReady || sending}
             >
-              {sending ? '…' : 'Send'}
+              {sending ? '…' : '↵'}
             </button>
           </div>
         </div>

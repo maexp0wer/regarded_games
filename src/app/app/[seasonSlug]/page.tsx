@@ -13,7 +13,6 @@ import { Order } from '@/hooks/useOrderBook';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
 
 // Components
-import { SeasonHeader } from '../_components/SeasonHeader';
 import { GiniDisplay } from '../_components/GiniDisplay';
 import { ProtocolCard } from '../_components/ProtocolCard';
 import { PolicyCard } from '../_components/PolicyCard';
@@ -26,8 +25,6 @@ import { PayoutMask } from '../_components/PayoutMask';
 import { SeasonStats } from '../_components/SeasonStats';
 import { FactionDiscussionBoard } from '../_components/FactionDiscussionBoard';
 import { FactionChat } from '../_components/FactionChat';
-import { CountdownCard } from '../_components/CountdownCard';
-import { PrizePoolCard } from '../_components/PrizePoolCard';
 import { TradingPanelMenu } from '../_components/TradingPanelMenu';
 import { useSeasonChart } from '@/hooks/useSeasonChart';
 
@@ -108,6 +105,7 @@ export default function SeasonDetailPage() {
 
   const chart = useSeasonChart(seasonAddress);
 
+
   // JIT faction sync
   useEffect(() => {
     if (!userAddress || !factionData) return;
@@ -137,43 +135,6 @@ export default function SeasonDetailPage() {
     );
   }
 
-  // ─── Shared hero props ────────────────────────────────────────────────────
-  const heroProps = {
-    tradingStart,
-    seasonEnd,
-    isAuction,
-    isBootstrap: isAuctionOrBootstrap,
-    isPayout,
-    isVictoryPending: effectiveVictoryPending,
-    isTimeLimitExpired: isTradingTimeExpired,
-    winningSide,
-    progressPercent,
-  };
-
-  // ─── Shared sidebar for GiniDisplay ──────────────────────────────────────
-  const giniSidebar = (
-    <>
-      <SeasonHeader
-        seasonAddress={seasonAddress}
-        seasonName={formattedName}
-        playerCount={giniData?.playerCount || 0}
-        currentPhase={currentPhase}
-        isBootstrap={isAuctionOrBootstrap}
-        isPayout={isPayout}
-        variant="sidebar"
-      />
-      <div className="h-px bg-bg" />
-      <PrizePoolCard
-        seasonAddress={seasonAddress}
-        prizePool={giniData?.prizePool || 0}
-        currentPhase={currentPhase}
-        variant="sidebar"
-      />
-      <div className="h-px bg-bg" />
-      <CountdownCard {...heroProps} variant="sidebar" />
-    </>
-  );
-
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <main className="pt-4 pb-16 animate-in fade-in duration-700">
@@ -184,24 +145,22 @@ export default function SeasonDetailPage() {
           ═══════════════════════════════════════════ */}
       {isAuctionOrBootstrap && (
         <div className="flex flex-col gap-5">
-          <GiniDisplay seasonAddress={seasonAddress} sidebar={giniSidebar} />
+          <GiniDisplay seasonAddress={seasonAddress} seasonName={formattedName} />
+
+          {/* Row 1: Chat | Activity Feed | Auction Mask */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <FactionChat seasonSlug={seasonSlug} auctionMode />
+            <AuctionActivityFeed seasonAddress={seasonAddress} />
+            <AuctionMask
+              seasonAddress={seasonAddress}
+              auctionAddress={auctionAddress}
+              fimAddress={fimAddress}
+              currentPhase={currentPhase}
+            />
+          </div>
+
+          {/* Row 2: Protocol / Policy / Schedule / Lending */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-          {/* Col 1: AuctionMask */}
-          <AuctionMask
-            seasonAddress={seasonAddress}
-            auctionAddress={auctionAddress}
-            fimAddress={fimAddress}
-            currentPhase={currentPhase}
-          />
-
-          {/* Col 2: Recent Activity */}
-          <AuctionActivityFeed seasonAddress={seasonAddress} />
-
-          {/* Col 3: Chat */}
-          <FactionChat seasonSlug={seasonSlug} auctionMode />
-
-          {/* Col 4: Protocol / Policy / Schedule / Lending stacked */}
-          <div className="flex flex-col gap-5">
             <ProtocolCard
               seasonAddress={seasonAddress}
               fimAddress={fimAddress}
@@ -213,7 +172,6 @@ export default function SeasonDetailPage() {
             <ScheduleCard tradingStart={tradingStart} seasonEnd={seasonEnd} config={config} />
             <LendingDistributionCard seasonAddress={seasonAddress} config={config} />
           </div>
-          </div>
         </div>
       )}
 
@@ -223,7 +181,7 @@ export default function SeasonDetailPage() {
   {isTrading && (
     <>
       {/* Row 1: Gini with integrated sidebar */}
-      <GiniDisplay seasonAddress={seasonAddress} sidebar={giniSidebar} />
+      <GiniDisplay seasonAddress={seasonAddress} seasonName={formattedName} />
 
       {/* Separator + optional discussion board — large screens only */}
       {factionData && showBoard ? (
@@ -328,7 +286,7 @@ export default function SeasonDetailPage() {
       {isPayout && (
         <div className="flex flex-col gap-5">
           {/* Row 1: Gini with integrated sidebar */}
-          <GiniDisplay seasonAddress={seasonAddress} sidebar={giniSidebar} />
+          <GiniDisplay seasonAddress={seasonAddress} seasonName={formattedName} />
 
           {/* Row 2: PayoutMask first in DOM (top on sm/xs), right on md+ */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_28rem] gap-5">

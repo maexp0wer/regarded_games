@@ -386,9 +386,14 @@ export function SwapMask() {
   // ── Disconnected state ────────────────────────────────────────────
   if (!isConnected) {
     return (
-      <div className="terminal-pane flex flex-col items-center justify-center gap-4 w-full max-w-lg py-12 border-border2">
-        <p className="font-mono text-sm" style={{ color: 'var(--color-text2)' }}>Connect your wallet to swap</p>
-        <WalletButton />
+      <div className="terminal-pane connect-gate w-full">
+        <div className="terminal-pane-header">
+          <span className="terminal-pane-title">Swap</span>
+        </div>
+        <div className="connect-gate-body">
+          <span className="terminal-pane-title" style={{ color: 'var(--color-text2)' }}>Connect your wallet to participate</span>
+          <WalletButton />
+        </div>
       </div>
     );
   }

@@ -230,12 +230,14 @@ export function TradingMask({
 
   if (!isConnected) {
     return (
-      <div className="card-app flex flex-col items-center justify-center gap-5 text-center h-full">
-        <div>
-          <p className="section-label mb-2">Trading</p>
-          <p className="font-mono text-[13px] text-text2">Connect your wallet to participate.</p>
+      <div className="terminal-pane connect-gate">
+        <div className="terminal-pane-header">
+          <span className="terminal-pane-title">Trading</span>
         </div>
-        <WalletButton />
+        <div className="connect-gate-body">
+          <span className="terminal-pane-title" style={{ color: 'var(--color-text2)' }}>Connect your wallet to participate</span>
+          <WalletButton />
+        </div>
       </div>
     );
   }
@@ -243,8 +245,7 @@ export function TradingMask({
   if (isOnHold) {
     return (
       <div className="flex flex-col gap-4 h-full">
-        <div className="card-app border border-border2">
-          <p className="section-label mb-1">FIM Balance</p>
+        <div className="terminal-pane">
           <div
             className="font-display font-extrabold leading-none text-display-trading tabular-nums"
             style={{ color: 'var(--color-gold)', textShadow: '0 0 40px var(--color-gold-35)' }}
@@ -264,9 +265,8 @@ export function TradingMask({
     <div className="flex flex-col gap-5 h-full relative">
 
       {/* ── Wallet balances card ── */}
-      <div className="p-6 rounded-lg flex items-start justify-between bg-linear-to-b from-(--color-gold-15) to-card to-10% border border-border2">
-        <div>
-          <p className="section-label mb-1">FIM Balance</p>
+      <div className="terminal-pane">
+        <div className="flex items-start justify-between">
           <div
             className="font-display font-extrabold leading-none text-display-trading mr-4"
             style={{ color: 'var(--color-gold)', textShadow: '0 0 40px var(--color-gold-35)', fontVariantNumeric: 'tabular-nums' }}
@@ -274,25 +274,17 @@ export function TradingMask({
             {Number(formatUnits(fimBalance || 0n, 18)).toLocaleString()}
             <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
           </div>
+          {userStats && (
+            <div className="flex flex-col items-end min-w-0">
+              <div className="xl:hidden"><PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="md" /></div>
+              <div className="hidden xl:block"><PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="lg" /></div>
+            </div>
+          )}
         </div>
-        {userStats ? (
-          <div className="flex flex-col items-start min-w-0">
-            <span className="section-label mb-1">
-              RANK:&nbsp;
-              <span style={{ color: userStats.isCapitalist ? 'var(--color-gold)' : 'var(--color-purple)' }}>
-                {userStats.isCapitalist ? 'CAPITALIST' : 'SOCIALIST'}
-              </span>
-            </span>
-            <div className="xl:hidden"><PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="md" /></div>
-            <div className="hidden xl:block"><PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="lg" /></div>
-          </div>
-        ) : (
-          <span className="section-label">{userStatsFetched ? 'No Rank Yet' : 'Loading…'}</span>
-        )}
       </div>
 
       {/* ── Trading panel card ── */}
-      <div className="rounded-lg p-6 flex flex-col gap-4 flex-1 min-h-0 bg-card border border-border">
+      <div className="terminal-pane flex flex-col gap-4 flex-1 min-h-0">
 
         {/* ── Buy / Sell toggle ── */}
         <div className="flex rounded-lg overflow-hidden border border-border bg-card2 p-1 gap-1">
@@ -340,20 +332,20 @@ export function TradingMask({
               Maker
             </button>
           </div>
-          <div className="bg-card2 border border-border rounded-b px-3 pt-2 pb-3 flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="mask-label">{isBuy ? 'Buy FIM' : 'Sell FIM'}</span>
-              <span className="mask-label">WALLET&nbsp;<span className="text-text font-semibold">{walletBalanceDisplay}</span></span>
+          <div className="bg-bg border border-border rounded-b px-3 pt-2 pb-3 flex flex-col gap-2">
+            <span className="mask-label text-right">WALLET&nbsp;<span className="text-text font-semibold">{walletBalanceDisplay}</span></span>
+            <div className="flex items-baseline gap-2">
+              <input
+                type="number"
+                min="0"
+                max={maxForSlider > 0n ? formatUnits(maxForSlider, maxDecimals) : undefined}
+                value={targetAmount}
+                onChange={(e) => handleTargetAmountChange(e.target.value)}
+                className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums"
+                placeholder={isMaker ? '0.00' : 'MAX'}
+              />
+              <span className="text-input font-mono font-bold text-text2 shrink-0">{isMaker && isBuy ? 'USDC' : 'FIM'}</span>
             </div>
-            <input
-              type="number"
-              min="0"
-              max={maxForSlider > 0n ? formatUnits(maxForSlider, maxDecimals) : undefined}
-              value={targetAmount}
-              onChange={(e) => handleTargetAmountChange(e.target.value)}
-              className="w-full bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums"
-              placeholder={isMaker ? '0.00' : 'MAX'}
-            />
             <PercentSlider value={sliderPct} onChange={handleSliderChange} disabled={isBusy} />
           </div>
         </div>
@@ -375,16 +367,19 @@ export function TradingMask({
                 Total
               </button>
             </div>
-            <div className="bg-card2 border border-border rounded-b px-3 pt-2 pb-3 flex flex-col gap-1">
-              <span className="mask-label">{isPricePerFim ? 'Price per FIM (USDC)' : 'Total Order (USDC)'}</span>
-              <input
-                type="number"
-                min="0"
-                value={price}
-                onChange={(e) => handlePriceChange(e.target.value)}
-                className="w-full bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums"
-                placeholder="0.00"
-              />
+            <div className="bg-bg border border-border rounded-b px-3 pt-2 pb-3 flex flex-col gap-1">
+              <span className="mask-label">{isPricePerFim ? 'Price per FIM' : 'Total Order'}</span>
+              <div className="flex items-baseline gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  value={price}
+                  onChange={(e) => handlePriceChange(e.target.value)}
+                  className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums"
+                  placeholder="0.00"
+                />
+                <span className="text-input font-mono font-bold text-text2 shrink-0">USDC</span>
+              </div>
             </div>
           </div>
         )}
@@ -426,7 +421,7 @@ export function TradingMask({
         )}
 
         {/* ── Summary + CTA ── */}
-        <div className="mt-auto pt-4 flex flex-col gap-4" style={{ borderTop: '1px solid var(--color-border)' }}>
+        <div className="mt-auto pt-4 flex flex-col gap-4 border-t border-border">
           <div className="flex justify-between items-end">
             <div>
               <p className="section-label mb-1">{isMaker ? 'Total' : 'Total'}</p>

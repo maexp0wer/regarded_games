@@ -29,23 +29,13 @@ export const WalletButton = () => {
               style: { opacity: 0, pointerEvents: 'none', userSelect: 'none' },
             })}
           >
-            {/* Invisible Discourse SSO auto-login */}
-            {connected && process.env.NEXT_PUBLIC_DISCOURSE_URL && (
-              <iframe
-                src={`${process.env.NEXT_PUBLIC_DISCOURSE_URL}/session/sso`}
-                title="Discourse Background Auth"
-                style={{ width: 0, height: 0, border: 'none', position: 'absolute', visibility: 'hidden' }}
-                aria-hidden="true"
-              />
-            )}
-
             {(() => {
               if (!connected) {
                 return (
                   <button
                     onClick={openConnectModal}
                     type="button"
-                    className="btn-primary w-auto! py-2! px-5! text-[13px]!"
+                    className="btn-game-primary py-2! px-4! text-sm!"
                   >
                     Connect
                   </button>

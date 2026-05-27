@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { ECElementEvent } from 'echarts';
 import { CandleData } from '@/utils/chartData';
@@ -44,6 +44,20 @@ export function CandlestickChart({
   socTargetBps,
 }: CandlestickChartProps) {
   const { darkMode } = useTheme();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(600);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setContainerWidth(entry.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const barWidth = 20;
+  const nBars = Math.max(5, Math.floor((containerWidth - 48 - 75) / 26));
+
   const option = useMemo(() => {
     if (typeof window === 'undefined') return {};
 
@@ -58,9 +72,16 @@ export function CandlestickChart({
     const capColor  = v('--color-gold')      || '#D4AF37';
     const socColor  = v('--color-purple')    || '#9D4EDD';
 
+    const tfMs = TIMEFRAME_MS[timeframe];
+    const nowMs = Date.now();
+    const latestMs = candles.length > 0 ? candles[candles.length - 1].time * 1000 : nowMs;
+    const xMax = Math.ceil(latestMs / tfMs) * tfMs + tfMs;
+    const xMin = xMax - nBars * tfMs;
+
     const candleData = candles.map(c => [c.time * 1000, c.open, c.close, c.low, c.high]);
     const capVolData = candles.map(c => [c.time * 1000, c.capBuyerVolume]);
-    const socVolData = candles.map(c => [c.time * 1000, c.socBuyerVolume]);
+    const socVolData = candles.map(c => [c.time * 1000, -c.socBuyerVolume]);
+    const maxVol = candles.reduce((m, c) => Math.max(m, c.capBuyerVolume, c.socBuyerVolume), 1);
     const giniData   = candles.filter(c => c.giniBps > 0).map(c => [c.time * 1000, c.giniBps]);
 
     return {
@@ -69,14 +90,16 @@ export function CandlestickChart({
       textStyle: { fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: textColor },
 
       grid: [
-        { left: 4, right: 75, top: 20, height: '52%' },
-        { left: 4, right: 75, top: '62%', bottom: 30 },
+        { left: 48, right: 75, top: 20, height: '52%' },
+        { left: 48, right: 75, top: '62%', bottom: 30 },
       ],
 
       xAxis: [
         {
           gridIndex: 0,
           type: 'time',
+          min: xMin,
+          max: xMax,
           axisLine: { show: true, lineStyle: { color: textColor, width: 1, opacity: 0.5 } },
           axisLabel: { show: false },
           splitLine: { lineStyle: { color: gridColor } },
@@ -84,6 +107,8 @@ export function CandlestickChart({
         {
           gridIndex: 1,
           type: 'time',
+          min: xMin,
+          max: xMax,
           axisLine: { lineStyle: { color: gridColor } },
           axisLabel: { color: textColor, fontSize: 10 },
           splitLine: { lineStyle: { color: gridColor } },
@@ -101,10 +126,15 @@ export function CandlestickChart({
         },
         {
           gridIndex: 1,
-          scale: true,
           position: 'right',
+          min: -maxVol,
+          max: maxVol,
           axisLine: { show: true, lineStyle: { color: gridColor } },
-          axisLabel: { color: textColor, fontSize: 10 },
+          axisLabel: {
+            color: textColor,
+            fontSize: 10,
+            formatter: (v: number) => Math.abs(v).toLocaleString(),
+          },
           splitLine: { show: false },
         },
         {
@@ -141,19 +171,40 @@ export function CandlestickChart({
           const ts = Array.isArray(first.value) ? first.value[0] : first.axisValue;
           const d = new Date(typeof ts === 'string' ? parseInt(ts) : ts);
           const dateStr = d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-          const lines: string[] = [`<span style="color:${textColor};font-weight:600">${dateStr}</span>`];
+
+          let ohlc = { o: '-', c: '-', l: '-', h: '-' };
+          let capVol = '-', socVol = '-', gini = '-';
+
           for (const p of arr) {
             if (p.value == null) continue;
             if (p.seriesType === 'candlestick') {
               const [, o, c, lo, hi] = p.value as number[];
-              lines.push(`${p.marker} O:${o}&nbsp;&nbsp;C:${c}&nbsp;&nbsp;L:${lo}&nbsp;&nbsp;H:${hi}`);
+              ohlc = { o: String(o), c: String(c), l: String(lo), h: String(hi) };
             } else if (p.seriesType === 'bar' && p.value[1] != null) {
-              lines.push(`${p.marker} ${p.seriesName}: ${Number(p.value[1]).toLocaleString()}`);
+              const val = Math.abs(Number(p.value[1])).toLocaleString(undefined, { maximumFractionDigits: 2 });
+              if (p.seriesName === 'Cap Vol') capVol = val;
+              else socVol = val;
             } else if (p.seriesType === 'line' && p.value[1] != null) {
-              lines.push(`${p.marker} Gini: ${p.value[1]} bps`);
+              gini = `${Number(p.value[1]).toLocaleString(undefined, { maximumFractionDigits: 2 })} bps`;
             }
           }
-          return `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8">${lines.join('<br/>')}</div>`;
+
+          const dot = (color: string) =>
+            `<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${color};margin-right:5px;vertical-align:middle"></span>`;
+          const row = (label: string, val: string, swatch = '') =>
+            `<tr><td style="color:${textColor};opacity:0.6;padding-right:8px">${swatch}${label}</td><td style="color:${textColor}">${val}</td></tr>`;
+
+          const fmt2 = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+          const capGoal = capTargetBps > 0 ? row('Cap goal', `${fmt2(capTargetBps)} bps`, dot(hexToRgba(capColor, 0.35))) : '';
+          const socGoal = socTargetBps > 0 ? row('Soc goal', `${fmt2(socTargetBps)} bps`, dot(hexToRgba(socColor, 0.35))) : '';
+
+          const left = `<table>${row('O', ohlc.o)}${row('C', ohlc.c)}${row('H', ohlc.h)}${row('L', ohlc.l)}</table>`;
+          const right = `<table>${row('Gini', gini)}${row('Cap vol', capVol, dot(hexToRgba(capColor, 0.75)))}${row('Soc vol', socVol, dot(hexToRgba(socColor, 0.75)))}${capGoal}${socGoal}</table>`;
+
+          return `<div style="font-family:'JetBrains Mono',monospace;font-size:11px">
+            <div style="color:${textColor};font-weight:600;margin-bottom:4px">${dateStr}</div>
+            <div style="display:flex;gap:16px">${left}${right}</div>
+          </div>`;
         },
       },
 
@@ -164,6 +215,7 @@ export function CandlestickChart({
           xAxisIndex: 0,
           yAxisIndex: 0,
           data: candleData,
+          barWidth,
           itemStyle: {
             color: upColor,
             color0: downColor,
@@ -184,8 +236,8 @@ export function CandlestickChart({
           xAxisIndex: 1,
           yAxisIndex: 1,
           data: capVolData,
-          barMaxWidth: 16,
-          stack: 'vol',
+          barWidth,
+          barGap: '-100%',
           itemStyle: { color: hexToRgba(capColor, 0.75) },
         },
         {
@@ -194,8 +246,8 @@ export function CandlestickChart({
           xAxisIndex: 1,
           yAxisIndex: 1,
           data: socVolData,
-          barMaxWidth: 16,
-          stack: 'vol',
+          barWidth,
+          barGap: '-100%',
           itemStyle: { color: hexToRgba(socColor, 0.75) },
         },
         {
@@ -215,13 +267,13 @@ export function CandlestickChart({
               data: [
                 {
                   yAxis: capTargetBps,
-                  lineStyle: { color: capColor, type: 'dashed', width: 1 },
-                  label: { formatter: 'Bourgeois Goal', color: capColor, fontSize: 10 },
+                  lineStyle: { color: hexToRgba(capColor, 0.35), type: 'solid', width: 1 },
+                  label: { show: false },
                 },
                 {
                   yAxis: socTargetBps,
-                  lineStyle: { color: socColor, type: 'dashed', width: 1 },
-                  label: { formatter: 'Proletariat Goal', color: socColor, fontSize: 10 },
+                  lineStyle: { color: hexToRgba(socColor, 0.35), type: 'solid', width: 1 },
+                  label: { show: false },
                 },
               ],
             },
@@ -229,7 +281,7 @@ export function CandlestickChart({
         },
       ],
     };
-  }, [candles, selectedRange, capTargetBps, socTargetBps, darkMode]);
+  }, [candles, timeframe, selectedRange, capTargetBps, socTargetBps, darkMode, nBars]);
 
   const onEvents = useMemo(() => ({
     click: (params: ECElementEvent) => {
@@ -248,25 +300,7 @@ export function CandlestickChart({
   return (
     <div className="rounded-lg py-6 flex flex-col overflow-hidden h-full bg-card">
       <div className="flex items-center justify-between px-6">
-        <div className="flex items-center gap-3">
-          <span className="h4-app">Price Chart</span>
-          {candles.length > 0 && (
-            <div className="flex items-center gap-2 text-xs font-mono text-text2">
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-2 h-2 rounded-sm bg-gold" />
-                Cap buying
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-2 h-2 rounded-sm bg-purple" />
-                Soc buying
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-2 h-2 rounded-sm" style={{ background: 'var(--color-gold)' }} />
-                Gini BPS
-              </span>
-            </div>
-          )}
-        </div>
+        <div />
         <div className="flex items-center gap-2">
           {selectedRange && (
             <button
@@ -279,20 +313,14 @@ export function CandlestickChart({
           <TimeframeSelector value={timeframe} onChange={onTimeframeChange} />
         </div>
       </div>
-      <div className="relative w-full h-110">
-        {candles.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center text-sm text-text2 animate-pulse">
-            Reading Ledger…
-          </div>
-        ) : (
-          <ReactECharts
-            option={option}
-            onEvents={onEvents}
-            style={{ height: '100%', width: '100%' }}
-            notMerge={false}
-            lazyUpdate
-          />
-        )}
+      <div ref={containerRef} className="relative w-full h-110">
+        <ReactECharts
+          option={option}
+          onEvents={onEvents}
+          style={{ height: '100%', width: '100%' }}
+          notMerge={false}
+          lazyUpdate
+        />
       </div>
     </div>
   );

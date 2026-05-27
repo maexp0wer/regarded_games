@@ -303,14 +303,14 @@ export function IcoMask() {
   // ── Disconnected ───────────────────────────────────────────────────────────
   if (!isConnected) {
     return (
-      <div className="terminal-pane flex flex-col items-center justify-center gap-4 py-12">
-        <div className="text-center">
-          <span className="terminal-pane-title block mb-2">Capital Auction</span>
-          <p className="font-mono text-sm" style={{ color: 'var(--color-text2)' }}>
-            Connect your wallet to participate
-          </p>
+      <div className="terminal-pane connect-gate">
+        <div className="terminal-pane-header">
+          <span className="terminal-pane-title">Capital Auction</span>
         </div>
-        <WalletButton />
+        <div className="connect-gate-body">
+          <span className="terminal-pane-title" style={{ color: 'var(--color-text2)' }}>Connect your wallet to participate</span>
+          <WalletButton />
+        </div>
       </div>
     );
   }

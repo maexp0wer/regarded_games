@@ -111,12 +111,12 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress }: OrdersPr
     <div className="flex flex-col">
 
       {/* Button bar */}
-      <div className="terminal-view-selector-bar">
+      <div className="terminal-view-selector-bar terminal-view-selector-bar--chat">
         {TABS.map(({ key, label }) => (
           <button
             key={key}
             onClick={() => toggle(key)}
-            className={`terminal-view-btn text-[0.7rem]${activeTab === key ? ' active' : ''}`}
+            className={`terminal-view-btn${activeTab === key ? ' active' : ''}`}
           >
             {label}
           </button>

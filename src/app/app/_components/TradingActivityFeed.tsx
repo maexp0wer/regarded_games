@@ -20,7 +20,7 @@ export function TradingActivityFeed({ seasonAddress, className }: { seasonAddres
             style={{ gridTemplateColumns: '1fr 1fr 1fr' }}
           >
             <div>Time</div>
-            <div>Participants</div>
+            <div>Players</div>
             <div className="text-right">Amount</div>
           </div>
 

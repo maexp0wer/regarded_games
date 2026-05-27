@@ -32,6 +32,7 @@ export function OrderBook({
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const targetRowRef = useRef<HTMLDivElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
 
   const uniqueMakers = useMemo(() => {
     if (!data) return [];
@@ -135,6 +136,16 @@ export function OrderBook({
   }, [priceRows]);
 
   useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const update = () => setIsOverflowing(container.scrollHeight > container.clientHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [priceRows]);
+
+  useEffect(() => {
     if (scrollContainerRef.current && targetRowRef.current) {
       const container = scrollContainerRef.current;
       const target = targetRowRef.current;
@@ -229,7 +240,7 @@ export function OrderBook({
         </div>
 
         {/* Rows viewport — header is sticky inside so both share the same scrollbar-adjusted width */}
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scrollbar-on-hover relative">
+        <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto relative ${isOverflowing ? 'scrollbar-on-hover' : ''}`}>
           <div
             className="ledger-header sticky top-0 z-10"
             style={{ gridTemplateColumns: showBoth ? 'repeat(6, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))' }}

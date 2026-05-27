@@ -5,6 +5,7 @@ import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { usePayout } from '@/hooks/usePayout';
 import { TxModal } from './TxModal';
+import { WalletButton } from './WalletButton';
 
 type TxStatus = 'idle' | 'executing' | 'mining' | 'success' | 'canceled' | 'failed' | 'no_gas';
 
@@ -81,8 +82,14 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
 
   if (!isConnected) {
     return (
-      <div className={`settlement-card-layout mx-auto${className ? ` ${className}` : ''}`}>
-        <p className="font-mono text-[13px] text-text2 text-center py-8">Connect wallet to check payout eligibility.</p>
+      <div className={`terminal-pane connect-gate mx-auto${className ? ` ${className}` : ''}`}>
+        <div className="terminal-pane-header">
+          <span className="terminal-pane-title">Payout</span>
+        </div>
+        <div className="connect-gate-body">
+          <span className="terminal-pane-title" style={{ color: 'var(--color-text2)' }}>Connect your wallet to participate</span>
+          <WalletButton />
+        </div>
       </div>
     );
   }
@@ -99,10 +106,8 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
     <div className={`settlement-card-layout mx-auto${className ? ` ${className}` : ''}`}>
 
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
-        <h3 className="text-base font-black uppercase tracking-tight text-text">
-          Payout Settlement
-        </h3>
+      <div className="terminal-pane-header">
+        <span className="terminal-pane-title">Payout Settlement</span>
         <span className="font-mono text-[10px] bg-[var(--color-card2)] border border-[var(--color-border)] px-2 py-0.5 rounded text-text2 uppercase tracking-wider flex items-center gap-1.5">
           <span className={`h-1.5 w-1.5 rounded-full ${hasClaimed ? 'bg-[var(--color-text2)]' : 'bg-[var(--color-green)] animate-pulse'}`} />
           {hasClaimed ? 'Settled' : 'Active'}

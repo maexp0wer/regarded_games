@@ -160,11 +160,14 @@ export function Stake() {
 
   if (!isConnected) {
     return (
-      <div 
-        className="bg-card flex flex-col items-center justify-center gap-4 w-full max-w-lg py-12 border-border2"
-      >
-        <p className="font-mono text-sm text-text2">Please connect wallet to stake</p>
-        <WalletButton />
+      <div className="terminal-pane connect-gate w-full">
+        <div className="terminal-pane-header">
+          <span className="terminal-pane-title">Stake</span>
+        </div>
+        <div className="connect-gate-body">
+          <span className="terminal-pane-title" style={{ color: 'var(--color-text2)' }}>Connect your wallet to participate</span>
+          <WalletButton />
+        </div>
       </div>
     );
   }
