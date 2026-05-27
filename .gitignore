@@ -57,5 +57,3 @@ indexer/.env*.local
 # Ponder
 indexer/generated/
 indexer/.ponder/
-
-start.bat

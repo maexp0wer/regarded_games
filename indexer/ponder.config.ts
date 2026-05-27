@@ -21,7 +21,8 @@ const START_BLOCK = parseInt(process.env.PONDER_START_BLOCK ?? "0");
 export default createConfig({
   database: {
     kind: "postgres",
-    connectionString: process.env.DATABASE_URL,
+    // Trim to guard against trailing whitespace from Windows `set VAR=value &&` in cmd.exe
+    connectionString: process.env.DATABASE_URL?.trim(),
   },
   chains: {
     anvil: {
