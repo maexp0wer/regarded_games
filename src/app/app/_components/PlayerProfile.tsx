@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAccount, useReadContract, useSignMessage } from 'wagmi';
 import { formatUnits } from 'viem';
 
-import ERC20AbiRaw from '@/deployments/abis/MockUSDC.json';
+import ERC20AbiRaw from '@/deployments/abis/FakeUSDC.json';
 import StakingAbiRaw from '@/deployments/abis/Staking.json';
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 

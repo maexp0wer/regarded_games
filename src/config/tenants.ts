@@ -10,6 +10,7 @@ export interface CoreDeployment {
   Aave: `0x${string}`;
   CapitalAuction: `0x${string}`;
   Controller: `0x${string}`;
+  Faucet?: `0x${string}`;
   RGD: `0x${string}`;
   Router: `0x${string}`;
   Staking: `0x${string}`;

@@ -1,5 +1,5 @@
 import { ponder } from "ponder:registry";
-import { seasons, playerSeasonStats, yieldEvents, protocolStats, capitalAuctionParticipant } from "ponder:schema";
+import { seasons, playerSeasonStats, yieldEvents, protocolStats, capitalAuctionParticipant, faucetClaims } from "ponder:schema";
 import { eq, and } from "ponder";
 import * as schema from "../ponder.schema";
 
@@ -606,7 +606,17 @@ ponder.on("GameSeason:StateChanged", async ({ event, context }) => {
     } catch (e) {
       console.error(`[Indexer] Failed to trigger Discourse Init:`, e);
     }
-    
+
   }
 });
+
+if ((process.env.PONDER_DEPLOYMENT ?? "mainnet").toLowerCase() === "sepolia") {
+  ponder.on("FakeUSDCFaucet:Claimed", async ({ event, context }) => {
+    await context.db.insert(schema.faucetClaims).values({
+      id: event.args.user.toLowerCase() as `0x${string}`,
+      amount: event.args.amount,
+      timestamp: event.block.timestamp,
+    });
+  });
+}
 

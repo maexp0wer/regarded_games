@@ -10,7 +10,7 @@ import { sliderPctToAmount } from '@/utils/sliderAmount';
 import { TxModal } from './TxModal';
 
 // ABIs
-import ERC20AbiRaw from '@/deployments/abis/MockUSDC.json';
+import ERC20AbiRaw from '@/deployments/abis/FakeUSDC.json';
 import StakingAbiRaw from '@/deployments/abis/Staking.json';
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 

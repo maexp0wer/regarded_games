@@ -11,6 +11,8 @@ export const APP_ROUTES: AppRoute[] = [
   { pattern: '/stake',               tenants: ['mainnet', 'sepolia'] },
   { pattern: '/swap',                tenants: ['mainnet', 'sepolia'] },
   { pattern: '/ico',                 tenants: ['mainnet'] },
+  { pattern: '/faucet',              tenants: ['sepolia'] },
+  { pattern: '/faucet/[referrer]',   tenants: ['sepolia'] },
   { pattern: '/dashboard/[address]', tenants: ['mainnet', 'sepolia'] },
   { pattern: '/dashboard'          , tenants: ['mainnet', 'sepolia'] },
   { pattern: '/[seasonSlug]',        tenants: ['mainnet', 'sepolia'] },

@@ -7,6 +7,7 @@ import { ExchangeAbi } from "./abis/ExchangeAbi";
 import { AuctionAbi } from "./abis/AuctionAbi";
 import { TreasuryAbi } from "./abis/TreasuryAbi";
 import { CapitalAuctionAbi } from "./abis/CapitalAuctionAbi";
+import { FakeUSDCFaucetAbi } from "./abis/FakeUSDCFaucetAbi";
 import mainnetCore from "../src/deployments/mainnet/core.json";
 import sepoliaCore from "../src/deployments/sepolia/core.json";
 
@@ -16,6 +17,8 @@ const coreDeployment = PONDER_DEPLOYMENT === "sepolia" ? sepoliaCore : mainnetCo
 const CONTROLLER_ADDRESS = coreDeployment.Controller as `0x${string}`;
 const TREASURY_ADDRESS = coreDeployment.Treasury as `0x${string}`;
 const CAPITAL_AUCTION_ADDRESS = coreDeployment.CapitalAuction as `0x${string}`;
+const FAUCET_ADDRESS = (coreDeployment as any).Faucet as `0x${string}` | undefined;
+const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 const START_BLOCK = parseInt(process.env.PONDER_START_BLOCK ?? "0");
 
 // Each Ponder instance indexes exactly one chain. In fork mode start.bat runs
@@ -100,5 +103,15 @@ export default createConfig({
       address: CAPITAL_AUCTION_ADDRESS,
       startBlock: START_BLOCK,
     },
+    ...(FAUCET_ADDRESS && FAUCET_ADDRESS !== ZERO_ADDR
+      ? {
+          FakeUSDCFaucet: {
+            abi: FakeUSDCFaucetAbi,
+            chain: "anvil" as const,
+            address: FAUCET_ADDRESS,
+            startBlock: START_BLOCK,
+          },
+        }
+      : {}),
   },
 });

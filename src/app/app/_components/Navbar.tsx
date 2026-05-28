@@ -44,6 +44,7 @@ export function Navbar() {
     { name: 'Stake',     href: '/stake',   pattern: '/stake' },
     { name: 'Swap',      href: '/swap',    pattern: '/swap' },
     { name: 'ICO',       href: '/ico',     pattern: '/ico' },
+    { name: 'Faucet',   href: '/faucet',  pattern: '/faucet' },
     { name: 'Docs',      href: `${docsUrl}`, external: true },
   ];
 

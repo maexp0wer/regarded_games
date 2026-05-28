@@ -10,7 +10,7 @@ import { WalletButton } from './WalletButton';
 import AmountInput from '@/components/AmountInput';
 import { sliderPctToAmount } from '@/utils/sliderAmount';
 
-import ERC20Abi from '@/deployments/abis/MockUSDC.json';
+import ERC20Abi from '@/deployments/abis/FakeUSDC.json';
 import StakingAbi from '@/deployments/abis/Staking.json';
 import AuctionAbi from '@/deployments/abis/Auction.json';
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';

@@ -1,10 +1,9 @@
-function getExplorerUrl(hash: string): string | null {
-  const env = process.env.NEXT_PUBLIC_ENVIRONMENT;
-  if (env === 'testnet' || env === 'fork-testnet')
+import { useTenant } from '@/context/TenantContext';
+
+function getExplorerUrl(hash: string, realChainId: number): string {
+  if (realChainId === 84532)
     return `https://sepolia.basescan.org/tx/${hash}`;
-  if (env === 'fork' || env === 'mainnet')
-    return `https://basescan.org/tx/${hash}`;
-  return null;
+  return `https://basescan.org/tx/${hash}`;
 }
 
 type TxStep = {
@@ -26,6 +25,8 @@ type TxModalProps = {
 };
 
 export function TxModal({ status, steps, title, successTitle, successMessage, errorReason, txHashes, onClose }: TxModalProps) {
+  const { realChainId } = useTenant();
+
   if (status === 'idle') return null;
 
   const isSuccess  = status === 'success';
@@ -61,7 +62,7 @@ export function TxModal({ status, steps, title, successTitle, successMessage, er
             const isComplete = step.completeStatuses.includes(status);
             const isActive   = step.activeStatuses.includes(status);
             const hash       = txHashes?.[i];
-            const explorerUrl = hash ? getExplorerUrl(hash) : null;
+            const explorerUrl = hash ? getExplorerUrl(hash, realChainId) : null;
             const shortHash   = hash ? `${hash.slice(0, 8)}…${hash.slice(-6)}` : null;
             return (
               <div

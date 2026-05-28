@@ -89,6 +89,12 @@ export const capitalAuctionParticipant = onchainTable("capital_auction_participa
   rgdClaimed: t.bigint(),         // null until Claimed event; RGD amount (18 decimals)
 }));
 
+export const faucetClaims = onchainTable("faucet_claims", (t) => ({
+  id: t.hex().primaryKey(),       // lowercase user address (one claim per user)
+  amount: t.bigint().notNull(),
+  timestamp: t.bigint().notNull(),
+}));
+
 export const candles = onchainTable("candles", (t) => ({
   seasonAddress:  t.hex().notNull(),
   timeframe:      t.text().notNull(),    // "5m" | "1h" | "4h" | "1d"
