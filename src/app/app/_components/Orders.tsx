@@ -8,8 +8,7 @@ import ExchangeAbi from '@/deployments/abis/Exchange.json';
 import { useOpenOrders, MyOrder } from '@/hooks/useOpenOrders';
 import { useMyAuctionMints, AuctionMint } from '@/hooks/useMyAuctionMints';
 import { useMyTrades, MyTrade } from '@/hooks/useMyTrades';
-
-const PONDER_URL = 'http://127.0.0.1:42069/graphql';
+import { useTenantChainId, useTenantPonderUrl } from '@/context/TenantContext';
 
 interface OrdersProps {
   seasonAddress: string;
@@ -32,8 +31,9 @@ const TABS: { key: TabType; label: string }[] = [
 ];
 
 function useLastTradePrice(seasonAddress: string | undefined) {
+  const PONDER_URL = useTenantPonderUrl();
   return useQuery({
-    queryKey: ['lastTradePrice', seasonAddress?.toLowerCase()],
+    queryKey: ['lastTradePrice', seasonAddress?.toLowerCase(), PONDER_URL],
     queryFn: async () => {
       const res = await fetch(PONDER_URL, {
         method: 'POST',
@@ -73,7 +73,8 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress }: OrdersPr
   const { data: lastTradePrice = 0 } = useLastTradePrice(seasonAddress);
 
   const { writeContractAsync } = useWriteContract();
-  const publicClient = usePublicClient();
+  const chainId = useTenantChainId();
+  const publicClient = usePublicClient({ chainId });
 
   const handleCancel = async (contractOrderId: bigint) => {
     if (!publicClient) return;

@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { cookieToInitialState } from 'wagmi';
 import { config } from '@/config/wagmi';
 import { Providers } from '@/components/Providers';
+import { TENANTS, type TenantKey } from '@/config/tenants';
 
 import './globals.css';
 import '@rainbow-me/rainbowkit/styles.css';
@@ -50,15 +51,22 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookie = (await headers()).get('cookie');
+  const h = await headers();
+  const cookie = h.get('cookie');
   const initialState = cookieToInitialState(config, cookie);
+
+  const tenantHeader = h.get('x-tenant') as TenantKey | null;
+  const initialChainId =
+    tenantHeader === 'mainnet' || tenantHeader === 'sepolia'
+      ? TENANTS[tenantHeader].activeChainId
+      : undefined;
 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${exo2.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
         <script dangerouslySetInnerHTML={{ __html: blockingThemeScript }} />
 
-        <Providers initialState={initialState}>
+        <Providers initialState={initialState} initialChainId={initialChainId}>
           {children}
         </Providers>
 

@@ -1,30 +1,20 @@
-'use client';
+import { notFound } from 'next/navigation';
+import { getServerTenant, getServerAppPath } from '@/lib/tenant.server';
+import { isRouteEnabled } from '@/config/appRoutes';
+import { TenantProvider } from '@/context/TenantContext';
+import { AppShell } from './_components/AppShell';
 
-import { usePathname } from 'next/navigation';
-import { useTheme } from '@/context/ThemeContext';
-import { Navbar } from './_components/Navbar';
-import { DiscourseHandshake } from './_components/DiscourseHandshake';
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const tenant = await getServerTenant();
+  const appPath = await getServerAppPath();
 
-const KNOWN_APP_PAGES = new Set(['seasons', 'stake', 'swap', 'ico', 'dashboard']);
-
-export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { darkMode } = useTheme();
-  const pathname = usePathname();
-
-  const segments = pathname.split('/').filter(Boolean);
-  const isSeasonPage =
-    segments.length === 1 &&
-    !KNOWN_APP_PAGES.has(segments[0]);
+  if (!isRouteEnabled(appPath, tenant.key)) {
+    notFound();
+  }
 
   return (
-    <div className={darkMode ? 'dark' : ''}>
-      <div className="min-h-screen bg-bg transition-colors duration-300">
-        <DiscourseHandshake />
-        <Navbar />
-        <div className={isSeasonPage ? 'w-full px-6 pb-16 pt-18' : 'mx-auto max-w-7xl px-6 pb-16 pt-18'}>
-          {children}
-        </div>
-      </div>
-    </div>
+    <TenantProvider tenant={tenant.key}>
+      <AppShell>{children}</AppShell>
+    </TenantProvider>
   );
 }

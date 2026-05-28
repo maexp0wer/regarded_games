@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createPublicClient, http, erc20Abi } from 'viem';
-import { foundry, base, baseSepolia } from 'viem/chains'; 
+import { foundry, base, baseSepolia } from 'viem/chains';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
+import { tenantFromRequest } from '@/lib/tenant.server';
+import { getTenant, type TenantKey } from '@/config/tenants';
 
 // --- IN-MEMORY CACHES ---
 // 1. Caches Group IDs to save API lookups
@@ -9,19 +11,24 @@ const groupIdCache: Record<string, number> = {};
 // 2. NEW: Caches the user's last known faction to prevent spamming Discourse
 const userFactionCache: Record<string, string> = {};
 
-const getChainConfig = (chainId: number) => {
+const viemChainFor = (chainId: number) => {
   switch (chainId) {
-    case 8453: return { chain: base, rpcUrl: process.env.NEXT_PUBLIC_ALCHEMY_BASE_RPC_URL };
-    case 84532: return { chain: baseSepolia, rpcUrl: process.env.NEXT_PUBLIC_ALCHEMY_BASE_SEPOLIA_RPC_URL };
-    case 31337: 
-    default: return { chain: foundry, rpcUrl: process.env.NEXT_PUBLIC_ANVIL_RPC_URL || "http://127.0.0.1:8545" };
+    case 8453: return base;
+    case 84532: return baseSepolia;
+    case 31337:
+    default: return foundry;
   }
 };
 
 export async function POST(req: Request) {
   try {
-    const { addresses, walletAddress, seasonAddress, fimAddress, seasonSlug } = await req.json();
+    const body = await req.json();
+    const { addresses, walletAddress, seasonAddress, fimAddress, seasonSlug, tenant: bodyTenant } = body;
     const walletsToProcess: string[] = addresses || (walletAddress ? [walletAddress] :[]);
+
+    const tenant = (bodyTenant === 'mainnet' || bodyTenant === 'sepolia')
+      ? getTenant(bodyTenant as TenantKey)
+      : tenantFromRequest(req);
 
     const url = process.env.NEXT_PUBLIC_DISCOURSE_URL!;
     const apiKey = process.env.DISCOURSE_API_KEY!;
@@ -34,10 +41,10 @@ export async function POST(req: Request) {
       'Content-Type': 'application/json'
     };
 
-    const targetChainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 31337);
-    const { chain, rpcUrl } = getChainConfig(targetChainId);
-    
-    const publicClient = createPublicClient({ chain, transport: rpcUrl ? http(rpcUrl) : http() });
+    const publicClient = createPublicClient({
+      chain: viemChainFor(tenant.activeChainId),
+      transport: tenant.rpcUrl ? http(tenant.rpcUrl) : http()
+    });
 
     async function getGroupId(name: string): Promise<number | null> {
         if (groupIdCache[name]) return groupIdCache[name];

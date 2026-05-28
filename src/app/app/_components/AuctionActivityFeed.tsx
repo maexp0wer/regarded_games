@@ -3,18 +3,20 @@
 import React from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { formatUnits, isAddress } from 'viem';
+import { useTenantPonderUrl } from '@/context/TenantContext';
 
 const DEAD_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 export function AuctionActivityFeed({ seasonAddress, className }: { seasonAddress: string; className?: string }) {
+  const ponderUrl = useTenantPonderUrl();
   const isSeasonValid = seasonAddress && seasonAddress !== DEAD_ADDRESS && isAddress(seasonAddress);
   const normalizedAddress = seasonAddress?.toLowerCase();
 
   const { data: history, isLoading } = useQuery({
-    queryKey: ['auctionHistory', normalizedAddress],
+    queryKey: ['auctionHistory', normalizedAddress, ponderUrl],
     queryFn: async () => {
       if (!isSeasonValid) return [];
-      const response = await fetch('http://127.0.0.1:42069/graphql', {
+      const response = await fetch(ponderUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

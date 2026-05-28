@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { parseUnits, formatUnits, erc20Abi, maxUint256 } from 'viem';
 import { Order } from '@/hooks/useOrderBook';
-import Core from '@/deployments/local/core.json';
+import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
 import { useTradeExecution, ExecutionPayload } from '@/hooks/useTradeExecution';
 import { PercentileCircle } from './PercentileCircle';
@@ -42,6 +42,8 @@ export function TradingMask({
   onOpenOrderBook,
 }: TradingMaskProps) {
   const { address, isConnected } = useAccount();
+  const core = useTenantDeployment();
+  const chainId = useTenantChainId();
   const [price, setPrice] = useState('1.00');
   const [isPricePerFim, setIsPricePerFim] = useState(true);
   const [draggedGroupIdx, setDraggedGroupIdx] = useState<number | null>(null);
@@ -52,16 +54,16 @@ export function TradingMask({
     setPrice(perFim ? '1.00' : targetAmount || '');
   };
 
-  const spendingToken  = isBuy ? Core.USDC : fimAddress;
+  const spendingToken  = isBuy ? core.USDC : fimAddress;
   const spendingSymbol = isBuy ? 'USDC' : 'FIM';
 
   const { data: fimBalance } = useReadContract({
     address: fimAddress as `0x${string}`, abi: erc20Abi, functionName: 'balanceOf',
-    args: [address as `0x${string}`], query: { enabled: !!address, refetchInterval: 5000 },
+    args: [address as `0x${string}`], chainId, query: { enabled: !!address, refetchInterval: 5000 },
   });
   const { data: usdcBalance } = useReadContract({
-    address: Core.USDC as `0x${string}`, abi: erc20Abi, functionName: 'balanceOf',
-    args: [address as `0x${string}`], query: { enabled: !!address, refetchInterval: 5000 },
+    address: core.USDC as `0x${string}`, abi: erc20Abi, functionName: 'balanceOf',
+    args: [address as `0x${string}`], chainId, query: { enabled: !!address, refetchInterval: 5000 },
   });
 
   const groupedQueue = useMemo(() => {

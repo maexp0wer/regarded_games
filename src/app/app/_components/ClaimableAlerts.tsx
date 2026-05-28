@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { useChainId, usePublicClient, useAccount } from 'wagmi';
+import { usePublicClient, useAccount } from 'wagmi';
 import { Address } from 'viem';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 
-import coreDeployment from '@/deployments/local/core.json';
+import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { usePayout } from '@/hooks/usePayout';
 
@@ -22,10 +22,11 @@ const CONTROLLER_ABI = [{
 
 export function ClaimableAlerts({ playerAddress }: { playerAddress: string }) {
   const { address: connectedAddress } = useAccount();
-  const chainId = useChainId();
-  const publicClient = usePublicClient();
+  const chainId = useTenantChainId();
+  const publicClient = usePublicClient({ chainId });
+  const coreDeployment = useTenantDeployment();
   const isOwner = connectedAddress?.toLowerCase() === playerAddress.toLowerCase();
-  const controllerAddress = (coreDeployment as any).Controller as Address;
+  const controllerAddress = coreDeployment.Controller as Address;
 
   const { data: concludedSeasons } = useQuery({
     queryKey: ['claimable-scan', playerAddress, chainId],

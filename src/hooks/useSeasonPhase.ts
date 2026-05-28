@@ -5,6 +5,7 @@ import { useReadContract } from 'wagmi';
 import { Address } from 'viem';
 
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
+import { useTenantChainId } from '@/context/TenantContext';
 
 export interface SeasonConfig {
   auctionStartTime: number;
@@ -37,11 +38,13 @@ export interface SeasonPhaseState {
 
 export function useSeasonPhase(seasonAddress: Address | string | undefined): SeasonPhaseState {
   const enabled = !!seasonAddress;
+  const chainId = useTenantChainId();
 
   const { data: phaseRaw, isLoading: isPhaseLoading } = useReadContract({
     address: seasonAddress as Address,
     abi: GameSeasonAbi as any,
     functionName: 'getPhase',
+    chainId,
     query: { enabled, refetchInterval: 3000 },
   });
 
@@ -49,6 +52,7 @@ export function useSeasonPhase(seasonAddress: Address | string | undefined): Sea
     address: seasonAddress as Address,
     abi: GameSeasonAbi as any,
     functionName: 'isActive',
+    chainId,
     query: { enabled, refetchInterval: 3000 },
   });
 
@@ -56,6 +60,7 @@ export function useSeasonPhase(seasonAddress: Address | string | undefined): Sea
     address: seasonAddress as Address,
     abi: GameSeasonAbi as any,
     functionName: 'tradingStartTime',
+    chainId,
     query: { enabled, refetchInterval: 3000 },
   });
 
@@ -63,6 +68,7 @@ export function useSeasonPhase(seasonAddress: Address | string | undefined): Sea
     address: seasonAddress as Address,
     abi: GameSeasonAbi as any,
     functionName: 'getConfig',
+    chainId,
     query: { enabled, staleTime: Infinity },
   });
 

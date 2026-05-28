@@ -3,8 +3,7 @@
 import { formatUnits } from 'viem';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-
-const PONDER_URL = "http://127.0.0.1:42069/graphql";
+import { useTenantPonderUrl } from '@/context/TenantContext';
 
 // Interface for the general structure of a player's stat from Ponder
 interface PlayerSeasonStat {
@@ -65,10 +64,11 @@ const calculatePnl = (stat: PlayerSeasonStat): number => {
  * @param userAddress The address of the player whose rank is being sought.
  */
 export function usePlayerRank(seasonAddress: string, userAddress: string | undefined): PlayerRankData {
-  
+  const PONDER_URL = useTenantPonderUrl();
+
   // 1. Fetch ALL Player Stats from Ponder
   const { data: allStatsData, isLoading: statsLoading } = useQuery({
-    queryKey: ["seasonRankings", seasonAddress],
+    queryKey: ["seasonRankings", seasonAddress, PONDER_URL],
     queryFn: async () => {
       if (!seasonAddress) return null;
       

@@ -7,6 +7,7 @@ import { Address } from 'viem';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
 import { useSeasonPhase } from '@/hooks/useSeasonPhase';
+import { useTenantChainId } from '@/context/TenantContext';
 
 export interface SeasonVictoryState {
   gCurrent: number;
@@ -31,6 +32,7 @@ export interface SeasonVictoryState {
 export function useSeasonVictory(seasonAddress: Address | string | undefined): SeasonVictoryState {
   const enabled = !!seasonAddress;
 
+  const chainId = useTenantChainId();
   const phase = useSeasonPhase(seasonAddress);
   const { data: giniData, isLoading: isGiniLoading } = useSeasonGini(seasonAddress);
 
@@ -40,6 +42,7 @@ export function useSeasonVictory(seasonAddress: Address | string | undefined): S
     address: seasonAddress as Address,
     abi: GameSeasonAbi as any,
     functionName: 'g_initial',
+    chainId,
     query: {
       enabled,
       refetchInterval: isAuctionOrBootstrap ? 3000 : undefined,
@@ -51,6 +54,7 @@ export function useSeasonVictory(seasonAddress: Address | string | undefined): S
     address: seasonAddress as Address,
     abi: GameSeasonAbi as any,
     functionName: 'finalProgressBps',
+    chainId,
     query: { enabled: enabled && isPayout, staleTime: Infinity },
   });
 
@@ -58,6 +62,7 @@ export function useSeasonVictory(seasonAddress: Address | string | undefined): S
     address: seasonAddress as Address,
     abi: GameSeasonAbi as any,
     functionName: 'isOligarchyWin',
+    chainId,
     query: { enabled: enabled && isPayout, staleTime: Infinity },
   });
 

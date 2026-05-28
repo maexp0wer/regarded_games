@@ -3,8 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { formatUnits } from 'viem';
 import { fetchAllPonderItems } from '@/lib/ponder';
-
-const PONDER_URL = 'http://127.0.0.1:42069/graphql';
+import { useTenantPonderUrl } from '@/context/TenantContext';
 
 export interface MyTrade {
   id: string;
@@ -58,8 +57,9 @@ export function useMyTrades(
   seasonAddress: string | undefined,
   userAddress: string | undefined,
 ) {
+  const PONDER_URL = useTenantPonderUrl();
   return useQuery({
-    queryKey: ['myTrades', seasonAddress?.toLowerCase(), userAddress?.toLowerCase()],
+    queryKey: ['myTrades', seasonAddress?.toLowerCase(), userAddress?.toLowerCase(), PONDER_URL],
     queryFn: async () => {
       const season = seasonAddress!.toLowerCase();
       const user = userAddress!.toLowerCase();

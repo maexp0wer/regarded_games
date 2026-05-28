@@ -2,10 +2,9 @@
 
 import { useReadContracts } from 'wagmi';
 import { formatUnits } from 'viem';
-import { useQuery } from '@tanstack/react-query'; 
+import { useQuery } from '@tanstack/react-query';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
-
-const PONDER_URL = "http://127.0.0.1:42069/graphql";
+import { useTenantChainId, useTenantPonderUrl } from '@/context/TenantContext';
 
 export interface PayoutData {
   payout: number;           // Unclaimed payout (Calculated from Ponder)
@@ -21,19 +20,21 @@ export interface PayoutData {
 }
 
 export function usePayout(seasonAddress: string | undefined, userAddress: string | undefined): PayoutData {
-  
+  const chainId = useTenantChainId();
+  const PONDER_URL = useTenantPonderUrl();
+
   // 1. Fetch RPC Data (Only need live/changing state: FIM Balance)
   const { data: rpcData, isLoading: rpcLoading, refetch: refetchRpc } = useReadContracts({
     contracts: [
       // fimBalances is the only value that changes frequently or is needed live.
-      { address: seasonAddress as `0x${string}`, abi: GameSeasonAbi, functionName: 'fimBalances', args: [userAddress!] }
+      { address: seasonAddress as `0x${string}`, abi: GameSeasonAbi, functionName: 'fimBalances', args: [userAddress!], chainId }
     ],
     query: { enabled: !!seasonAddress && !!userAddress }
   });
 
   // 2. Fetch Ponder Data (All constant/historical data)
   const { data: ponderData, isLoading: ponderLoading, refetch: refetchPonder } = useQuery({
-    queryKey: ["payoutHistory", seasonAddress, userAddress],
+    queryKey: ["payoutHistory", seasonAddress, userAddress, PONDER_URL],
     queryFn: async () => {
       if (!seasonAddress || !userAddress) return null;
       

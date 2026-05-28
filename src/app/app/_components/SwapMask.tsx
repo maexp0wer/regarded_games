@@ -10,7 +10,7 @@ import PercentSlider from '@/components/PercentSlider';
 import { sliderPctToAmount } from '@/utils/sliderAmount';
 
 import UniswapV2RouterAbi from '@/deployments/abis/UniswapV2Router.json';
-import Core from '@/deployments/local/core.json';
+import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import { TxModal } from './TxModal';
 import { extractRevertReason } from '@/utils/txErrors';
 
@@ -25,9 +25,6 @@ const SLIPPAGE_PRESETS: { label: string; bps: bigint }[] = [
   { label: '1%',   bps: 100n },
   { label: '3%',   bps: 300n },
 ];
-
-const RGD_TOKEN:  TokenInfo = { address: Core.RGD  as `0x${string}`, symbol: 'RGD',  decimals: 18 };
-const USDC_TOKEN: TokenInfo = { address: Core.USDC as `0x${string}`, symbol: 'USDC', decimals: 6  };
 
 // ── Token dropdown ────────────────────────────────────────────────────────────
 interface TokenDropdownProps {
@@ -97,8 +94,13 @@ function TokenDropdown({
 // ── SwapMask ──────────────────────────────────────────────────────────────────
 export function SwapMask() {
   const { address, isConnected } = useAccount();
-  const publicClient = usePublicClient();
+  const chainId = useTenantChainId();
+  const publicClient = usePublicClient({ chainId });
   const { writeContractAsync } = useWriteContract();
+  const core = useTenantDeployment();
+
+  const RGD_TOKEN:  TokenInfo = useMemo(() => ({ address: core.RGD  as `0x${string}`, symbol: 'RGD',  decimals: 18 }), [core.RGD]);
+  const USDC_TOKEN: TokenInfo = useMemo(() => ({ address: core.USDC as `0x${string}`, symbol: 'USDC', decimals: 6  }), [core.USDC]);
 
   const [amountIn, setAmountIn]   = useState('');
   const [isBuying, setIsBuying]   = useState(true); // true = otherToken→RGD, false = RGD→otherToken
@@ -118,13 +120,14 @@ export function SwapMask() {
   const [customTokenError, setCustomTokenError] = useState<string | null>(null);
   const [customTokenLoading, setCustomTokenLoading] = useState(false);
 
-  const routerAddr = Core.Router as `0x${string}`;
+  const routerAddr = core.Router as `0x${string}`;
 
   // Read WETH address from router (static — never changes)
   const { data: wethAddress } = useReadContract({
     address: routerAddr,
     abi: UniswapV2RouterAbi,
     functionName: 'WETH',
+    chainId,
     query: { staleTime: Infinity },
   });
 
@@ -151,16 +154,19 @@ export function SwapMask() {
   const { data: rgdBalance,   refetch: refetchRgd   } = useReadContract({
     address: RGD_TOKEN.address, abi: erc20Abi, functionName: 'balanceOf',
     args: [address!],
+    chainId,
     query: { enabled: !!address, refetchInterval: 5000 },
   });
   const { data: otherBalance, refetch: refetchOther } = useReadContract({
     address: otherToken.address, abi: erc20Abi, functionName: 'balanceOf',
     args: [address!],
+    chainId,
     query: { enabled: !!address, refetchInterval: 5000 },
   });
   const { refetch: refetchAllowance } = useReadContract({
     address: tokenIn.address, abi: erc20Abi, functionName: 'allowance',
     args: [address!, routerAddr],
+    chainId,
     query: { enabled: !!address },
   });
 

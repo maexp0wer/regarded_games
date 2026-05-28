@@ -6,6 +6,7 @@ import { erc20Abi, parseUnits } from 'viem';
 import { useQueryClient } from '@tanstack/react-query';
 import ExchangeAbi from '@/deployments/abis/Exchange.json';
 import { Order } from '@/hooks/useOrderBook';
+import { useTenantChainId } from '@/context/TenantContext';
 
 export type WorkflowStep = 'idle' | 'approving' | 'mining_approval' | 'executing' | 'mining_execute' | 'success' | 'canceled' | 'failed';
 
@@ -38,7 +39,8 @@ export function useTradeExecution({
   selectedOrders, onRemoveOrder, setTargetAmount, setPrice
 }: UseTradeExecutionParams) {
   const { address } = useAccount();
-  const publicClient = usePublicClient();
+  const chainId = useTenantChainId();
+  const publicClient = usePublicClient({ chainId });
   const queryClient = useQueryClient();
   const { writeContractAsync } = useWriteContract();
 
@@ -50,6 +52,7 @@ export function useTradeExecution({
     abi: erc20Abi,
     functionName: 'allowance',
     args: [address as `0x${string}`, exchangeAddress],
+    chainId,
   });
 
   const handleStartFlow = async () => {

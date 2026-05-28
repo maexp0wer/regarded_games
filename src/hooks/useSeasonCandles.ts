@@ -3,8 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchAllPonderItems } from '@/lib/ponder';
 import { CandleData } from '@/utils/chartData';
-
-const PONDER_URL = process.env.NEXT_PUBLIC_PONDER_URL || 'http://127.0.0.1:42069/graphql';
+import { useTenantPonderUrl } from '@/context/TenantContext';
 
 interface SeasonCandle {
   bucketTs: string;
@@ -39,8 +38,9 @@ export function useSeasonCandles(
   seasonAddress: string | undefined,
   timeframe: string,
 ): { data: CandleData[] } {
+  const PONDER_URL = useTenantPonderUrl();
   return useQuery({
-    queryKey: ['seasonCandles', seasonAddress?.toLowerCase(), timeframe],
+    queryKey: ['seasonCandles', seasonAddress?.toLowerCase(), timeframe, PONDER_URL],
     enabled: !!seasonAddress,
     queryFn: async () => {
       const items = await fetchAllPonderItems<SeasonCandle>(

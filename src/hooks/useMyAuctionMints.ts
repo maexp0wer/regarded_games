@@ -2,8 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { formatUnits } from 'viem';
-
-const PONDER_URL = 'http://127.0.0.1:42069/graphql';
+import { useTenantPonderUrl } from '@/context/TenantContext';
 
 export interface AuctionMint {
   id: string;
@@ -28,8 +27,9 @@ export function useMyAuctionMints(
   seasonAddress: string | undefined,
   userAddress: string | undefined,
 ) {
+  const PONDER_URL = useTenantPonderUrl();
   return useQuery({
-    queryKey: ['myAuctionMints', seasonAddress?.toLowerCase(), userAddress?.toLowerCase()],
+    queryKey: ['myAuctionMints', seasonAddress?.toLowerCase(), userAddress?.toLowerCase(), PONDER_URL],
     queryFn: async () => {
       const res = await fetch(PONDER_URL, {
         method: 'POST',

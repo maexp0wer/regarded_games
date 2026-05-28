@@ -2,9 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { formatUnits } from "viem";
-
-// Use 127.0.0.1 to avoid Windows localhost issues
-const PONDER_URL = "http://127.0.0.1:42069/graphql";
+import { useTenantPonderUrl } from '@/context/TenantContext';
 
 export interface Trade {
   id: string;
@@ -23,8 +21,9 @@ export interface Trade {
 }
 
 export function useRecentTrades(seasonAddress: string | undefined) {
+  const PONDER_URL = useTenantPonderUrl();
   return useQuery({
-    queryKey: ["recentTrades", seasonAddress?.toLowerCase()],
+    queryKey: ["recentTrades", seasonAddress?.toLowerCase(), PONDER_URL],
     queryFn: async () => {
       if (!seasonAddress) return [];
 

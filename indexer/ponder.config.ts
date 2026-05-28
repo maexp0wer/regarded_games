@@ -1,7 +1,3 @@
-import dotenv from "dotenv";
-dotenv.config({ path: "../.env.local", override: true });
-dotenv.config({ path: "../.env" });
-
 import { createConfig, factory } from "ponder";
 import { parseAbiItem } from "viem";
 import { GameControllerAbi } from "./abis/GameControllerAbi";
@@ -11,12 +7,27 @@ import { ExchangeAbi } from "./abis/ExchangeAbi";
 import { AuctionAbi } from "./abis/AuctionAbi";
 import { TreasuryAbi } from "./abis/TreasuryAbi";
 import { CapitalAuctionAbi } from "./abis/CapitalAuctionAbi";
-import coreDeployment from "../src/deployments/local/core.json";
+import mainnetCore from "../src/deployments/mainnet/core.json";
+import sepoliaCore from "../src/deployments/sepolia/core.json";
+
+const PONDER_DEPLOYMENT = (process.env.PONDER_DEPLOYMENT ?? "mainnet").toLowerCase();
+const coreDeployment = PONDER_DEPLOYMENT === "sepolia" ? sepoliaCore : mainnetCore;
 
 const CONTROLLER_ADDRESS = coreDeployment.Controller as `0x${string}`;
 const TREASURY_ADDRESS = coreDeployment.Treasury as `0x${string}`;
 const CAPITAL_AUCTION_ADDRESS = coreDeployment.CapitalAuction as `0x${string}`;
 const START_BLOCK = parseInt(process.env.PONDER_START_BLOCK ?? "0");
+
+// Each Ponder instance indexes exactly one chain. In fork mode start.bat runs
+// two instances side-by-side: PONDER_CHAIN_ID=31337 (mainnet fork on :8545) and
+// PONDER_CHAIN_ID=31338 (sepolia fork on :8546). PONDER_RPC_URL points at the
+// matching Anvil. In real mainnet/sepolia deployments these are 8453/84532
+// plus the real RPC URL.
+const CHAIN_ID = parseInt(process.env.PONDER_CHAIN_ID ?? "31337");
+const RPC_URL =
+  process.env.PONDER_RPC_URL ??
+  process.env.PONDER_RPC_URL_31337 ??
+  "http://127.0.0.1:8545";
 
 export default createConfig({
   database: {
@@ -26,17 +37,9 @@ export default createConfig({
   },
   chains: {
     anvil: {
-      id: 31337,
-      rpc: process.env.PONDER_RPC_URL_31337,
-    }/*,
-    baseSepolia: {
-      id: 84532,
-      rpc: process.env.PONDER_RPC_URL_84532,
+      id: CHAIN_ID,
+      rpc: RPC_URL,
     },
-    base: {
-      id: 8453,
-      rpc: process.env.PONDER_RPC_URL_8453,
-    },*/
   },
   contracts: {
     GameController: {

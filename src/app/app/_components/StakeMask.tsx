@@ -10,9 +10,9 @@ import { sliderPctToAmount } from '@/utils/sliderAmount';
 import { TxModal } from './TxModal';
 
 // ABIs
-import ERC20AbiRaw from '@/deployments/abis/MockUSDC.json'; 
+import ERC20AbiRaw from '@/deployments/abis/MockUSDC.json';
 import StakingAbiRaw from '@/deployments/abis/Staking.json';
-import coreAddresses from '@/deployments/local/core.json';
+import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 
 const ERC20Abi = ERC20AbiRaw as any;
 const StakingAbi = StakingAbiRaw as any;
@@ -21,8 +21,10 @@ type WorkflowStep = 'idle' | 'approving' | 'mining_approval' | 'executing' | 'mi
 
 export function Stake() {
   const { address, isConnected } = useAccount();
-  const publicClient = usePublicClient();
+  const chainId = useTenantChainId();
+  const publicClient = usePublicClient({ chainId });
   const { writeContractAsync } = useWriteContract();
+  const coreAddresses = useTenantDeployment();
 
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState<'stake' | 'unstake'>('stake');
@@ -34,16 +36,16 @@ export function Stake() {
 
   // --- 1. Contract Reads ---
   const { data: stakedBalances, refetch: refetchStaked } = useReadContract({
-    address: stakingAddr, abi: StakingAbi, functionName: 'stakedBalances', args: address ? [address] : undefined,
+    address: stakingAddr, abi: StakingAbi, functionName: 'stakedBalances', args: address ? [address] : undefined, chainId,
   });
   const { data: requiredRegStake, refetch: refetchRequired } = useReadContract({
-    address: stakingAddr, abi: StakingAbi, functionName: 'requiredRegStake', args: address ? [address] : undefined,
+    address: stakingAddr, abi: StakingAbi, functionName: 'requiredRegStake', args: address ? [address] : undefined, chainId,
   });
   const { data: walletBalance, refetch: refetchWallet } = useReadContract({
-    address: rgdAddr, abi: ERC20Abi, functionName: 'balanceOf', args: address ? [address] : undefined,
+    address: rgdAddr, abi: ERC20Abi, functionName: 'balanceOf', args: address ? [address] : undefined, chainId,
   });
   const { refetch: refetchAllowance } = useReadContract({
-    address: rgdAddr, abi: ERC20Abi, functionName: 'allowance', args: address ? [address, stakingAddr] : undefined,
+    address: rgdAddr, abi: ERC20Abi, functionName: 'allowance', args: address ? [address, stakingAddr] : undefined, chainId,
   });
 
   // --- 2. Logic & Math ---

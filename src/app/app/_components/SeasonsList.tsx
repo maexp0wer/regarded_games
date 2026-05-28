@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useChainId, usePublicClient } from 'wagmi';
+import { usePublicClient } from 'wagmi';
 import { Address, getAddress } from 'viem';
-import { base, baseSepolia, foundry } from 'wagmi/chains';
 import { useQuery } from '@tanstack/react-query';
-import coreDeployment from '@/deployments/local/core.json';
+import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
 import { useSeasonPhase } from '@/hooks/useSeasonPhase';
 import { useSeasonVictory } from '@/hooks/useSeasonVictory';
@@ -40,18 +39,6 @@ type SeasonRegistry = {
 };
 
 // --- Helpers ---
-const getControllerAddress = (chainId: number): Address | undefined => {
-  const chainNameMap: { [key: number]: string } = {
-    [foundry.id]: 'Controller',
-    [baseSepolia.id]: 'Controller',
-    [base.id]: 'Controller',
-  };
-  const chainName = chainNameMap[chainId];
-  if (!chainName) return undefined;
-  const controllerAddress = (coreDeployment as any)[chainName] as Address | undefined;
-  return controllerAddress ? getAddress(controllerAddress) : undefined;
-};
-
 const formatDateShort = (timestamp: number) => {
   if (!timestamp) return '—';
   return new Date(timestamp * 1000).toLocaleString(undefined, {
@@ -177,10 +164,11 @@ function SeasonCard({ season }: { season: SeasonRegistry }) {
 // MAIN COMPONENT
 // ============================================================================
 export function SeasonsList() {
-  const chainId = useChainId();
-  const controllerAddress = getControllerAddress(chainId);
+  const chainId = useTenantChainId();
+  const coreDeployment = useTenantDeployment();
+  const controllerAddress = getAddress(coreDeployment.Controller) as Address;
   const [showAll, setShowAll] = useState(false);
-  const publicClient = usePublicClient();
+  const publicClient = usePublicClient({ chainId });
 
   const { data: seasonsData, isLoading } = useQuery({
     queryKey: ['allSeasons_v3', chainId, controllerAddress],

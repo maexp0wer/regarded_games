@@ -13,7 +13,7 @@ import { sliderPctToAmount } from '@/utils/sliderAmount';
 import ERC20Abi from '@/deployments/abis/MockUSDC.json';
 import StakingAbi from '@/deployments/abis/Staking.json';
 import AuctionAbi from '@/deployments/abis/Auction.json';
-import coreAddresses from '@/deployments/local/core.json';
+import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import { TxModal } from './TxModal';
 
 const DEAD_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -36,6 +36,7 @@ export function AuctionMask({
   isPhaseError?: boolean;
 }) {
   const { isConnected } = useAccount();
+  const coreAddresses = useTenantDeployment();
 
   const resolvedAuction = (propAuction || DEAD_ADDRESS) as `0x${string}`;
   const resolvedSeason  = (propSeason  || DEAD_ADDRESS) as `0x${string}`;
@@ -98,21 +99,23 @@ function AuctionMaskInner({
   isPhaseError: boolean;
 }) {
   const { address } = useAccount();
-  const publicClient = usePublicClient();
+  const chainId = useTenantChainId();
+  const publicClient = usePublicClient({ chainId });
   const queryClient  = useQueryClient();
+  const coreAddresses = useTenantDeployment();
 
   const [buyAmount, setBuyAmount] = useState('');
   const [status, setStatus] = useState<WorkflowStep>('idle');
   const [txHashes, setTxHashes] = useState<(string | null)[]>([null, null]);
 
-  const stakingAddr = (coreAddresses as any).Staking as `0x${string}`;
-  const usdcAddr    = (coreAddresses as any).USDC    as `0x${string}`;
+  const stakingAddr = coreAddresses.Staking as `0x${string}`;
+  const usdcAddr    = coreAddresses.USDC    as `0x${string}`;
 
   // --- Contract reads ---
-  const { data: stakedBalances, refetch: refetchStaked } = useReadContract({ address: stakingAddr, abi: StakingAbi, functionName: 'stakedBalances', args: [address] });
-  const { data: fimWallet, refetch: refetchFimWallet, isFetching: isFimFetching } = useReadContract({ address: fimAddress as `0x${string}`, abi: ERC20Abi, functionName: 'balanceOf', args: [address], query: { refetchInterval: 5000 } });
-  const { data: usdcWallet,  refetch: refetchUsdcWallet }            = useReadContract({ address: usdcAddr,    abi: ERC20Abi, functionName: 'balanceOf', args: [address] });
-  const { refetch: refetchUsdcAllowance } = useReadContract({ address: usdcAddr, abi: ERC20Abi, functionName: 'allowance', args: [address, auctionAddress as `0x${string}`], query: { staleTime: 0 } });
+  const { data: stakedBalances, refetch: refetchStaked } = useReadContract({ address: stakingAddr, abi: StakingAbi, functionName: 'stakedBalances', args: [address], chainId });
+  const { data: fimWallet, refetch: refetchFimWallet, isFetching: isFimFetching } = useReadContract({ address: fimAddress as `0x${string}`, abi: ERC20Abi, functionName: 'balanceOf', args: [address], chainId, query: { refetchInterval: 5000 } });
+  const { data: usdcWallet,  refetch: refetchUsdcWallet }            = useReadContract({ address: usdcAddr,    abi: ERC20Abi, functionName: 'balanceOf', args: [address], chainId });
+  const { refetch: refetchUsdcAllowance } = useReadContract({ address: usdcAddr, abi: ERC20Abi, functionName: 'allowance', args: [address, auctionAddress as `0x${string}`], chainId, query: { staleTime: 0 } });
 
   const { writeContractAsync } = useWriteContract();
 

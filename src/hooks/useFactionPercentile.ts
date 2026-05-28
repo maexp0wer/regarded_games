@@ -5,8 +5,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { formatUnits } from "viem";
 import { fetchAllPonderItems } from '@/lib/ponder';
-
-const PONDER_URL = process.env.NEXT_PUBLIC_PONDER_URL || "http://127.0.0.1:42069/graphql";
+import { useTenantPonderUrl } from '@/context/TenantContext';
 
 export interface FactionData {
   factionPercentile: number;
@@ -16,10 +15,11 @@ export interface FactionData {
 }
 
 export function useFactionPercentile(seasonAddress: string | undefined, userAddress: string | undefined) {
-  
+  const PONDER_URL = useTenantPonderUrl();
+
   return useQuery<FactionData | null>({
     // Cleaned up queryKey: No longer depends on the stale contract threshold
-    queryKey: ["playerFactionStanding", seasonAddress, userAddress],
+    queryKey: ["playerFactionStanding", seasonAddress, userAddress, PONDER_URL],
     
     // Starts fetching immediately once we have the addresses
     enabled: !!seasonAddress && !!userAddress,

@@ -10,7 +10,7 @@ import AmountInput from '@/components/AmountInput';
 import { sliderPctToAmount } from '@/utils/sliderAmount';
 
 import CapitalAuctionAbi from '@/deployments/abis/CapitalAuction.json';
-import Core from '@/deployments/local/core.json';
+import { useTenantDeployment, useTenantChainId, useTenantPonderUrl } from '@/context/TenantContext';
 import { TxModal } from './TxModal';
 import { extractRevertReason } from '@/utils/txErrors';
 
@@ -18,14 +18,17 @@ type DepositStatus = 'idle' | 'approving' | 'mining_approval' | 'depositing' | '
 type ClaimStatus   = 'idle' | 'claiming' | 'mining_claim' | 'success' | 'canceled' | 'failed';
 type AuctionPhase  = 'loading' | 'pending' | 'live' | 'awaiting_finalization' | 'claimable' | 'no_deposit' | 'already_claimed';
 
-const ZERO_ADDR          = '0x0000000000000000000000000000000000000000';
-const capitalAuctionAddr = (Core as any).CapitalAuction as `0x${string}`;
-const usdcAddr           = Core.USDC as `0x${string}`;
+const ZERO_ADDR = '0x0000000000000000000000000000000000000000';
 
 export function IcoMask() {
   const { address, isConnected } = useAccount();
-  const publicClient = usePublicClient();
+  const chainId = useTenantChainId();
+  const ponderUrl = useTenantPonderUrl();
+  const publicClient = usePublicClient({ chainId });
   const { writeContractAsync } = useWriteContract();
+  const core = useTenantDeployment();
+  const capitalAuctionAddr = core.CapitalAuction as `0x${string}`;
+  const usdcAddr = core.USDC as `0x${string}`;
 
   const [depositAmount, setDepositAmount] = useState('');
   const [depositStatus, setDepositStatus] = useState<DepositStatus>('idle');
@@ -35,7 +38,7 @@ export function IcoMask() {
   const [claimTxHashes,   setClaimTxHashes]   = useState<(string | null)[]>([null]);
 
   // ── Chain time (block-anchored, advanced by real elapsed time) ──
-  const { data: blockData } = useBlock({ query: { refetchInterval: 10000 } });
+  const { data: blockData } = useBlock({ chainId, query: { refetchInterval: 10000 } });
   const [chainTs, setChainTs] = useState(0);
   const blockAnchor = useRef<{ chain: number; real: number } | null>(null);
 
@@ -61,42 +64,52 @@ export function IcoMask() {
   // ── Contract reads ──────────────────────────────────────────────────────────
   const { data: rgdRaw } = useReadContract({
     address: capitalAuctionAddr, abi: CapitalAuctionAbi, functionName: 'rgd',
+    chainId,
     query: { refetchInterval: 5000 },
   });
   const { data: auctionEndRaw } = useReadContract({
     address: capitalAuctionAddr, abi: CapitalAuctionAbi, functionName: 'auctionEnd',
+    chainId,
     query: { refetchInterval: 15000 },
   });
   const { data: finalizedRaw } = useReadContract({
     address: capitalAuctionAddr, abi: CapitalAuctionAbi, functionName: 'finalized',
+    chainId,
     query: { refetchInterval: 5000 },
   });
   const { data: vestingContractRaw } = useReadContract({
     address: capitalAuctionAddr, abi: CapitalAuctionAbi, functionName: 'vestingContract',
+    chainId,
     query: { refetchInterval: 30000 },
   });
   const { data: saleBpsRaw } = useReadContract({
     address: capitalAuctionAddr, abi: CapitalAuctionAbi, functionName: 'SALE_BPS',
+    chainId,
   });
   const { data: lpBpsRaw } = useReadContract({
     address: capitalAuctionAddr, abi: CapitalAuctionAbi, functionName: 'LP_BPS',
+    chainId,
   });
   const { data: totalUsdcRaw, refetch: refetchTotalUsdc } = useReadContract({
     address: capitalAuctionAddr, abi: CapitalAuctionAbi, functionName: 'totalUsdcRaised',
+    chainId,
     query: { refetchInterval: 5000 },
   });
   const { data: totalRgdRaw } = useReadContract({
     address: capitalAuctionAddr, abi: CapitalAuctionAbi, functionName: 'totalRgd',
+    chainId,
     query: { refetchInterval: 5000 },
   });
   const { data: userDepositRaw, refetch: refetchUserDeposit } = useReadContract({
     address: capitalAuctionAddr, abi: CapitalAuctionAbi, functionName: 'usdcDeposited',
     args: [address!],
+    chainId,
     query: { enabled: !!address, refetchInterval: 5000 },
   });
   const { data: usdcBalanceRaw, refetch: refetchUsdcBalance } = useReadContract({
     address: usdcAddr, abi: erc20Abi, functionName: 'balanceOf',
     args: [address!],
+    chainId,
     query: { enabled: !!address, refetchInterval: 5000 },
   });
 
@@ -115,10 +128,10 @@ export function IcoMask() {
 
   // ── Ponder: post-claim display data ────────────────────────────────────────
   const { data: participantData, refetch: refetchParticipant } = useQuery({
-    queryKey: ['capitalAuctionParticipant', address?.toLowerCase()],
+    queryKey: ['capitalAuctionParticipant', address?.toLowerCase(), ponderUrl],
     enabled: !!address && finalized,
     queryFn: async () => {
-      const res = await fetch('http://127.0.0.1:42069/graphql', {
+      const res = await fetch(ponderUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

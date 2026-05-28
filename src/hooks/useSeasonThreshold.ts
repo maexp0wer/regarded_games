@@ -2,8 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { fetchAllPonderItems } from '@/lib/ponder';
-
-const PONDER_URL = process.env.NEXT_PUBLIC_PONDER_URL || 'http://127.0.0.1:42069/graphql';
+import { useTenantPonderUrl } from '@/context/TenantContext';
 
 const PLAYERS_QUERY = `
   query GetPlayersForThreshold($season: String!, $after: String, $limit: Int!) {
@@ -24,8 +23,9 @@ const ORDERS_QUERY = `
 `;
 
 export function useSeasonThreshold(seasonAddress: string | undefined) {
+  const PONDER_URL = useTenantPonderUrl();
   return useQuery<bigint>({
-    queryKey: ['seasonThreshold', seasonAddress?.toLowerCase()],
+    queryKey: ['seasonThreshold', seasonAddress?.toLowerCase(), PONDER_URL],
     enabled: !!seasonAddress,
     queryFn: async () => {
       const sAddr = seasonAddress!.toLowerCase();

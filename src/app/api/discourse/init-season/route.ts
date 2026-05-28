@@ -4,17 +4,15 @@ import { foundry, base, baseSepolia } from 'viem/chains';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import crypto from 'crypto';
 import { fetchAllPonderItems } from '@/lib/ponder';
+import { tenantFromRequest } from '@/lib/tenant.server';
+import { getTenant, type TenantKey } from '@/config/tenants';
 
-// --- CHAIN CONFIGURATION ROUTER ---
-const getChainConfig = (chainId: number) => {
+const viemChainFor = (chainId: number) => {
   switch (chainId) {
-    case 8453:
-      return { chain: base, rpcUrl: process.env.NEXT_PUBLIC_ALCHEMY_BASE_RPC_URL };
-    case 84532:
-      return { chain: baseSepolia, rpcUrl: process.env.NEXT_PUBLIC_ALCHEMY_BASE_SEPOLIA_RPC_URL };
+    case 8453: return base;
+    case 84532: return baseSepolia;
     case 31337:
-    default:
-      return { chain: foundry, rpcUrl: process.env.NEXT_PUBLIC_ANVIL_RPC_URL || "http://127.0.0.1:8545" };
+    default: return foundry;
   }
 };
 
@@ -25,15 +23,20 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { seasonAddress, seasonId } = await req.json();
+    const body = await req.json();
+    const { seasonAddress, seasonId, tenant: bodyTenant } = body;
+
+    const tenant = (bodyTenant === 'mainnet' || bodyTenant === 'sepolia')
+      ? getTenant(bodyTenant as TenantKey)
+      : tenantFromRequest(req);
 
     console.log(`\n========================================`);
-    console.log(`INITIALIZING DISCOURSE FOR SEASON ${seasonId}`);
+    console.log(`INITIALIZING DISCOURSE FOR SEASON ${seasonId} (tenant=${tenant.key})`);
 
     const url = process.env.NEXT_PUBLIC_DISCOURSE_URL;
     const apiKey = process.env.DISCOURSE_API_KEY;
     const ssoSecret = process.env.DISCOURSE_SSO_SECRET;
-    const ponderUrl = process.env.NEXT_PUBLIC_PONDER_URL || "http://127.0.0.1:42069/graphql";
+    const ponderUrl = tenant.ponderUrl;
 
     if (!url || !apiKey || !ssoSecret) {
       return NextResponse.json({ error: "Missing Discourse ENV" }, { status: 500 });
@@ -45,13 +48,9 @@ export async function POST(req: Request) {
       'Content-Type': 'application/json'
     };
 
-    // 1️⃣ Get Threshold From Contract
-    const targetChainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 31337);
-    const { chain, rpcUrl } = getChainConfig(targetChainId);
-
     const publicClient = createPublicClient({
-      chain,
-      transport: rpcUrl ? http(rpcUrl) : http()
+      chain: viemChainFor(tenant.activeChainId),
+      transport: tenant.rpcUrl ? http(tenant.rpcUrl) : http()
     });
 
     const threshold = BigInt(await publicClient.readContract({

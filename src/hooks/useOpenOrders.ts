@@ -2,8 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { formatUnits } from "viem";
-
-const PONDER_URL = "http://127.0.0.1:42069/graphql";
+import { useTenantPonderUrl } from '@/context/TenantContext';
 
 export type OrderFilter = 'open' | 'filled' | 'cancelled';
 
@@ -67,8 +66,9 @@ export function useOpenOrders(
   userAddress: string | undefined,
   filter: OrderFilter = 'open',
 ) {
+  const PONDER_URL = useTenantPonderUrl();
   return useQuery({
-    queryKey: ["myOrders", seasonAddress, userAddress, filter],
+    queryKey: ["myOrders", seasonAddress, userAddress, filter, PONDER_URL],
     queryFn: async () => {
       if (!seasonAddress || !userAddress) return [];
 

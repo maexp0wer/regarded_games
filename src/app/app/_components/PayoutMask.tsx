@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { usePayout } from '@/hooks/usePayout';
+import { useTenantChainId } from '@/context/TenantContext';
 import { TxModal } from './TxModal';
 import { WalletButton } from './WalletButton';
 
@@ -16,7 +17,8 @@ interface PayoutMaskProps {
 
 export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
   const { address, isConnected } = useAccount();
-  const publicClient = usePublicClient();
+  const chainId = useTenantChainId();
+  const publicClient = usePublicClient({ chainId });
 
   const [status, setStatus] = useState<TxStatus>('idle');
   const [txHash, setTxHash] = useState<string | null>(null);

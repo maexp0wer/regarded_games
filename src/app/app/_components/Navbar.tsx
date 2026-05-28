@@ -8,11 +8,14 @@ import { WalletButton } from './WalletButton';
 import { useState, useEffect, useRef, MouseEvent } from 'react';
 import { useAccount } from 'wagmi';
 import { Logo } from '@/components/icons/svg';
+import { useTenant } from '@/context/TenantContext';
+import { isRouteEnabled } from '@/config/appRoutes';
 
 export function Navbar() {
   const { address } = useAccount();
   const { darkMode, toggleTheme } = useTheme();
   const pathname = usePathname();
+  const tenant = useTenant();
   const mainUrl = process.env.NEXT_PUBLIC_MAIN_DOMAIN;
   const docsUrl = mainUrl?.replace('://', '://docs.');
 
@@ -30,14 +33,23 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const navLinks = [
-    { name: 'Dashboard', href: address ? `/dashboard/${address}` : '/dashboard' },
-    { name: 'Seasons',   href: '/seasons' },
-    { name: 'Stake',     href: '/stake' },
-    { name: 'Swap',      href: '/swap' },
-    { name: 'ICO',       href: '/ico' },
+  const allNavLinks: {
+    name: string;
+    href: string;
+    pattern?: string;
+    external?: boolean;
+  }[] = [
+    { name: 'Dashboard', href: address ? `/dashboard/${address}` : '/dashboard', pattern: '/dashboard/[address]' },
+    { name: 'Seasons',   href: '/seasons', pattern: '/seasons' },
+    { name: 'Stake',     href: '/stake',   pattern: '/stake' },
+    { name: 'Swap',      href: '/swap',    pattern: '/swap' },
+    { name: 'ICO',       href: '/ico',     pattern: '/ico' },
     { name: 'Docs',      href: `${docsUrl}`, external: true },
   ];
+
+  const navLinks = allNavLinks.filter(
+    (link) => link.external || !link.pattern || isRouteEnabled(link.pattern, tenant.key),
+  );
 
   return (
     <>

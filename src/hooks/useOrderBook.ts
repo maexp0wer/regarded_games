@@ -2,8 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { fetchAllPonderItems } from '@/lib/ponder';
-
-const PONDER_URL = process.env.NEXT_PUBLIC_PONDER_URL || "http://127.0.0.1:42069/graphql";
+import { useTenantPonderUrl } from '@/context/TenantContext';
 
 export interface Order {
   id: string;
@@ -21,8 +20,9 @@ export interface Order {
 }
 
 export function useOrderBook(seasonAddress: string | undefined) {
+  const PONDER_URL = useTenantPonderUrl();
   return useQuery({
-    queryKey: ["orderBook", seasonAddress?.toLowerCase()],
+    queryKey: ["orderBook", seasonAddress?.toLowerCase(), PONDER_URL],
     queryFn: async () => {
       if (!seasonAddress) return { bids: [], asks: [] };
 

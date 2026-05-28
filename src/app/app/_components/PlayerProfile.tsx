@@ -6,7 +6,7 @@ import { formatUnits } from 'viem';
 
 import ERC20AbiRaw from '@/deployments/abis/MockUSDC.json';
 import StakingAbiRaw from '@/deployments/abis/Staking.json';
-import coreAddresses from '@/deployments/local/core.json';
+import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 
 const ERC20Abi = ERC20AbiRaw as any;
 const StakingAbi = StakingAbiRaw as any;
@@ -18,6 +18,8 @@ interface PlayerProfileProps {
 export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
   const { address: connectedAddress } = useAccount();
   const { signMessageAsync } = useSignMessage();
+  const coreAddresses = useTenantDeployment();
+  const chainId = useTenantChainId();
   const isOwner = connectedAddress?.toLowerCase() === profileAddress.toLowerCase();
 
   const [profile, setProfile] = useState({ name: '', imageUrl: '' });
@@ -33,9 +35,9 @@ export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
   const stakingAddr = coreAddresses.Staking as `0x${string}`;
   const rgdAddr     = coreAddresses.RGD    as `0x${string}`;
 
-  const { data: stakedBalances }  = useReadContract({ address: stakingAddr, abi: StakingAbi, functionName: 'stakedBalances',  args: [profileAddress] });
-  const { data: requiredRegStake } = useReadContract({ address: stakingAddr, abi: StakingAbi, functionName: 'requiredRegStake', args: [profileAddress] });
-  const { data: walletBalance }   = useReadContract({ address: rgdAddr,     abi: ERC20Abi,   functionName: 'balanceOf',         args: [profileAddress] });
+  const { data: stakedBalances }  = useReadContract({ address: stakingAddr, abi: StakingAbi, functionName: 'stakedBalances',  args: [profileAddress], chainId });
+  const { data: requiredRegStake } = useReadContract({ address: stakingAddr, abi: StakingAbi, functionName: 'requiredRegStake', args: [profileAddress], chainId });
+  const { data: walletBalance }   = useReadContract({ address: rgdAddr,     abi: ERC20Abi,   functionName: 'balanceOf',         args: [profileAddress], chainId });
 
   const currentStaked = (stakedBalances   as bigint) ?? 0n;
   const currentLocked = (requiredRegStake as bigint) ?? 0n;

@@ -1,13 +1,10 @@
 'use client';
 
 import { useQuery } from "@tanstack/react-query";
-import { useReadContract, useChainId, usePublicClient } from 'wagmi';
-import { formatUnits, Address, getAddress } from "viem";
-import { base, baseSepolia, foundry } from 'wagmi/chains';
+import { useReadContract } from 'wagmi';
+import { formatUnits } from "viem";
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
-import coreDeployment from '@/deployments/local/core.json';
-
-const PONDER_URL = "http://127.0.0.1:42069/graphql";
+import { useTenantPonderUrl, useTenantChainId } from '@/context/TenantContext';
 
 const CONTROLLER_SEASONS_ABI = [
   {
@@ -23,18 +20,6 @@ const CONTROLLER_SEASONS_ABI = [
     stateMutability: "view",
   },
 ] as const;
-
-function getControllerAddress(chainId: number): Address | undefined {
-  const map: Record<number, string> = {
-    [foundry.id]: 'Controller',
-    [baseSepolia.id]: 'Controller',
-    [base.id]: 'Controller',
-  };
-  const key = map[chainId];
-  if (!key) return undefined;
-  const addr = (coreDeployment as Record<string, string>)[key];
-  return addr ? getAddress(addr) : undefined;
-}
 
 // --- Types ---
 export interface SeasonLiveStats {
@@ -74,14 +59,15 @@ function calculateGiniBps(balances: number[]): number {
 
 // --- Hook 1: Metadata by Slug ---
 export function useSeasonById(slug: string | undefined) {
+  const PONDER_URL = useTenantPonderUrl();
   return useQuery<SeasonMetadata | null>({
-    queryKey: ["seasonById", slug],
+    queryKey: ["seasonById", slug, PONDER_URL],
     queryFn: async () => {
       if (!slug) return null;
       const numberPart = slug.replace(/[^0-9]/g, '');
       if (!numberPart) return null;
       const dbId = (BigInt(numberPart) - 1n).toString();
-      
+
       const query = `
         query GetSeasonByNumber($id: BigInt!) {
           seasonss(where: { seasonId: $id }) {
@@ -106,17 +92,20 @@ export function useSeasonById(slug: string | undefined) {
 
 // --- Hook 2: The Core Logic (Gini + Unfilled Orders) ---
 export function useSeasonGini(seasonAddress: string | undefined) {
+  const PONDER_URL = useTenantPonderUrl();
+  const chainId = useTenantChainId();
   const { data: thresholdRaw } = useReadContract({
     address: seasonAddress as `0x${string}`,
     abi: GameSeasonAbi as any,
     functionName: 'existentialThreshold',
+    chainId,
     query: { enabled: !!seasonAddress }
   });
 
   const threshold = thresholdRaw ? BigInt(thresholdRaw.toString()) : 0n;
 
   return useQuery<SeasonLiveStats | null>({
-    queryKey: ["seasonGini", seasonAddress?.toLowerCase(), threshold.toString()],
+    queryKey: ["seasonGini", seasonAddress?.toLowerCase(), threshold.toString(), PONDER_URL],
     queryFn: async () => {
       if (!seasonAddress) return null;
       const addr = seasonAddress.toLowerCase();

@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { useChainId, usePublicClient, useReadContracts } from 'wagmi';
+import { usePublicClient, useReadContracts } from 'wagmi';
 import { Address, formatUnits, erc20Abi } from 'viem';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 
 // Assets & Hooks
-import coreDeployment from '@/deployments/local/core.json';
+import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
 import { useSeasonPhase } from '@/hooks/useSeasonPhase';
@@ -40,16 +40,14 @@ interface PlayerActiveSeasonsProps {
 }
 
 export function PlayerActiveSeasons({ playerAddress }: PlayerActiveSeasonsProps) {
-  const chainId = useChainId();
-  const publicClient = usePublicClient();
+  const chainId = useTenantChainId();
+  const publicClient = usePublicClient({ chainId });
+  const coreDeployment = useTenantDeployment();
   const [showAll, setShowAll] = useState(false);
 
   const [validPositions, setValidPositions] = useState<Record<string, boolean>>({});
 
-  const controllerAddress = useMemo(() => {
-    const chainMap: Record<number, string> = { 8453: 'Controller', 84532: 'Controller', 31337: 'Controller' };
-    return (coreDeployment as any)[chainMap[chainId] || 'Controller'] as Address;
-  }, [chainId]);
+  const controllerAddress = coreDeployment.Controller as Address;
 
   // 1. SCAN REGISTRY (addresses + phase only — math is owned by per-row hooks)
   const { data: registry, isLoading: isScanning } = useQuery({
@@ -85,6 +83,7 @@ export function PlayerActiveSeasons({ playerAddress }: PlayerActiveSeasonsProps)
       abi: erc20Abi,
       functionName: 'balanceOf',
       args: [playerAddress as Address],
+      chainId,
     })),
     query: { enabled: !!registry && registry.length > 0 }
   });

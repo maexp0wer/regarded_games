@@ -7,7 +7,13 @@ import { RainbowKitProvider, darkTheme, lightTheme, Theme } from '@rainbow-me/ra
 import { config } from '@/config/wagmi';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext'; 
 
-function RainbowKitThemeWrapper({ children }: { children: React.ReactNode }) {
+function RainbowKitThemeWrapper({
+  children,
+  initialChainId,
+}: {
+  children: React.ReactNode;
+  initialChainId?: number;
+}) {
   const { darkMode } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -43,9 +49,10 @@ function RainbowKitThemeWrapper({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <RainbowKitProvider 
-      theme={mounted ? customTheme : darkTheme()} 
+    <RainbowKitProvider
+      theme={mounted ? customTheme : darkTheme()}
       modalSize="compact"
+      initialChain={initialChainId}
     >
       {children}
     </RainbowKitProvider>
@@ -55,9 +62,11 @@ function RainbowKitThemeWrapper({ children }: { children: React.ReactNode }) {
 export function Providers({
   children,
   initialState,
+  initialChainId,
 }: {
   children: React.ReactNode;
   initialState?: State;
+  initialChainId?: number;
 }) {
   const [queryClient] = useState(() => new QueryClient());
 
@@ -65,7 +74,7 @@ export function Providers({
     <WagmiProvider config={config} initialState={initialState}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <RainbowKitThemeWrapper>
+          <RainbowKitThemeWrapper initialChainId={initialChainId}>
             {children}
           </RainbowKitThemeWrapper>
         </ThemeProvider>

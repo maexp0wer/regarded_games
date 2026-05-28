@@ -1,5 +1,6 @@
 import { http, createConfig, cookieStorage, createStorage } from 'wagmi';
 import { foundry, base, baseSepolia } from 'wagmi/chains'; // 1. Import chains
+import { foundrySepolia } from './tenants';
 import { connectorsForWallets } from '@rainbow-me/rainbowkit';
 import {
   rainbowWallet,
@@ -10,12 +11,12 @@ import {
 
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '';
 
-// 1. Define all chains (Anvil for dev, Base for test/prod)
-const chains = [
-  ...(process.env.NEXT_PUBLIC_DEBUG === 'true' ? [foundry] : []), // Anvil (31337)
-  baseSepolia,
-  base,
-] as const;
+// 1. Define all chains. In fork mode two local Anvils run side-by-side:
+//    foundry (31337) → Base mainnet fork on :8545
+//    foundrySepolia (31338) → Base Sepolia fork on :8546
+//    The active chain per tenant is set by RainbowKitProvider's `initialChain`
+//    prop (see src/components/Providers.tsx + src/app/layout.tsx).
+const chains = [foundry, foundrySepolia, baseSepolia, base] as const;
 
 
 // 2. Set up the connectors (Wallet UI logic)
@@ -41,15 +42,9 @@ const connectors = typeof window !== 'undefined' ? connectorsForWallets(
 export const config = createConfig({
   chains,
   transports: {
-    ...(process.env.NEXT_PUBLIC_DEBUG === 'true' && {
-      // Local Anvil Node
-      [foundry.id]: http(process.env.NEXT_PUBLIC_ANVIL_RPC_URL),
-    }),
-
-    // Base Sepolia Testnet (Alchemy)
+    [foundry.id]: http(process.env.NEXT_PUBLIC_ANVIL_RPC_URL_MAINNET || 'http://127.0.0.1:8545'),
+    [foundrySepolia.id]: http(process.env.NEXT_PUBLIC_ANVIL_RPC_URL_SEPOLIA || 'http://127.0.0.1:8546'),
     [baseSepolia.id]: http(process.env.NEXT_PUBLIC_ALCHEMY_BASE_SEPOLIA_RPC_URL),
-
-    // Base Mainnet (Alchemy)
     [base.id]: http(process.env.NEXT_PUBLIC_ALCHEMY_BASE_RPC_URL),
   },
   connectors, 

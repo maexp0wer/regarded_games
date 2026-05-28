@@ -7,8 +7,7 @@ import { useReadContract } from 'wagmi';
 import { formatUnits } from "viem";
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { fetchAllPonderItems } from '@/lib/ponder';
-
-const PONDER_URL = process.env.NEXT_PUBLIC_PONDER_URL || "http://127.0.0.1:42069/graphql";
+import { useTenantPonderUrl, useTenantChainId } from '@/context/TenantContext';
 
 export interface PercentileData {
   factionPercentile: number;
@@ -22,23 +21,27 @@ export function useBatchPlayerPercentiles(
   userAddresses: string[],
   exchangeAddress?: string
 ) {
-  // 1. Get Threshold from Contract 
+  const PONDER_URL = useTenantPonderUrl();
+  const chainId = useTenantChainId();
+
+  // 1. Get Threshold from Contract
   // (We keep this to preserve exact hook timing and enabled states for dependent components!)
   const { data: massThresholdRaw } = useReadContract({
     address: seasonAddress as `0x${string}`,
     abi: GameSeasonAbi,
-    functionName: 'massThresholdBalance', 
+    functionName: 'massThresholdBalance',
+    chainId,
     query: { enabled: !!seasonAddress }
   });
 
   const massThresholdStr = massThresholdRaw ? massThresholdRaw.toString() : "0";
-  
+
   // Sort addresses to ensure stable query key
   const safeAddresses = userAddresses || [];
   const stableAddresses = [...new Set(safeAddresses)].sort();
 
   return useQuery<Record<string, PercentileData>>({
-    queryKey:["batchPlayerPercentiles", seasonAddress, stableAddresses.join(','), massThresholdStr],
+    queryKey:["batchPlayerPercentiles", seasonAddress, stableAddresses.join(','), massThresholdStr, PONDER_URL],
     
     // Exact original dependencies preserved to prevent UI breakage
     enabled: !!seasonAddress && stableAddresses.length > 0 && !!massThresholdRaw,
