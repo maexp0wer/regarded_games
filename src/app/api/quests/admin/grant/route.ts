@@ -3,6 +3,12 @@ import { isAddress } from 'viem';
 import { query } from '@/lib/db';
 import { loadQuestsConfig } from '@/lib/quests';
 
+interface GrantEntry {
+  address: string;
+  points: number;
+  note?: string;
+}
+
 export async function POST(req: Request) {
   const adminToken = req.headers.get('x-quests-admin-token');
   if (!adminToken || adminToken !== process.env.DISCOURSE_INIT_SECRET) {
@@ -10,40 +16,47 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = (await req.json()) as {
-      address?: string;
-      questId?: string;
-      points?: number;
-      note?: string;
-    };
-    const { address, questId, points, note } = body;
+    const body = (await req.json()) as { grants?: GrantEntry[] };
 
-    if (!address || !questId || typeof points !== 'number') {
-      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
-    }
-    if (!isAddress(address, { strict: false })) {
-      return NextResponse.json({ error: 'Invalid address' }, { status: 400 });
-    }
-    if (questId !== 'discussion_bonus') {
-      return NextResponse.json({ error: 'questId not grantable' }, { status: 400 });
+    if (!Array.isArray(body.grants) || body.grants.length === 0) {
+      return NextResponse.json({ error: 'grants array required' }, { status: 400 });
     }
 
     const config = loadQuestsConfig();
     const cap = config.points.discussion_bonus_cap;
-    const capped = Math.max(0, Math.min(points, cap));
 
-    const addr = address.toLowerCase();
-    await query(
-      `INSERT INTO quest_completions (address, quest_id, points, note)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (address, quest_id) DO UPDATE
-         SET points = LEAST($5, GREATEST(quest_completions.points, EXCLUDED.points)),
-             note   = COALESCE(EXCLUDED.note, quest_completions.note),
-             awarded_at = NOW()`,
-      [addr, questId, capped, note ?? null, cap],
-    );
+    const results: { address: string; points: number }[] = [];
+    const errors: { address: string; error: string }[] = [];
 
-    return NextResponse.json({ success: true, address: addr, points: capped });
+    for (const entry of body.grants) {
+      const { address, points, note } = entry;
+
+      if (!address || typeof points !== 'number') {
+        errors.push({ address: address ?? '?', error: 'missing address or points' });
+        continue;
+      }
+      if (!isAddress(address, { strict: false })) {
+        errors.push({ address, error: 'invalid address' });
+        continue;
+      }
+
+      const addr = address.toLowerCase();
+      const capped = Math.max(0, Math.min(points, cap));
+
+      await query(
+        `INSERT INTO quest_completions (address, quest_id, points, note)
+         VALUES ($1, 'discussion_bonus', $2, $3)
+         ON CONFLICT (address, quest_id) DO UPDATE
+           SET points = LEAST($4, GREATEST(quest_completions.points, EXCLUDED.points)),
+               note   = COALESCE(EXCLUDED.note, quest_completions.note),
+               awarded_at = NOW()`,
+        [addr, capped, note ?? null, cap],
+      );
+
+      results.push({ address: addr, points: capped });
+    }
+
+    return NextResponse.json({ success: true, granted: results, errors });
   } catch (err: any) {
     console.error('POST /api/quests/admin/grant error:', err?.message ?? err);
     return NextResponse.json({ error: 'server_error' }, { status: 500 });

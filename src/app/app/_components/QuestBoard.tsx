@@ -17,6 +17,7 @@ interface SubQuest {
   copyUrl?: string;
   auctionGate?: boolean;
   tradingGate?: boolean;
+  payoutGate?: boolean;
   note?: string;
 }
 
@@ -42,7 +43,7 @@ function CopyLinkButton({ url }: { url: string }) {
 }
 
 async function findActiveSeasonSlug(
-  phase: 'AUCTION' | 'TRADING',
+  phase: 'AUCTION' | 'TRADING' | 'PAYOUT',
   ponderUrl: string,
   publicClient: NonNullable<ReturnType<typeof usePublicClient>>,
 ): Promise<string | null> {
@@ -61,7 +62,10 @@ async function findActiveSeasonSlug(
       abi: GameSeasonAbi as any,
       functionName: 'getPhase',
     });
-    if (currentPhase === phase) {
+    const isMatch = phase === 'PAYOUT'
+      ? (currentPhase === 'PAYOUT' || currentPhase === 'DISTRIBUTION')
+      : currentPhase === phase;
+    if (isMatch) {
       return `season_${BigInt(season.seasonId) + 1n}`;
     }
   }
@@ -69,7 +73,7 @@ async function findActiveSeasonSlug(
 }
 
 function PhaseGateButton({ phase, modalTitle, modalBody }: {
-  phase: 'AUCTION' | 'TRADING';
+  phase: 'AUCTION' | 'TRADING' | 'PAYOUT';
   modalTitle: string;
   modalBody: string;
 }) {
@@ -79,8 +83,9 @@ function PhaseGateButton({ phase, modalTitle, modalBody }: {
   const ponderUrl = useTenantPonderUrl();
   const publicClient = usePublicClient({ chainId });
 
+  const queryKeyLabel = phase === 'AUCTION' ? 'auctionActive' : phase === 'TRADING' ? 'tradingActive' : 'payoutActive';
   const { data: activeSlug = null } = useQuery({
-    queryKey: [phase === 'AUCTION' ? 'auctionActive' : 'tradingActive', ponderUrl, chainId],
+    queryKey: [queryKeyLabel, ponderUrl, chainId],
     queryFn: () => findActiveSeasonSlug(phase, ponderUrl, publicClient!),
     enabled: !!publicClient,
     refetchInterval: 15000,
@@ -256,6 +261,12 @@ export function QuestBoard({
                           phase="TRADING"
                           modalTitle="No Active Trading Season"
                           modalBody="There is currently no testnet season in the trading phase. Check back when the next season starts."
+                        />
+                      ) : sub.payoutGate && !sub.isCompleted ? (
+                        <PhaseGateButton
+                          phase="PAYOUT"
+                          modalTitle="No Active Payout"
+                          modalBody="There is currently no testnet season in the payout phase. Check back when the current season concludes."
                         />
                       ) : sub.isCompleted ? (
                         <div className="w-6 h-6 rounded-full bg-[var(--color-green)]/10 border border-[var(--color-green)] grid place-items-center text-[var(--color-green)] font-mono text-xs font-black">

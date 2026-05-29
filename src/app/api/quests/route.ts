@@ -180,19 +180,47 @@ async function discourseHasVoted(addr: string): Promise<boolean> {
   );
   const postId = rows.find((r) => r.key === 'manifest_post_id')?.value;
   const pollName = rows.find((r) => r.key === 'manifest_poll_name')?.value;
-  if (!postId || !pollName) return false;
+  if (!postId || !pollName) {
+    console.warn('[quests] discourseHasVoted: missing manifest_post_id/manifest_poll_name in quest_config');
+    return false;
+  }
 
-  const res = await fetch(
-    `${url}/polls/voters.json?post_id=${postId}&poll_name=${encodeURIComponent(pollName)}`,
-    { headers: { 'Api-Key': apiKey, 'Api-Username': 'system' } },
-  );
-  if (!res.ok) return false;
-  const data = await res.json();
-  const voters = data?.voters ?? {};
-  for (const arr of Object.values(voters)) {
-    if (Array.isArray(arr) && arr.some((u: any) => (u?.username ?? '').toLowerCase() === addr)) {
-      return true;
+  const discourseHeaders = { 'Api-Key': apiKey, 'Api-Username': 'system' };
+
+  // Resolve the Discourse user.id for this wallet (external_id == wallet).
+  // Matching by numeric user.id is robust regardless of username formatting.
+  const userRes = await fetch(`${url}/u/by-external/${addr}.json`, { headers: discourseHeaders });
+  if (!userRes.ok) {
+    console.warn(`[quests] discourseHasVoted: by-external lookup failed (${userRes.status}) for ${addr}`);
+    return false;
+  }
+  const userData = await userRes.json();
+  const discourseUserId = userData?.user?.id;
+  if (typeof discourseUserId !== 'number') {
+    console.warn(`[quests] discourseHasVoted: no user.id returned for ${addr}`);
+    return false;
+  }
+
+  // Paginate through voter pages (Discourse returns ~25 per page per option).
+  for (let page = 1; page <= 20; page++) {
+    const res = await fetch(
+      `${url}/polls/voters.json?post_id=${postId}&poll_name=${encodeURIComponent(pollName)}&page=${page}`,
+      { headers: discourseHeaders },
+    );
+    if (!res.ok) {
+      console.warn(`[quests] discourseHasVoted: voters.json failed (${res.status}) page ${page}`);
+      return false;
     }
+    const data = await res.json();
+    const voters = data?.voters ?? {};
+    let totalOnPage = 0;
+    for (const arr of Object.values(voters)) {
+      if (!Array.isArray(arr)) continue;
+      totalOnPage += arr.length;
+      if (arr.some((u: any) => u?.id === discourseUserId)) return true;
+    }
+    // If every option returned 0 voters this page, we've exhausted all pages.
+    if (totalOnPage === 0) break;
   }
   return false;
 }
@@ -233,7 +261,7 @@ export async function GET(req: Request) {
     // unreachable service (Ponder sepolia, Discourse) does not 500 the route.
     const [
       hasFaucet, hasSwap, hasStake, hasAuctionMint, hasTrade,
-      userStats, loggedDiscourse, hasVoted, existingMap,
+      userStats, loggedDiscourse, hasVoted, existingMap, manifestTopicRow,
     ] = await Promise.all([
       safe('ponderHasFaucet',      () => ponderHasFaucet(address),      false),
       safe('ponderHasSwap',        () => ponderHasSwap(address),        false),
@@ -244,7 +272,14 @@ export async function GET(req: Request) {
       safe('discourseLastSeen',    () => discourseLastSeen(address),    false),
       safe('discourseHasVoted',    () => discourseHasVoted(address),    false),
       existing(address),
+      query<{ value: string }>(`SELECT value FROM quest_config WHERE key = 'manifest_topic_id'`),
     ]);
+
+    const manifestTopicId = manifestTopicRow.rows[0]?.value;
+    const discourseBase = process.env.NEXT_PUBLIC_DISCOURSE_URL ?? config.externalLinks.discourseUrl;
+    const manifestActionUrl = manifestTopicId
+      ? `${discourseBase}/t/${manifestTopicId}`
+      : config.externalLinks.discourseUrl;
 
     // ── Internal credit insertions ─────────────────────────────────────
     if (hasFaucet && !existingMap.has('use_faucet')) {
@@ -351,7 +386,7 @@ export async function GET(req: Request) {
             title: 'Vote on the Mainnet Season 1 Manifest',
             points: P.vote_manifest,
             isCompleted: isDone('vote_manifest'),
-            actionUrl: config.externalLinks.discourseUrl,
+            actionUrl: manifestActionUrl,
           },
         ],
       },
@@ -387,7 +422,7 @@ export async function GET(req: Request) {
           { id: 'stake_rgd',       type: 'internal', title: 'Stake RGD',                       points: P.stake_rgd,       isCompleted: isDone('stake_rgd'),       actionUrl: config.internalRoutes.stake },
           { id: 'buy_fim_auction', type: 'internal', title: 'Buy FIM during the Auction',      points: P.buy_fim_auction, isCompleted: isDone('buy_fim_auction'), auctionGate: true },
           { id: 'trade_fim',       type: 'internal', title: 'Buy or sell FIM during Trading',  points: P.trade_fim,       isCompleted: isDone('trade_fim'),       tradingGate: true },
-          { id: 'claim_payout',    type: 'internal', title: 'Claim payout',                    points: P.claim_payout,    isCompleted: isDone('claim_payout'),    actionUrl: config.internalRoutes.payout },
+          { id: 'claim_payout',    type: 'internal', title: 'Claim payout',                    points: P.claim_payout,    isCompleted: isDone('claim_payout'),    payoutGate: true },
           {
             id: 'win_the_game', type: 'internal',
             title: 'Win the Game (relative PnL rank)',

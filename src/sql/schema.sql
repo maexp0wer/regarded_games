@@ -22,3 +22,29 @@ CREATE INDEX IF NOT EXISTS idx_contacts_wallet_address ON contacts(wallet_addres
 -- ALTER TABLE contacts ADD CONSTRAINT check_bounty_requires_wallet
 -- CHECK ( bounty_airdrop = FALSE OR (bounty_airdrop = TRUE AND wallet_address IS NOT NULL) );
 -- It's generally easier and more flexible to validate this in the API route handler before insertion.
+
+-- Quest system tables
+CREATE TABLE IF NOT EXISTS quest_completions (
+    address     VARCHAR(42)  NOT NULL,
+    quest_id    VARCHAR(64)  NOT NULL,
+    points      INTEGER      NOT NULL DEFAULT 0,
+    note        TEXT,
+    completed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (address, quest_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_quest_completions_address ON quest_completions(address);
+
+-- Generic key/value store for quest configuration (e.g. manifest_post_id, manifest_poll_name)
+CREATE TABLE IF NOT EXISTS quest_config (
+    key   VARCHAR(128) PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+-- Faucet referral tracking
+CREATE TABLE IF NOT EXISTS faucet_referrals (
+    referee_address  VARCHAR(42) PRIMARY KEY,
+    referrer_address VARCHAR(42) NOT NULL,
+    chain_id         INTEGER     NOT NULL,
+    created_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

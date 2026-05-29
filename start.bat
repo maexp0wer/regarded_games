@@ -23,7 +23,7 @@ set "CMD_D=npm start"
 set "FOLDER_TO_DELETE=C:\Users\info\Documents\Work\ritardo_games\indexer\.ponder"
 
 :: PostgreSQL
-set "PG_ADMIN_URL=postgresql://postgres:***REMOVED***@localhost:5432/postgres"
+set "PG_APP_URL=postgresql://postgres:***REMOVED***@localhost:5432/regarded_games"
 set "PSQL_PATH=C:\Program Files\PostgreSQL\18\bin\psql.exe"
 set "PONDER_USER=ponder_user"
 set "PONDER_PASS=***REMOVED***"
@@ -49,12 +49,16 @@ set "APP_ENV="
 set "ALCHEMY_KEY="
 set "ALCHEMY_BASE_TEMPLATE="
 set "ALCHEMY_SEPOLIA_TEMPLATE="
+set "DISCOURSE_URL="
+set "DISCOURSE_API_KEY="
 
 for /f "usebackq tokens=1,* delims==" %%a in (`findstr /v "^#" "%PATH_A%\.env"`) do (
     if "%%a"=="NEXT_PUBLIC_ENVIRONMENT"                 set "APP_ENV=%%b"
     if "%%a"=="NEXT_PUBLIC_ALCHEMY_API_KEY"             set "ALCHEMY_KEY=%%b"
     if "%%a"=="NEXT_PUBLIC_ALCHEMY_BASE_RPC_URL"        set "ALCHEMY_BASE_TEMPLATE=%%b"
     if "%%a"=="NEXT_PUBLIC_ALCHEMY_BASE_SEPOLIA_RPC_URL" set "ALCHEMY_SEPOLIA_TEMPLATE=%%b"
+    if "%%a"=="NEXT_PUBLIC_DISCOURSE_URL"               set "DISCOURSE_URL=%%b"
+    if "%%a"=="DISCOURSE_API_KEY"                       set "DISCOURSE_API_KEY=%%b"
 )
 
 :: .env.local overrides .env (only for the keys we care about)
@@ -64,6 +68,8 @@ if exist "%PATH_A%\.env.local" (
         if "%%a"=="NEXT_PUBLIC_ALCHEMY_API_KEY"             set "ALCHEMY_KEY=%%b"
         if "%%a"=="NEXT_PUBLIC_ALCHEMY_BASE_RPC_URL"        set "ALCHEMY_BASE_TEMPLATE=%%b"
         if "%%a"=="NEXT_PUBLIC_ALCHEMY_BASE_SEPOLIA_RPC_URL" set "ALCHEMY_SEPOLIA_TEMPLATE=%%b"
+        if "%%a"=="NEXT_PUBLIC_DISCOURSE_URL"               set "DISCOURSE_URL=%%b"
+        if "%%a"=="DISCOURSE_API_KEY"                       set "DISCOURSE_API_KEY=%%b"
     )
 )
 
@@ -130,14 +136,28 @@ if /i "!APP_ENV!"=="fork" (
 
     ECHO fork mode: launching dual Anvil + dual Ponder.
 
-    :: --- DB setup: drop and recreate both ---
+    :: --- DB setup: drop and recreate both Ponder DBs ---
     ECHO Dropping and recreating: !MAINNET_DB!
-    "%PSQL_PATH%" "%PG_ADMIN_URL%" -c "DROP DATABASE IF EXISTS !MAINNET_DB! WITH (FORCE);"
-    "%PSQL_PATH%" "%PG_ADMIN_URL%" -c "CREATE DATABASE !MAINNET_DB! OWNER %PONDER_USER%;"
+    "%PSQL_PATH%" "%PG_APP_URL%" -c "DROP DATABASE IF EXISTS !MAINNET_DB! WITH (FORCE);"
+    "%PSQL_PATH%" "%PG_APP_URL%" -c "CREATE DATABASE !MAINNET_DB! OWNER %PONDER_USER%;"
 
     ECHO Dropping and recreating: !SEPOLIA_DB!
-    "%PSQL_PATH%" "%PG_ADMIN_URL%" -c "DROP DATABASE IF EXISTS !SEPOLIA_DB! WITH (FORCE);"
-    "%PSQL_PATH%" "%PG_ADMIN_URL%" -c "CREATE DATABASE !SEPOLIA_DB! OWNER %PONDER_USER%;"
+    "%PSQL_PATH%" "%PG_APP_URL%" -c "DROP DATABASE IF EXISTS !SEPOLIA_DB! WITH (FORCE);"
+    "%PSQL_PATH%" "%PG_APP_URL%" -c "CREATE DATABASE !SEPOLIA_DB! OWNER %PONDER_USER%;"
+
+    :: --- Discourse: delete the manifest vote topic (if one was registered) ---
+    if not "!DISCOURSE_URL!"=="" if not "!DISCOURSE_API_KEY!"=="" (
+        for /f "usebackq tokens=1 delims= " %%T in (`"%PSQL_PATH%" "%PG_APP_URL%" -t -A -c "SELECT value FROM quest_config WHERE key='manifest_topic_id';" 2^>nul`) do set "DISCOURSE_TOPIC_ID=%%T"
+        if not "!DISCOURSE_TOPIC_ID!"=="" (
+            ECHO Deleting Discourse topic !DISCOURSE_TOPIC_ID!...
+            curl.exe -s -X DELETE "!DISCOURSE_URL!/t/!DISCOURSE_TOPIC_ID!.json" -H "Api-Key: !DISCOURSE_API_KEY!" -H "Api-Username: system" >nul
+            set "DISCOURSE_TOPIC_ID="
+        )
+    )
+
+    :: --- App DB: clear transient tables in regarded_games ---
+    ECHO Clearing faucet_referrals, quest_completions, quest_config in regarded_games...
+    "%PSQL_PATH%" "%PG_APP_URL%" -c "TRUNCATE TABLE faucet_referrals, quest_completions, quest_config RESTART IDENTITY CASCADE;"
 
     :: --- Anvil A: Base mainnet fork ---
     set "ANVIL_CMD_M=anvil --fork-url !ALCHEMY_BASE_URL! --fork-block-number !PONDER_START_BLOCK_MAINNET! --chain-id !MAINNET_CHAIN_ID! --port !MAINNET_ANVIL_PORT!"
