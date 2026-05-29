@@ -2,6 +2,14 @@ import { ponder } from "ponder:registry";
 import { seasons, playerSeasonStats, yieldEvents, protocolStats, capitalAuctionParticipant, faucetClaims } from "ponder:schema";
 import { eq, and } from "ponder";
 import * as schema from "../ponder.schema";
+import mainnetCore from "../../src/deployments/mainnet/core.json";
+import sepoliaCore from "../../src/deployments/sepolia/core.json";
+
+const _coreDeployment =
+  (process.env.PONDER_DEPLOYMENT ?? "mainnet").toLowerCase() === "sepolia"
+    ? sepoliaCore
+    : mainnetCore;
+const ROUTER_ADDRESS_LC = ((_coreDeployment as any).Router as string | undefined)?.toLowerCase();
 
 // Gini coefficient in basis points (0–10 000) from a balance map.
 // Divides by 1e15 before summing to stay within safe Number range.
@@ -619,4 +627,29 @@ if ((process.env.PONDER_DEPLOYMENT ?? "mainnet").toLowerCase() === "sepolia") {
     });
   });
 }
+
+// Staking: track Staked events so the quest board can credit `stake_rgd`.
+ponder.on("Staking:Staked", async ({ event, context }) => {
+  await context.db.insert(schema.rgdStakes).values({
+    id: `${event.transaction.hash}-${event.log.logIndex}`,
+    staker: event.args.user.toLowerCase() as `0x${string}`,
+    amount: event.args.amount,
+    timestamp: event.block.timestamp,
+  });
+});
+
+// MockUniswapV2Router has no Swap event, so we detect a USDC→RGD swap via
+// an RGD Transfer where the sender is the router. The recipient is the user.
+ponder.on("RgdToken:Transfer", async ({ event, context }) => {
+  if (!ROUTER_ADDRESS_LC) return;
+  if (event.args.from.toLowerCase() !== ROUTER_ADDRESS_LC) return;
+  if (event.args.value === 0n) return;
+
+  await context.db.insert(schema.rgdSwaps).values({
+    id: `${event.transaction.hash}-${event.log.logIndex}`,
+    sender: event.args.to.toLowerCase() as `0x${string}`,
+    rgdOut: event.args.value,
+    timestamp: event.block.timestamp,
+  });
+});
 

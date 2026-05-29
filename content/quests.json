@@ -1,0 +1,42 @@
+{
+  "galxe": {
+    "followX": "https://galxe.com/regardedgames/campaign/follow-x",
+    "joinDiscord": "https://galxe.com/regardedgames/campaign/join-discord",
+    "retweet": "https://galxe.com/regardedgames/campaign/retweet"
+  },
+  "externalLinks": {
+    "discordInvite": "https://discord.gg/regardedgames",
+    "xProfile": "https://x.com/regardedgames",
+    "discourseUrl": "http://community.localhost"
+  },
+  "internalRoutes": {
+    "faucet": "/faucet",
+    "swap": "/swap",
+    "stake": "/stake",
+    "auction": "/ico",
+    "trading": "/dashboard",
+    "payout": "/seasons"
+  },
+  "points": {
+    "follow_x": 50,
+    "join_discord": 50,
+    "login_discourse": 50,
+    "vote_manifest": 200,
+    "retweet_x": 200,
+    "use_faucet": 50,
+    "swap_usdc_rgd": 50,
+    "stake_rgd": 50,
+    "buy_fim_auction": 50,
+    "trade_fim": 50,
+    "claim_payout": 50,
+    "win_the_game_max": 1000,
+    "discussion_bonus_cap": 400
+  },
+  "referralTiers": [
+    { "from": 1, "to": 10, "perReferral": 50 },
+    { "from": 11, "to": 35, "perReferral": 20 },
+    { "from": 36, "to": 100, "perReferral": 5 }
+  ],
+  "referralQualifyingThreshold": 500,
+  "tgeConversionRate": "Dynamic Vector"
+}

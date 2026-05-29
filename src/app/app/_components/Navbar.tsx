@@ -39,6 +39,7 @@ export function Navbar() {
     pattern?: string;
     external?: boolean;
   }[] = [
+    { name: 'Quests',    href: '/quests',  pattern: '/quests' },
     { name: 'Dashboard', href: address ? `/dashboard/${address}` : '/dashboard', pattern: '/dashboard/[address]' },
     { name: 'Seasons',   href: '/seasons', pattern: '/seasons' },
     { name: 'Stake',     href: '/stake',   pattern: '/stake' },

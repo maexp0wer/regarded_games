@@ -1,0 +1,415 @@
+import { NextResponse } from 'next/server';
+import { isAddress } from 'viem';
+import { query } from '@/lib/db';
+import { fetchAllPonderItems } from '@/lib/ponder';
+import {
+  loadQuestsConfig,
+  computeTotalReferralPoints,
+  computeWinScoreForSeason,
+  relativePnl,
+} from '@/lib/quests';
+import { TENANTS } from '@/config/tenants';
+
+const PONDER_URL = TENANTS.sepolia.ponderUrl;
+
+async function safe<T>(label: string, fn: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await fn();
+  } catch (e: any) {
+    console.warn(`[quests] ${label} failed: ${e?.message ?? e}`);
+    return fallback;
+  }
+}
+
+interface SubQuestOut {
+  id: string;
+  title: string;
+  points: number;
+  type: 'galxe' | 'internal';
+  isCompleted: boolean;
+  actionUrl?: string;
+  copyUrl?: string;
+  auctionGate?: boolean;
+  tradingGate?: boolean;
+  note?: string;
+}
+
+interface MainQuestOut {
+  id: string;
+  title: string;
+  description: string;
+  subQuests: SubQuestOut[];
+}
+
+async function upsertCompletion(address: string, questId: string, points: number, note?: string) {
+  await query(
+    `INSERT INTO quest_completions (address, quest_id, points, note)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (address, quest_id) DO UPDATE
+       SET points = EXCLUDED.points,
+           note   = COALESCE(EXCLUDED.note, quest_completions.note)`,
+    [address, questId, points, note ?? null],
+  );
+}
+
+async function existing(address: string): Promise<Map<string, { points: number; note: string | null }>> {
+  const { rows } = await query<{ quest_id: string; points: number; note: string | null }>(
+    `SELECT quest_id, points, note FROM quest_completions WHERE address = $1`,
+    [address],
+  );
+  const m = new Map<string, { points: number; note: string | null }>();
+  for (const r of rows) m.set(r.quest_id, { points: r.points, note: r.note });
+  return m;
+}
+
+async function ponderHasFaucet(addr: string) {
+  const q = `query($id: String!) { faucetClaims(id: $id) { id } }`;
+  const res = await fetch(PONDER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: q, variables: { id: addr } }),
+  });
+  const j = await res.json();
+  return Boolean(j?.data?.faucetClaims?.id);
+}
+
+async function ponderHasSwap(addr: string) {
+  const q = `query($sender: String!, $after: String, $limit: Int!) {
+    rgdSwapss(where: { sender: $sender }, limit: $limit, after: $after) {
+      items { id }
+      pageInfo { endCursor hasNextPage }
+    }
+  }`;
+  const items = await fetchAllPonderItems<{ id: string }>(
+    PONDER_URL, q, { sender: addr }, (d) => d.rgdSwapss,
+  );
+  return items.length > 0;
+}
+
+async function ponderHasStake(addr: string) {
+  const q = `query($staker: String!, $after: String, $limit: Int!) {
+    rgdStakess(where: { staker: $staker }, limit: $limit, after: $after) {
+      items { id }
+      pageInfo { endCursor hasNextPage }
+    }
+  }`;
+  const items = await fetchAllPonderItems<{ id: string }>(
+    PONDER_URL, q, { staker: addr }, (d) => d.rgdStakess,
+  );
+  return items.length > 0;
+}
+
+async function ponderHasAuctionMint(addr: string) {
+  const q = `query($p: String!, $after: String, $limit: Int!) {
+    auctionMintss(where: { playerAddress: $p }, limit: $limit, after: $after) {
+      items { id }
+      pageInfo { endCursor hasNextPage }
+    }
+  }`;
+  const items = await fetchAllPonderItems<{ id: string }>(
+    PONDER_URL, q, { p: addr }, (d) => d.auctionMintss,
+  );
+  return items.length > 0;
+}
+
+async function ponderHasTrade(addr: string) {
+  const q = (field: 'buyer' | 'seller') => `query($u: String!, $after: String, $limit: Int!) {
+    tradess(where: { ${field}: $u }, limit: $limit, after: $after) {
+      items { id }
+      pageInfo { endCursor hasNextPage }
+    }
+  }`;
+  const [b, s] = await Promise.all([
+    fetchAllPonderItems<{ id: string }>(PONDER_URL, q('buyer'), { u: addr }, (d) => d.tradess),
+    fetchAllPonderItems<{ id: string }>(PONDER_URL, q('seller'), { u: addr }, (d) => d.tradess),
+  ]);
+  return b.length > 0 || s.length > 0;
+}
+
+interface PlayerStatRow {
+  seasonAddress: string;
+  playerAddress: string;
+  totalPotentialPayout: string;
+  netContribution: string;
+  realizedPayout: string;
+}
+
+async function ponderUserStats(addr: string): Promise<PlayerStatRow[]> {
+  const q = `query($p: String!, $after: String, $limit: Int!) {
+    playerSeasonStatss(where: { playerAddress: $p }, limit: $limit, after: $after) {
+      items { seasonAddress playerAddress totalPotentialPayout netContribution realizedPayout }
+      pageInfo { endCursor hasNextPage }
+    }
+  }`;
+  return fetchAllPonderItems<PlayerStatRow>(
+    PONDER_URL, q, { p: addr }, (d) => d.playerSeasonStatss,
+  );
+}
+
+async function ponderSeasonStats(seasonAddr: string): Promise<PlayerStatRow[]> {
+  const q = `query($s: String!, $after: String, $limit: Int!) {
+    playerSeasonStatss(where: { seasonAddress: $s }, limit: $limit, after: $after) {
+      items { seasonAddress playerAddress totalPotentialPayout netContribution realizedPayout }
+      pageInfo { endCursor hasNextPage }
+    }
+  }`;
+  return fetchAllPonderItems<PlayerStatRow>(
+    PONDER_URL, q, { s: seasonAddr }, (d) => d.playerSeasonStatss,
+  );
+}
+
+async function discourseLastSeen(addr: string): Promise<boolean> {
+  const url = process.env.NEXT_PUBLIC_DISCOURSE_URL;
+  const apiKey = process.env.DISCOURSE_API_KEY;
+  if (!url || !apiKey) return false;
+  const res = await fetch(`${url}/u/by-external/${addr}.json`, {
+    headers: { 'Api-Key': apiKey, 'Api-Username': 'system' },
+  });
+  if (!res.ok) return false;
+  const data = await res.json();
+  return Boolean(data?.user?.last_seen_at);
+}
+
+async function discourseHasVoted(addr: string): Promise<boolean> {
+  const url = process.env.NEXT_PUBLIC_DISCOURSE_URL;
+  const apiKey = process.env.DISCOURSE_API_KEY;
+  if (!url || !apiKey) return false;
+
+  const { rows } = await query<{ key: string; value: string }>(
+    `SELECT key, value FROM quest_config WHERE key IN ('manifest_post_id','manifest_poll_name')`,
+  );
+  const postId = rows.find((r) => r.key === 'manifest_post_id')?.value;
+  const pollName = rows.find((r) => r.key === 'manifest_poll_name')?.value;
+  if (!postId || !pollName) return false;
+
+  const res = await fetch(
+    `${url}/polls/voters.json?post_id=${postId}&poll_name=${encodeURIComponent(pollName)}`,
+    { headers: { 'Api-Key': apiKey, 'Api-Username': 'system' } },
+  );
+  if (!res.ok) return false;
+  const data = await res.json();
+  const voters = data?.voters ?? {};
+  for (const arr of Object.values(voters)) {
+    if (Array.isArray(arr) && arr.some((u: any) => (u?.username ?? '').toLowerCase() === addr)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function qualifyingReferralCount(addr: string, threshold: number): Promise<number> {
+  const { rows } = await query<{ count: string }>(
+    `SELECT COUNT(*)::int AS count FROM (
+       SELECT fr.referee_address
+       FROM faucet_referrals fr
+       JOIN quest_completions qc ON qc.address = fr.referee_address
+       WHERE fr.referrer_address = $1
+       GROUP BY fr.referee_address
+       HAVING SUM(qc.points) >= $2
+     ) sub`,
+    [addr, threshold],
+  );
+  return Number(rows[0]?.count ?? 0);
+}
+
+async function checkGalxe(_addr: string, _campaign: string): Promise<boolean> {
+  // Galxe API integration is deferred. Always returns false in v1 so the
+  // sub-quest is rendered as "Launch" (galxe type) but never auto-completed.
+  return false;
+}
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const addressParam = searchParams.get('address');
+    if (!addressParam || !isAddress(addressParam, { strict: false })) {
+      return NextResponse.json({ error: 'invalid_address' }, { status: 400 });
+    }
+    const address = addressParam.toLowerCase();
+    const config = loadQuestsConfig();
+    const P = config.points;
+
+    // Single-shot Ponder probes, in parallel. Each is wrapped so one
+    // unreachable service (Ponder sepolia, Discourse) does not 500 the route.
+    const [
+      hasFaucet, hasSwap, hasStake, hasAuctionMint, hasTrade,
+      userStats, loggedDiscourse, hasVoted, existingMap,
+    ] = await Promise.all([
+      safe('ponderHasFaucet',      () => ponderHasFaucet(address),      false),
+      safe('ponderHasSwap',        () => ponderHasSwap(address),        false),
+      safe('ponderHasStake',       () => ponderHasStake(address),       false),
+      safe('ponderHasAuctionMint', () => ponderHasAuctionMint(address), false),
+      safe('ponderHasTrade',       () => ponderHasTrade(address),       false),
+      safe('ponderUserStats',      () => ponderUserStats(address),      [] as PlayerStatRow[]),
+      safe('discourseLastSeen',    () => discourseLastSeen(address),    false),
+      safe('discourseHasVoted',    () => discourseHasVoted(address),    false),
+      existing(address),
+    ]);
+
+    // ── Internal credit insertions ─────────────────────────────────────
+    if (hasFaucet && !existingMap.has('use_faucet')) {
+      await upsertCompletion(address, 'use_faucet', P.use_faucet);
+    }
+    if (hasSwap && !existingMap.has('swap_usdc_rgd')) {
+      await upsertCompletion(address, 'swap_usdc_rgd', P.swap_usdc_rgd);
+    }
+    if (hasStake && !existingMap.has('stake_rgd')) {
+      await upsertCompletion(address, 'stake_rgd', P.stake_rgd);
+    }
+    if (hasAuctionMint && !existingMap.has('buy_fim_auction')) {
+      await upsertCompletion(address, 'buy_fim_auction', P.buy_fim_auction);
+    }
+    if (hasTrade && !existingMap.has('trade_fim')) {
+      await upsertCompletion(address, 'trade_fim', P.trade_fim);
+    }
+    const claimedAny = userStats.some((s) => BigInt(s.realizedPayout) > 0n);
+    if (claimedAny && !existingMap.has('claim_payout')) {
+      await upsertCompletion(address, 'claim_payout', P.claim_payout);
+    }
+    if (loggedDiscourse && !existingMap.has('login_discourse')) {
+      await upsertCompletion(address, 'login_discourse', P.login_discourse);
+    }
+    if (hasVoted && !existingMap.has('vote_manifest')) {
+      await upsertCompletion(address, 'vote_manifest', P.vote_manifest);
+    }
+
+    // ── Win the Game (variable, lazy, best-across-seasons) ─────────────
+    let bestWin = 0;
+    for (const stat of userStats) {
+      if (BigInt(stat.realizedPayout) <= 0n) continue;
+      const userPnl = relativePnl(BigInt(stat.totalPotentialPayout), BigInt(stat.netContribution));
+      if (userPnl === null) continue;
+      const allStats = await safe(
+        `ponderSeasonStats(${stat.seasonAddress})`,
+        () => ponderSeasonStats(stat.seasonAddress),
+        [] as PlayerStatRow[],
+      );
+      const pnls = allStats
+        .map((s) => relativePnl(BigInt(s.totalPotentialPayout), BigInt(s.netContribution)))
+        .filter((v): v is number => v !== null);
+      if (pnls.length < 2) continue;
+      const score = computeWinScoreForSeason(userPnl, pnls);
+      if (score > bestWin) bestWin = score;
+    }
+    const existingWin = existingMap.get('win_the_game')?.points ?? 0;
+    if (bestWin > existingWin) {
+      await upsertCompletion(address, 'win_the_game', bestWin);
+    }
+
+    // ── Referrals (variable, gated by 500-pt threshold) ────────────────
+    const qualified = await qualifyingReferralCount(address, config.referralQualifyingThreshold);
+    const totalReferralPts = computeTotalReferralPoints(qualified, config.referralTiers);
+    if (totalReferralPts > 0) {
+      await upsertCompletion(address, 'referrals', totalReferralPts);
+    }
+
+    // Re-read after all upserts.
+    const finalMap = await existing(address);
+
+    // ── Build response ─────────────────────────────────────────────────
+    const isDone = (id: string) => finalMap.has(id);
+    const pts = (id: string, fallback: number) => finalMap.get(id)?.points ?? fallback;
+
+    const discussionRow = finalMap.get('discussion_bonus');
+
+    const mainQuests: MainQuestOut[] = [
+      {
+        id: 'join_community',
+        title: 'Join the Community',
+        description: 'Plug into the Regarded Games signal network.',
+        subQuests: [
+          {
+            id: 'follow_x', type: 'galxe',
+            title: 'Follow us on X',
+            points: P.follow_x,
+            isCompleted: isDone('follow_x') || (await checkGalxe(address, 'follow_x')),
+            actionUrl: config.galxe.followX,
+          },
+          {
+            id: 'join_discord', type: 'galxe',
+            title: 'Join us on Discord',
+            points: P.join_discord,
+            isCompleted: isDone('join_discord') || (await checkGalxe(address, 'join_discord')),
+            actionUrl: config.galxe.joinDiscord,
+          },
+          {
+            id: 'login_discourse', type: 'internal',
+            title: 'Log into our Discourse',
+            points: P.login_discourse,
+            isCompleted: isDone('login_discourse'),
+            actionUrl: config.externalLinks.discourseUrl,
+          },
+          {
+            id: 'discussion_bonus', type: 'internal',
+            title: 'Strategic voice bonus — join the discussion',
+            points: discussionRow?.points ?? 0,
+            isCompleted: !!discussionRow,
+            note: `Determined at the end of the Testnet Phase. Up to ${P.discussion_bonus_cap} pts.`,
+          },
+          {
+            id: 'vote_manifest', type: 'internal',
+            title: 'Vote on the Mainnet Season 1 Manifest',
+            points: P.vote_manifest,
+            isCompleted: isDone('vote_manifest'),
+            actionUrl: config.externalLinks.discourseUrl,
+          },
+        ],
+      },
+      {
+        id: 'spread_word',
+        title: 'Spread the Word',
+        description: 'Amplify the protocol signal beyond the inner circle.',
+        subQuests: [
+          {
+            id: 'retweet_x', type: 'galxe',
+            title: 'Retweet on X',
+            points: P.retweet_x,
+            isCompleted: isDone('retweet_x') || (await checkGalxe(address, 'retweet')),
+            actionUrl: config.galxe.retweet,
+          },
+          {
+            id: 'referrals', type: 'internal',
+            title: 'Invite players via your referral link',
+            points: pts('referrals', 0),
+            isCompleted: pts('referrals', 0) > 0,
+            copyUrl: `${config.internalRoutes.faucet}/${address}`,
+            note: `Tiers: 1–10 refs (50 pts each) · 11–35 (20 pts) · 36–100 (5 pts). Referee must reach ≥${config.referralQualifyingThreshold} quest pts.`,
+          },
+        ],
+      },
+      {
+        id: 'dominate_testnet',
+        title: 'Dominate the Testnet',
+        description: 'Run the full loop — capital in, capital out.',
+        subQuests: [
+          { id: 'use_faucet',      type: 'internal', title: 'Use the faucet to get FakeUSDC', points: P.use_faucet,      isCompleted: isDone('use_faucet'),      actionUrl: config.internalRoutes.faucet },
+          { id: 'swap_usdc_rgd',   type: 'internal', title: 'Exchange FakeUSDC for RGD',       points: P.swap_usdc_rgd,   isCompleted: isDone('swap_usdc_rgd'),   actionUrl: config.internalRoutes.swap },
+          { id: 'stake_rgd',       type: 'internal', title: 'Stake RGD',                       points: P.stake_rgd,       isCompleted: isDone('stake_rgd'),       actionUrl: config.internalRoutes.stake },
+          { id: 'buy_fim_auction', type: 'internal', title: 'Buy FIM during the Auction',      points: P.buy_fim_auction, isCompleted: isDone('buy_fim_auction'), auctionGate: true },
+          { id: 'trade_fim',       type: 'internal', title: 'Buy or sell FIM during Trading',  points: P.trade_fim,       isCompleted: isDone('trade_fim'),       tradingGate: true },
+          { id: 'claim_payout',    type: 'internal', title: 'Claim payout',                    points: P.claim_payout,    isCompleted: isDone('claim_payout'),    actionUrl: config.internalRoutes.payout },
+          {
+            id: 'win_the_game', type: 'internal',
+            title: 'Win the Game (relative PnL rank)',
+            points: pts('win_the_game', 0),
+            isCompleted: isDone('win_the_game'),
+            note: `0–${P.win_the_game_max} pts based on your best season's PnL rank.`,
+          },
+        ],
+      },
+    ];
+
+    const totalPoints = Array.from(finalMap.values()).reduce((s, v) => s + v.points, 0);
+    return NextResponse.json({
+      success: true,
+      data: {
+        mainQuests,
+        totalPoints,
+        tgeConversionRate: config.tgeConversionRate,
+      },
+    });
+  } catch (err: any) {
+    console.error('GET /api/quests error:', err?.message ?? err);
+    return NextResponse.json({ error: 'server_error' }, { status: 500 });
+  }
+}

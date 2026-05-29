@@ -6,6 +6,7 @@ export interface AppRoute {
 }
 
 export const APP_ROUTES: AppRoute[] = [
+  { pattern: '/quests',              tenants: ['sepolia'] },
   { pattern: '/',                    tenants: ['mainnet', 'sepolia'] },
   { pattern: '/seasons',             tenants: ['mainnet', 'sepolia'] },
   { pattern: '/stake',               tenants: ['mainnet', 'sepolia'] },

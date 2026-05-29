@@ -36,3 +36,7 @@ export function useTenantPonderUrl(): string {
 export function useTenantChainId(): number {
   return useTenant().activeChainId;
 }
+
+export function useTenantKey(): TenantKey {
+  return useTenant().key;
+}

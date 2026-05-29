@@ -10,7 +10,8 @@ import PercentSlider from '@/components/PercentSlider';
 import { sliderPctToAmount } from '@/utils/sliderAmount';
 
 import UniswapV2RouterAbi from '@/deployments/abis/UniswapV2Router.json';
-import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
+import MockUniswapV2RouterAbi from '@/deployments/abis/MockUniswapV2Router.json';
+import { useTenantDeployment, useTenantChainId, useTenantKey } from '@/context/TenantContext';
 import { TxModal } from './TxModal';
 import { extractRevertReason } from '@/utils/txErrors';
 
@@ -98,6 +99,9 @@ export function SwapMask() {
   const publicClient = usePublicClient({ chainId });
   const { writeContractAsync } = useWriteContract();
   const core = useTenantDeployment();
+  const tenantKey = useTenantKey();
+  const isMock = tenantKey === 'sepolia';
+  const routerAbi = isMock ? MockUniswapV2RouterAbi : UniswapV2RouterAbi;
 
   const RGD_TOKEN:  TokenInfo = useMemo(() => ({ address: core.RGD  as `0x${string}`, symbol: 'RGD',  decimals: 18 }), [core.RGD]);
   const USDC_TOKEN: TokenInfo = useMemo(() => ({ address: core.USDC as `0x${string}`, symbol: 'USDC', decimals: 6  }), [core.USDC]);
@@ -122,13 +126,14 @@ export function SwapMask() {
 
   const routerAddr = core.Router as `0x${string}`;
 
-  // Read WETH address from router (static — never changes)
+  // Read WETH address from router (static — never changes).
+  // Mock router has no WETH() — skip on sepolia.
   const { data: wethAddress } = useReadContract({
     address: routerAddr,
     abi: UniswapV2RouterAbi,
     functionName: 'WETH',
     chainId,
-    query: { staleTime: Infinity },
+    query: { enabled: !isMock, staleTime: Infinity },
   });
 
   const wethToken: TokenInfo | null = useMemo(
@@ -174,11 +179,30 @@ export function SwapMask() {
   const walletBalanceOut = ((isBuying ? rgdBalance   : otherBalance) ?? 0n) as bigint;
 
   // ── Route discovery + quote ───────────────────────────────────────
-  // Tries paths in priority order; returns the first that yields > 0 output.
+  // Mainnet: try Uniswap V2 paths via getAmountsOut.
+  // Sepolia (Mock router): read RGD/USDC balances of the router itself
+  // (the Mock holds both tokens as its pool) and compute x*y=k locally.
   const { data: routeData, isLoading: quoteLoading } = useQuery({
-    queryKey: ['swap-route', tokenIn.address, tokenOut.address, amountInBigInt.toString(), String(wethAddress)],
+    queryKey: ['swap-route', tenantKey, tokenIn.address, tokenOut.address, amountInBigInt.toString(), String(wethAddress)],
     queryFn: async () => {
       if (!amountInBigInt || !publicClient) return null;
+
+      if (isMock) {
+        const path: `0x${string}`[] = [tokenIn.address, tokenOut.address];
+        const [reserveIn, reserveOut] = await Promise.all([
+          publicClient.readContract({
+            address: tokenIn.address, abi: erc20Abi, functionName: 'balanceOf', args: [routerAddr],
+          }) as Promise<bigint>,
+          publicClient.readContract({
+            address: tokenOut.address, abi: erc20Abi, functionName: 'balanceOf', args: [routerAddr],
+          }) as Promise<bigint>,
+        ]);
+        if (reserveIn === 0n || reserveOut === 0n) return null;
+        const amountOut = (amountInBigInt * reserveOut) / (reserveIn + amountInBigInt);
+        const spotOut   = reserveOut / reserveIn; // marginal rate, may be 0 if reserveIn > reserveOut
+        return { path, amounts: [amountInBigInt, amountOut], spotAmounts: [1n, spotOut] };
+      }
+
       const candidates: `0x${string}`[][] = [
         [tokenIn.address, tokenOut.address],
         [tokenIn.address, USDC_TOKEN.address, tokenOut.address],
@@ -317,7 +341,7 @@ export function SwapMask() {
       const deadline = latestBlock.timestamp + 3600n;
       const swapHash = await writeContractAsync({
         address: routerAddr,
-        abi: UniswapV2RouterAbi,
+        abi: routerAbi,
         functionName: 'swapExactTokensForTokens',
         args: [amountInBigInt, amountOutMin, activePath, address, deadline],
       });
@@ -484,10 +508,14 @@ export function SwapMask() {
             disabled={isBusy || isSuccess || isError}
           />
           {isBuying ? (
-            <div className="relative">
-              <TokenBadge token={otherToken} onClick={() => setShowTokenSelect(p => !p)} disabled={isBusy || isSuccess || isError} />
-              {showTokenSelect && <TokenDropdown {...dropdownProps} />}
-            </div>
+            isMock ? (
+              <TokenBadge token={otherToken} disabled />
+            ) : (
+              <div className="relative">
+                <TokenBadge token={otherToken} onClick={() => setShowTokenSelect(p => !p)} disabled={isBusy || isSuccess || isError} />
+                {showTokenSelect && <TokenDropdown {...dropdownProps} />}
+              </div>
+            )
           ) : (
             <TokenBadge token={RGD_TOKEN} disabled />
           )}
@@ -529,10 +557,14 @@ export function SwapMask() {
               : noRoute ? 'No route' : '0.00'}
           </div>
           {!isBuying ? (
-            <div className="relative">
-              <TokenBadge token={otherToken} onClick={() => setShowTokenSelect(p => !p)} disabled={isBusy || isSuccess || isError} />
-              {showTokenSelect && <TokenDropdown {...dropdownProps} />}
-            </div>
+            isMock ? (
+              <TokenBadge token={otherToken} disabled />
+            ) : (
+              <div className="relative">
+                <TokenBadge token={otherToken} onClick={() => setShowTokenSelect(p => !p)} disabled={isBusy || isSuccess || isError} />
+                {showTokenSelect && <TokenDropdown {...dropdownProps} />}
+              </div>
+            )
           ) : (
             <TokenBadge token={RGD_TOKEN} disabled />
           )}

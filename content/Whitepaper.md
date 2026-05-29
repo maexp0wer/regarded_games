@@ -592,22 +592,54 @@ The initial acquisition strategy targets participants capable of understanding g
 
 ### 14.2. Phase 2: The Genesis Meritocracy (Retroactive Distribution)
 
-**The initial decentralisation of the DAO is facilitated by the Genesis Airdrop**, which constitutes the 5% "Genesis Liquidity (Retroactive)" allocation. *This is not a conventional, indiscriminate distribution. It is a Meritocratic Capitalisation Event designed to identify and incentivise the protocol's founding citizenry. The allocation for each participant is derived deterministically from a Contribution Score (CS), calculated as a weighted sum of on-chain activity and off-chain value addition.*
+**The initial decentralisation of the DAO is facilitated by the Genesis Airdrop**, which constitutes the 5% "Genesis Liquidity (Retroactive)" allocation. *This is not a conventional, indiscriminate distribution. It is a Meritocratic Capitalisation Event designed to identify and incentivise the protocol's founding citizenry. The allocation for each participant is derived deterministically from a Contribution Score (CS), accumulated through a structured Testnet Quest Program spanning community participation, network growth, and live simulation engagement.*
 
 **The Contribution Scoring Function**
-CS_p = (B × M_social) + S_referral + S_testnet + S_bug
+CS_p = S_community + S_spread + S_testnet
 
-Where:
+**S_community — Join the Community**
 
-- **B:** Base Identity Score (Fixed at 100 points for verified registration)
+- *Follow on X:* 50 pts (Galxe Quest)
 
-- **M_social:** Qualitative Engagement Multiplier (1× to 5×)
+- *Join Discord:* 50 pts (Galxe Quest)
 
-- *S_referral:* Network Growth Score — Referrals 1–10: 50 pts; 11–50: 20 pts; 51–100: 5 pts; 101+: 0 pts (Max: 1,325 pts)
+- *Log in to Discourse:* 50 pts
 
-- *S_testnet:* Simulation Performance Score — Winning Faction: 1,000 pts; Losing Faction: 100 pts
+- *Strategic Voice Bonus:*
 
-- *S_bug:* Security Auditing Score — Critical: 25,000 pts; High: 10,000 pts; Medium/Low: 500–2,500 pts
+  - *Join the discussion on Discord or Discourse:* up to 400 pts
+
+  - *Vote on the Mainnet Season 1 Season Manifest (Discourse):* 200 pts
+
+**S_spread — Spread the Word**
+
+- *Retweet on X:* 200 pts (Galxe Quest)
+
+- *Referrals 1–10:* 50 pts each
+
+- *Referrals 11–35:* 20 pts each
+
+- *Referrals 36–100:* 5 pts each
+
+**S_testnet — Dominate the Testnet**
+
+- *Use the faucet to claim fakeUSDC:* 50 pts
+
+- *Exchange fakeUSDC for \$RGD:* 50 pts
+
+- *Stake \$RGD:* 50 pts
+
+- *Buy \$FIM during the Auction:* 50 pts
+
+- *Buy or sell \$FIM during the Trading Phase:* 50 pts
+
+- *Claim payout:* 50 pts
+
+- *Win the Game (Efficiency Rank):* 0–1,000 pts, scaled linearly by relative seasonal performance — the top relative gainer receives 1,000 pts; the top relative loser receives 0.
+
+**A Note on Security Disclosures**
+
+*Bug discoveries are deliberately excluded from the Genesis Contribution Score.* Vulnerability research is compensated independently under the Guardian Programme, paid directly from the DAO Treasury Reserve in \$RGD (see Section 16.2). This decoupling ensures that security work is rewarded on its own technical merits rather than competing with community-acquisition metrics for a fixed airdrop pool.
 
 ## 15. Coordination Infrastructure: The Deliberative Layer
 
@@ -645,7 +677,7 @@ Prior to the mainnet initialisation of Season 1, the smart contract suite will u
 
 Security is not a static state but a continuous process.
 
-- **Continuous Bug Bounty Program:** A permanent Bug Bounty Program via Immunefi, ensuring that the disclosure of a vulnerability is always more profitable than its exploitation.
+- **The Guardian Programme:** A permanent, treasury-funded bug bounty programme. Verified disclosures are compensated directly from the DAO Treasury Reserve in \$RGD according to a fixed severity schedule — *Critical:* 1,000,000 \$RGD; *High:* 400,000 \$RGD; *Medium:* 100,000 \$RGD; *Log / Informational:* 20,000 \$RGD — ensuring that responsible disclosure of any vulnerability is always more profitable than its exploitation.
 
 - **Transparency and Verifiability:** The codebase will remain fully open-source and verified on block explorers, aligning with the ethos of "Don't Trust, Verify."
 

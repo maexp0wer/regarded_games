@@ -95,6 +95,24 @@ export const faucetClaims = onchainTable("faucet_claims", (t) => ({
   timestamp: t.bigint().notNull(),
 }));
 
+export const rgdSwaps = onchainTable("rgd_swaps", (t) => ({
+  id: t.text().primaryKey(),         // `${txHash}-${logIndex}`
+  sender: t.hex().notNull(),         // user that received RGD (lowercased)
+  rgdOut: t.bigint().notNull(),
+  timestamp: t.bigint().notNull(),
+}), (table) => ({
+  senderIdx: index("rgd_swaps_sender_idx").on(table.sender),
+}));
+
+export const rgdStakes = onchainTable("rgd_stakes", (t) => ({
+  id: t.text().primaryKey(),         // `${txHash}-${logIndex}`
+  staker: t.hex().notNull(),
+  amount: t.bigint().notNull(),
+  timestamp: t.bigint().notNull(),
+}), (table) => ({
+  stakerIdx: index("rgd_stakes_staker_idx").on(table.staker),
+}));
+
 export const candles = onchainTable("candles", (t) => ({
   seasonAddress:  t.hex().notNull(),
   timeframe:      t.text().notNull(),    // "5m" | "1h" | "4h" | "1d"
