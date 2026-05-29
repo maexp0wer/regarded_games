@@ -379,7 +379,7 @@ export async function GET(req: Request) {
             title: 'Strategic voice bonus — join the discussion',
             points: discussionRow?.points ?? 0,
             isCompleted: !!discussionRow,
-            note: `Determined at the end of the Testnet Phase. Up to ${P.discussion_bonus_cap} pts.`,
+            note: `Determined at the end of the Testnet Phase.`,
           },
           {
             id: 'vote_manifest', type: 'internal',
@@ -425,10 +425,10 @@ export async function GET(req: Request) {
           { id: 'claim_payout',    type: 'internal', title: 'Claim payout',                    points: P.claim_payout,    isCompleted: isDone('claim_payout'),    payoutGate: true },
           {
             id: 'win_the_game', type: 'internal',
-            title: 'Win the Game (relative PnL rank)',
+            title: 'Win the Game',
             points: pts('win_the_game', 0),
             isCompleted: isDone('win_the_game'),
-            note: `0–${P.win_the_game_max} pts based on your best season's PnL rank.`,
+            note: `0–${P.win_the_game_max} pts based on your best season's relative PnL rank.`,
           },
         ],
       },

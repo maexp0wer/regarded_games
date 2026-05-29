@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAccount } from 'wagmi';
+import { useTenantKey } from '@/context/TenantContext';
+import { discourseNames } from '@/lib/discourseNames';
 
 interface Topic {
   id: number;
@@ -71,7 +73,10 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
   const pillClass = isCapitalist ? 'pill-faction-cap' : 'pill-faction-soc';
   const hoverBorderColor = isCapitalist ? 'var(--color-gold-35)' : 'var(--color-purple-35)';
   const seasonNum = seasonSlug.match(/\d+/)?.[0] || '1';
-  const discourseNewTopicUrl = `${process.env.NEXT_PUBLIC_DISCOURSE_URL}/c/season-${seasonNum}/${isCapitalist ? `s${seasonNum}-bourgeoisie-strategy` : `s${seasonNum}-proletariat-strategy`}`;
+  const tenantKey = useTenantKey();
+  const names = discourseNames(tenantKey, Number(seasonNum));
+  const childCat = isCapitalist ? names.categories.bourgeoisie : names.categories.proletariat;
+  const discourseNewTopicUrl = `${process.env.NEXT_PUBLIC_DISCOURSE_URL}/c/${names.categories.parent.slug}/${childCat.slug}`;
 
   // ── Fetch topic list ──────────────────────────────────────────────────────
   const fetchTopics = useCallback(async () => {

@@ -44,7 +44,7 @@ export function useBatchPlayerPercentiles(
     queryKey:["batchPlayerPercentiles", seasonAddress, stableAddresses.join(','), massThresholdStr, PONDER_URL],
     
     // Exact original dependencies preserved to prevent UI breakage
-    enabled: !!seasonAddress && stableAddresses.length > 0 && !!massThresholdRaw,
+    enabled: !!seasonAddress && stableAddresses.length > 0,
     
     queryFn: async () => {
       if (!seasonAddress || stableAddresses.length === 0) return {};

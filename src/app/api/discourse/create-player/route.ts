@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { tenantFromRequest } from "@/lib/tenant.server";
+import { getTenant, type TenantKey } from "@/config/tenants";
+import { discourseNames } from "@/lib/discourseNames";
 
 // OPTIMIZATION 2: In-memory cache for Group IDs.
 // This prevents fetching the Group ID on every single player creation.
@@ -7,7 +10,13 @@ const groupIdCache: Record<string, number> = {};
 
 export async function POST(req: Request) {
   try {
-    const { walletAddress, seasonId } = await req.json();
+    const { walletAddress, seasonId, tenant: bodyTenant } = await req.json();
+
+    const tenant = (bodyTenant === 'mainnet' || bodyTenant === 'sepolia')
+      ? getTenant(bodyTenant as TenantKey)
+      : tenantFromRequest(req);
+    const seasonNum = seasonId + 1;
+    const names = discourseNames(tenant.key, seasonNum);
 
     const url = process.env.NEXT_PUBLIC_DISCOURSE_URL!;
     const apiKey = process.env.DISCOURSE_API_KEY!;
@@ -21,7 +30,7 @@ export async function POST(req: Request) {
 
     const wallet = walletAddress.toLowerCase();
     const username = wallet;
-    const groupName = `S${seasonId + 1}_Players`;
+    const groupName = names.groups.players;
 
     // ---- 1. Prepare SSO Payload ----
     const params = new URLSearchParams({
@@ -47,7 +56,8 @@ export async function POST(req: Request) {
     if (!groupId) {
       const groupRes = await fetch(`${url}/groups/${groupName}.json`, { headers });
       if (!groupRes.ok) {
-        return NextResponse.json({ error: `Group ${groupName} not found` }, { status: 404 });
+        console.warn(`[create-player] Group ${groupName} not found at Discourse (seasonId=${seasonId}, wallet=${wallet}, status=${groupRes.status}). Was setup-season run for seasonNum=${seasonId + 1}?`);
+        return NextResponse.json({ error: `Group ${groupName} not found`, seasonId, groupName }, { status: 404 });
       }
       groupId = (await groupRes.json()).group.id;
       groupIdCache[groupName] = groupId; // Save to cache for next time

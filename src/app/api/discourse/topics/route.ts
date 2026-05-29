@@ -1,16 +1,20 @@
 import { NextResponse } from 'next/server';
+import { tenantFromRequest } from '@/lib/tenant.server';
+import { getTenant, type TenantKey } from '@/config/tenants';
+import { discourseNames } from '@/lib/discourseNames';
 
-function buildCategorySlug(seasonSlug: string, isCapitalist: boolean) {
-  const seasonNum = seasonSlug.match(/\d+/)?.[0] || '1';
-  return isCapitalist
-    ? `season-${seasonNum}/s${seasonNum}-bourgeoisie-strategy`
-    : `season-${seasonNum}/s${seasonNum}-proletariat-strategy`;
+function resolveTenantFromQuery(req: Request, bodyTenant?: unknown) {
+  if (bodyTenant === 'mainnet' || bodyTenant === 'sepolia') {
+    return getTenant(bodyTenant as TenantKey);
+  }
+  return tenantFromRequest(req);
 }
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const seasonSlug = searchParams.get('seasonSlug');
   const isCapitalist = searchParams.get('isCapitalist') === 'true';
+  const tenantParam = searchParams.get('tenant');
 
   if (!seasonSlug) {
     return NextResponse.json({ error: 'seasonSlug is required' }, { status: 400 });
@@ -22,7 +26,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Discourse not configured' }, { status: 500 });
   }
 
-  const categorySlug = buildCategorySlug(seasonSlug, isCapitalist);
+  const tenant = resolveTenantFromQuery(req, tenantParam);
+  const seasonNum = Number(seasonSlug.match(/\d+/)?.[0] || '1');
+  const names = discourseNames(tenant.key, seasonNum);
+  const child = isCapitalist ? names.categories.bourgeoisie : names.categories.proletariat;
+  const categorySlug = `${names.categories.parent.slug}/${child.slug}`;
 
   try {
     const res = await fetch(`${discourseUrl}/c/${categorySlug}.json`, {
@@ -51,16 +59,18 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { seasonSlug, isCapitalist, title, raw, walletAddress } = await req.json();
+    const { seasonSlug, isCapitalist, title, raw, walletAddress, tenant: bodyTenant } = await req.json();
     if (!seasonSlug || !title || !raw || !walletAddress) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Resolve category ID via /site.json (same approach as setup-season)
-    const seasonNum = seasonSlug.match(/\d+/)?.[0] || '1';
+    const tenant = resolveTenantFromQuery(req, bodyTenant);
+    const seasonNum = Number(seasonSlug.match(/\d+/)?.[0] || '1');
+    const names = discourseNames(tenant.key, seasonNum);
     const subcategorySlug = isCapitalist === true
-      ? `s${seasonNum}-bourgeoisie-strategy`
-      : `s${seasonNum}-proletariat-strategy`;
+      ? names.categories.bourgeoisie.slug
+      : names.categories.proletariat.slug;
+
     const siteRes = await fetch(`${discourseUrl}/site.json`, {
       headers: { 'Api-Key': apiKey, 'Api-Username': 'system' },
     });
@@ -73,7 +83,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Could not resolve category ID' }, { status: 500 });
     }
 
-    // Create topic
     const res = await fetch(`${discourseUrl}/posts.json`, {
       method: 'POST',
       headers: {

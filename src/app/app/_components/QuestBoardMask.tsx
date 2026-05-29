@@ -11,7 +11,7 @@ export function QuestBoardMask() {
 
   if (!isConnected || !address) {
     return (
-      <div className="w-full metric-bar-chassis flex flex-col items-center justify-center gap-4 py-12">
+      <div className="w-full terminal-pane flex flex-col items-center justify-center gap-4 py-12">
         <span className="font-mono text-[10px] uppercase text-text2 tracking-widest">
           Wallet Required to Initialize Quest Vector
         </span>
@@ -22,7 +22,7 @@ export function QuestBoardMask() {
 
   if (isLoading || !data) {
     return (
-      <div className="w-full metric-bar-chassis py-12 text-center animate-pulse">
+      <div className="w-full terminal-pane py-12 text-center animate-pulse">
         <span className="font-mono text-xs uppercase text-text2 tracking-widest">
           Reading Ledger...
         </span>
@@ -32,7 +32,7 @@ export function QuestBoardMask() {
 
   if (isError) {
     return (
-      <div className="w-full metric-bar-chassis py-12 text-center">
+      <div className="w-full terminal-pane py-12 text-center">
         <span className="font-mono text-xs text-red-500">
           Failed to load quests. Try refreshing.
         </span>

@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createPublicClient, http, erc20Abi } from 'viem';
+import { createPublicClient, http, erc20Abi, isAddress } from 'viem';
 import { foundry, base, baseSepolia } from 'viem/chains';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { tenantFromRequest } from '@/lib/tenant.server';
 import { getTenant, type TenantKey } from '@/config/tenants';
+import { discourseNames } from '@/lib/discourseNames';
 
 // --- IN-MEMORY CACHES ---
 // 1. Caches Group IDs to save API lookups
@@ -21,10 +22,22 @@ const viemChainFor = (chainId: number) => {
 };
 
 export async function POST(req: Request) {
+  const adminToken = req.headers.get('x-discourse-admin-token');
+  if (!adminToken || adminToken !== process.env.DISCOURSE_INIT_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await req.json();
     const { addresses, walletAddress, seasonAddress, fimAddress, seasonSlug, tenant: bodyTenant } = body;
-    const walletsToProcess: string[] = addresses || (walletAddress ? [walletAddress] :[]);
+    const walletsToProcess: string[] = addresses || (walletAddress ? [walletAddress] : []);
+
+    if (!fimAddress || !isAddress(fimAddress, { strict: false })) {
+      return NextResponse.json({ error: 'fimAddress missing or invalid' }, { status: 400 });
+    }
+    if (!seasonAddress || !isAddress(seasonAddress, { strict: false })) {
+      return NextResponse.json({ error: 'seasonAddress missing or invalid' }, { status: 400 });
+    }
 
     const tenant = (bodyTenant === 'mainnet' || bodyTenant === 'sepolia')
       ? getTenant(bodyTenant as TenantKey)
@@ -71,9 +84,10 @@ export async function POST(req: Request) {
 
       const seasonIdMatch = seasonSlug?.match(/\d+/)?.[0] || "1";
       const seasonNum = Number(seasonIdMatch);
+      const names = discourseNames(tenant.key, seasonNum);
 
-      const targetGroupName = isCap ? `S${seasonNum}_Bourgeoisie` : `S${seasonNum}_Proletariat`;
-      const oldGroupName = isCap ? `S${seasonNum}_Proletariat` : `S${seasonNum}_Bourgeoisie`;
+      const targetGroupName = isCap ? names.groups.bourgeoisie : names.groups.proletariat;
+      const oldGroupName = isCap ? names.groups.proletariat : names.groups.bourgeoisie;
 
       // ==========================================
       // THE FIX: CHECK IN-MEMORY CACHE FIRST

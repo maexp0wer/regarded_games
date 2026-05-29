@@ -131,7 +131,9 @@ def ssh_rails_delete_categories():
     import base64
 
     ruby_script = (
-        'Category.where.not(id: SiteSetting.uncategorized_category_id).each do |c|; '
+        'cats = Category.where.not(id: SiteSetting.uncategorized_category_id).order(parent_category_id: :desc); '
+        'cats.each do |c|; '
+        'Topic.where(category_id: c.id).find_each { |t| t.destroy! rescue nil }; '
         'begin; c.destroy!; puts "Deleted: " + c.name; '
         'rescue => e; puts "Error: " + c.name + " -> " + e.message; end; end; '
         'puts "Done"'

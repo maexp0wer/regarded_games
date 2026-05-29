@@ -151,8 +151,6 @@ export default function Home() {
           : 'relative mx-auto md:transform md:-translate-x-16.25'
       }`}>
 
-        <div className="hero-blur-backdrop" />
-
         <div className="w-full max-w-6xl p-8 text-text">
           <div className='text-gold flex justify-center items-center '>
             <Logo className='w-40 text-white'/>
@@ -160,9 +158,10 @@ export default function Home() {
 
 
           {/* Hero Section */}
-          <section className="hero-section relative overflow-hidden min-h-screen flex items-center justify-center">
+          <section className="hero-section relative min-h-screen flex items-center justify-center">
 
-  
+        <div className="hero-blur-backdrop" />
+
   <div className="hero-container">
     {/* Main Header Display - Single block for perfect scaling */}
     <h1 className="hero-title">

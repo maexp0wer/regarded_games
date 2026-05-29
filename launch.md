@@ -129,7 +129,7 @@ Posts all discussion grants in a single call. Run this **after** the vote is liv
 Invoke-RestMethod `
   -Method POST `
   -Uri "http://localhost:3000/api/quests/admin/grant" `
-  -Headers @{ "x-quests-admin-token" = "YOUR_DISCOURSE_INIT_SECRET" } `
+  -Headers @{ "x-quests-admin-token" = "jeTN6Oe8IiBfITffH1mb" } `
   -ContentType "application/json" `
   -Body (Get-Content -Raw content/discussion-grants.json)
 ```

@@ -23,6 +23,7 @@ set "CMD_D=npm start"
 set "FOLDER_TO_DELETE=C:\Users\info\Documents\Work\ritardo_games\indexer\.ponder"
 
 :: PostgreSQL
+set "PG_ADMIN_URL=postgresql://postgres:***REMOVED***@localhost:5432/postgres"
 set "PG_APP_URL=postgresql://postgres:***REMOVED***@localhost:5432/regarded_games"
 set "PSQL_PATH=C:\Program Files\PostgreSQL\18\bin\psql.exe"
 set "PONDER_USER=ponder_user"
@@ -138,12 +139,12 @@ if /i "!APP_ENV!"=="fork" (
 
     :: --- DB setup: drop and recreate both Ponder DBs ---
     ECHO Dropping and recreating: !MAINNET_DB!
-    "%PSQL_PATH%" "%PG_APP_URL%" -c "DROP DATABASE IF EXISTS !MAINNET_DB! WITH (FORCE);"
-    "%PSQL_PATH%" "%PG_APP_URL%" -c "CREATE DATABASE !MAINNET_DB! OWNER %PONDER_USER%;"
+    "%PSQL_PATH%" "%PG_ADMIN_URL%" -c "DROP DATABASE IF EXISTS !MAINNET_DB! WITH (FORCE);"
+    "%PSQL_PATH%" "%PG_ADMIN_URL%" -c "CREATE DATABASE !MAINNET_DB! OWNER %PONDER_USER%;"
 
     ECHO Dropping and recreating: !SEPOLIA_DB!
-    "%PSQL_PATH%" "%PG_APP_URL%" -c "DROP DATABASE IF EXISTS !SEPOLIA_DB! WITH (FORCE);"
-    "%PSQL_PATH%" "%PG_APP_URL%" -c "CREATE DATABASE !SEPOLIA_DB! OWNER %PONDER_USER%;"
+    "%PSQL_PATH%" "%PG_ADMIN_URL%" -c "DROP DATABASE IF EXISTS !SEPOLIA_DB! WITH (FORCE);"
+    "%PSQL_PATH%" "%PG_ADMIN_URL%" -c "CREATE DATABASE !SEPOLIA_DB! OWNER %PONDER_USER%;"
 
     :: --- Discourse: delete the manifest vote topic (if one was registered) ---
     if not "!DISCOURSE_URL!"=="" if not "!DISCOURSE_API_KEY!"=="" (

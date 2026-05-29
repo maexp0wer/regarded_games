@@ -5,10 +5,9 @@ import * as schema from "../ponder.schema";
 import mainnetCore from "../../src/deployments/mainnet/core.json";
 import sepoliaCore from "../../src/deployments/sepolia/core.json";
 
-const _coreDeployment =
-  (process.env.PONDER_DEPLOYMENT ?? "mainnet").toLowerCase() === "sepolia"
-    ? sepoliaCore
-    : mainnetCore;
+const TENANT: "mainnet" | "sepolia" =
+  (process.env.PONDER_DEPLOYMENT ?? "mainnet").toLowerCase() === "sepolia" ? "sepolia" : "mainnet";
+const _coreDeployment = TENANT === "sepolia" ? sepoliaCore : mainnetCore;
 const ROUTER_ADDRESS_LC = ((_coreDeployment as any).Router as string | undefined)?.toLowerCase();
 
 // Gini coefficient in basis points (0–10 000) from a balance map.
@@ -60,7 +59,7 @@ ponder.on("GameController:SeasonDeployed", async ({ event, context }) => {
         "Content-Type": "application/json",
         "x-discourse-admin-token": process.env.DISCOURSE_INIT_SECRET || "",
       },
-      body: JSON.stringify({ seasonNum }),
+      body: JSON.stringify({ seasonNum, tenant: TENANT }),
     });
     const body = await res.text();
     console.log(`[Indexer] setup-season response: ${res.status} ${body}`);
@@ -69,15 +68,20 @@ ponder.on("GameController:SeasonDeployed", async ({ event, context }) => {
   }
 });
 
-// 2. Track FIM Balances & Prize Pool (The Source of Truth)
+// 2. FIM Burn handler
+// Ponder dispatches the ERC-20 `Transfer` event under the key `FIM:Transfer`,
+// so the registration name is fixed by the ABI. Mints and exchange-direction
+// transfers are handled by Auction:FimPurchased and Exchange:OrderFilled —
+// this handler exclusively processes BURNS (transfers to the zero address).
 ponder.on("FIM:Transfer", async ({ event, context }) => {
-  // 1. Normalize Addresses (Crucial for 0.16.1 matching)
-  const from = event.args.from.toLowerCase() as `0x${string}`;
   const to = event.args.to.toLowerCase() as `0x${string}`;
-  const value = event.args.value;
+  // Burn-only guard: ignore mints and peer-to-peer / exchange transfers.
+  if (to !== ZERO_ADDRESS) return;
+
+  const burner = event.args.from.toLowerCase() as `0x${string}`;
+  const burnedAmount = event.args.value;
   const fimAddress = event.log.address.toLowerCase() as `0x${string}`;
 
-  // 2. Find the season linked to this FIM contract
   const results = await context.db.sql
     .select()
     .from(seasons)
@@ -85,64 +89,18 @@ ponder.on("FIM:Transfer", async ({ event, context }) => {
     .limit(1);
 
   const season = results[0];
-
   if (!season) {
-    console.warn(`[Indexer] ⚠️ Transfer ignored: No season found for FIM ${fimAddress}`);
+    console.warn(`[Indexer] ⚠️ Burn ignored: No season found for FIM ${fimAddress}`);
     return;
   }
 
-  // 3. Handle Scenarios Explicitly
-
-  // --- SCENARIO A: MINT (Money In) ---
-  if (from === ZERO_ADDRESS) {
-    // 1. Update Prize Pool (1 FIM = 1 USDC, scale down 18->6 decimals)
-    const usdcValue = value / 1000000000000n;
-    await context.db
-      .update(seasons, { address: season.address })
-      .set((row) => ({
-        prizePool: row.prizePool + usdcValue,
-      }));
-
-    // 2. Credit Recipient
-    await context.db
-      .insert(playerSeasonStats)
-      .values({
-        seasonAddress: season.address,
-        playerAddress: to,
-        fimBalance: value,
-        netContribution: 0n,
-      })
-      .onConflictDoUpdate((row) => ({
-        fimBalance: row.fimBalance + value,
-      }));
-      
-    // console.log(`[Indexer] 🟢 Mint: +${value} to ${to}`);
-  } 
-  
-  // --- SCENARIO B: BURN (Money Out) ---
-  else if (to === ZERO_ADDRESS) {
-    await context.db
-      .insert(playerSeasonStats)
-      .values({ seasonAddress: season.address, playerAddress: from, fimBalance: -value, fimBurned: value, netContribution: 0n })
-      .onConflictDoUpdate((row) => ({
-        fimBalance: row.fimBalance - value,
-        fimBurned: row.fimBurned + value,
-      }));
-  } 
-  
-  // --- SCENARIO C: EXCHANGE-MEDIATED TRANSFER (P2P) ---
-  // FIM moves via the Exchange contract (sell order lock on creation, or fill to buyer).
-  // Track both sides so fimBalance reflects real wallet balance, enabling accurate Gini during Trading.
-  else {
-    await context.db
-      .insert(playerSeasonStats)
-      .values({ seasonAddress: season.address, playerAddress: from, fimBalance: -value, netContribution: 0n })
-      .onConflictDoUpdate((row) => ({ fimBalance: row.fimBalance - value }));
-    await context.db
-      .insert(playerSeasonStats)
-      .values({ seasonAddress: season.address, playerAddress: to, fimBalance: value, netContribution: 0n })
-      .onConflictDoUpdate((row) => ({ fimBalance: row.fimBalance + value }));
-  }
+  await context.db
+    .insert(playerSeasonStats)
+    .values({ seasonAddress: season.address, playerAddress: burner, fimBalance: -burnedAmount, fimBurned: burnedAmount, netContribution: 0n })
+    .onConflictDoUpdate((row) => ({
+      fimBalance: row.fimBalance - burnedAmount,
+      fimBurned: row.fimBurned + burnedAmount,
+    }));
 });
 
 ponder.on("Auction:FimPurchased", async ({ event, context }) => {
@@ -183,7 +141,8 @@ ponder.on("Auction:FimPurchased", async ({ event, context }) => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 walletAddress: buyer,
-                seasonId: Number(season.seasonId)
+                seasonId: Number(season.seasonId),
+                tenant: TENANT
             })
         }).catch(e => console.error(`[Indexer] Discourse API fetch failed:`, e));
         
@@ -191,6 +150,16 @@ ponder.on("Auction:FimPurchased", async ({ event, context }) => {
     } catch (e) {
         console.error(`[Indexer] Failed to trigger player creation:`, e);
     }
+
+    // Credit buyer fimBalance and update prize pool (1 FIM = 1 USDC, scale 18→6 decimals)
+    await context.db
+      .insert(schema.playerSeasonStats)
+      .values({ seasonAddress: season.address, playerAddress: buyer.toLowerCase() as `0x${string}`, fimBalance: fimMinted, netContribution: 0n })
+      .onConflictDoUpdate((row) => ({ fimBalance: row.fimBalance + fimMinted }));
+
+    await context.db
+      .update(schema.seasons, { address: season.address })
+      .set((row) => ({ prizePool: row.prizePool + fimMinted / 1_000_000_000_000n }));
 
 });
 
@@ -254,7 +223,7 @@ ponder.on("Exchange:OrderCreated", async ({ event, context }) => {
   await context.db.insert(schema.orders).values({
     id: uniqueId,                 // <--- NEW: The Primary Key String
     orderId: id,                  // The contract's numeric ID
-    seasonAddress: seasonAddress, 
+    seasonAddress: seasonAddress,
     maker: owner,
     isBuy: isBuy,
     price: usdcPrice,
@@ -263,6 +232,14 @@ ponder.on("Exchange:OrderCreated", async ({ event, context }) => {
     active: true,
     timestamp: event.block.timestamp,
   }).onConflictDoNothing();
+
+  // Sell orders lock FIM in the exchange — debit seller's balance immediately
+  if (!isBuy) {
+    await context.db
+      .insert(schema.playerSeasonStats)
+      .values({ seasonAddress, playerAddress: owner.toLowerCase() as `0x${string}`, fimBalance: -fimAmount, netContribution: 0n })
+      .onConflictDoUpdate((row) => ({ fimBalance: row.fimBalance - fimAmount }));
+  }
 });
 
 // 2. Order Filled (Fixing all issues)
@@ -299,7 +276,7 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
     ...(newRemaining === 0n ? { settledAt: event.block.timestamp } : {}),
   });
 
-  // 6. Snapshot pre-trade balances (FIM:Transfer hasn't fired yet in this block's log order)
+  // 6. Snapshot pre-trade balances (the FIM burn handler hasn't fired yet in this block's log order)
   const [buyerStats, sellerStats] = await Promise.all([
     context.db.find(schema.playerSeasonStats, { seasonAddress, playerAddress: buyer }),
     context.db.find(schema.playerSeasonStats, { seasonAddress, playerAddress: seller }),
@@ -434,20 +411,30 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
     );
   }
 
-  // 9. ==========================================
-  // NEW: TRIGGER DISCOURSE SYNC ON TRADE
+  // 9. Credit buyer fimBalance (placed after trade/candle recording to preserve pre-fill Gini semantics)
+  await context.db
+    .insert(schema.playerSeasonStats)
+    .values({ seasonAddress, playerAddress: buyer.toLowerCase() as `0x${string}`, fimBalance: fimAmount, netContribution: 0n })
+    .onConflictDoUpdate((row) => ({ fimBalance: row.fimBalance + fimAmount }));
+
+  // 10. ==========================================
+  // TRIGGER DISCOURSE SYNC ON TRADE
   // ==========================================
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://127.0.0.1:3000";
   try {
       // Fire-and-forget fetch to Next.js API
       fetch(`${appUrl}/api/discourse/sync-faction`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "x-discourse-admin-token": process.env.DISCOURSE_INIT_SECRET || "",
+          },
           body: JSON.stringify({
               addresses: [buyer, seller], // Both buyer and seller balances changed!
               seasonAddress: currentSeason.address,
               fimAddress: currentSeason.fimAddress,
-              seasonSlug: `season_${Number(currentSeason.seasonId) + 1}`
+              seasonSlug: `season_${Number(currentSeason.seasonId) + 1}`,
+              tenant: TENANT
           })
       }).catch(e => console.error(`[Indexer] Discourse sync error:`, e));
       
@@ -469,13 +456,22 @@ ponder.on("Exchange:OrderCancelled", async ({ event, context }) => {
   // Recreate the primary key used in insert
   const uniqueId = `${seasonAddress}-${id}`;
 
-  // 2. Update using the primary key 'id'
+  // Read order before updating to get maker address and remaining amount
+  const order = await context.db.find(schema.orders, { id: uniqueId });
+  if (!order) return;
+
   // remainingAmount is preserved (not zeroed) so we know how much was unfilled at cancellation
   await context.db.update(schema.orders, { id: uniqueId }).set({
     active: false,
     isCancelled: true,
     settledAt: event.block.timestamp,
   });
+
+  // Re-credit seller's fimBalance with the unlocked remaining amount
+  await context.db
+    .insert(schema.playerSeasonStats)
+    .values({ seasonAddress, playerAddress: order.maker.toLowerCase() as `0x${string}`, fimBalance: order.remainingAmount, netContribution: 0n })
+    .onConflictDoUpdate((row) => ({ fimBalance: row.fimBalance + order.remainingAmount }));
 });
 
 ponder.on("GameSeason:PayoutClaimed", async ({ event, context }) => {
@@ -594,7 +590,10 @@ ponder.on("GameSeason:StateChanged", async ({ event, context }) => {
     console.log(`[Indexer] Season ${seasonAddress} entered BOOTSTRAP.`);
 
     const season = await context.db.find(schema.seasons, { address: seasonAddress as `0x${string}` });
-    const seasonId = season?.seasonId || 1n;
+    const onchainSeasonId = season?.seasonId ?? 0n;
+    // Discourse groups are named with the 1-based display number (S1_*, S2_*, ...),
+    // matching the convention used by SeasonDeployed → setup-season.
+    const seasonNum = Number(onchainSeasonId) + 1;
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://127.0.0.1:3000";
 
@@ -607,7 +606,8 @@ ponder.on("GameSeason:StateChanged", async ({ event, context }) => {
         },
         body: JSON.stringify({
           seasonAddress: seasonAddress,
-          seasonId: Number(seasonId)
+          seasonId: seasonNum,
+          tenant: TENANT
         })
       });
       console.log(`[Indexer] Discourse Init Triggered Successfully.`);

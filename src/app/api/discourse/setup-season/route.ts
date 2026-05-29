@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { tenantFromRequest } from '@/lib/tenant.server';
+import { getTenant, type TenantKey } from '@/config/tenants';
+import { discourseNames } from '@/lib/discourseNames';
 
 function parseCategoryIntros(seasonNum: number): Record<string, { title: string; body: string }> {
   const raw = readFileSync(join(process.cwd(), 'content', 'discourse-category-intros.md'), 'utf-8')
@@ -27,7 +30,12 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { seasonNum } = await req.json(); // 1-indexed
+    const { seasonNum, tenant: bodyTenant } = await req.json(); // 1-indexed
+
+    const tenant = (bodyTenant === 'mainnet' || bodyTenant === 'sepolia')
+      ? getTenant(bodyTenant as TenantKey)
+      : tenantFromRequest(req);
+    const names = discourseNames(tenant.key, seasonNum);
 
     const url = process.env.NEXT_PUBLIC_DISCOURSE_URL!;
     const apiKey = process.env.DISCOURSE_API_KEY!;
@@ -42,7 +50,7 @@ export async function POST(req: Request) {
 
     const safeJson = (s: string) => { try { return JSON.parse(s); } catch { return null; } };
 
-    console.log(`\n===== DISCOURSE SETUP: SEASON ${seasonNum} =====`);
+    console.log(`\n===== DISCOURSE SETUP: SEASON ${seasonNum} (tenant=${tenant.key}) =====`);
 
     const intros = parseCategoryIntros(seasonNum);
 
@@ -59,9 +67,9 @@ export async function POST(req: Request) {
       console.log(`Created group: ${name} (${res.status}) ${body.slice(0, 200)}`);
     }
 
-    await ensureGroup(`S${seasonNum}_Players`);
-    await ensureGroup(`S${seasonNum}_Bourgeoisie`);
-    await ensureGroup(`S${seasonNum}_Proletariat`);
+    await ensureGroup(names.groups.players);
+    await ensureGroup(names.groups.bourgeoisie);
+    await ensureGroup(names.groups.proletariat);
 
     // ── 2. Ensure Categories (idempotent via /site.json slug lookup) ───
     async function ensureCategory(slug: string, payload: object): Promise<{ id: number | null; topicId: number | null }> {
@@ -95,36 +103,36 @@ export async function POST(req: Request) {
       console.log(`Updated about topic "${introKey}" (topic=${topicId}, post=${firstPostId}, status=${postRes.status})`);
     }
 
-    const { id: parentId, topicId: parentTopicId } = await ensureCategory(`season-${seasonNum}`, {
-      name: `Season ${seasonNum}`,
-      slug: `season-${seasonNum}`,
+    const { id: parentId, topicId: parentTopicId } = await ensureCategory(names.categories.parent.slug, {
+      name: names.categories.parent.name,
+      slug: names.categories.parent.slug,
       color: 'CC4713',
       text_color: 'FFFFFF',
       permissions: {
-        [`S${seasonNum}_Players`]: 1,
-        [`S${seasonNum}_Bourgeoisie`]: 1,
-        [`S${seasonNum}_Proletariat`]: 1
+        [names.groups.players]: 1,
+        [names.groups.bourgeoisie]: 1,
+        [names.groups.proletariat]: 1
       }
     });
     if (parentTopicId) await updateAboutTopic(parentTopicId, 'season-parent');
 
-    const { id: capCategoryId, topicId: capTopicId } = await ensureCategory(`s${seasonNum}-bourgeoisie-strategy`, {
-      name: `S${seasonNum} Bourgeoisie Strategy`,
-      slug: `s${seasonNum}-bourgeoisie-strategy`,
+    const { id: capCategoryId, topicId: capTopicId } = await ensureCategory(names.categories.bourgeoisie.slug, {
+      name: names.categories.bourgeoisie.name,
+      slug: names.categories.bourgeoisie.slug,
       parent_category_id: parentId,
       color: '0088CC',
       text_color: 'FFFFFF',
-      permissions: { [`S${seasonNum}_Bourgeoisie`]: 1 }
+      permissions: { [names.groups.bourgeoisie]: 1 }
     });
     if (capTopicId) await updateAboutTopic(capTopicId, 'bourgeoisie-strategy');
 
-    const { id: socCategoryId, topicId: socTopicId } = await ensureCategory(`s${seasonNum}-proletariat-strategy`, {
-      name: `S${seasonNum} Proletariat Strategy`,
-      slug: `s${seasonNum}-proletariat-strategy`,
+    const { id: socCategoryId, topicId: socTopicId } = await ensureCategory(names.categories.proletariat.slug, {
+      name: names.categories.proletariat.name,
+      slug: names.categories.proletariat.slug,
       parent_category_id: parentId,
       color: 'FA6C8A',
       text_color: 'FFFFFF',
-      permissions: { [`S${seasonNum}_Proletariat`]: 1 }
+      permissions: { [names.groups.proletariat]: 1 }
     });
     if (socTopicId) await updateAboutTopic(socTopicId, 'proletariat-strategy');
 
@@ -142,41 +150,41 @@ export async function POST(req: Request) {
     }
 
     if (parentId) {
-      await ensureChannel(`S${seasonNum}_General`, {
+      await ensureChannel(names.channels.general, {
         channel: {
           chatable_type: 'Category',
           chatable_id: parentId,
-          name: `S${seasonNum}_General`,
+          name: names.channels.general,
           description: `Season ${seasonNum} general chat for all players`,
           auto_join_users: true
         }
       });
     }
     if (capCategoryId) {
-      await ensureChannel(`S${seasonNum}_Bourgeoisie`, {
+      await ensureChannel(names.channels.bourgeoisie, {
         channel: {
           chatable_type: 'Category',
           chatable_id: capCategoryId,
-          name: `S${seasonNum}_Bourgeoisie`,
+          name: names.channels.bourgeoisie,
           description: `Season ${seasonNum} Bourgeoisie faction chat`,
           auto_join_users: true
         }
       });
     }
     if (socCategoryId) {
-      await ensureChannel(`S${seasonNum}_Proletariat`, {
+      await ensureChannel(names.channels.proletariat, {
         channel: {
           chatable_type: 'Category',
           chatable_id: socCategoryId,
-          name: `S${seasonNum}_Proletariat`,
+          name: names.channels.proletariat,
           description: `Season ${seasonNum} Proletariat faction chat`,
           auto_join_users: true
         }
       });
     }
 
-    console.log(`===== SETUP COMPLETE: SEASON ${seasonNum} =====`);
-    return NextResponse.json({ success: true, seasonNum });
+    console.log(`===== SETUP COMPLETE: SEASON ${seasonNum} (tenant=${tenant.key}) =====`);
+    return NextResponse.json({ success: true, seasonNum, tenant: tenant.key });
 
   } catch (error: any) {
     console.error('Setup crash:', error);

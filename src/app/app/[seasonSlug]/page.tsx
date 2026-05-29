@@ -106,16 +106,6 @@ export default function SeasonDetailPage() {
   const chart = useSeasonChart(seasonAddress);
 
 
-  // JIT faction sync
-  useEffect(() => {
-    if (!userAddress || !factionData) return;
-    fetch('/api/discourse/sync-faction', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ walletAddress: userAddress, seasonAddress, fimAddress, seasonSlug }),
-    }).catch((e) => console.error('JIT Sync Failed:', e));
-  }, [userAddress, factionData?.isCapitalist]);
-
   const formattedName = seasonSlug?.replace(/_/g, ' ') || 'Season Dashboard';
 
   // 5. Loading / error states
