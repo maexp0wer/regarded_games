@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
 import { fetchAllPonderItems } from '@/lib/ponder';
 import { tenantFromRequest } from '@/lib/tenant.server';
 import { getTenant, type TenantKey } from '@/config/tenants';
 import { discourseNames } from '@/lib/discourseNames';
+import { ssoSync } from '@/lib/discourseSSO';
+
+const debug = process.env.DEBUG === 'true';
+const GET_BATCH_SIZE = 20; // parallel existence checks per batch
+const SSO_CONCURRENCY = 5; // concurrent SSO sync workers
 
 export async function POST(req: Request) {
   const adminToken = req.headers.get('x-discourse-admin-token');
@@ -20,8 +24,7 @@ export async function POST(req: Request) {
       : tenantFromRequest(req);
     const names = discourseNames(tenant.key, Number(seasonId));
 
-    console.log(`\n========================================`);
-    console.log(`INITIALIZING DISCOURSE FOR SEASON ${seasonId} (tenant=${tenant.key})`);
+    if (debug) console.log(`[init-season] initializing season ${seasonId} (tenant=${tenant.key})`);
 
     const url = process.env.NEXT_PUBLIC_DISCOURSE_URL;
     const apiKey = process.env.DISCOURSE_API_KEY;
@@ -117,119 +120,110 @@ export async function POST(req: Request) {
       else break;
     }
 
-    console.log(`Threshold (off-chain): ${threshold.toString()}`);
+    if (debug) console.log(`[init-season] threshold (off-chain): ${threshold.toString()}`);
 
     // Provision only players with a positive effective balance.
     const players = Array.from(effectiveBals.entries())
       .filter(([, bal]) => bal > 0n)
       .map(([playerAddress, bal]) => ({ playerAddress, fimBalance: bal.toString() }));
 
-    console.log(`Found ${players.length} players`);
+    if (debug) console.log(`[init-season] found ${players.length} players`);
 
-    // Fetch S{seasonId}_Players group ID once before the loop
-    const playersGroupName = names.groups.players;
-    const playersGroupRes = await fetch(`${url}/groups/${playersGroupName}.json`, { headers });
-    const playersGroupId = playersGroupRes.ok ? (await playersGroupRes.json()).group.id : null;
-    if (!playersGroupId) console.log(`Warning: group ${playersGroupName} not found — players will not be added to it`);
+    // --- Fetch all three group IDs upfront in parallel ---
+    const [bourgeoisieGroupRes, proletariatGroupRes, playersGroupRes] = await Promise.all([
+      fetch(`${url}/groups/${names.groups.bourgeoisie}.json`, { headers }),
+      fetch(`${url}/groups/${names.groups.proletariat}.json`, { headers }),
+      fetch(`${url}/groups/${names.groups.players}.json`, { headers }),
+    ]);
 
-    let successCount = 0;
+    if (!bourgeoisieGroupRes.ok || !proletariatGroupRes.ok) {
+      return NextResponse.json({ error: 'Faction groups not found — run setup-season first' }, { status: 404 });
+    }
 
-    //Provision Players
+    const bourgeoisieGroupId = (await bourgeoisieGroupRes.json()).group.id as number;
+    const proletariatGroupId = (await proletariatGroupRes.json()).group.id as number;
+    const playersGroupId = playersGroupRes.ok ? (await playersGroupRes.json()).group.id as number : null;
+
+    if (!playersGroupId) console.warn(`[init-season] players group not found — skipping players group assignment`);
+
+    // --- Phase 1: classify all players by faction ---
+    const bourgeoisieWallets: string[] = [];
+    const proletariatWallets: string[] = [];
+
     for (const player of players) {
-
       const wallet = player.playerAddress.toLowerCase();
-      const isCapitalist = BigInt(player.fimBalance) > threshold;
-      const targetGroupName = isCapitalist
-        ? names.groups.bourgeoisie
-        : names.groups.proletariat;
+      if (BigInt(player.fimBalance) > threshold) bourgeoisieWallets.push(wallet);
+      else proletariatWallets.push(wallet);
+    }
 
-      console.log(`Processing ${wallet}`);
+    const allWallets = [...bourgeoisieWallets, ...proletariatWallets];
 
-      // --- A. Create/Sync User via SSO ---
-      const ssoParams = new URLSearchParams({
-        external_id: wallet,
-        email: `${wallet}@regarded.local`,
-        username: wallet,
-        name: `Player ${wallet.slice(2, 8)}`
-      });
+    // --- Phase 2: existence checks in parallel batches (GETs are cheap rate-limit-wise) ---
+    const newWallets: string[] = [];
 
-      const payloadBase64 = Buffer.from(ssoParams.toString(), 'utf8').toString('base64');
-
-      const sig = crypto
-        .createHmac('sha256', ssoSecret)
-        .update(payloadBase64)
-        .digest('hex');
-
-      await fetch(`${url}/admin/users/sync_sso`, {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          sso: payloadBase64,
-          sig
-        }).toString()
-      });
-
-      // --- B. Fetch User ---
-      const userRes = await fetch(
-        `${url}/users/by-external/${wallet}.json`,
-        { headers }
-      );
-
-      if (!userRes.ok) {
-        console.log(`User lookup failed: ${wallet}`);
-        continue;
-      }
-
-      const user = (await userRes.json()).user;
-
-      // --- C. Fetch Group ---
-      const groupRes = await fetch(
-        `${url}/groups/${targetGroupName}.json`,
-        { headers }
-      );
-
-      if (!groupRes.ok) {
-        console.log(`Group not found: ${targetGroupName}`);
-        continue;
-      }
-
-      const groupId = (await groupRes.json()).group.id;
-
-      // --- D. Add User To Group (ADMIN ENDPOINT like working route) ---
-      const addRes = await fetch(`${url}/admin/users/${user.id}/groups`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          group_id: groupId
+    for (let i = 0; i < allWallets.length; i += GET_BATCH_SIZE) {
+      const batch = allWallets.slice(i, i + GET_BATCH_SIZE);
+      const results = await Promise.all(
+        batch.map(async wallet => {
+          const res = await fetch(`${url}/users/by-external/${wallet}.json`, { headers });
+          return { wallet, exists: res.ok };
         })
-      });
-
-      if (addRes.ok) {
-        successCount++;
-        console.log(`${wallet} -> ${targetGroupName}`);
-      } else {
-        console.log(`Failed assigning ${wallet}`);
-      }
-
-      // --- E. Also Add to S{seasonId}_Players ---
-      if (playersGroupId) {
-        await fetch(`${url}/admin/users/${user.id}/groups`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ group_id: playersGroupId })
-        });
+      );
+      for (const { wallet, exists } of results) {
+        if (!exists) newWallets.push(wallet);
       }
     }
 
-    console.log(`Provisioned ${successCount}/${players.length} users`);
+    if (debug) console.log(`[init-season] ${newWallets.length} new / ${allWallets.length - newWallets.length} existing players`);
 
-    return NextResponse.json({
-      success: true,
-      provisioned: successCount
-    });
+    // --- Phase 3: SSO sync only new players — concurrency pool with 429 retry ---
+    let syncCount = 0;
+    let queueIdx = 0;
+
+    async function ssoWorker() {
+      while (true) {
+        const idx = queueIdx++;
+        if (idx >= newWallets.length) break;
+        const ok = await ssoSync(url!, headers, ssoSecret!, newWallets[idx]);
+        if (ok) syncCount++;
+        else console.warn(`[init-season] skipping ${newWallets[idx]} after failed SSO sync`);
+      }
+    }
+
+    await Promise.all(
+      Array.from({ length: Math.min(SSO_CONCURRENCY, newWallets.length) }, ssoWorker)
+    );
+
+    if (debug) console.log(`[init-season] SSO synced ${syncCount}/${newWallets.length} new players`);
+
+    // --- Phase 4: bulk group assignments for ALL players (existing + new) ---
+    // PUT is idempotent — already-members are silently skipped by Discourse.
+    const bulkPuts: Promise<Response>[] = [];
+
+    if (bourgeoisieWallets.length > 0) {
+      bulkPuts.push(fetch(`${url}/groups/${bourgeoisieGroupId}/members.json`, {
+        method: 'PUT', headers,
+        body: JSON.stringify({ usernames: bourgeoisieWallets.join(',') }),
+      }));
+    }
+    if (proletariatWallets.length > 0) {
+      bulkPuts.push(fetch(`${url}/groups/${proletariatGroupId}/members.json`, {
+        method: 'PUT', headers,
+        body: JSON.stringify({ usernames: proletariatWallets.join(',') }),
+      }));
+    }
+    if (playersGroupId && allWallets.length > 0) {
+      bulkPuts.push(fetch(`${url}/groups/${playersGroupId}/members.json`, {
+        method: 'PUT', headers,
+        body: JSON.stringify({ usernames: allWallets.join(',') }),
+      }));
+    }
+
+    await Promise.all(bulkPuts);
+
+    if (debug) console.log(`[init-season] done — ${allWallets.length} players assigned to groups, ${syncCount} newly created`);
+
+    return NextResponse.json({ success: true, total: allWallets.length, created: syncCount });
 
   } catch (error: any) {
 

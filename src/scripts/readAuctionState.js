@@ -31,7 +31,7 @@ async function main() {
   console.log(`   USDC Address:     0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9`);
   */
   if (storedTreasuryAddress.toLowerCase() !== "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853".toLowerCase()) {
-    console.error("\n\n🔴 MISMATCH FOUND! The Treasury address in the contract does not match the frontend.");
+    console.error("MISMATCH FOUND! The Treasury address in the contract does not match the frontend.");
   } else {
     // console.log("\n\n✅ MATCH! The Treasury address in the contract matches the frontend.");
   }

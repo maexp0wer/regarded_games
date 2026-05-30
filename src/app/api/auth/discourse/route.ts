@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
+const debug = process.env.DEBUG === 'true';
+
 /**
  * Robust fetch for the profile. 
  * Note: On the server, app.localhost might not resolve. 
@@ -67,7 +69,7 @@ export async function GET(req: NextRequest) {
     : `https://api.dicebear.com/9.x/bottts/svg?seed=${encodeURIComponent(seed)}`;
   // ------------------------------------------------
 
-  console.log(`SSO Syncing: ${walletAddress} | Name: ${displayName}`);
+  if (debug) console.log(`[sso] syncing: ${walletAddress} | name: ${displayName}`);
 
   // 5. Decode Nonce
   const payloadRaw = Buffer.from(sso, 'base64').toString();

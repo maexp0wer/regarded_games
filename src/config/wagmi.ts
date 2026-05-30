@@ -39,15 +39,28 @@ const connectors = typeof window !== 'undefined' ? connectorsForWallets(
 ) : [];
 
 // 3. Create the main Wagmi Config
+// In fork mode, use local Anvils. In mainnet mode, use /api/rpc proxy (adds Alchemy key server-side).
+const isFork = typeof window !== 'undefined' ?
+  process.env.NEXT_PUBLIC_ENVIRONMENT !== 'mainnet' :
+  true;
+
+const baseMainnetRpc = isFork
+  ? (process.env.NEXT_PUBLIC_ANVIL_RPC_URL_MAINNET || 'http://127.0.0.1:8545')
+  : '/api/rpc/mainnet';
+
+const baseSepoliaRpc = isFork
+  ? (process.env.NEXT_PUBLIC_ANVIL_RPC_URL_SEPOLIA || 'http://127.0.0.1:8546')
+  : '/api/rpc/sepolia';
+
 export const config = createConfig({
   chains,
   transports: {
     [foundry.id]: http(process.env.NEXT_PUBLIC_ANVIL_RPC_URL_MAINNET || 'http://127.0.0.1:8545'),
     [foundrySepolia.id]: http(process.env.NEXT_PUBLIC_ANVIL_RPC_URL_SEPOLIA || 'http://127.0.0.1:8546'),
-    [baseSepolia.id]: http(process.env.NEXT_PUBLIC_ALCHEMY_BASE_SEPOLIA_RPC_URL),
-    [base.id]: http(process.env.NEXT_PUBLIC_ALCHEMY_BASE_RPC_URL),
+    [baseSepolia.id]: http(baseSepoliaRpc),
+    [base.id]: http(baseMainnetRpc),
   },
-  connectors, 
+  connectors,
   ssr: true,
   storage: createStorage({
     storage: cookieStorage,

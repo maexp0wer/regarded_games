@@ -35,6 +35,8 @@ export const APP_ENV: AppEnv =
   (process.env.NEXT_PUBLIC_ENVIRONMENT as AppEnv) || 'fork';
 
 const isFork = APP_ENV !== 'mainnet';
+const MAINNET_RPC_PROXY_MAINNET = '/api/rpc/mainnet';
+const MAINNET_RPC_PROXY_SEPOLIA = '/api/rpc/sepolia';
 
 /** Custom foundry-style chain for the sepolia-fork Anvil (chain id 31338, port 8546). */
 export const foundrySepolia = defineChain({
@@ -67,7 +69,7 @@ export const TENANTS: Record<TenantKey, TenantConfig> = {
       : process.env.NEXT_PUBLIC_PONDER_URL_MAINNET || FORK_PONDER_MAINNET,
     rpcUrl: isFork
       ? ANVIL_RPC_MAINNET
-      : process.env.NEXT_PUBLIC_ALCHEMY_BASE_RPC_URL || '',
+      : MAINNET_RPC_PROXY_MAINNET,
     realChain: base,
   },
   sepolia: {
@@ -80,7 +82,7 @@ export const TENANTS: Record<TenantKey, TenantConfig> = {
       : process.env.NEXT_PUBLIC_PONDER_URL_SEPOLIA || FORK_PONDER_SEPOLIA,
     rpcUrl: isFork
       ? ANVIL_RPC_SEPOLIA
-      : process.env.NEXT_PUBLIC_ALCHEMY_BASE_SEPOLIA_RPC_URL || '',
+      : MAINNET_RPC_PROXY_SEPOLIA,
     realChain: baseSepolia,
   },
 };

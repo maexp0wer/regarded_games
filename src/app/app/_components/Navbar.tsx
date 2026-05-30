@@ -117,7 +117,7 @@ export function Navbar() {
       </nav>
 
       {/* Debug: Tailwind breakpoint indicator */}
-      {process.env.NEXT_PUBLIC_DEBUG === 'true' && (
+      {process.env.NEXT_PUBLIC_FRONTEND_DEBUG === 'true' && (
         <div className="fixed top-3 left-3 z-9999 flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 font-mono text-[11px] text-text2 shadow-lg">
           <span className="font-semibold text-[--color-gold]">BP:</span>
           <span className="sm:hidden">xs</span>

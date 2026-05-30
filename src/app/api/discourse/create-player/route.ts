@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
-import crypto from "crypto";
 import { tenantFromRequest } from "@/lib/tenant.server";
 import { getTenant, type TenantKey } from "@/config/tenants";
 import { discourseNames } from "@/lib/discourseNames";
+import { ssoSync } from "@/lib/discourseSSO";
 
-// OPTIMIZATION 2: In-memory cache for Group IDs.
-// This prevents fetching the Group ID on every single player creation.
 const groupIdCache: Record<string, number> = {};
+// Tracks wallets already registered + group-added this server lifecycle.
+// Cache key: `${wallet}:${groupName}`. Mirrors the userFactionCache pattern in sync-faction.
+const registeredPlayersCache = new Set<string>();
+const debug = process.env.DEBUG === 'true';
 
 export async function POST(req: Request) {
   try {
@@ -32,27 +34,15 @@ export async function POST(req: Request) {
     const username = wallet;
     const groupName = names.groups.players;
 
-    // ---- 1. Prepare SSO Payload ----
-    const params = new URLSearchParams({
-      external_id: wallet,
-      email: `${wallet}@regarded.local`,
-      username,
-      name: `Player ${wallet.slice(2, 8)}`
-    });
+    // Tier 1: skip all Discourse calls if we already registered this wallet this session.
+    const cacheKey = `${wallet}:${groupName}`;
+    if (registeredPlayersCache.has(cacheKey)) {
+      return NextResponse.json({ success: true });
+    }
 
-    const payload = Buffer.from(params.toString()).toString("base64");
-    const sig = crypto.createHmac("sha256", ssoSecret).update(payload).digest("hex");
-
-    // OPTIMIZATION 3: Start the SSO sync immediately but don't await it yet
-    const syncPromise = fetch(`${url}/admin/users/sync_sso`, {
-      method: "POST",
-      headers: { ...headers, "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ sso: payload, sig }).toString(),
-    });
-
-    // ---- 2. Fetch Group ID (Using Cache) ----
+    // ---- 1. Fetch Group ID (Using Cache) ----
     let groupId = groupIdCache[groupName];
-    
+
     if (!groupId) {
       const groupRes = await fetch(`${url}/groups/${groupName}.json`, { headers });
       if (!groupRes.ok) {
@@ -60,29 +50,40 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: `Group ${groupName} not found`, seasonId, groupName }, { status: 404 });
       }
       groupId = (await groupRes.json()).group.id;
-      groupIdCache[groupName] = groupId; // Save to cache for next time
+      groupIdCache[groupName] = groupId;
     }
 
-    // Now we wait for the user creation to finish
-    const syncRes = await syncPromise;
-    if (!syncRes.ok) {
+    // Tier 2a: check user existence before SSO sync to skip the POST for returning players.
+    const existsRes = await fetch(`${url}/users/by-external/${wallet}.json`, { headers });
+    const userExists = existsRes.ok;
+
+    if (!userExists) {
+      // ---- 2. SSO sync — only for new players ----
+      // Short backoff: user-facing call, 500ms → 1s → 2s (max ~3.5s wait)
+      const ok = await ssoSync(url, headers, ssoSecret, wallet, { maxRetries: 3, baseBackoffMs: 500 });
+      if (!ok) {
         return NextResponse.json({ error: "SSO User sync failed" }, { status: 500 });
+      }
     }
 
-    // ---- 3. Add User to Group using Username ----
-    // OPTIMIZATION 1: By using PUT /groups/{id}/members.json, 
-    // we can pass the username directly and skip the User ID lookup entirely!
-    const addRes = await fetch(`${url}/groups/${groupId}/members.json`, {
-      method: "PUT", // Note: This endpoint requires PUT
-      headers,
-      body: JSON.stringify({ usernames: username }),
-    });
+    // Tier 2b: check group membership before adding to skip the PUT for existing members.
+    const memberRes = await fetch(`${url}/groups/${groupName}/members.json?filter=${username}&limit=1`, { headers });
+    const alreadyMember = memberRes.ok && ((await memberRes.json()).members?.length ?? 0) > 0;
 
-    if (!addRes.ok) {
+    if (!alreadyMember) {
+      // ---- 3. Add User to Group ----
+      const addRes = await fetch(`${url}/groups/${groupId}/members.json`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ usernames: username }),
+      });
+      if (!addRes.ok) {
         return NextResponse.json({ error: "Failed to add user to group" }, { status: 500 });
+      }
     }
 
-    console.log(`Player ${wallet} added to ${groupName}`);
+    registeredPlayersCache.add(cacheKey);
+    if (debug) console.log(`[create-player] ${wallet} -> ${groupName} (userExists=${userExists}, alreadyMember=${alreadyMember})`);
 
     return NextResponse.json({ success: true });
 
