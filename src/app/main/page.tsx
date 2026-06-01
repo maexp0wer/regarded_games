@@ -4,8 +4,8 @@ import { useState} from 'react';
 import Head from 'next/head';
 import { useScrollNavigation } from '@/hooks/useScrollNavigation';
 import '@/app/globals.css';
-import { Logo } from '@/components/icons/svg';
 import { useTheme } from '@/context/ThemeContext';
+import { Logo } from '@/components/icons/svg';
 import Card from '@/components/Card';
 import CardPlain from '@/components/CardPlain';
 import ContactForm from '@/components/ContactForm';
@@ -145,7 +145,7 @@ export default function Home() {
         scrollToSection={scrollToSection}
       />
 
-      <main className={`transition-all duration-300 ${
+      <main className={`min-w-0 transition-all duration-300 ${
         isNavVisible
           ? 'relative mx-auto 2xl:transform 2xl:-translate-x-16.25'
           : 'relative mx-auto md:transform md:-translate-x-16.25'
@@ -212,7 +212,7 @@ export default function Home() {
                 <div className="flex flex-col items-center text-center landing-card max-h-screen">
                   <Regardo className="w-full h-auto max-h-70 transition-transform duration-200 ease-in-out hover:scale-110" viewBox="0 0 500 800" onClick={openRegardoModal}/>
                   <h3 className="text-xl font-bold mt-8 m-3">Regardo, the Capitalist</h3>
-                  <p className='text-sm'>Play the game of accumulation. Use your capital to concentrate power, outmaneuver rivals, and push the economy towards a state of perfect inequality. If you win, the Bourgeoisie - the select few controlling 50% of the supply - splits the entire prize pool. The rest get nothing.</p>
+                  <p className='text-sm'>Concentrate capital to push the economy toward perfect inequality. Win as the Capitalists — the fewest wallets collectively holding 50% of the supply — and split the entire prize pool. The rest get nothing.</p>
                 </div>
                 <GenericModal
                   isOpen={isRegardoModalOpen}
@@ -241,9 +241,7 @@ export default function Home() {
                 <div className="flex flex-col items-center text-center bg-card p-8 rounded-lg shadow-md max-h-screen">
                   <Carlo className="w-full h-auto max-h-70  transition-transform duration-200 ease-in-out hover:scale-110 pt-8" viewBox="0 0 500 800" onClick={openCarloModal}/>
                   <h3 className="text-xl font-bold mt-8 m-3">Carlo, the Socialist</h3>
-                  <p className='text-sm'>Play the game of coordination. Organize with the masses to resist the pull of capital and drive the economy towards perfect distribution.
-                    If you win, the Solidarity Fund caps the rich and pays the surplus to the Proletariat - the mass that holds the other 50% of the supply.
-                  </p>
+                  <p className='text-sm'>Coordinate with the masses to drive the economy toward perfect distribution. Win as the Proletariat — the largest number of players collectively holding 50% of the supply — and trigger the Expropriation: Capitalist payouts are capped and the surplus flows to you.</p>
                 
                 </div>
                 </div>
@@ -279,20 +277,20 @@ export default function Home() {
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="ENTER THE ARENA"
-                description="Each season begins with an Auction. Buy your in-game Fake Internet Money ($FIM) with $USDC to form the season's Prize Pool."
+                description="Buy Fake Internet Money ($FIM) with $USDC in the season's opening Auction which seeds the Prize Pool."
                 onButtonClick={() => navigateToDocs('intro#phase-1-auction')}
                 //buttonText="Learn more" // You could override the default if needed
               />
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="OUTPLAY THE MARKET"
-                description="During the Trading Phase, trade $FIM to impact the live Gini Coefficient, a measure of wealth inequality. Choose your trades wisely and coordinate with your peers—who you trade with is as important as the price."
+                description="Trade $FIM to move the Gini Coefficient. Coordinate with your faction — who you trade with matters as much as price."
                 onButtonClick={() => navigateToDocs('intro#phase-3-victory-payouts')}
               />
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="ENFORCE YOUR IDEOLOGY"
-                description="It’s a race. The first faction to shift the Gini Coefficient by 25% captures the Treasury. The winner dictates the payout rules; the loser pays the price."
+                description="Shift the Gini Coefficient in your favor. The winning faction sets the payout rules — the loser pays."
                 onButtonClick={() => navigateToDocs('intro#phase-3-victory-and-payouts')}
               />
             </div>
@@ -310,20 +308,20 @@ export default function Home() {
               <div className="grid md:grid-cols-3 gap-8"> 
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
-                title="Sovereign Player Ownership"
-                description="No central company. No rigged outcomes. Regarded Games is a DAO owned entirely by you. Through $RGD, holders dictate the rules, manage the treasury, and control the arena. The players hold the power."
+                title="Player Ownership"
+                description="No company. No rigged outcomes. $RGD holders govern the game rules and DAO treasury"
                 onButtonClick={() => navigateToDocs('intro#5-governance')}
               />
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
-                title="Active Value Accrual"
-                description="The Prize Pool generates yield via blue-chip DeFi. $RGD holders direct this revenue: executing deflationary buybacks, deepening liquidity, or compounding future spoils. Ownership is designed to be productive, not passive."
+                title="Value Accrual"
+                description="Prize Pool defi yield flows to holders — via deflationary buybacks, liquidity injections, or Prize Pool Bonuses."
                 onButtonClick={() => navigateToDocs('intro#revenue-allocation')}
               />
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
-                title="Beyond the Casino"
-                description="Move past the speculative noise. Regarded Games provides a transparent arena where collective action is a strategic weapon. By playing, you are joining a grand experiment to redefine how humanity organizes itself."
+                title="Financial Markets 3.0"
+                description="Challeng the status quo of web3 and financial markets. Help building a new paradigm for people-owned, people-governed economies."
                 onButtonClick={() => navigateToDocs('mission')}
               />
               
@@ -341,11 +339,13 @@ export default function Home() {
 
           {/* Distribution of Power */}
           <section id="sectionDistribution" className="py-16 mx-auto">
-            <h2 className="text-3xl font-bold mb-12 text-center">Distribution of Power</h2>
-            <div className="mx-auto">
+            <div className="flex flex-col gap-10">
+              <div className="flex flex-col gap-2 text-center">
+                <h2 className="font-display font-black text-3xl uppercase tracking-tight text-text">Distribution of Power</h2>
+                <p className="font-sans text-sm text-text2 max-w-xl mx-auto">75% of the initial $RGD supply is governed by the DAO. The remainder aligns the founding team with long-term protocol success.</p>
+              </div>
               <NestedPieChart data={tableData} />
-
-          </div>
+            </div>
           </section>
 
           {/* Distribution of Power */}
@@ -369,7 +369,7 @@ export default function Home() {
           description={
             <>
               <p className="text-sm">
-                First, register for the Genesis Program to unlock your Base Score. Then, earn a 5x Multiplier by becoming a strategic voice in our Discord.
+                Register for the Genesis Program to unlock your Base Score. Earn a 5x Multiplier by becoming a strategic voice in Discord.
               </p>
               <h5 className="font-bold mt-4 mb-1 text-card-foreground">Points Breakdown:</h5>
               <ul className="list-disc list-inside text-sm space-y-1">
@@ -395,8 +395,7 @@ export default function Home() {
           description={
             <>
               <p className="text-sm">
-                Use your unique code to recruit other high-quality players. You&apos;re rewarded for the engaged members you
-                bring in.
+                Share your referral code and earn points for every engaged player you recruit.
               </p>
               <h5 className="font-bold mt-4 mb-1 text-card-foreground">Points Breakdown:</h5>
               <ul className="list-disc list-inside text-sm space-y-1">
@@ -423,7 +422,7 @@ export default function Home() {
           description={
             <>
               <p className="text-sm">
-                Prove your skill in the preseason arena. Execute trades to earn activity points, and lead your faction to victory for the big win.
+                Execute trades in the preseason arena to earn activity points. Lead your faction to victory for the top bonus.
               </p>
               <h5 className="font-bold mt-4 mb-1 text-card-foreground">Points Breakdown:</h5>
               <ul className="list-disc list-inside text-sm space-y-1">
@@ -449,7 +448,7 @@ export default function Home() {
           description={
             <>
               <p className="text-sm">
-                Help us harden the protocol. Find and responsibly report vulnerabilities to earn the highest tier of rewards.
+                Find and responsibly disclose protocol vulnerabilities to earn the highest-tier rewards.
               </p>
               <h5 className="font-bold mt-4 mb-1 text-card-foreground">Points Breakdown:</h5>
               <ul className="list-disc list-inside text-sm space-y-1">

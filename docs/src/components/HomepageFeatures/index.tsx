@@ -5,7 +5,6 @@ import Heading from '@theme/Heading';
 import styles from './styles.module.css';
 
 type Feature = {
-  icon:        string;
   title:       string;
   body:        string;
   chips:       string[];
@@ -15,7 +14,6 @@ type Feature = {
 
 const FEATURES: Feature[] = [
   {
-    icon:        '📊',
     title:       'Trading Terminal',
     body:        'Peer-to-peer FIM exchange with a fully transparent order book. Every bid, ask, and counterparty is visible on-chain — no hidden liquidity, no dark pools.',
     chips:       ['P2P Exchange', 'Order Book', 'Gini-Aware'],
@@ -23,7 +21,6 @@ const FEATURES: Feature[] = [
     cardClass:   styles.gold,
   },
   {
-    icon:        '⚔️',
     title:       'The Faction War',
     body:        'Your faction is determined by your FIM balance vs. the live 50th-percentile threshold. Capitalists concentrate wealth. Socialists redistribute it. Every trade is a political act.',
     chips:       ['Capitalists', 'Socialists', 'Live Threshold'],
@@ -31,7 +28,6 @@ const FEATURES: Feature[] = [
     cardClass:   styles.purple,
   },
   {
-    icon:        '🏆',
     title:       'Real-Money Stakes',
     body:        'Seasonal USDC prize pools deployed into DeFi yield strategies. The winning faction dictates the payout rules — oligarchy takes all, or the Solidarity Fund redistributes.',
     chips:       ['USDC', 'Base', 'Seasonal'],
@@ -40,11 +36,10 @@ const FEATURES: Feature[] = [
   },
 ];
 
-function FeatureCard({icon, title, body, chips, accentClass, cardClass}: Feature) {
+function FeatureCard({ title, body, chips, accentClass, cardClass}: Feature) {
   return (
     <div className={clsx(styles.card, cardClass)}>
       <div className={clsx(styles.accent, accentClass)} />
-      <div className={styles.iconWrap}>{icon}</div>
       <Heading as="h3" className={styles.cardTitle}>{title}</Heading>
       <p className={styles.cardBody}>{body}</p>
       <div className={styles.chips}>

@@ -13,19 +13,16 @@ export const useScrollNavigation = () => {
 
   useEffect(() => {
     const handleScroll = () => {
-      const heroSection = document.querySelector('.hero-section');
       const header = document.querySelector('header');
       const sections = document.querySelectorAll<HTMLElementWithOffset>('section[id]');
-      
+
       const headerHeight = header?.clientHeight || 0;
       const buffer = 100;
 
-      // Show/hide side navigation
-      if (heroSection) {
-        const heroRect = heroSection.getBoundingClientRect();
-        setIsNavVisible(heroRect.bottom <= 300);
-
-      }
+      // Show/hide side navigation: hidden at the very top, appears as soon as
+      // the user scrolls down past a small threshold.
+      const SHOW_NAV_THRESHOLD = 80;
+      setIsNavVisible(window.scrollY > SHOW_NAV_THRESHOLD);
 
       // Update active section
       const scrollPosition = window.scrollY + headerHeight + buffer;

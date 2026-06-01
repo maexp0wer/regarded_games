@@ -6,12 +6,12 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
-        source: '/docs',
-        destination: 'http://localhost:3001/docs/',
+        source: '/docsproxy',
+        destination: 'http://localhost:3001/',
       },
       {
-        source: '/docs/:path*',
-        destination: 'http://localhost:3001/docs/:path*',
+        source: '/docsproxy/:path*',
+        destination: 'http://localhost:3001/:path*',
       },
     ];
   },

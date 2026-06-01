@@ -12,7 +12,7 @@ const config: Config = {
   },
 
   url: 'http://localhost:3000',
-  baseUrl: '/docs/',
+  baseUrl: '/',
 
   onBrokenLinks: 'warn',
 
@@ -97,7 +97,7 @@ const config: Config = {
     prism: {
       theme: prismThemes.oneLight,
       darkTheme: prismThemes.vsDark,
-      additionalLanguages: ['solidity', 'bash', 'json'],
+      additionalLanguages: ['bash', 'json'],
     },
   } satisfies Preset.ThemeConfig,
 };

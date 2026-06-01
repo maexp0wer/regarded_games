@@ -19,13 +19,11 @@ interface ScrollNavProps {
 }
 
 const SCROLL_THRESHOLD = 100;
-const HIDE_DELAY = 3000;
 const CLICK_SCROLL_DELAY = 1000;
 
 export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrollToSection }: ScrollNavProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isButtonVisible, setIsButtonVisible] = useState(false);
-  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const desktopNavRef = useRef<HTMLElement>(null);
   const mobileNavRef = useRef<HTMLElement>(null);
@@ -109,21 +107,15 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
   }, [activeSection, navLinks]);
 
   // Effect for managing the floating mobile button visibility.
+  // Visible whenever the user has scrolled past the threshold; hidden at the
+  // very top. No auto-hide timer — the button should stay put while scrolled.
   useEffect(() => {
     const handleScroll = () => {
-      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
-      if (window.scrollY > SCROLL_THRESHOLD) {
-        setIsButtonVisible(true);
-        hideTimeoutRef.current = setTimeout(() => setIsButtonVisible(false), HIDE_DELAY);
-      } else {
-        setIsButtonVisible(false);
-      }
+      setIsButtonVisible(window.scrollY > SCROLL_THRESHOLD);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
-    };
+    handleScroll(); // Initial call in case the page loads already scrolled
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   // MODIFIED: This handler now also controls the highlight state.
@@ -171,10 +163,10 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
       {/* ============================================= */}
       {/* ======      DESKTOP SIDEBAR NAV        ====== */}
       {/* ============================================= */}
-      <div className={`hidden md:inline-block sticky top-0 h-screen transition-opacity duration-300 ${isNavVisible ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`hidden md:block transition-opacity duration-300 ${isNavVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <nav
           ref={desktopNavRef}
-          className={`bg-bg w-fit h-full flex flex-col p-3 overflow-y-auto custom-scrollbar ${
+          className={`sticky top-0 bg-bg w-fit h-screen flex flex-col p-3 overflow-y-auto custom-scrollbar ${
             isOverflowing ? 'justify-start py-8' : 'justify-center'
           }`}
         >

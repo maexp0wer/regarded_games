@@ -15,10 +15,7 @@ export function middleware(req: NextRequest) {
 
   // 1. DOCS SUBDOMAIN — docs.localhost:3000 OR docs.yourdomain.com
   if (hostname === `docs.${PROD_ROOT_DOMAIN}` || hostname === `docs.${DEV_ROOT_DOMAIN}`) {
-    if (path.startsWith('/docs/')) {
-      return NextResponse.rewrite(new URL(path, req.url));
-    }
-    return NextResponse.rewrite(new URL(`/docs${path}`, req.url));
+    return NextResponse.rewrite(new URL(`/docsproxy${path}`, req.url));
   }
 
   // 2. APP.SEPOLIA SUBDOMAIN — must be checked BEFORE app.* (prefix match)
