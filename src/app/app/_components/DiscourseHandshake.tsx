@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAccount } from 'wagmi';
 
 // Cookie domain strategy:
@@ -22,50 +22,115 @@ function cookieDomainAttr(host: string): string {
 
 const HANDSHAKE_SESSION_KEY = 'discourse_handshake_wallet';
 
+function getProceedDomain(): string {
+  if (typeof window === 'undefined') return 'localhost';
+  const hostNoPort = window.location.host.split(':')[0];
+  if (hostNoPort === 'localhost' || hostNoPort.endsWith('.localhost')) {
+    return 'localhost';
+  }
+  const parts = hostNoPort.split('.');
+  return parts.length <= 2 ? hostNoPort : parts.slice(-2).join('.');
+}
+
 export function DiscourseHandshake() {
   const { address, isConnected } = useAccount();
+  const prevAddressRef = useRef<string | null>(null);
+  const pendingTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
-    if (!isConnected || !address) return;
+    const currentAddress = address?.toLowerCase() || null;
 
-    // 1. Set a cookie that the Next.js API can read.
-    // In a real app, you'd use SIWE, but for dev, this is 100% reliable.
-    const domainAttr = cookieDomainAttr(window.location.host);
-    document.cookie = `current_wallet=${address}; path=/; max-age=3600; ${domainAttr}SameSite=Lax`;
+    // Detect wallet disconnection or account switch
+    if (prevAddressRef.current && currentAddress !== prevAddressRef.current) {
+      // Wallet switched or disconnected — log out
+      const domainAttr = cookieDomainAttr(window.location.host);
+      document.cookie = `current_wallet=; path=/; max-age=0; ${domainAttr}SameSite=Lax`;
+      sessionStorage.removeItem(HANDSHAKE_SESSION_KEY);
 
-    // Idempotency guard: each handshake hits Discourse's logout + SSO endpoints,
-    // and Discourse rate-limits aggressively. Without this, every remount
-    // (HMR, StrictMode, tenant switch, navigation) re-fires the handshake and
-    // trips Discourse's "high load" throttle. Only run once per wallet per
-    // browser session.
-    const last = sessionStorage.getItem(HANDSHAKE_SESSION_KEY);
-    if (last === address.toLowerCase()) return;
-    sessionStorage.setItem(HANDSHAKE_SESSION_KEY, address.toLowerCase());
+      if (currentAddress) {
+        // Account switched — log out then log back in with new address
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`War Room: Account switch detected ${prevAddressRef.current} → ${currentAddress}`);
+        }
+        const logoutIframe = document.createElement('iframe');
+        logoutIframe.src = `http://community.${getProceedDomain()}/logout`;
+        logoutIframe.style.display = 'none';
+        document.body.appendChild(logoutIframe);
 
-      console.log(`War Room: Forcing sync for ${address}`);
+        const timer = setTimeout(() => {
+          const loginIframe = document.createElement('iframe');
+          loginIframe.src = `http://community.${getProceedDomain()}/session/sso?t=${Date.now()}`;
+          loginIframe.style.display = 'none';
+          document.body.appendChild(loginIframe);
 
-      // 2. Create hidden logout iframe to clear old session
+          setTimeout(() => {
+            if (document.body.contains(logoutIframe)) document.body.removeChild(logoutIframe);
+            if (document.body.contains(loginIframe)) document.body.removeChild(loginIframe);
+          }, 5000);
+        }, 1500);
+
+        pendingTimeoutRef.current = timer;
+      } else {
+        // Wallet disconnected — just log out
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`War Room: Wallet disconnected`);
+        }
+        const logoutIframe = document.createElement('iframe');
+        logoutIframe.src = `http://community.${getProceedDomain()}/logout`;
+        logoutIframe.style.display = 'none';
+        document.body.appendChild(logoutIframe);
+
+        setTimeout(() => {
+          if (document.body.contains(logoutIframe)) document.body.removeChild(logoutIframe);
+        }, 3000);
+      }
+      prevAddressRef.current = currentAddress;
+      return;
+    }
+
+    // Normal login flow: connected with address and not yet handed off
+    if (isConnected && currentAddress) {
+      prevAddressRef.current = currentAddress;
+
+      const domainAttr = cookieDomainAttr(window.location.host);
+      document.cookie = `current_wallet=${currentAddress}; path=/; max-age=3600; ${domainAttr}SameSite=Lax`;
+
+      // Idempotency guard
+      const last = sessionStorage.getItem(HANDSHAKE_SESSION_KEY);
+      if (last === currentAddress) return;
+      sessionStorage.setItem(HANDSHAKE_SESSION_KEY, currentAddress);
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`War Room: Forcing sync for ${currentAddress}`);
+      }
+
       const logoutIframe = document.createElement('iframe');
-      logoutIframe.src = "http://community.localhost/logout";
-      logoutIframe.style.display = "none";
+      logoutIframe.src = `http://community.${getProceedDomain()}/logout`;
+      logoutIframe.style.display = 'none';
       document.body.appendChild(logoutIframe);
 
-      // 3. Short delay, then trigger fresh Login
       const timer = setTimeout(() => {
         const loginIframe = document.createElement('iframe');
-        loginIframe.src = `http://community.localhost/session/sso?t=${Date.now()}`;
-        loginIframe.style.display = "none";
+        loginIframe.src = `http://community.${getProceedDomain()}/session/sso?t=${Date.now()}`;
+        loginIframe.style.display = 'none';
         document.body.appendChild(loginIframe);
 
-        // Cleanup
         setTimeout(() => {
           if (document.body.contains(logoutIframe)) document.body.removeChild(logoutIframe);
           if (document.body.contains(loginIframe)) document.body.removeChild(loginIframe);
         }, 5000);
-      }, 1500); // 1.5s delay to ensure logout is processed
+      }, 1500);
 
-    return () => clearTimeout(timer);
+      pendingTimeoutRef.current = timer;
+      return () => clearTimeout(timer);
+    }
   }, [isConnected, address]);
+
+  useEffect(() => {
+    return () => {
+      if (pendingTimeoutRef.current) clearTimeout(pendingTimeoutRef.current);
+    };
+  }, []);
 
   return null;
 }

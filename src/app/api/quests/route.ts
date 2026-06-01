@@ -329,7 +329,7 @@ async function buildMainQuests(
           // The referral link is wallet-specific, so omit it for the
           // anonymous catalogue.
           ...(address ? { copyUrl: `${config.internalRoutes.faucet}/${address}` } : {}),
-          note: `Tiers: 1–10 refs (50 pts each) · 11–35 (20 pts) · 36–100 (5 pts). Referee must reach ≥${config.referralQualifyingThreshold} quest pts.`,
+          note: `Tiers: 1–10 refs (50 pts each) · 11–35 (20 pts) · 36–100 (5 pts). Referee must reach ≥${config.referralQualifyingThreshold} quest points.`,
         },
       ],
     },
@@ -341,9 +341,9 @@ async function buildMainQuests(
         { id: 'use_faucet',      type: 'internal', title: 'Use the faucet to get FakeUSDC', points: P.use_faucet,      isCompleted: isDone('use_faucet'),      actionUrl: config.internalRoutes.faucet },
         { id: 'swap_usdc_rgd',   type: 'internal', title: 'Exchange FakeUSDC for RGD',       points: P.swap_usdc_rgd,   isCompleted: isDone('swap_usdc_rgd'),   actionUrl: config.internalRoutes.swap },
         { id: 'stake_rgd',       type: 'internal', title: 'Stake RGD',                       points: P.stake_rgd,       isCompleted: isDone('stake_rgd'),       actionUrl: config.internalRoutes.stake },
-        { id: 'buy_fim_auction', type: 'internal', title: 'Buy FIM during the Auction',      points: P.buy_fim_auction, isCompleted: isDone('buy_fim_auction'), auctionGate: true },
-        { id: 'trade_fim',       type: 'internal', title: 'Buy or sell FIM during Trading',  points: P.trade_fim,       isCompleted: isDone('trade_fim'),       tradingGate: true },
-        { id: 'claim_payout',    type: 'internal', title: 'Claim payout',                    points: P.claim_payout,    isCompleted: isDone('claim_payout'),    payoutGate: true },
+        { id: 'buy_fim_auction', type: 'internal', title: 'Buy Fake Internet Money during the Auction',      points: P.buy_fim_auction, isCompleted: isDone('buy_fim_auction'), auctionGate: true },
+        { id: 'trade_fim',       type: 'internal', title: 'Buy or sell Fake Internet Money during Trading',  points: P.trade_fim,       isCompleted: isDone('trade_fim'),       tradingGate: true },
+        { id: 'claim_payout',    type: 'internal', title: 'Claim your payout',                    points: P.claim_payout,    isCompleted: isDone('claim_payout'),    payoutGate: true },
         {
           id: 'win_the_game', type: 'internal',
           title: 'Win the Game',

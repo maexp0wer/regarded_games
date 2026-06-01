@@ -39,7 +39,7 @@ const Card: React.FC<CardProps> = ({
       </div>
 
       <div className="flex flex-col gap-3 p-5 grow">
-        <h3 className="font-display font-black text-base uppercase tracking-tight leading-tight">
+        <h3 className="h3-app">
           {title}
         </h3>
         <p className="font-sans text-sm leading-relaxed text-text2">
@@ -50,7 +50,7 @@ const Card: React.FC<CardProps> = ({
       <div className="p-5 pt-0">
         <button
           onClick={onButtonClick}
-          className="group/cta font-mono text-xs font-bold uppercase tracking-widest text-gold hover:text-gold-hover transition-all duration-150 ease-in-out active:translate-y-px flex items-center gap-1.5"
+          className="group/cta font-mono text-xs font-bold uppercase tracking-widest text-purple hover:text-purple3-hover transition-all duration-150 ease-in-out active:translate-y-px flex items-center gap-1.5"
         >
           {buttonText}
           <span className="transition-transform duration-150 group-hover/cta:translate-x-0.5">&#8594;</span>

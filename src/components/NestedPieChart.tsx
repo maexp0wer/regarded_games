@@ -79,11 +79,23 @@ const NestedPieChart: React.FC<NestedPieChartProps> = ({ data }) => {
   const activeDisplay = useMemo(() => {
     if (hoveredIndex !== null) {
       const item = data[hoveredIndex];
-      return { name: item.name, explanation: item.explanation, color: item.color };
+      return {
+        name: item.name,
+        explanation: item.explanation,
+        color: item.color,
+        percentage: item.percentage,
+        subChildren: item.subChildren,
+      };
     }
     if (hoveredParent !== null) {
       const pData = data.find(d => d.parentName === hoveredParent);
-      return { name: hoveredParent, explanation: pData?.parentExplanation, color: pData?.parentColor };
+      return {
+        name: hoveredParent.trim() || (pData?.parentPercentage === 75 ? 'Community Controlled' : 'Team & Operations'),
+        explanation: pData?.parentExplanation,
+        color: pData?.parentColor,
+        percentage: pData?.parentPercentage,
+        subChildren: [] as Tier3Child[],
+      };
     }
     return null;
   }, [hoveredIndex, hoveredParent, data]);
@@ -144,6 +156,7 @@ const NestedPieChart: React.FC<NestedPieChartProps> = ({ data }) => {
         {
           type: 'pie',
           radius: ['0%', '28%'],
+          startAngle: 180,
           data: tier1Items,
           emphasis: { scale: false },
           label: {
@@ -162,6 +175,7 @@ const NestedPieChart: React.FC<NestedPieChartProps> = ({ data }) => {
         {
           type: 'pie',
           radius: ['31%', '90%'],
+          startAngle: 180,
           data: tier2Items,
           emphasis: { scale: false },
           label: {
@@ -236,91 +250,7 @@ const NestedPieChart: React.FC<NestedPieChartProps> = ({ data }) => {
       </div>
 
       {/* Main panel */}
-      <div className="flex flex-col lg:flex-row w-full bg-card border border-border rounded-xl overflow-hidden shadow-2xl">
-
-        {/* Legend panel */}
-        <div className="w-full lg:w-72 shrink-0 flex flex-col gap-5 p-5 border-b lg:border-b-0 lg:border-r border-border">
-          <span className="font-mono text-[10px] font-bold text-text2 uppercase tracking-widest">
-            Allocation Breakdown
-          </span>
-
-          <div className="flex flex-col gap-4">
-            {groups.map((group, gIdx) => {
-              const isCommunity = group.parentPercentage === 75;
-              return (
-                <div key={gIdx} className="flex flex-col gap-1">
-                  {/* Group header */}
-                  <div
-                    className="flex items-center justify-between px-2 py-1 cursor-default"
-                    onMouseEnter={() => setHoveredParent(group.parentName)}
-                    onMouseLeave={() => setHoveredParent(null)}
-                  >
-                    <span
-                      className="font-mono text-[10px] font-bold uppercase tracking-widest"
-                      style={{ color: isCommunity ? 'var(--color-gold)' : 'var(--color-text2)' }}
-                    >
-                      {isCommunity ? 'DAO Community' : 'Founding Team'}
-                    </span>
-                    <span className="font-mono text-[10px] font-bold tabular-nums text-text2">
-                      {group.parentPercentage}%
-                    </span>
-                  </div>
-
-                  {/* Stat separation grid */}
-                  <div className="flex flex-col gap-px bg-border rounded-xl overflow-hidden border border-border">
-                    {group.items.map((item) => {
-                      const itemFocused = hoveredIndex === item.globalIndex
-                        || (hoveredParent === item.parentName && hoveredIndex === null);
-                      const isAnyHovered = hoveredIndex !== null || hoveredParent !== null;
-                      return (
-                        <div
-                          key={item.globalIndex}
-                          onMouseEnter={() => { setHoveredIndex(item.globalIndex); setHoveredParent(null); }}
-                          onMouseLeave={() => setHoveredIndex(null)}
-                          className="relative group bg-card hover:bg-card2 transition-all duration-150 ease-in-out cursor-default"
-                          style={{ opacity: isAnyHovered && !itemFocused ? 0.35 : 1 }}
-                        >
-                          <div
-                            className="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-150"
-                            style={{ backgroundColor: item.color }}
-                          />
-                          <div className="pl-4 pr-3 py-2.5 flex flex-col gap-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2 min-w-0">
-                              <span className="font-sans font-semibold text-xs text-text truncate">
-                                {item.name}
-                              </span>
-                              <span className="font-mono font-bold text-xs tabular-nums text-text shrink-0">
-                                {item.percentage}%
-                              </span>
-                            </div>
-                            {item.subChildren && item.subChildren.length > 0 && (
-                              <div className="flex flex-col gap-0.5 ml-1">
-                                {item.subChildren.map((sub, sIdx) => (
-                                  <div key={sIdx} className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-1.5">
-                                      <div
-                                        className="w-1.5 h-1.5 rounded-full shrink-0"
-                                        style={{ backgroundColor: sub.color }}
-                                      />
-                                      <span className="font-sans text-[10px] text-text2">{sub.name}</span>
-                                    </div>
-                                    <span className="font-mono text-[10px] tabular-nums text-text2">
-                                      {sub.percentage}%
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      <div className="flex flex-col w-full bg-card border border-border rounded-xl overflow-hidden shadow-2xl">
 
         {/* Chart + info panel */}
         <div className="flex flex-col flex-1 min-w-0 p-5 gap-4">
@@ -338,16 +268,44 @@ const NestedPieChart: React.FC<NestedPieChartProps> = ({ data }) => {
           <div className="rounded-xl border border-border bg-card2 p-4 min-h-18 flex items-start">
             <div className={`w-full transition-all duration-300 ${activeDisplay ? 'opacity-100 translate-y-0' : 'opacity-60'}`}>
               {activeDisplay ? (
-                <div className="flex flex-col gap-1.5">
-                  <span
-                    className="font-display font-black text-xs uppercase tracking-widest"
-                    style={{ color: activeDisplay.color }}
-                  >
-                    {activeDisplay.name}
-                  </span>
+                <div className="flex flex-col gap-1.5 w-full">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span
+                      className="font-display font-black text-xs uppercase tracking-widest"
+                      style={{ color: activeDisplay.color }}
+                    >
+                      {activeDisplay.name}
+                    </span>
+                    {activeDisplay.percentage != null && (
+                      <span
+                        className="font-mono font-bold text-sm tabular-nums shrink-0"
+                        style={{ color: activeDisplay.color }}
+                      >
+                        {activeDisplay.percentage}%
+                      </span>
+                    )}
+                  </div>
                   <p className="font-sans text-sm text-text2 leading-relaxed">
                     {activeDisplay.explanation ?? 'No additional information available.'}
                   </p>
+                  {activeDisplay.subChildren && activeDisplay.subChildren.length > 0 && (
+                    <div className="flex flex-col gap-1 mt-1 pt-2 border-t border-border">
+                      {activeDisplay.subChildren.map((sub, sIdx) => (
+                        <div key={sIdx} className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <div
+                              className="w-1.5 h-1.5 rounded-full shrink-0"
+                              style={{ backgroundColor: sub.color }}
+                            />
+                            <span className="font-sans text-[11px] text-text2">{sub.name}</span>
+                          </div>
+                          <span className="font-mono text-[11px] tabular-nums text-text2">
+                            {sub.percentage}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <span className="font-mono text-xs text-text2 uppercase tracking-widest">

@@ -81,7 +81,7 @@
   --ifm-navbar-height:           60px;
 
   /* ── Infima footer ─────────────────────────────────────────────── */
-  --ifm-footer-background-color: #0D0B14;
+  --ifm-footer-background-color: var(--color-bg);
 
   /* ── Infima sidebar ────────────────────────────────────────────── */
   --ifm-menu-color:                   var(--color-text2);
@@ -149,7 +149,7 @@
   --ifm-navbar-background-color: rgba(13, 11, 20, 0.85);
   --ifm-navbar-shadow:           none;
 
-  --ifm-footer-background-color: #08070E;
+  --ifm-footer-background-color: var(--color-bg);
 
   --ifm-menu-color:                   var(--color-text2);
   --ifm-menu-color-active:            var(--color-purple);
@@ -176,10 +176,7 @@ body {
 }
 
 [data-theme='dark'] body {
-  background:
-    radial-gradient(ellipse 1000px 500px at 90% -5%,  var(--color-purple-15),  transparent 60%),
-    radial-gradient(ellipse 800px  400px at -5% 110%, var(--color-magenta-15), transparent 60%),
-    var(--color-bg);
+  background: var(--color-bg);
 }
 
 /* ── NAVBAR ─────────────────────────────────────────────────────── */
@@ -414,6 +411,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── TABLES ─────────────────────────────────────────────────────── */
 .markdown table {
+  display:         table;
   width:           100%;
   border-collapse: separate;
   border-spacing:  0;
@@ -485,7 +483,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── FOOTER ─────────────────────────────────────────────────────── */
 .footer {
-  border-top:   1px solid var(--color-border);
+  border-top:   1px solid var(--color-bg);
   padding:      2.5rem 0;
   position:     relative;
   overflow:     hidden;

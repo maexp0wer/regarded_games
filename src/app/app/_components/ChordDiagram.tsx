@@ -88,17 +88,32 @@ export function ChordDiagram({
 
     if (chordData.groups.length === 0 || tradeCount === 0) return;
 
-    const CAP_COLOR   = getCSSVar('--color-gold')    || '#D4AF37';
-    const SOC_COLOR   = getCSSVar('--color-purple')  || '#9D4EDD';
-    const BG_COLOR    = getCSSVar('--color-card')    || '#15120f';
-    const BG2_COLOR   = getCSSVar('--color-card2')   || '#1b1814';
-    const TXT_COLOR   = getCSSVar('--color-text2')   || '#8a8378';
-    const TXT1_COLOR  = getCSSVar('--color-text')    || '#f4ede0';
+    const CAP_COLOR     = getCSSVar('--color-gold')    || '#FFC300';
+    const SOC_COLOR     = getCSSVar('--color-purple')  || '#9D4EDD';
+    const MAGENTA_COLOR = getCSSVar('--color-magenta') || '#D81B60';
+    const ORANGE_COLOR  = getCSSVar('--color-orange')  || '#FF8C00';
+    const BG_COLOR      = getCSSVar('--color-card')    || '#15120f';
+    const BG2_COLOR     = getCSSVar('--color-card2')   || '#1b1814';
+    const TXT_COLOR     = getCSSVar('--color-text2')   || '#8a8378';
+    const TXT1_COLOR    = getCSSVar('--color-text')    || '#f4ede0';
 
     const { groups, matrix } = chordData;
     const N = groups.length;
-    const groupColor = (idx: number) =>
-      d3.interpolateRgb(CAP_COLOR, SOC_COLOR)(N > 1 ? idx / (N - 1) : 0);
+    // cyber-sunset: socialist(purple,t=0) → magenta(t=0.45) → orange(t=0.75) → capitalist(gold,t=1)
+    const cyberStops = [
+      { pos: 0,    color: SOC_COLOR     },
+      { pos: 0.45, color: MAGENTA_COLOR },
+      { pos: 0.75, color: ORANGE_COLOR  },
+      { pos: 1,    color: CAP_COLOR     },
+    ];
+    const groupColor = (idx: number) => {
+      const t = N > 1 ? 1 - idx / (N - 1) : 1;
+      let s = 0;
+      while (s < cyberStops.length - 2 && t > cyberStops[s + 1].pos) s++;
+      const lo = cyberStops[s], hi = cyberStops[s + 1];
+      const span = hi.pos - lo.pos;
+      return d3.interpolateRgb(lo.color, hi.color)(span > 0 ? (t - lo.pos) / span : 0);
+    };
     const numCap = groups.filter(g => g.isCapitalist).length;
     const numSoc = N - numCap;
 

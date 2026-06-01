@@ -1,6 +1,6 @@
 'use client';
 
-import { useState} from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useScrollNavigation } from '@/hooks/useScrollNavigation';
 import '@/app/globals.css';
@@ -21,11 +21,11 @@ const tableData = [
   {
     parentName: " ",        // Tier 1
     parentPercentage: 75,
-    parentColor: "var(--color-card2)",
+    parentColor: "var(--color-card3)",
     parentExplanation: "75% of the initial $RGD supply is directly controlled by you, the DAO members.",
     name: "DAO Treasury Reserve",        // Tier 2
     percentage: 40,
-    color: "var(--color-gold)",
+    color: "var(--color-green)",
     explanation: "Long-Term Capital. Controlled entirely by governance for future growth, acquisitions, or diversification. Subject to a 5-year linear unlock.",
     subChildren: [              // Tier 3
     ]
@@ -36,11 +36,11 @@ const tableData = [
     parentColor: "var(--color-card3)",
     name: "Growth & Ecosystem",         // Tier 2
     percentage: 20,
-    color: "var(--color-gold-70)",
+    color: "var(--color-magenta)",
     explanation: "Funds Active Incentives and marketing. Released based on DAO-approved milestones.",
     subChildren: [               // Tier 3
-      { name: "Merkl Rewards", percentage: 5, color: "var(--color-gold)" },
-      { name: "User Acquisition", percentage: 15, color: "var(--color-gold-70)" }
+      { name: "Merkl Rewards", percentage: 5, color: "var(--color-magenta-70)" },
+      { name: "User Acquisition", percentage: 15, color: "var(--color-magenta)" }
     ]
   },
   {
@@ -49,12 +49,12 @@ const tableData = [
     parentColor: "var(--color-card3)",
     name: "Market Formation",         // Tier 2
     percentage: 15,
-    color: "var(--color-gold-35)",
+    color: "var(--color-orange)",
     explanation: "Distributed to early community participants and used to provide initial exchange liquidity to ensure Day 1 market stability.",
     subChildren: [               // Tier 3
-      { name: "Genesis Program", percentage: 3, color: "var(--color-gold)" },
-      { name: "Capital Auction", percentage: 6, color: "var(--color-gold-70)" },
-      { name: "Liquidity Pool", percentage: 6, color: "var(--color-gold-35)" },
+      { name: "Genesis Program", percentage: 3, color: "var(--color-orange-35)" },
+      { name: "Capital Auction", percentage: 6, color: "var(--color-orange-70)" },
+      { name: "Liquidity Pool", percentage: 6, color: "var(--color-orange)" },
     ]
   },
   {
@@ -62,10 +62,10 @@ const tableData = [
     parentPercentage: 25,
     parentColor: "var(--color-card3)",
     parentExplanation: "only 25% of the initial $RGD supply is not directly controlled by you, but distributed to the non-profit DAO LLC and vested among the founding Team for longterm alignment.",
-    name: "Operational Reserve",         // Tier 2
-    percentage: 10,
+    name: "Team",         // Tier 2
+    percentage: 15,
     color: "var(--color-gold)",
-    explanation: "Allocated to the non-profit Regarded DAO LLC to cover real-world costs (legal compliance, audits, hosting). Managed via multi-sig with strict spending rules.",
+    explanation: "Incentivizes the founding team. Subject to a 4-year vesting schedule with a 12-month cliff.",
     subChildren: [               // Tier 3
     ]
   },
@@ -73,10 +73,10 @@ const tableData = [
     parentName: "  ",        // Tier 1
     parentPercentage: 25,
     parentColor: "var(--color-card3)",
-    name: "Team",         // Tier 2
-    percentage: 15,
-    color: "var(--color-gold)",
-    explanation: "Incentivizes the founding team. Subject to a 4-year vesting schedule with a 12-month cliff.",
+    name: "Operational Reserve",         // Tier 2
+    percentage: 10,
+    color: "var(--color-purple)",
+    explanation: "Allocated to the non-profit Regarded DAO LLC to cover real-world costs (legal compliance, audits, hosting). Managed via multi-sig with strict spending rules.",
     subChildren: [
     ]
   },
@@ -95,6 +95,31 @@ export default function Home() {
   // Scroll Navigation
   const { activeSection, isNavVisible, scrollToSection } = useScrollNavigation();
 
+  // The desktop sidebar always reserves its column at md+, so `mx-auto` centers
+  // the main content in the *remaining* space rather than the viewport. We pull
+  // it back by exactly half the sidebar's measured width so it sits at the true
+  // viewport center. While the nav is visible we only re-center on very wide
+  // screens (2xl) where there's room beside it; once it's hidden (its column is
+  // still reserved) we can re-center from md up since nothing visible overlaps.
+  const [navOffset, setNavOffset] = useState(0);
+  useEffect(() => {
+    const navEl = document.getElementById('desktop-scrollnav');
+    const compute = () => {
+      const width = navEl?.offsetWidth ?? 0;
+      const vw = window.innerWidth;
+      const shouldOffset = isNavVisible ? vw >= 1536 : vw >= 768;
+      setNavOffset(shouldOffset ? width / 2 : 0);
+    };
+    compute();
+    const ro = navEl ? new ResizeObserver(compute) : null;
+    if (navEl && ro) ro.observe(navEl);
+    window.addEventListener('resize', compute);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', compute);
+    };
+  }, [isNavVisible]);
+
   // Modal
   const [isRegardoModalOpen, setIsRegardoModalOpen] = useState(false);
   const openRegardoModal = () => setIsRegardoModalOpen(true);
@@ -110,10 +135,10 @@ export default function Home() {
   const navLinks = [
     { id: 'sectionHero', label: 'Choose your Hero' },
     { id: 'sectionPlay', label: 'Play the Game' },
-    { id: 'sectionOwnMarket', label: 'Own the Market' },
+    { id: 'sectionOwnMarket', label: 'Own the Project' },
     { id: 'sectionDistribution', label: 'Distribution of Power' },
     { id: 'sectionCampaign', label: 'Campaign Sequence' },
-    { id: 'sectionSecureStake', label: 'Secure Your Stake' }
+    { id: 'sectionSecureYourStake', label: 'Secure Your Stake' }
   ];
 
 
@@ -145,13 +170,12 @@ export default function Home() {
         scrollToSection={scrollToSection}
       />
 
-      <main className={`min-w-0 transition-all duration-300 ${
-        isNavVisible
-          ? 'relative mx-auto 2xl:transform 2xl:-translate-x-16.25'
-          : 'relative mx-auto md:transform md:-translate-x-16.25'
-      }`}>
+      <main
+        className="relative mx-auto min-w-0 transition-transform duration-300"
+        style={{ transform: navOffset ? `translateX(-${navOffset}px)` : undefined }}
+      >
 
-        <div className="w-full max-w-6xl p-8 text-text">
+        <div className="w-full max-w-6xl md:pl-0  p-5 2xl:p-8 text-text">
           <div className='text-gold flex justify-center items-center '>
             <Logo className='w-40 text-white'/>
           </div>
@@ -191,7 +215,7 @@ export default function Home() {
       </button>
 
       <button 
-        onClick={() => scrollToSection('sectionSecureStake')}
+        onClick={() => window.open('http://app.localhost:3000/ico')}
         className="btn-game-primary"
       >
         Secure Your Stake
@@ -204,14 +228,14 @@ export default function Home() {
 
           {/* Choose your Hero */}
           <section id="sectionHero" className="py-16 mx-auto">
-            <h2 className="text-3xl font-bold mb-12 text-center">Choose Your Hero</h2>
+            <h2 className="h2-app mb-12 text-center">Choose Your Hero</h2>
             <div className="mx-auto">
               
               <div className="grid md:grid-cols-2 gap-8">
                 
                 <div className="flex flex-col items-center text-center landing-card max-h-screen">
                   <Regardo className="w-full h-auto max-h-70 transition-transform duration-200 ease-in-out hover:scale-110" viewBox="0 0 500 800" onClick={openRegardoModal}/>
-                  <h3 className="text-xl font-bold mt-8 m-3">Regardo, the Capitalist</h3>
+                  <h3 className="h3-app mt-8 m-3">Regardo, the Capitalist</h3>
                   <p className='text-sm'>Concentrate capital to push the economy toward perfect inequality. Win as the Capitalists — the fewest wallets collectively holding 50% of the supply — and split the entire prize pool. The rest get nothing.</p>
                 </div>
                 <GenericModal
@@ -238,9 +262,9 @@ export default function Home() {
                   </div>
                 </GenericModal>
 
-                <div className="flex flex-col items-center text-center bg-card p-8 rounded-lg shadow-md max-h-screen">
+                <div className="flex flex-col items-center text-center landing-card max-h-screen">
                   <Carlo className="w-full h-auto max-h-70  transition-transform duration-200 ease-in-out hover:scale-110 pt-8" viewBox="0 0 500 800" onClick={openCarloModal}/>
-                  <h3 className="text-xl font-bold mt-8 m-3">Carlo, the Socialist</h3>
+                  <h3 className="mt-8 m-3 h3-app">Carlo, the Proletarian</h3>
                   <p className='text-sm'>Coordinate with the masses to drive the economy toward perfect distribution. Win as the Proletariat — the largest number of players collectively holding 50% of the supply — and trigger the Expropriation: Capitalist payouts are capped and the surplus flows to you.</p>
                 
                 </div>
@@ -272,7 +296,7 @@ export default function Home() {
 
           {/* How it Works */}
           <section id="sectionPlay" className="py-16 mx-auto ">
-            <h2 className="text-3xl font-semibold mb-12 text-center">Play the Game</h2>
+            <h2 className="h2-app mb-12 text-center">Play the Game</h2>
             <div className="grid md:grid-cols-3 gap-8"> 
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
@@ -299,17 +323,14 @@ export default function Home() {
 
           {/* More Than a Game */}
           <section id="sectionOwnMarket" className="py-16 mx-auto">
-            <h2 className="text-3xl font-bold mb-8 text-center">Own the Market</h2>
+            <h2 className="h2-app mb-8 text-center">Own the Project</h2>
             <div className="mx-auto">
-              <p className='mb-10'>Traditional markets are rigged against the individual. Regarded Games is the antidote. We’ve built an unmanipulated, player-owned arena that strips away the insider advantage. The fog of war is lifted; your only weapon is your strategy.</p>
-              
-              
               </div>
               <div className="grid md:grid-cols-3 gap-8"> 
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
                 title="Player Ownership"
-                description="No company. No rigged outcomes. $RGD holders govern the game rules and DAO treasury"
+                description="No company. No rigged outcomes. Regarded Token holders govern the game and DAO treasury"
                 onButtonClick={() => navigateToDocs('intro#5-governance')}
               />
               <Card
@@ -320,7 +341,7 @@ export default function Home() {
               />
               <Card
                 icon={<FIM1 viewBox="0 0 850 850" />}
-                title="Financial Markets 3.0"
+                title="Market 3.0"
                 description="Challeng the status quo of web3 and financial markets. Help building a new paradigm for people-owned, people-governed economies."
                 onButtonClick={() => navigateToDocs('mission')}
               />
@@ -329,8 +350,8 @@ export default function Home() {
 
             <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8">
             <button 
-              onClick={() => navigateToDocs('sectionHero')}
-              className=" bg-card2 hover:bg-card3 text-text px-6 py-3 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-103">
+              onClick={() => window.open('http://docs.localhost:3000/whitepaper')}
+              className=" btn-game-secondary">
               Read the Whitepaper
             </button>
           </div>
@@ -341,8 +362,7 @@ export default function Home() {
           <section id="sectionDistribution" className="py-16 mx-auto">
             <div className="flex flex-col gap-10">
               <div className="flex flex-col gap-2 text-center">
-                <h2 className="font-display font-black text-3xl uppercase tracking-tight text-text">Distribution of Power</h2>
-                <p className="font-sans text-sm text-text2 max-w-xl mx-auto">75% of the initial $RGD supply is governed by the DAO. The remainder aligns the founding team with long-term protocol success.</p>
+                <h2 className="h2-app">Distribution of Power</h2>
               </div>
               <NestedPieChart data={tableData} />
             </div>
@@ -350,127 +370,42 @@ export default function Home() {
 
           {/* Distribution of Power */}
           <section id="sectionCampaign" className="py-16 mx-auto">
-            <h2 className="text-3xl font-bold mb-12 text-center">Campaign Sequence</h2>
+            <h2 className="h2-app mb-12 text-center">Campaign Sequence</h2>
             <div className="mx-auto">
 
           </div>
           </section>
 
-          {/* Secure Your Stake */}
-          <section id="sectionSecureStake" className="py-16 mx-auto">
+          
+          <section id="sectionSecureYourStake" className="py-16 mx-auto">
+            
 
-            <h2 className="text-3xl font-bold mb-8 text-center">Secure Your Stake</h2>
-            <h2 className="text-xl font-bold mb-8 text-center">Regarded Games is a community-owned DAO. We&apos;re reserving a significant portion of the initial $RGD supply for our founding players. Your Contribution Score determines your share. Here&apos;s your quest board:</h2>
-            <div className="grid md:grid-cols-2 gap-8 mb-8">
-              {/* Card 1: Community & Social */}
-        <CardPlain
-          icon={<Regardo className='w-full h-full' viewBox='0 0 500 800'/>}
-          title="Join the Community"
-          description={
-            <>
-              <p className="text-sm">
-                Register for the Genesis Program to unlock your Base Score. Earn a 5x Multiplier by becoming a strategic voice in Discord.
-              </p>
-              <h5 className="font-bold mt-4 mb-1 text-card-foreground">Points Breakdown:</h5>
-              <ul className="list-disc list-inside text-sm space-y-1">
-                <li>Registration: 100 Points</li>
-                <li>Strategic Voice Bonus: Up to 400 Points</li>
-              </ul>
-              <p className="my-4 font-semibold">Max Score: 500 Points</p>
-              </>
-            }
-          actions={
-              <button 
-                onClick={() => scrollToId('contactForm')}
-                className="w-full lg:w-2/3 bg-gold hover:bg-gold-soft text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
-                Register
-              </button> 
-          }
-        />
-
-        {/* Card 2: Ecosystem Growth */}
-        <CardPlain
-          icon={<Regardo className='w-full h-full' viewBox='0 0 500 800'/>}
-          title="Spread the Word"
-          description={
-            <>
-              <p className="text-sm">
-                Share your referral code and earn points for every engaged player you recruit.
-              </p>
-              <h5 className="font-bold mt-4 mb-1 text-card-foreground">Points Breakdown:</h5>
-              <ul className="list-disc list-inside text-sm space-y-1">
-                <li>Referrals 1-10: 50 Points each</li>
-                <li>Referrals 11-35: 20 Points each</li>
-                <li>Referrals 36-100: 5 Points each</li>
-              </ul>
-              <p className="mt-4 font-semibold">Max Score: 1,325 Points</p>
-              </>
-            }
-          actions={
-            <button 
-              onClick={() => scrollToId('contactForm')}
-              className="w-full lg:w-2/3 bg-gold hover:bg-gold-soft text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
-              Get referral code
-            </button>
-          }
-        />
-
-        {/* Card 3: Testnet Performance */}
-        <CardPlain
-          icon={<Regardo className='w-full h-full' viewBox='0 0 500 800'/>}
-          title="Dominate the Testnet"
-          description={
-            <>
-              <p className="text-sm">
-                Execute trades in the preseason arena to earn activity points. Lead your faction to victory for the top bonus.
-              </p>
-              <h5 className="font-bold mt-4 mb-1 text-card-foreground">Points Breakdown:</h5>
-              <ul className="list-disc list-inside text-sm space-y-1">
-                <li>Activity Score: 200 Points</li>
-                <li>Winning Faction Bonus: 1,000 Points</li>
-              </ul>
-              <p className="mt-4 font-semibold">Max Score: 1,200 Points</p>
-              </>
-            }
-          actions={
-              <button 
-                onClick={() => window.open('http://app.localhost:3000')}
-                className="w-full lg:w-2/3 bg-gold hover:bg-gold-soft text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
-                Launch Testnet App
-              </button>
-          }
-        />
-
-        {/* Card 4: Protocol Security */}
-        <CardPlain
-          icon={<Regardo className='w-full h-full' viewBox='0 0 500 800'/>}
-          title="Become a Guardian"
-          description={
-            <>
-              <p className="text-sm">
-                Find and responsibly disclose protocol vulnerabilities to earn the highest-tier rewards.
-              </p>
-              <h5 className="font-bold mt-4 mb-1 text-card-foreground">Points Breakdown:</h5>
-              <ul className="list-disc list-inside text-sm space-y-1">
-                <li>Critical Bug: 25,000 Points</li>
-                <li>High Severity: 10,000 Points</li>
-                <li>Medium Severity: 2,500 Points</li>
-                <li>Low / Info: 500 Points</li>
-              </ul>
-              </>
-            }
-          actions={
-            <button 
-              onClick={() => window.open('https://github.com/maexp0wer/Regardo_games')}
-              className="w-full lg:w-2/3 bg-gold hover:bg-gold-soft text-bg px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-103">
-              Open GitHub
-            </button>
-          }
-        />
+            <h2 className="h2-app text-center mb-5">Secure Your Stake</h2>
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="flex flex-col items-center text-center landing-card max-h-screen">
+                  <h2 className="h3-app mb-4">Capital Auction</h2>
+                  <p className='text-sm mb-8'>The Regarded Token will be launched in a capital auction, allowing early supporters to secure their stake in the project.</p>
+                  <button 
+                    onClick={() => window.open('http://app.localhost:3000/ico')}
+                    className=" btn-game-primary">
+                    Capital Auction
+                </button>
+                </div>
+                <div className="flex flex-col items-center text-center landing-card max-h-screen">
+                  <h2 className="h3-app mb-4">Testnet Quests</h2>
+                  <p className='text-sm mb-8'>Complete quests and play on the Testnet to earn points that trasnalate into governance token during the Token Generation Event</p>
+                  <button 
+                    onClick={() => window.open('http://app.sepolia.localhost:3000/quests')}
+                    className=" btn-game-primary">
+                    Quest Board
+                </button>
+                </div>
               </div>
-              <div id='contactForm'>
-                <h3 className='text-center text-xl font-bold mt-12 mb-4'>Ready to start your campaign?</h3>
-            <ContactForm/>
+
+
+            <div className="flex flex-col items-center gap-4">
+            
+              
             </div>
           </section>
         </div>

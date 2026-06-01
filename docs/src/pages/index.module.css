@@ -1,73 +1,42 @@
-/* ── HERO ─────────────────────────────────────────────────────── */
-.hero {
-  position:   relative;
-  padding:    5rem 1.5rem 4rem;
-  text-align: center;
-  overflow:   hidden;
-  isolation:  isolate;
-  min-height: 72vh;
-  display:    flex;
-  align-items: center;
-  justify-content: center;
+/* ── PAGE ─────────────────────────────────────────────────────── */
+.page {
+  position:  relative;
+  overflow:  hidden;
+  isolation: isolate;
+  /* Fill the main wrapper so the glow reaches down to the footer */
+  display:         flex;
+  flex-direction:  column;
+  flex:            1 0 auto;
 }
 
-/* Radial glows behind content */
-.hero::before {
+/* Radial glows behind the entire first page */
+.page::before {
   content:    '';
   position:   absolute;
   inset:      0;
   background:
-    radial-gradient(ellipse 900px 400px at 50% -10%,
+    radial-gradient(ellipse 900px 500px at 50% -5%,
       color-mix(in srgb, var(--color-purple) 12%, transparent),
       transparent 70%),
-    radial-gradient(ellipse 600px 300px at 80% 90%,
+    radial-gradient(ellipse 700px 500px at 80% 100%,
       color-mix(in srgb, var(--color-gold) 8%, transparent),
       transparent 70%);
   z-index: -1;
 }
 
+/* ── HERO ─────────────────────────────────────────────────────── */
+.hero {
+  position:   relative;
+  padding:    5.5rem 1.5rem 2.5rem;
+  text-align: center;
+  display:    flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .heroInner {
   max-width: 760px;
   width:     100%;
-}
-
-/* Faction badge row */
-.factionBadges {
-  display:         flex;
-  align-items:     center;
-  justify-content: center;
-  gap:             0.75rem;
-  margin-bottom:   1.75rem;
-}
-
-.badge {
-  font-family:     'JetBrains Mono', monospace;
-  font-size:       0.65rem;
-  font-weight:     700;
-  letter-spacing:  0.15em;
-  text-transform:  uppercase;
-  padding:         4px 12px;
-  border-radius:   4px;
-  border:          1px solid;
-  transition:      all 0.15s ease;
-}
-
-.badgeGold {
-  color:            var(--color-gold);
-  border-color:     var(--color-gold);
-  background:       color-mix(in srgb, var(--color-gold) 10%, transparent);
-}
-
-.badgePurple {
-  color:            var(--color-purple);
-  border-color:     var(--color-purple);
-  background:       color-mix(in srgb, var(--color-purple) 10%, transparent);
-}
-
-.badgeSep {
-  font-family: 'JetBrains Mono', monospace;
-  font-size:   0.7rem;
-  color:       var(--color-text2);
 }
 
 /* Main title */
@@ -92,180 +61,132 @@
   color:         var(--color-text2);
   line-height:   1.6;
   max-width:     540px;
-  margin:        0 auto 2.25rem;
+  margin:        0 auto;
 }
 
-/* CTA buttons row */
-.buttons {
+/* ── DOC CARDS ────────────────────────────────────────────────── */
+.cardsSection {
+  padding: 1rem 1.5rem 5rem;
+}
+
+.cardsGrid {
+  display:        grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap:            1.25rem;
+  max-width:      1040px;
+  margin:         0 auto;
+}
+
+.card {
+  position:        relative;
+  isolation:       isolate;
+  overflow:        hidden;
   display:         flex;
-  align-items:     center;
-  justify-content: center;
-  gap:             1rem;
-  flex-wrap:       wrap;
-  margin-bottom:   3rem;
-}
-
-.btnPrimary {
-  font-family:     'Exo 2', system-ui, sans-serif;
-  font-weight:     800;
-  font-size:       0.875rem;
-  text-transform:  uppercase;
-  letter-spacing:  0.06em;
-  padding:         0.65rem 1.6rem;
-  border-radius:   8px;
-  border:          none;
-  background:      var(--cyber-sunset);
-  color:           #fff !important;
-  text-decoration: none !important;
-  box-shadow:      0 4px 14px color-mix(in srgb, var(--color-purple) 35%, transparent);
-  transition:      all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-  cursor:          pointer;
-  display:         inline-flex;
-  align-items:     center;
-  gap:             0.4rem;
-}
-
-.btnPrimary:hover {
-  transform:  translateY(-2px);
-  box-shadow: 0 8px 22px color-mix(in srgb, var(--color-purple) 40%, transparent);
-}
-
-.btnPrimary:active {
-  transform:  translateY(0) scale(0.98);
-  box-shadow: none;
-}
-
-.btnSecondary {
-  font-family:    'Exo 2', system-ui, sans-serif;
-  font-weight:    700;
-  font-size:      0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding:        0.65rem 1.6rem;
-  border-radius:  8px;
-  border:         1px solid var(--color-border2);
-  background:     var(--color-card2);
-  color:          var(--color-text) !important;
-  text-decoration: none !important;
-  transition:     all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-  cursor:         pointer;
-  display:        inline-flex;
-  align-items:    center;
-  gap:            0.4rem;
-}
-
-.btnSecondary:hover {
-  border-color: var(--color-purple);
-  color:        var(--color-purple) !important;
-  transform:    translateY(-2px);
-  box-shadow:   0 0 16px color-mix(in srgb, var(--color-purple) 20%, transparent);
-}
-
-.btnSecondary:active {
-  transform: translateY(0) scale(0.98);
-}
-
-/* Stats strip */
-.statsStrip {
-  display:         flex;
-  align-items:     center;
-  justify-content: center;
-  gap:             0;
-  flex-wrap:       wrap;
+  flex-direction:  column;
+  gap:             0.75rem;
+  padding:         1.75rem 1.5rem;
   background:      var(--color-card);
   border:          1px solid var(--color-border);
-  border-radius:   10px;
-  overflow:        hidden;
+  border-radius:   14px;
+  text-decoration: none !important;
+  transition:      all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.statCell {
-  flex:            1 1 140px;
-  padding:         1rem 1.5rem;
-  text-align:      center;
-  position:        relative;
-  background:      var(--color-card);
-  transition:      background 0.15s ease;
+.card:hover {
+  transform:    translateY(-6px);
+  border-color: var(--color-border2);
+  box-shadow:   0 12px 30px rgba(0, 0, 0, 0.15),
+                0 0 20px color-mix(in srgb, var(--color-purple) 15%, transparent);
 }
 
-.statCell:hover {
-  background: var(--color-card2);
-}
-
-.statCell + .statCell {
-  border-left: 1px solid var(--color-border);
-}
-
-/* Gold accent strip on hover */
-.statCell::before {
-  content:    '';
+/* Left accent strip */
+.cardAccent {
   position:   absolute;
   left:       0;
   top:        0;
   bottom:     0;
-  width:      0;
-  background: var(--color-gold);
-  transition: width 0.2s ease;
+  width:      3px;
+  transition: width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.statCell:hover::before {
-  width: 3px;
+.card:hover .cardAccent {
+  width: 5px;
 }
 
-.statValue {
+.accentPurple { background: var(--color-purple); }
+.accentGreen  { background: var(--color-green); }
+.accentGold   { background: var(--color-gold); }
+
+.cardHead {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+}
+
+.cardEyebrow {
   font-family:    'JetBrains Mono', monospace;
-  font-size:      1.4rem;
+  font-size:      0.6rem;
   font-weight:    700;
-  color:          var(--color-text);
-  letter-spacing: -0.02em;
-  display:        block;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color:          var(--color-text2);
+}
+
+.cardIndex {
+  font-family:          'JetBrains Mono', monospace;
+  font-size:            0.75rem;
+  font-weight:          700;
+  color:                var(--color-text2);
   font-variant-numeric: tabular-nums;
 }
 
-.statLabel {
-  font-family:    'JetBrains Mono', monospace;
-  font-size:      0.62rem;
-  font-weight:    700;
-  letter-spacing: 0.12em;
+.cardTitle {
+  font-family:    'Exo 2', system-ui, sans-serif;
+  font-weight:    900;
+  font-size:      1.5rem;
   text-transform: uppercase;
-  color:          var(--color-text2);
-  display:        block;
+  letter-spacing: -0.02em;
+  line-height:    1.1;
+  color:          var(--color-text);
+  margin:         0;
 }
 
-/* Gradient separator line below hero */
-.heroLine {
-  width:   100%;
-  height:  1px;
-  background: var(--cyber-sunset);
-  opacity: 0.2;
-  border:  none;
+.cardBody {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size:   0.9rem;
+  line-height: 1.55;
+  color:       var(--color-text2);
+  margin:      0;
+  flex:        1;
+}
+
+.cardCta {
+  font-family:    'Exo 2', system-ui, sans-serif;
+  font-weight:    800;
+  font-size:      0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color:          var(--color-purple);
+  display:        inline-flex;
+  align-items:    center;
+  gap:            0.3rem;
+  transition:     gap 0.15s ease-in-out;
+}
+
+.cardCta::after {
+  content: '\2192';
+}
+
+.card:hover .cardCta {
+  gap: 0.55rem;
 }
 
 @media (max-width: 768px) {
   .hero {
-    min-height: auto;
-    padding:    3.5rem 1rem 3rem;
+    padding: 3.5rem 1rem 2rem;
   }
 
-  .statsStrip {
-    flex-direction: column;
-  }
-
-  .statCell + .statCell {
-    border-left:  none;
-    border-top:   1px solid var(--color-border);
-  }
-
-  .statCell::before {
-    top:    0;
-    bottom: auto;
-    left:   0;
-    right:  0;
-    width:  auto;
-    height: 0;
-  }
-
-  .statCell:hover::before {
-    width:  auto;
-    height: 3px;
+  .cardsGrid {
+    grid-template-columns: 1fr;
   }
 }

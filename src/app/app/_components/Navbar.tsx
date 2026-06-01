@@ -154,31 +154,32 @@ export function Navbar() {
       {/* Mobile overlay nav */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-200 sm:hidden"
-          style={{ background: 'var(--color-card3)', backdropFilter: 'blur(8px)' }}
+          className="fixed inset-0 z-200 sm:hidden bg-bg bg-opacity-70 flex justify-center items-center"
           onClick={() => setIsModalOpen(false)}
           role="dialog"
           aria-modal="true"
         >
           <div
-            className="absolute top-4 right-4 w-64 rounded-[20px] border border-border p-5 flex flex-col gap-1"
-            style={{ background: 'var(--color-card)' }}
+            className="bg-card rounded-lg shadow-xl p-6 w-11/12 max-w-xs relative mx-auto flex flex-col max-h-[85vh]"
             onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
           >
             <button
               onClick={() => setIsModalOpen(false)}
-              className="self-end mb-2 w-7 h-7 flex items-center justify-center rounded-full text-text2 hover:text-text hover:bg-card2 transition-colors"
+              className="absolute top-2 right-2 text-text hover:[background:var(--sunset-glow)] p-1 rounded-full"
               aria-label="Close navigation menu"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
               </svg>
             </button>
 
-            <nav>
-              <ul className="space-y-0.5">
+            <nav className="mt-4 mb-4 grow overflow-y-auto custom-scrollbar">
+              <ul className="space-y-3 pr-2">
                 {navLinks.map((link) => {
                   const isActive = !link.external && pathname === link.href;
+                  const itemClass = `w-full block text-center py-2 px-4 rounded text-sm font-display font-bold uppercase tracking-[0.05em] text-text transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-gold ${
+                    isActive ? '[background:var(--sunset-glow)]' : 'hover:[background:var(--subtle-glow)]'
+                  }`;
                   return (
                     <li key={link.href}>
                       {link.external ? (
@@ -187,18 +188,16 @@ export function Navbar() {
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={() => setIsModalOpen(false)}
-                          className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg font-sans text-sm font-medium text-text2 hover:text-text hover:bg-card2 transition-colors"
+                          className={`${itemClass} flex items-center justify-center gap-2`}
                         >
                           {link.name}
-                          <PopoutIcon className="size-3 opacity-60 ml-auto" />
+                          <PopoutIcon className="size-3 opacity-60" />
                         </a>
                       ) : (
                         <Link
                           href={link.href}
                           onClick={() => setIsModalOpen(false)}
-                          className={`block w-full px-3 py-2.5 rounded-lg font-sans text-sm font-medium transition-colors ${
-                            isActive ? 'text-text bg-card2' : 'text-text2 hover:text-text hover:bg-card2'
-                          }`}
+                          className={itemClass}
                         >
                           {link.name}
                         </Link>
@@ -209,16 +208,13 @@ export function Navbar() {
               </ul>
             </nav>
 
-            <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-              <span className="font-mono text-[10px] text-text2 uppercase tracking-[0.12em]">Theme</span>
+            <div className="flex items-center justify-center border-t border-card2 pt-4">
               <button
                 onClick={toggleTheme}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-border text-text2 hover:text-text hover:border-border-bright transition-all text-sm"
+                className="bg-card2 flex p-2 rounded-full text-text hover:[background:var(--sunset-glow)] transition-colors duration-300"
+                aria-label="Toggle dark mode"
               >
-                {darkMode
-                  ? <><SunIcon /><span className="font-mono text-[11px]">Light</span></>
-                  : <><MoonIcon /><span className="font-mono text-[11px]">Dark</span></>
-                }
+                {darkMode ? <SunIcon /> : <MoonIcon />}
               </button>
             </div>
           </div>

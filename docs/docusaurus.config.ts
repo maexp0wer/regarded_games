@@ -1,6 +1,12 @@
 import {themes as prismThemes} from 'prism-react-renderer';
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+import {generateWhitepaperPages, GENERATED_DIR, WHITEPAPER_SOURCE} from './whitepaperSplit';
+
+// Split the single-source Whitepaper.md into per-Part pages before the docs
+// plugin reads them. The inline plugin below re-runs this when the source
+// changes so `docusaurus start` hot-reloads.
+generateWhitepaperPages();
 
 const config: Config = {
   title: 'Regarded Games',
@@ -51,12 +57,20 @@ const config: Config = {
   ],
 
   plugins: [
+    () => ({
+      name: 'whitepaper-source-watch',
+      getPathsToWatch() {
+        return [WHITEPAPER_SOURCE];
+      },
+      async loadContent() {
+        generateWhitepaperPages();
+      },
+    }),
     [
       '@docusaurus/plugin-content-docs',
       {
         id: 'whitepaper',
-        path: '../content',
-        include: ['Whitepaper.md'],
+        path: GENERATED_DIR,
         routeBasePath: 'whitepaper',
         sidebarPath: './sidebarsWhitepaper.ts',
       },
@@ -66,6 +80,11 @@ const config: Config = {
   themeConfig: {
     colorMode: {
       respectPrefersColorScheme: true,
+    },
+    docs: {
+      sidebar: {
+        autoCollapseCategories: true,
+      },
     },
     navbar: {
       title: 'Regarded Games',
