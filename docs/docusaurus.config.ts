@@ -95,8 +95,9 @@ const config: Config = {
       copyright: `Copyright © ${new Date().getFullYear()} Regarded Games.`,
     },
     prism: {
-      theme: prismThemes.github,
-      darkTheme: prismThemes.dracula,
+      theme: prismThemes.oneLight,
+      darkTheme: prismThemes.vsDark,
+      additionalLanguages: ['solidity', 'bash', 'json'],
     },
   } satisfies Preset.ThemeConfig,
 };

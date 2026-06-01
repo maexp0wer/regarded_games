@@ -55,7 +55,7 @@ set "DISCOURSE_API_KEY="
 
 for /f "usebackq tokens=1,* delims==" %%a in (`findstr /v "^#" "%PATH_A%\.env"`) do (
     if "%%a"=="NEXT_PUBLIC_ENVIRONMENT"                 set "APP_ENV=%%b"
-    if "%%a"=="NEXT_PUBLIC_ALCHEMY_API_KEY"             set "ALCHEMY_KEY=%%b"
+    if "%%a"=="ALCHEMY_API_KEY"             set "ALCHEMY_KEY=%%b"
     if "%%a"=="NEXT_PUBLIC_ALCHEMY_BASE_RPC_URL"        set "ALCHEMY_BASE_TEMPLATE=%%b"
     if "%%a"=="NEXT_PUBLIC_ALCHEMY_BASE_SEPOLIA_RPC_URL" set "ALCHEMY_SEPOLIA_TEMPLATE=%%b"
     if "%%a"=="NEXT_PUBLIC_DISCOURSE_URL"               set "DISCOURSE_URL=%%b"
@@ -66,7 +66,7 @@ for /f "usebackq tokens=1,* delims==" %%a in (`findstr /v "^#" "%PATH_A%\.env"`)
 if exist "%PATH_A%\.env.local" (
     for /f "usebackq tokens=1,* delims==" %%a in (`findstr /v "^#" "%PATH_A%\.env.local"`) do (
         if "%%a"=="NEXT_PUBLIC_ENVIRONMENT"                 set "APP_ENV=%%b"
-        if "%%a"=="NEXT_PUBLIC_ALCHEMY_API_KEY"             set "ALCHEMY_KEY=%%b"
+        if "%%a"=="ALCHEMY_API_KEY"             set "ALCHEMY_KEY=%%b"
         if "%%a"=="NEXT_PUBLIC_ALCHEMY_BASE_RPC_URL"        set "ALCHEMY_BASE_TEMPLATE=%%b"
         if "%%a"=="NEXT_PUBLIC_ALCHEMY_BASE_SEPOLIA_RPC_URL" set "ALCHEMY_SEPOLIA_TEMPLATE=%%b"
         if "%%a"=="NEXT_PUBLIC_DISCOURSE_URL"               set "DISCOURSE_URL=%%b"
@@ -82,11 +82,11 @@ set "PONDER_START_BLOCK_SEPOLIA=42059900"
 ECHO Environment: !APP_ENV!
 
 :: =========================================================================
-:: Resolve Alchemy RPC URLs (expand ${NEXT_PUBLIC_ALCHEMY_API_KEY} placeholder)
+:: Resolve Alchemy RPC URLs (expand ${ALCHEMY_API_KEY} placeholder)
 :: =========================================================================
 
-call set "ALCHEMY_BASE_URL=%%ALCHEMY_BASE_TEMPLATE:${NEXT_PUBLIC_ALCHEMY_API_KEY}=%ALCHEMY_KEY%%%"
-call set "ALCHEMY_SEPOLIA_URL=%%ALCHEMY_SEPOLIA_TEMPLATE:${NEXT_PUBLIC_ALCHEMY_API_KEY}=%ALCHEMY_KEY%%%"
+call set "ALCHEMY_BASE_URL=%%ALCHEMY_BASE_TEMPLATE:${ALCHEMY_API_KEY}=%ALCHEMY_KEY%%%"
+call set "ALCHEMY_SEPOLIA_URL=%%ALCHEMY_SEPOLIA_TEMPLATE:${ALCHEMY_API_KEY}=%ALCHEMY_KEY%%%"
 
 :: =========================================================================
 :: Delete Ponder cache folder

@@ -334,13 +334,9 @@ export function IcoMask() {
       <div className="flex flex-col md:flex-row md:items-end justify-between border-b pb-4 mb-6 gap-4"
         style={{ borderColor: 'var(--color-border)' }}>
         <div>
-          <span className="font-mono text-xs font-bold uppercase tracking-widest block mb-1"
-            style={{ color: 'var(--color-purple)' }}>
-            Price Discovery Terminal
-          </span>
           <div className="flex items-center gap-3">
             <h2 className="font-display text-2xl font-black uppercase tracking-tight text-text">
-              Capital Auction Pool
+              Capital Auction
             </h2>
             <span className="font-mono text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
               style={{ color: phasePill.color, background: phasePill.bg }}>

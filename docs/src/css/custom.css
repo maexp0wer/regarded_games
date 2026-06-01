@@ -1,305 +1,552 @@
 /* ================================================================
-   Regarded Games — Docusaurus theme
-   Maps the main site's design system (globals.css) to Infima.
-   Fonts loaded via docusaurus.config.ts stylesheets.
+   Regarded Games — Docusaurus Theme
+   Design blueprint: gamified trading terminal
+   Fonts: Exo 2 (display) · Space Grotesk (body) · JetBrains Mono (mono)
    ================================================================ */
 
-/* ── LIGHT palette ─────────────────────────────────────────────── */
+/* ── LIGHT COLOR TOKENS ─────────────────────────────────────────── */
 :root {
-  /* Project color tokens */
-  --rg-bg:           #f9f7f4;
-  --rg-card:         #ffffff;
-  --rg-card2:        #f5f2ed;
-  --rg-text:         #1a1814;
-  --rg-text2:        #7a7268;
-  --rg-border:       #e0dbd2;
-  --rg-border-bright:#ccc7be;
-  --rg-gold:         #c98a00;
-  --rg-gold-soft:    #f5b800;
-  --rg-gold-a08:     #c98a0014;
-  --rg-gold-a30:     #c98a004d;
-  --rg-gold-a40:     #c98a0066;
-  --rg-pink:         #d4215f;
-  --rg-blue:         #2d5eaa;
-  --rg-green:        #2d8c30;
+  --color-bg:           #F8F9FC;
+  --color-card:         #FFFFFF;
+  --color-card2:        #F1F3F9;
+  --color-card3:        #E4E8F2;
+  --color-border:       #E2E8F0;
+  --color-border2:      #CBD5E1;
+  --color-text:         #0F0D1A;
+  --color-text2:        #64748B;
+  --color-purple:       #6A1B9A;
+  --color-purple-hover: #4A148C;
+  --color-gold:         #D4AF37;
+  --color-gold-hover:   #AA820A;
+  --color-green:        #00875A;
+  --color-green-hover:  #006644;
+  --color-red:          #D32F2F;
+  --color-red-hover:    #B71C1C;
+  --color-magenta:      #B8004F;
+  --color-orange:       #D35400;
 
-  /* Infima primary → gold */
-  --ifm-color-primary:          #c98a00;
-  --ifm-color-primary-dark:     #b57c00;
-  --ifm-color-primary-darker:   #a87200;
-  --ifm-color-primary-darkest:  #8c5f00;
-  --ifm-color-primary-light:    #dd9a00;
-  --ifm-color-primary-lighter:  #e8a400;
-  --ifm-color-primary-lightest: #f5b800;
+  /* Transparency layers */
+  --color-purple-15:  color-mix(in srgb, var(--color-purple) 15%, transparent);
+  --color-purple-35:  color-mix(in srgb, var(--color-purple) 35%, transparent);
+  --color-gold-15:    color-mix(in srgb, var(--color-gold) 15%, transparent);
+  --color-gold-35:    color-mix(in srgb, var(--color-gold) 35%, transparent);
+  --color-gold-70:    color-mix(in srgb, var(--color-gold) 70%, transparent);
+  --color-green-35:   color-mix(in srgb, var(--color-green) 35%, transparent);
+  --color-red-35:     color-mix(in srgb, var(--color-red) 35%, transparent);
+  --color-magenta-15: color-mix(in srgb, var(--color-magenta) 15%, transparent);
+  --color-orange-15:  color-mix(in srgb, var(--color-orange) 15%, transparent);
 
-  /* Infima backgrounds */
-  --ifm-background-color:         #f9f7f4;
-  --ifm-background-surface-color: #ffffff;
+  /* Gradients */
+  --cyber-sunset: linear-gradient(
+    90deg,
+    var(--color-purple)  0%,
+    var(--color-magenta) 45%,
+    var(--color-orange)  75%,
+    var(--color-gold)    100%
+  );
+  --subtle-glow: linear-gradient(
+    90deg,
+    var(--color-purple-15)  0%,
+    var(--color-magenta-15) 45%,
+    var(--color-orange-15)  75%,
+    var(--color-gold-15)    100%
+  );
 
-  /* Infima text */
-  --ifm-font-color-base:      #1a1814;
-  --ifm-font-color-secondary: #7a7268;
+  /* ── Infima primary → gold ─────────────────────────────────────── */
+  --ifm-color-primary:          #D4AF37;
+  --ifm-color-primary-dark:     #BF9D31;
+  --ifm-color-primary-darker:   #B5942E;
+  --ifm-color-primary-darkest:  #967A25;
+  --ifm-color-primary-light:    #D9B842;
+  --ifm-color-primary-lighter:  #DFBF4D;
+  --ifm-color-primary-lightest: #EDD272;
 
-  /* Infima borders / emphasis */
-  --ifm-toc-border-color:   #e0dbd2;
-  --ifm-color-emphasis-300: #e0dbd2;
-  --ifm-color-emphasis-600: #7a7268;
-  --ifm-hr-border-color:    #e0dbd2;
+  /* ── Infima surfaces ───────────────────────────────────────────── */
+  --ifm-background-color:         var(--color-bg);
+  --ifm-background-surface-color: var(--color-card);
 
-  /* Infima navbar */
-  --ifm-navbar-background-color: #ffffff;
-  --ifm-navbar-shadow:           0 1px 0 #e0dbd2;
+  /* ── Infima text ───────────────────────────────────────────────── */
+  --ifm-font-color-base:      var(--color-text);
+  --ifm-font-color-secondary: var(--color-text2);
 
-  /* Infima footer */
-  --ifm-footer-background-color: #15120f;
+  /* ── Infima borders ────────────────────────────────────────────── */
+  --ifm-toc-border-color:   var(--color-border);
+  --ifm-color-emphasis-300: var(--color-border);
+  --ifm-color-emphasis-600: var(--color-text2);
+  --ifm-hr-border-color:    var(--color-border);
 
-  /* Infima sidebar */
-  --ifm-menu-color:                    #7a7268;
-  --ifm-menu-color-active:             #c98a00;
-  --ifm-menu-color-background-active:  #c98a0014;
-  --ifm-menu-color-background-hover:   #1a18140a;
+  /* ── Infima navbar ─────────────────────────────────────────────── */
+  --ifm-navbar-background-color: rgba(248, 249, 252, 0.85);
+  --ifm-navbar-shadow:           none;
+  --ifm-navbar-height:           60px;
 
-  /* Infima code */
-  --ifm-code-font-size:                    92%;
-  --ifm-code-background:                   #f5f2ed;
-  --docusaurus-highlighted-code-line-bg:   rgba(0,0,0,0.05);
+  /* ── Infima footer ─────────────────────────────────────────────── */
+  --ifm-footer-background-color: #0D0B14;
 
-  /* Infima links */
-  --ifm-link-color:       #c98a00;
-  --ifm-link-hover-color: #a87200;
+  /* ── Infima sidebar ────────────────────────────────────────────── */
+  --ifm-menu-color:                   var(--color-text2);
+  --ifm-menu-color-active:            var(--color-gold);
+  --ifm-menu-color-background-active: var(--color-gold-15);
+  --ifm-menu-color-background-hover:  var(--color-gold-15);
 
-  /* Infima fonts */
+  /* ── Infima code ───────────────────────────────────────────────── */
+  --ifm-code-font-size:                  91%;
+  --ifm-code-background:                 var(--color-card2);
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.05);
+
+  /* ── Infima links ──────────────────────────────────────────────── */
+  --ifm-link-color:       var(--color-gold);
+  --ifm-link-hover-color: var(--color-gold-hover);
+
+  /* ── Infima typography ─────────────────────────────────────────── */
   --ifm-font-family-base:      'Space Grotesk', system-ui, sans-serif;
   --ifm-font-family-monospace: 'JetBrains Mono', ui-monospace, monospace;
   --ifm-heading-font-weight:   700;
   --ifm-global-radius:         8px;
+  --ifm-global-line-height:    1.65;
 }
 
-/* ── DARK palette ──────────────────────────────────────────────── */
+/* ── DARK COLOR TOKENS ──────────────────────────────────────────── */
 [data-theme='dark'] {
-  --rg-bg:           #0b0a09;
-  --rg-card:         #15120f;
-  --rg-card2:        #1b1814;
-  --rg-text:         #f4ede0;
-  --rg-text2:        #8a8378;
-  --rg-border:       #2a2520;
-  --rg-border-bright:#3a342d;
-  --rg-gold:         #f5b800;
-  --rg-gold-soft:    #ffd34a;
-  --rg-gold-a08:     #f5b80014;
-  --rg-gold-a30:     #f5b8004d;
-  --rg-gold-a40:     #f5b80066;
-  --rg-pink:         #ff3d8a;
-  --rg-blue:         #4d9fff;
-  --rg-green:        #6bcb6e;
+  --color-bg:           #0D0B14;
+  --color-card:         #161322;
+  --color-card2:        #1F1A30;
+  --color-card3:        #2B2544;
+  --color-border:       #251F3D;
+  --color-border2:      #4C3F7A;
+  --color-text:         #EAE6F8;
+  --color-text2:        #8B82A7;
+  --color-purple:       #9D4EDD;
+  --color-purple-hover: #B577F2;
+  --color-gold:         #FFC300;
+  --color-gold-hover:   #FFD447;
+  --color-green:        #00F5A0;
+  --color-green-hover:  #33FFBC;
+  --color-red:          #FF3B69;
+  --color-red-hover:    #FF6687;
+  --color-magenta:      #D81B60;
+  --color-orange:       #FF8C00;
 
-  --ifm-color-primary:          #f5b800;
-  --ifm-color-primary-dark:     #dda600;
-  --ifm-color-primary-darker:   #cc9a00;
-  --ifm-color-primary-darkest:  #a87a00;
-  --ifm-color-primary-light:    #ffc933;
-  --ifm-color-primary-lighter:  #ffd34a;
-  --ifm-color-primary-lightest: #ffe080;
+  --ifm-color-primary:          #FFC300;
+  --ifm-color-primary-dark:     #E6B000;
+  --ifm-color-primary-darker:   #D9A700;
+  --ifm-color-primary-darkest:  #B38B00;
+  --ifm-color-primary-light:    #FFCB33;
+  --ifm-color-primary-lighter:  #FFD14D;
+  --ifm-color-primary-lightest: #FFE080;
 
-  --ifm-background-color:         #0b0a09;
-  --ifm-background-surface-color: #15120f;
+  --ifm-background-color:         var(--color-bg);
+  --ifm-background-surface-color: var(--color-card);
 
-  --ifm-font-color-base:      #f4ede0;
-  --ifm-font-color-secondary: #8a8378;
+  --ifm-font-color-base:      var(--color-text);
+  --ifm-font-color-secondary: var(--color-text2);
 
-  --ifm-toc-border-color:   #2a2520;
-  --ifm-color-emphasis-300: #2a2520;
-  --ifm-color-emphasis-600: #8a8378;
-  --ifm-hr-border-color:    #2a2520;
+  --ifm-toc-border-color:   var(--color-border);
+  --ifm-color-emphasis-300: var(--color-border);
+  --ifm-color-emphasis-600: var(--color-text2);
+  --ifm-hr-border-color:    var(--color-border);
 
-  --ifm-navbar-background-color: #15120f;
-  --ifm-navbar-shadow:           0 1px 0 #2a2520;
+  --ifm-navbar-background-color: rgba(13, 11, 20, 0.85);
+  --ifm-navbar-shadow:           none;
 
-  --ifm-footer-background-color: #0b0a09;
+  --ifm-footer-background-color: #08070E;
 
-  --ifm-menu-color:                    #8a8378;
-  --ifm-menu-color-active:             #f5b800;
-  --ifm-menu-color-background-active:  #f5b80014;
-  --ifm-menu-color-background-hover:   #f4ede005;
+  --ifm-menu-color:                   var(--color-text2);
+  --ifm-menu-color-active:            var(--color-gold);
+  --ifm-menu-color-background-active: var(--color-gold-15);
+  --ifm-menu-color-background-hover:  var(--color-purple-15);
 
-  --ifm-code-background:                  #1b1814;
-  --docusaurus-highlighted-code-line-bg:  rgba(255,255,255,0.06);
+  --ifm-code-background:                 var(--color-card2);
+  --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.06);
 
-  --ifm-link-color:       #f5b800;
-  --ifm-link-hover-color: #ffd34a;
+  --ifm-link-color:       var(--color-gold);
+  --ifm-link-hover-color: var(--color-gold-hover);
 }
 
-/* ── BASE ──────────────────────────────────────────────────────── */
+/* ── BASE ───────────────────────────────────────────────────────── */
 html {
   -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-  font-feature-settings: "ss01", "cv11";
+  text-rendering:         optimizeLegibility;
+  font-feature-settings:  "ss01", "cv11";
 }
 
-/* Dark mode gradient background (matches .dark body in globals.css) */
+body {
+  background-color: var(--color-bg);
+  transition: background-color 0.2s ease;
+}
+
 [data-theme='dark'] body {
   background:
-    radial-gradient(1200px 600px at 80% -10%, rgba(245,184,0,0.04), transparent 60%),
-    radial-gradient(900px 500px at -10% 120%, rgba(255,61,138,0.03), transparent 60%),
-    var(--rg-bg);
+    radial-gradient(ellipse 1000px 500px at 90% -5%,  var(--color-purple-15),  transparent 60%),
+    radial-gradient(ellipse 800px  400px at -5% 110%, var(--color-magenta-15), transparent 60%),
+    var(--color-bg);
 }
 
-/* ── NAVBAR ────────────────────────────────────────────────────── */
+/* ── NAVBAR ─────────────────────────────────────────────────────── */
 .navbar {
-  border-bottom: 1px solid var(--rg-border);
+  backdrop-filter:    blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom:      1px solid var(--color-border);
+  position:           sticky;
+  top:                0;
+  z-index:            100;
 }
+
+.navbar::after {
+  content:    '';
+  position:   absolute;
+  left:       0;
+  right:      0;
+  bottom:     0;
+  height:     1px;
+  background: var(--cyber-sunset);
+  opacity:    0.4;
+}
+
 .navbar__title {
-  font-family: 'Exo 2', system-ui, sans-serif;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  font-family:    'Exo 2', system-ui, sans-serif;
+  font-weight:    900;
+  font-size:      1.1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background:     var(--cyber-sunset);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
+
 .navbar__link {
   font-family: 'Space Grotesk', system-ui, sans-serif;
   font-weight: 500;
+  font-size:   0.875rem;
+  transition:  color 0.15s ease;
 }
 
-/* ── SIDEBAR ───────────────────────────────────────────────────── */
+.navbar__link:hover,
+.navbar__link--active {
+  color: var(--color-gold) !important;
+}
+
+/* ── SIDEBAR ────────────────────────────────────────────────────── */
 .menu__link {
   font-family: 'Space Grotesk', system-ui, sans-serif;
-  font-size: 14px;
+  font-size:   0.875rem;
+  font-weight: 400;
+  border-radius: 6px;
+  transition: all 0.15s ease;
 }
-.menu__link--active {
-  color: var(--rg-gold) !important;
-  font-weight: 600;
+
+.menu__link:hover:not(.menu__link--active) {
+  color: var(--color-text);
 }
+
+.menu__link--active:not(.menu__link--sublist) {
+  color:            var(--color-gold) !important;
+  font-weight:      600;
+  border-left:      2px solid var(--color-gold);
+  padding-left:     10px;
+}
+
+.menu__list-item-collapsible .menu__link--active {
+  color: var(--color-gold) !important;
+}
+
 .menu__caret::before {
-  filter: none;
+  border-color: var(--color-text2) transparent transparent transparent;
+  transition:   border-color 0.15s ease;
 }
 
-/* ── TOC ───────────────────────────────────────────────────────── */
-.table-of-contents__link {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+/* ── TABLE OF CONTENTS ──────────────────────────────────────────── */
+.table-of-contents {
+  border-left: 1px solid var(--color-border);
 }
+
+.table-of-contents__link {
+  font-family:     'JetBrains Mono', monospace;
+  font-size:       0.7rem;
+  letter-spacing:  0.03em;
+  color:           var(--color-text2);
+  transition:      color 0.15s ease;
+}
+
+.table-of-contents__link:hover,
 .table-of-contents__link--active {
-  color: var(--rg-gold);
+  color:       var(--color-gold) !important;
   font-weight: 600;
 }
 
-/* ── HEADINGS ──────────────────────────────────────────────────── */
+/* ── HEADINGS ───────────────────────────────────────────────────── */
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Exo 2', system-ui, sans-serif;
+  font-family:     'Exo 2', system-ui, sans-serif;
+  letter-spacing:  -0.01em;
+  line-height:     1.25;
 }
 
 .markdown h1 {
-  font-weight: 800;
-  color: var(--rg-gold);
-  border-bottom: 1px solid var(--rg-border);
-  padding-bottom: 0.5rem;
-  margin-bottom: 1.5rem;
-  margin-top: 2.5rem;
+  font-weight:   900;
+  font-size:     2rem;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  background:     var(--cyber-sunset);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  border-bottom:  1px solid var(--color-border);
+  padding-bottom: 0.75rem;
 }
+
 .markdown h2 {
-  font-weight: 700;
-  margin-top: 3rem;
-  margin-bottom: 1rem;
+  font-weight:   800;
+  font-size:     1.4rem;
+  color:         var(--color-text);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.4rem;
 }
+
+.markdown h2::before {
+  content:       '//';
+  font-family:   'JetBrains Mono', monospace;
+  font-size:     0.85em;
+  color:         var(--color-purple);
+  margin-right:  0.5rem;
+  font-weight:   400;
+}
+
 .markdown h3 {
   font-weight: 700;
-  margin-top: 2rem;
-  margin-bottom: 0.75rem;
+  font-size:   1.1rem;
+  color:       var(--color-text);
 }
+
 .markdown h4 {
+  font-weight:    600;
+  font-family:    'Space Grotesk', system-ui, sans-serif;
+  color:          var(--color-text2);
+  text-transform: uppercase;
+  font-size:      0.8rem;
+  letter-spacing: 0.1em;
+}
+
+/* ── PROSE ──────────────────────────────────────────────────────── */
+.markdown strong {
+  color:       var(--color-gold);
   font-weight: 600;
 }
 
-/* ── PROSE ─────────────────────────────────────────────────────── */
-.markdown strong {
-  color: var(--rg-gold);
-  font-weight: 600;
+.markdown em {
+  color: var(--color-text2);
 }
 
 .markdown a {
-  color: var(--rg-gold);
-  text-underline-offset: 2px;
-  text-decoration-color: var(--rg-gold-a40);
-  transition: text-decoration-color 0.15s;
+  color:                   var(--color-gold);
+  text-underline-offset:   3px;
+  text-decoration-color:   var(--color-gold-35);
+  font-weight:             500;
+  transition:              text-decoration-color 0.15s ease, color 0.15s ease;
 }
+
 .markdown a:hover {
-  color: var(--rg-gold);
-  text-decoration-color: var(--rg-gold);
+  color:                 var(--color-gold-hover);
+  text-decoration-color: var(--color-gold);
 }
 
 .markdown blockquote {
-  border-left: 3px solid var(--rg-gold);
-  background: var(--rg-gold-a08);
+  border-left:   3px solid;
+  border-image:  var(--cyber-sunset) 1;
+  background:    var(--subtle-glow);
   border-radius: 0 8px 8px 0;
-  padding: 12px 20px;
-  margin: 1.5rem 0;
-  color: var(--rg-text2);
-  font-style: italic;
+  padding:       14px 20px;
+  color:         var(--color-text2);
+  font-style:    italic;
+  position:      relative;
 }
+
 .markdown blockquote p {
   margin-bottom: 0;
 }
 
 .markdown hr {
-  border-top: 1px solid var(--rg-border);
+  border: none;
+  height: 1px;
+  background: var(--cyber-sunset);
+  opacity: 0.25;
 }
 
-/* ── CODE ──────────────────────────────────────────────────────── */
-.markdown code {
-  background: var(--rg-card2);
-  color: var(--rg-gold);
-  border: none;
+.markdown li::marker {
+  color: var(--color-purple);
+}
+
+/* ── CODE ───────────────────────────────────────────────────────── */
+.markdown :not(pre) > code {
+  background:    var(--color-card2);
+  color:         var(--color-gold);
+  border:        1px solid var(--color-border);
   border-radius: 4px;
-  padding: 2px 6px;
+  padding:       1px 6px;
+  font-size:     0.88em;
+  font-weight:   500;
 }
 
 .markdown pre {
-  background: var(--rg-card2) !important;
-  border: 1px solid var(--rg-border);
-  border-radius: 8px;
-}
-.markdown pre code {
-  color: inherit;
+  background:    var(--color-card) !important;
+  border:        1px solid var(--color-border);
+  border-radius: 10px;
+  position:      relative;
+  overflow:      hidden;
 }
 
-/* ── TABLES ────────────────────────────────────────────────────── */
+.markdown pre::before {
+  content:    '';
+  position:   absolute;
+  top:        0;
+  left:       0;
+  right:      0;
+  height:     2px;
+  background: var(--cyber-sunset);
+}
+
+.markdown pre code {
+  color:       inherit;
+  font-size:   0.875rem;
+  line-height: 1.7;
+}
+
+/* ── TABLES ─────────────────────────────────────────────────────── */
 .markdown table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
+  width:           100%;
+  border-collapse: separate;
+  border-spacing:  0;
+  font-size:       0.875rem;
+  border:          1px solid var(--color-border);
+  border-radius:   10px;
+  overflow:        hidden;
 }
+
 .markdown th {
-  background: var(--rg-card);
-  color: var(--rg-text);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border: 1px solid var(--rg-border);
-  padding: 10px 16px;
+  background:      var(--color-card2);
+  color:           var(--color-text);
+  font-family:     'JetBrains Mono', monospace;
+  font-size:       0.7rem;
+  font-weight:     700;
+  letter-spacing:  0.1em;
+  text-transform:  uppercase;
+  border-bottom:   1px solid var(--color-border2);
+  padding:         10px 16px;
 }
+
+.markdown th:first-child { border-left: none; }
+.markdown th:last-child  { border-right: none; }
+
 .markdown td {
-  border: 1px solid var(--rg-border);
-  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  padding:       10px 16px;
   vertical-align: top;
 }
+
+.markdown tr:last-child td { border-bottom: none; }
+
 .markdown tr:nth-child(even) td {
-  background: var(--rg-card2);
+  background: var(--color-card2);
 }
 
-/* ── FOOTER ────────────────────────────────────────────────────── */
+.markdown tr:hover td {
+  background: color-mix(in srgb, var(--color-purple-15) 40%, transparent);
+}
+
+/* ── ADMONITIONS ────────────────────────────────────────────────── */
+.alert {
+  border-radius: 10px;
+  border-width:  0;
+  border-left:   3px solid currentColor;
+}
+
+/* ── PAGINATION ─────────────────────────────────────────────────── */
+.pagination-nav__link {
+  border:        1px solid var(--color-border);
+  border-radius: 10px;
+  transition:    all 0.2s ease;
+}
+
+.pagination-nav__link:hover {
+  border-color: var(--color-gold);
+  background:   var(--color-gold-15);
+  color:        var(--color-gold);
+}
+
+/* ── BREADCRUMBS ────────────────────────────────────────────────── */
+.breadcrumbs__item--active .breadcrumbs__link {
+  color:       var(--color-gold);
+  font-weight: 600;
+  background:  none;
+}
+
+/* ── FOOTER ─────────────────────────────────────────────────────── */
 .footer {
-  border-top: 1px solid var(--rg-border);
-}
-.footer__copyright {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  letter-spacing: 0.05em;
-  color: var(--rg-text2);
+  border-top:   1px solid var(--color-border);
+  padding:      2.5rem 0;
+  position:     relative;
+  overflow:     hidden;
 }
 
-/* ── SCROLLBAR ─────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--rg-card2); }
-::-webkit-scrollbar-thumb { background: var(--rg-text2); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: var(--rg-text); }
-* { scrollbar-width: thin; scrollbar-color: var(--rg-text2) var(--rg-card2); }
+.footer::before {
+  content:    '';
+  position:   absolute;
+  top:        0;
+  left:       0;
+  right:      0;
+  height:     1px;
+  background: var(--cyber-sunset);
+  opacity:    0.5;
+}
+
+.footer__copyright {
+  font-family:     'JetBrains Mono', monospace;
+  font-size:       0.7rem;
+  letter-spacing:  0.08em;
+  text-transform:  uppercase;
+  color:           var(--color-text2);
+}
+
+/* ── SEARCH ─────────────────────────────────────────────────────── */
+.DocSearch-Button {
+  background:    var(--color-card2) !important;
+  border:        1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+}
+
+.DocSearch-Button:hover {
+  border-color: var(--color-gold) !important;
+  box-shadow:   0 0 0 2px var(--color-gold-15) !important;
+}
+
+/* ── SCROLLBAR ──────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  {
+  background:    var(--color-text2);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--color-text); }
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-text2) transparent;
+}
+
+/* ── BLINKING CURSOR ANIMATION ──────────────────────────────────── */
+@keyframes terminal-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ── PRISM OVERRIDES ────────────────────────────────────────────── */
+[data-theme='dark'] .prism-code {
+  background: var(--color-card) !important;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: var(--color-text2) !important;
+}

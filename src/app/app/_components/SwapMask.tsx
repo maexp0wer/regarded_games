@@ -386,7 +386,7 @@ export function SwapMask() {
     return `Swap ${tokenIn.symbol} for ${tokenOut.symbol}`;
   };
 
-  const inputBase = 'bg-transparent border-none p-0 w-full font-mono font-bold text-text outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none';
+  const inputBase = 'bg-transparent border-none p-0 w-full font-mono font-bold text-text outline-none focus:ring-0 no-spinners';
 
 
   const TokenBadge = ({ token, onClick, disabled }: { token: TokenInfo; onClick?: () => void; disabled?: boolean }) => (
@@ -464,16 +464,20 @@ export function SwapMask() {
                 {label}
               </button>
             ))}
-            <div className="flex items-center gap-1 rounded-lg px-2 py-1"
+            <div className="group flex items-center gap-1 rounded-lg px-2 py-1"
               style={{ border: '1px solid ' + (customSlippage ? 'var(--color-primary)' : 'var(--color-border)'), background: 'var(--color-card2)' }}>
               <input
                 type="number"
                 value={customSlippage}
                 onChange={e => handleCustomSlippage(e.target.value)}
                 placeholder="Custom"
-                className="bg-transparent border-none font-mono text-xs w-16 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="bg-transparent border-none font-mono text-xs w-16 outline-none no-spinners"
                 style={{ color: 'var(--color-text)' }}
               />
+              <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button className="btn-stepper" onClick={() => handleCustomSlippage(String(parseFloat((parseFloat(customSlippage || '0') + 0.1).toFixed(1))))}>▲</button>
+                <button className="btn-stepper" onClick={() => handleCustomSlippage(String(Math.max(0, parseFloat((parseFloat(customSlippage || '0') - 0.1).toFixed(1)))))}>▼</button>
+              </div>
               <span className="font-mono text-xs" style={{ color: 'var(--color-text2)' }}>%</span>
             </div>
           </div>
@@ -498,7 +502,7 @@ export function SwapMask() {
             Bal: {Number(formatUnits(walletBalanceIn, tokenIn.decimals)).toLocaleString(undefined, { maximumFractionDigits: 4 })} {tokenIn.symbol} · MAX
           </button>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="group flex items-center gap-3">
           <input
             type="number"
             value={amountIn}
@@ -507,6 +511,10 @@ export function SwapMask() {
             placeholder="0.00"
             disabled={isBusy || isSuccess || isError}
           />
+          <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button className="btn-stepper" disabled={isBusy || isSuccess || isError} onClick={() => setAmountIn(v => String(Math.max(0, parseFloat(v || '0') + 1)))}>▲</button>
+            <button className="btn-stepper" disabled={isBusy || isSuccess || isError} onClick={() => setAmountIn(v => String(Math.max(0, parseFloat(v || '0') - 1)))}>▼</button>
+          </div>
           {isBuying ? (
             isMock ? (
               <TokenBadge token={otherToken} disabled />

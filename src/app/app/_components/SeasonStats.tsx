@@ -69,7 +69,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
       {/* TRACK 1: FACTION IDEOLOGY SPECTRUM */}
       <div className="stat-rail-card">
         <div className="font-mono text-[10px] font-bold text-text2 uppercase tracking-wide">
-          <span>Ideology Matrix Spectrum</span>
+          <span>Rank</span>
         </div>
 
         {/* Ideology rail */}
@@ -105,7 +105,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
       {/* TRACK 2: ABSOLUTE PNL RANK */}
       <div className="stat-rail-card">
         <div className="flex justify-between items-baseline font-mono text-[10px] uppercase tracking-wide">
-          <span className="font-bold text-text2">Absolute P&amp;L Volume Standing</span>
+          <span className="font-bold text-text2">Absolute P&amp;L</span>
           <span className="font-black" style={{ color: pnlColor }}>
             {pnlSign}${userPnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC Net Return
           </span>
@@ -119,9 +119,9 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
             transition: 'width 0.5s ease-out',
           }} />
           <div className="progress-rail-overlay-text">
-            <span>GLOBAL RANK #{rank}</span>
-            <span className="opacity-40 mx-1.5">·</span>
-            <span>TOP {absoluteTopPercent < 1 ? '<1' : absoluteTopPercent.toFixed(1)}% OF {totalPlayers}</span>
+            <span>TOP {absoluteTopPercent < 1 ? '<1' : absoluteTopPercent.toFixed(1)}%</span>
+            <span className="opacity-40 mx-1.5">-</span>
+            <span>RANK {rank} OF {totalPlayers}</span>
           </div>
         </div>
       </div>
@@ -129,9 +129,9 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
       {/* TRACK 3: RELATIVE GROWTH RANK */}
       <div className="stat-rail-card">
         <div className="flex justify-between items-baseline font-mono text-[10px] uppercase tracking-wide">
-          <span className="font-bold text-text2">Relative Capital Growth Multiplier</span>
+          <span className="font-bold text-text2">Relative P&amp;L</span>
           <span className="font-black text-purple">
-            {growthSign}{growthPercent.toFixed(1)}% Account Scaling
+            {growthSign}{growthPercent.toFixed(1)}% Capital Growth
           </span>
         </div>
 
@@ -143,9 +143,9 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
             transition: 'width 0.5s ease-out',
           }} />
           <div className="progress-rail-overlay-text">
-            <span>EFFICIENCY RANK #{efficiencyRank}</span>
-            <span className="opacity-40 mx-1.5">·</span>
-            <span>TOP {relativeTopPercent < 1 ? '<1' : relativeTopPercent.toFixed(1)}% ACCOUNT GROWTH</span>
+            <span>TOP {relativeTopPercent < 1 ? '<1' : relativeTopPercent.toFixed(1)}%</span>
+            <span className="opacity-40 mx-1.5">-</span>
+            <span>RANK {efficiencyRank} OF {totalPlayers}</span>
           </div>
         </div>
       </div>

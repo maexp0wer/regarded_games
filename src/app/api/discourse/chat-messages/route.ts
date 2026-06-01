@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
       { headers: { 'Api-Key': API_KEY, 'Api-Username': 'system' } }
     );
     const data = await res.json();
+    if (process.env.APP_DEBUG) console.log('[chat-messages] Discourse response:', JSON.stringify(data).slice(0, 500));
     return NextResponse.json({ messages: data.messages || [] });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

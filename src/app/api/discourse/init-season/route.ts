@@ -5,7 +5,7 @@ import { getTenant, type TenantKey } from '@/config/tenants';
 import { discourseNames } from '@/lib/discourseNames';
 import { ssoSync } from '@/lib/discourseSSO';
 
-const debug = process.env.DEBUG === 'true';
+const debug = process.env.APP_DEBUG === 'true';
 const GET_BATCH_SIZE = 20; // parallel existence checks per batch
 const SSO_CONCURRENCY = 5; // concurrent SSO sync workers
 

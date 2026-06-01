@@ -28,8 +28,15 @@ export async function POST(req: Request) {
     const channelsData = await res.json();
     const channels: any[] = channelsData.channels || [];
     const target = targetGroupName.toLowerCase();
+
+    if (process.env.APP_DEBUG) {
+      console.log(`[discover-channel] Looking for "${target}" in channels:`, channels.map((c: any) => `${c.title} (id: ${c.id})`));
+    }
+
     // Strict equality only — `includes` would let a mainnet target match a sepolia channel title.
     const activeChannel = channels.find((c: any) => (c.title || '').toLowerCase() === target);
+
+    if (process.env.APP_DEBUG) console.log(`[discover-channel] Found channel:`, activeChannel?.id || 'null');
 
     return NextResponse.json({ channelId: activeChannel?.id || null });
   } catch (error) {

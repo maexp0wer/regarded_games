@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { SunIcon, MoonIcon, PopoutIcon } from '@/components/icons/svg';
 import { WalletButton } from './WalletButton';
+import { useRgdPrice } from '@/hooks/useRgdPrice';
 import { useState, useEffect, useRef, MouseEvent } from 'react';
 import { useAccount } from 'wagmi';
 import { Logo } from '@/components/icons/svg';
@@ -14,6 +15,7 @@ import { isRouteEnabled } from '@/config/appRoutes';
 export function Navbar() {
   const { address } = useAccount();
   const { darkMode, toggleTheme } = useTheme();
+  const rgdPrice = useRgdPrice();
   const pathname = usePathname();
   const tenant = useTenant();
   const mainUrl = process.env.NEXT_PUBLIC_MAIN_DOMAIN;
@@ -21,16 +23,29 @@ export function Navbar() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [visible, setVisible] = useState(true);
-  const lastScrollY = useRef(0);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const onScroll = () => {
-      const current = window.scrollY;
-      setVisible(current < lastScrollY.current || current < 10);
-      lastScrollY.current = current;
+    const scheduleHide = () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      hideTimer.current = setTimeout(() => setVisible(false), 3000);
     };
+
+    const onScroll = () => {
+      if (window.scrollY < 10) {
+        if (hideTimer.current) clearTimeout(hideTimer.current);
+        setVisible(true);
+      } else {
+        setVisible(true);
+        scheduleHide();
+      }
+    };
+
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    };
   }, []);
 
   const allNavLinks: {
@@ -57,7 +72,7 @@ export function Navbar() {
     <>
       <nav className={`nav-container transition-transform duration-300 ${visible ? 'translate-y-0' : '-translate-y-full'}`}>
         {/* Brand */}
-        <Link href={mainUrl || '/'} className="flex items-center no-underline" style={{ textDecoration: 'none' }}>
+        <Link href={mainUrl || '/'} className="flex items-center h-18 shrink-0 no-underline" style={{ textDecoration: 'none' }}>
           <Logo className="w-36 text-white" />
         </Link>
 
@@ -92,7 +107,7 @@ export function Navbar() {
         </div>
 
         {/* Right Actions */}
-        <div className="nav-actions-group">
+        <div className="nav-actions-group h-18">
           <button
             onClick={toggleTheme}
             className="hidden sm:flex items-center justify-center w-8 h-8 rounded-full text-text2 hover:text-text hover:bg-card border border-transparent hover:border-border transition-all"
@@ -100,6 +115,13 @@ export function Navbar() {
           >
             {darkMode ? <SunIcon /> : <MoonIcon />}
           </button>
+
+          {rgdPrice !== undefined && (
+            <Link href="/swap" className="chip chip-nav hidden sm:flex items-center gap-1.5" style={{ textDecoration: 'none' }}>
+              <span className="text-text2 text-[11px]">RGD</span>
+              <span className="text-text font-semibold">${rgdPrice.toFixed(6)}</span>
+            </Link>
+          )}
 
           <WalletButton />
 

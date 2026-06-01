@@ -7,6 +7,7 @@ import {
   computeTotalReferralPoints,
   computeWinScoreForSeason,
   relativePnl,
+  type QuestsConfig,
 } from '@/lib/quests';
 import { TENANTS } from '@/config/tenants';
 
@@ -31,6 +32,7 @@ interface SubQuestOut {
   copyUrl?: string;
   auctionGate?: boolean;
   tradingGate?: boolean;
+  payoutGate?: boolean;
   note?: string;
 }
 
@@ -246,194 +248,227 @@ async function checkGalxe(_addr: string, _campaign: string): Promise<boolean> {
   return false;
 }
 
+type CompletionMap = Map<string, { points: number; note: string | null }>;
+
+/**
+ * Build the full quest catalogue. `finalMap` carries the wallet's recorded
+ * completions; an empty map (anonymous, no wallet connected) yields the
+ * catalogue with nothing completed. `address` is null in the anonymous case.
+ */
+async function buildMainQuests(
+  config: QuestsConfig,
+  finalMap: CompletionMap,
+  manifestActionUrl: string,
+  address: string | null,
+): Promise<MainQuestOut[]> {
+  const P = config.points;
+  const isDone = (id: string) => finalMap.has(id);
+  const pts = (id: string, fallback: number) => finalMap.get(id)?.points ?? fallback;
+  const discussionRow = finalMap.get('discussion_bonus');
+
+  return [
+    {
+      id: 'join_community',
+      title: 'Join the Community',
+      description: 'Plug into the Regarded Games signal network.',
+      subQuests: [
+        {
+          id: 'follow_x', type: 'galxe',
+          title: 'Follow us on X',
+          points: P.follow_x,
+          isCompleted: isDone('follow_x') || (await checkGalxe(address ?? '', 'follow_x')),
+          actionUrl: config.galxe.followX,
+        },
+        {
+          id: 'join_discord', type: 'galxe',
+          title: 'Join us on Discord',
+          points: P.join_discord,
+          isCompleted: isDone('join_discord') || (await checkGalxe(address ?? '', 'join_discord')),
+          actionUrl: config.galxe.joinDiscord,
+        },
+        {
+          id: 'login_discourse', type: 'internal',
+          title: 'Log into our Discourse',
+          points: P.login_discourse,
+          isCompleted: isDone('login_discourse'),
+          actionUrl: config.externalLinks.discourseUrl,
+        },
+        {
+          id: 'discussion_bonus', type: 'internal',
+          title: 'Strategic voice bonus — join the discussion',
+          points: discussionRow?.points ?? 0,
+          isCompleted: !!discussionRow,
+          note: `Determined at the end of the Testnet Phase.`,
+        },
+        {
+          id: 'vote_manifest', type: 'internal',
+          title: 'Vote on the Mainnet Season 1 Manifest',
+          points: P.vote_manifest,
+          isCompleted: isDone('vote_manifest'),
+          actionUrl: manifestActionUrl,
+        },
+      ],
+    },
+    {
+      id: 'spread_word',
+      title: 'Spread the Word',
+      description: 'Amplify the protocol signal beyond the inner circle.',
+      subQuests: [
+        {
+          id: 'retweet_x', type: 'galxe',
+          title: 'Retweet on X',
+          points: P.retweet_x,
+          isCompleted: isDone('retweet_x') || (await checkGalxe(address ?? '', 'retweet')),
+          actionUrl: config.galxe.retweet,
+        },
+        {
+          id: 'referrals', type: 'internal',
+          title: 'Invite players via your referral link',
+          points: pts('referrals', 0),
+          isCompleted: pts('referrals', 0) > 0,
+          // The referral link is wallet-specific, so omit it for the
+          // anonymous catalogue.
+          ...(address ? { copyUrl: `${config.internalRoutes.faucet}/${address}` } : {}),
+          note: `Tiers: 1–10 refs (50 pts each) · 11–35 (20 pts) · 36–100 (5 pts). Referee must reach ≥${config.referralQualifyingThreshold} quest pts.`,
+        },
+      ],
+    },
+    {
+      id: 'dominate_testnet',
+      title: 'Dominate the Testnet',
+      description: 'Run the full loop — capital in, capital out.',
+      subQuests: [
+        { id: 'use_faucet',      type: 'internal', title: 'Use the faucet to get FakeUSDC', points: P.use_faucet,      isCompleted: isDone('use_faucet'),      actionUrl: config.internalRoutes.faucet },
+        { id: 'swap_usdc_rgd',   type: 'internal', title: 'Exchange FakeUSDC for RGD',       points: P.swap_usdc_rgd,   isCompleted: isDone('swap_usdc_rgd'),   actionUrl: config.internalRoutes.swap },
+        { id: 'stake_rgd',       type: 'internal', title: 'Stake RGD',                       points: P.stake_rgd,       isCompleted: isDone('stake_rgd'),       actionUrl: config.internalRoutes.stake },
+        { id: 'buy_fim_auction', type: 'internal', title: 'Buy FIM during the Auction',      points: P.buy_fim_auction, isCompleted: isDone('buy_fim_auction'), auctionGate: true },
+        { id: 'trade_fim',       type: 'internal', title: 'Buy or sell FIM during Trading',  points: P.trade_fim,       isCompleted: isDone('trade_fim'),       tradingGate: true },
+        { id: 'claim_payout',    type: 'internal', title: 'Claim payout',                    points: P.claim_payout,    isCompleted: isDone('claim_payout'),    payoutGate: true },
+        {
+          id: 'win_the_game', type: 'internal',
+          title: 'Win the Game',
+          points: pts('win_the_game', 0),
+          isCompleted: isDone('win_the_game'),
+          note: `0–${P.win_the_game_max} pts based on your best season's relative PnL rank.`,
+        },
+      ],
+    },
+  ];
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const addressParam = searchParams.get('address');
-    if (!addressParam || !isAddress(addressParam, { strict: false })) {
+    // A wallet address is optional. When present it must be well-formed; when
+    // absent we serve an anonymous catalogue (nothing completed) so the board
+    // can render before a wallet is connected.
+    if (addressParam && !isAddress(addressParam, { strict: false })) {
       return NextResponse.json({ error: 'invalid_address' }, { status: 400 });
     }
-    const address = addressParam.toLowerCase();
+    const address = addressParam ? addressParam.toLowerCase() : null;
     const config = loadQuestsConfig();
     const P = config.points;
 
-    // Single-shot Ponder probes, in parallel. Each is wrapped so one
-    // unreachable service (Ponder sepolia, Discourse) does not 500 the route.
-    const [
-      hasFaucet, hasSwap, hasStake, hasAuctionMint, hasTrade,
-      userStats, loggedDiscourse, hasVoted, existingMap, manifestTopicRow,
-    ] = await Promise.all([
-      safe('ponderHasFaucet',      () => ponderHasFaucet(address),      false),
-      safe('ponderHasSwap',        () => ponderHasSwap(address),        false),
-      safe('ponderHasStake',       () => ponderHasStake(address),       false),
-      safe('ponderHasAuctionMint', () => ponderHasAuctionMint(address), false),
-      safe('ponderHasTrade',       () => ponderHasTrade(address),       false),
-      safe('ponderUserStats',      () => ponderUserStats(address),      [] as PlayerStatRow[]),
-      safe('discourseLastSeen',    () => discourseLastSeen(address),    false),
-      safe('discourseHasVoted',    () => discourseHasVoted(address),    false),
-      existing(address),
-      query<{ value: string }>(`SELECT value FROM quest_config WHERE key = 'manifest_topic_id'`),
-    ]);
-
-    const manifestTopicId = manifestTopicRow.rows[0]?.value;
+    // Manifest topic link (DB-derived, with graceful fallback) — needed for
+    // both the anonymous catalogue and the per-wallet response.
+    let manifestTopicId: string | undefined;
+    try {
+      const r = await query<{ value: string }>(
+        `SELECT value FROM quest_config WHERE key = 'manifest_topic_id'`,
+      );
+      manifestTopicId = r.rows[0]?.value;
+    } catch (e: any) {
+      console.warn(`[quests] manifest_topic_id lookup failed: ${e?.message ?? e}`);
+    }
     const discourseBase = process.env.NEXT_PUBLIC_DISCOURSE_URL ?? config.externalLinks.discourseUrl;
     const manifestActionUrl = manifestTopicId
       ? `${discourseBase}/t/${manifestTopicId}`
       : config.externalLinks.discourseUrl;
 
-    // ── Internal credit insertions ─────────────────────────────────────
-    if (hasFaucet && !existingMap.has('use_faucet')) {
-      await upsertCompletion(address, 'use_faucet', P.use_faucet);
-    }
-    if (hasSwap && !existingMap.has('swap_usdc_rgd')) {
-      await upsertCompletion(address, 'swap_usdc_rgd', P.swap_usdc_rgd);
-    }
-    if (hasStake && !existingMap.has('stake_rgd')) {
-      await upsertCompletion(address, 'stake_rgd', P.stake_rgd);
-    }
-    if (hasAuctionMint && !existingMap.has('buy_fim_auction')) {
-      await upsertCompletion(address, 'buy_fim_auction', P.buy_fim_auction);
-    }
-    if (hasTrade && !existingMap.has('trade_fim')) {
-      await upsertCompletion(address, 'trade_fim', P.trade_fim);
-    }
-    const claimedAny = userStats.some((s) => BigInt(s.realizedPayout) > 0n);
-    if (claimedAny && !existingMap.has('claim_payout')) {
-      await upsertCompletion(address, 'claim_payout', P.claim_payout);
-    }
-    if (loggedDiscourse && !existingMap.has('login_discourse')) {
-      await upsertCompletion(address, 'login_discourse', P.login_discourse);
-    }
-    if (hasVoted && !existingMap.has('vote_manifest')) {
-      await upsertCompletion(address, 'vote_manifest', P.vote_manifest);
-    }
+    let finalMap: CompletionMap = new Map();
 
-    // ── Win the Game (variable, lazy, best-across-seasons) ─────────────
-    let bestWin = 0;
-    for (const stat of userStats) {
-      if (BigInt(stat.realizedPayout) <= 0n) continue;
-      const userPnl = relativePnl(BigInt(stat.totalPotentialPayout), BigInt(stat.netContribution));
-      if (userPnl === null) continue;
-      const allStats = await safe(
-        `ponderSeasonStats(${stat.seasonAddress})`,
-        () => ponderSeasonStats(stat.seasonAddress),
-        [] as PlayerStatRow[],
-      );
-      const pnls = allStats
-        .map((s) => relativePnl(BigInt(s.totalPotentialPayout), BigInt(s.netContribution)))
-        .filter((v): v is number => v !== null);
-      if (pnls.length < 2) continue;
-      const score = computeWinScoreForSeason(userPnl, pnls);
-      if (score > bestWin) bestWin = score;
-    }
-    const existingWin = existingMap.get('win_the_game')?.points ?? 0;
-    if (bestWin > existingWin) {
-      await upsertCompletion(address, 'win_the_game', bestWin);
-    }
+    if (address) {
+      // Single-shot Ponder probes, in parallel. Each is wrapped so one
+      // unreachable service (Ponder sepolia, Discourse) does not 500 the route.
+      const [
+        hasFaucet, hasSwap, hasStake, hasAuctionMint, hasTrade,
+        userStats, loggedDiscourse, hasVoted, existingMap,
+      ] = await Promise.all([
+        safe('ponderHasFaucet',      () => ponderHasFaucet(address),      false),
+        safe('ponderHasSwap',        () => ponderHasSwap(address),        false),
+        safe('ponderHasStake',       () => ponderHasStake(address),       false),
+        safe('ponderHasAuctionMint', () => ponderHasAuctionMint(address), false),
+        safe('ponderHasTrade',       () => ponderHasTrade(address),       false),
+        safe('ponderUserStats',      () => ponderUserStats(address),      [] as PlayerStatRow[]),
+        safe('discourseLastSeen',    () => discourseLastSeen(address),    false),
+        safe('discourseHasVoted',    () => discourseHasVoted(address),    false),
+        existing(address),
+      ]);
 
-    // ── Referrals (variable, gated by 500-pt threshold) ────────────────
-    const qualified = await qualifyingReferralCount(address, config.referralQualifyingThreshold);
-    const totalReferralPts = computeTotalReferralPoints(qualified, config.referralTiers);
-    if (totalReferralPts > 0) {
-      await upsertCompletion(address, 'referrals', totalReferralPts);
-    }
+      // ── Internal credit insertions ─────────────────────────────────────
+      if (hasFaucet && !existingMap.has('use_faucet')) {
+        await upsertCompletion(address, 'use_faucet', P.use_faucet);
+      }
+      if (hasSwap && !existingMap.has('swap_usdc_rgd')) {
+        await upsertCompletion(address, 'swap_usdc_rgd', P.swap_usdc_rgd);
+      }
+      if (hasStake && !existingMap.has('stake_rgd')) {
+        await upsertCompletion(address, 'stake_rgd', P.stake_rgd);
+      }
+      if (hasAuctionMint && !existingMap.has('buy_fim_auction')) {
+        await upsertCompletion(address, 'buy_fim_auction', P.buy_fim_auction);
+      }
+      if (hasTrade && !existingMap.has('trade_fim')) {
+        await upsertCompletion(address, 'trade_fim', P.trade_fim);
+      }
+      const claimedAny = userStats.some((s) => BigInt(s.realizedPayout) > 0n);
+      if (claimedAny && !existingMap.has('claim_payout')) {
+        await upsertCompletion(address, 'claim_payout', P.claim_payout);
+      }
+      if (loggedDiscourse && !existingMap.has('login_discourse')) {
+        await upsertCompletion(address, 'login_discourse', P.login_discourse);
+      }
+      if (hasVoted && !existingMap.has('vote_manifest')) {
+        await upsertCompletion(address, 'vote_manifest', P.vote_manifest);
+      }
 
-    // Re-read after all upserts.
-    const finalMap = await existing(address);
+      // ── Win the Game (variable, lazy, best-across-seasons) ─────────────
+      let bestWin = 0;
+      for (const stat of userStats) {
+        if (BigInt(stat.realizedPayout) <= 0n) continue;
+        const userPnl = relativePnl(BigInt(stat.totalPotentialPayout), BigInt(stat.netContribution));
+        if (userPnl === null) continue;
+        const allStats = await safe(
+          `ponderSeasonStats(${stat.seasonAddress})`,
+          () => ponderSeasonStats(stat.seasonAddress),
+          [] as PlayerStatRow[],
+        );
+        const pnls = allStats
+          .map((s) => relativePnl(BigInt(s.totalPotentialPayout), BigInt(s.netContribution)))
+          .filter((v): v is number => v !== null);
+        if (pnls.length < 2) continue;
+        const score = computeWinScoreForSeason(userPnl, pnls);
+        if (score > bestWin) bestWin = score;
+      }
+      const existingWin = existingMap.get('win_the_game')?.points ?? 0;
+      if (bestWin > existingWin) {
+        await upsertCompletion(address, 'win_the_game', bestWin);
+      }
+
+      // ── Referrals (variable, gated by 500-pt threshold) ────────────────
+      const qualified = await qualifyingReferralCount(address, config.referralQualifyingThreshold);
+      const totalReferralPts = computeTotalReferralPoints(qualified, config.referralTiers);
+      if (totalReferralPts > 0) {
+        await upsertCompletion(address, 'referrals', totalReferralPts);
+      }
+
+      // Re-read after all upserts.
+      finalMap = await existing(address);
+    }
 
     // ── Build response ─────────────────────────────────────────────────
-    const isDone = (id: string) => finalMap.has(id);
-    const pts = (id: string, fallback: number) => finalMap.get(id)?.points ?? fallback;
-
-    const discussionRow = finalMap.get('discussion_bonus');
-
-    const mainQuests: MainQuestOut[] = [
-      {
-        id: 'join_community',
-        title: 'Join the Community',
-        description: 'Plug into the Regarded Games signal network.',
-        subQuests: [
-          {
-            id: 'follow_x', type: 'galxe',
-            title: 'Follow us on X',
-            points: P.follow_x,
-            isCompleted: isDone('follow_x') || (await checkGalxe(address, 'follow_x')),
-            actionUrl: config.galxe.followX,
-          },
-          {
-            id: 'join_discord', type: 'galxe',
-            title: 'Join us on Discord',
-            points: P.join_discord,
-            isCompleted: isDone('join_discord') || (await checkGalxe(address, 'join_discord')),
-            actionUrl: config.galxe.joinDiscord,
-          },
-          {
-            id: 'login_discourse', type: 'internal',
-            title: 'Log into our Discourse',
-            points: P.login_discourse,
-            isCompleted: isDone('login_discourse'),
-            actionUrl: config.externalLinks.discourseUrl,
-          },
-          {
-            id: 'discussion_bonus', type: 'internal',
-            title: 'Strategic voice bonus — join the discussion',
-            points: discussionRow?.points ?? 0,
-            isCompleted: !!discussionRow,
-            note: `Determined at the end of the Testnet Phase.`,
-          },
-          {
-            id: 'vote_manifest', type: 'internal',
-            title: 'Vote on the Mainnet Season 1 Manifest',
-            points: P.vote_manifest,
-            isCompleted: isDone('vote_manifest'),
-            actionUrl: manifestActionUrl,
-          },
-        ],
-      },
-      {
-        id: 'spread_word',
-        title: 'Spread the Word',
-        description: 'Amplify the protocol signal beyond the inner circle.',
-        subQuests: [
-          {
-            id: 'retweet_x', type: 'galxe',
-            title: 'Retweet on X',
-            points: P.retweet_x,
-            isCompleted: isDone('retweet_x') || (await checkGalxe(address, 'retweet')),
-            actionUrl: config.galxe.retweet,
-          },
-          {
-            id: 'referrals', type: 'internal',
-            title: 'Invite players via your referral link',
-            points: pts('referrals', 0),
-            isCompleted: pts('referrals', 0) > 0,
-            copyUrl: `${config.internalRoutes.faucet}/${address}`,
-            note: `Tiers: 1–10 refs (50 pts each) · 11–35 (20 pts) · 36–100 (5 pts). Referee must reach ≥${config.referralQualifyingThreshold} quest pts.`,
-          },
-        ],
-      },
-      {
-        id: 'dominate_testnet',
-        title: 'Dominate the Testnet',
-        description: 'Run the full loop — capital in, capital out.',
-        subQuests: [
-          { id: 'use_faucet',      type: 'internal', title: 'Use the faucet to get FakeUSDC', points: P.use_faucet,      isCompleted: isDone('use_faucet'),      actionUrl: config.internalRoutes.faucet },
-          { id: 'swap_usdc_rgd',   type: 'internal', title: 'Exchange FakeUSDC for RGD',       points: P.swap_usdc_rgd,   isCompleted: isDone('swap_usdc_rgd'),   actionUrl: config.internalRoutes.swap },
-          { id: 'stake_rgd',       type: 'internal', title: 'Stake RGD',                       points: P.stake_rgd,       isCompleted: isDone('stake_rgd'),       actionUrl: config.internalRoutes.stake },
-          { id: 'buy_fim_auction', type: 'internal', title: 'Buy FIM during the Auction',      points: P.buy_fim_auction, isCompleted: isDone('buy_fim_auction'), auctionGate: true },
-          { id: 'trade_fim',       type: 'internal', title: 'Buy or sell FIM during Trading',  points: P.trade_fim,       isCompleted: isDone('trade_fim'),       tradingGate: true },
-          { id: 'claim_payout',    type: 'internal', title: 'Claim payout',                    points: P.claim_payout,    isCompleted: isDone('claim_payout'),    payoutGate: true },
-          {
-            id: 'win_the_game', type: 'internal',
-            title: 'Win the Game',
-            points: pts('win_the_game', 0),
-            isCompleted: isDone('win_the_game'),
-            note: `0–${P.win_the_game_max} pts based on your best season's relative PnL rank.`,
-          },
-        ],
-      },
-    ];
-
+    const mainQuests = await buildMainQuests(config, finalMap, manifestActionUrl, address);
     const totalPoints = Array.from(finalMap.values()).reduce((s, v) => s + v.points, 0);
     return NextResponse.json({
       success: true,

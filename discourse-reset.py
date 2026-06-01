@@ -21,8 +21,10 @@ import os
 import re
 import subprocess
 import sys
+import time
 import urllib.request
 import urllib.error
+import urllib.parse
 
 # ---------------------------------------------------------------------------
 # Load .env.local
@@ -62,25 +64,66 @@ if not BASE or not API_KEY:
 # API helpers
 # ---------------------------------------------------------------------------
 
-def api(method, path, data=None):
+def api(method, path, data=None, max_retries=5):
+    """Make API request with automatic rate limit detection and retry.
+
+    Returns JSON response on success, or dict with '_http_error' and '_body' on failure.
+    Automatically retries on 429 (Too Many Requests) with exponential backoff.
+    """
     url = BASE + path
     body = urllib.parse.urlencode(data).encode() if data else None
-    req = urllib.request.Request(url, data=body, method=method)
-    req.add_header("Api-Key", API_KEY)
-    req.add_header("Api-Username", API_USR)
-    if data:
-        req.add_header("Content-Type", "application/x-www-form-urlencoded")
-    try:
-        with urllib.request.urlopen(req) as resp:
-            return json.loads(resp.read())
-    except urllib.error.HTTPError as e:
-        body = e.read().decode(errors="replace")
-        try:
-            return json.loads(body)
-        except Exception:
-            return {"_http_error": e.code, "_body": body[:200]}
 
-import urllib.parse
+    for attempt in range(max_retries + 1):
+        req = urllib.request.Request(url, data=body, method=method)
+        req.add_header("Api-Key", API_KEY)
+        req.add_header("Api-Username", API_USR)
+        if data:
+            req.add_header("Content-Type", "application/x-www-form-urlencoded")
+
+        try:
+            with urllib.request.urlopen(req) as resp:
+                resp_data = json.loads(resp.read())
+
+                # Check for rate limit warnings in headers
+                remaining = resp.headers.get("X-RateLimit-Remaining")
+                if remaining is not None and int(remaining) < 10:
+                    print(f"  ⚠️  Rate limit warning: {remaining} requests remaining")
+
+                return resp_data
+
+        except urllib.error.HTTPError as e:
+            # Handle 429 (Too Many Requests)
+            if e.code == 429:
+                if attempt < max_retries:
+                    # Check for Retry-After header, default to exponential backoff
+                    retry_after = e.headers.get("Retry-After")
+                    if retry_after:
+                        wait_time = float(retry_after)
+                    else:
+                        wait_time = min(2 ** attempt, 60)  # Exponential backoff, max 60s
+
+                    print(f"  ⏳ Rate limited (429). Retrying in {wait_time:.1f}s... (attempt {attempt + 1}/{max_retries})")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    error_body = e.read().decode(errors="replace")
+                    print(f"  ❌ Rate limited after {max_retries} retries. Aborting.")
+                    return {"_http_error": 429, "_body": error_body[:200]}
+
+            # Handle other HTTP errors
+            error_body = e.read().decode(errors="replace")
+            try:
+                return json.loads(error_body)
+            except Exception:
+                return {"_http_error": e.code, "_body": error_body[:200]}
+
+        except Exception as e:
+            # Network or other errors
+            return {"_error": str(e)}
+
+def throttle(delay=0.1):
+    """Sleep for a short delay to rate-limit API requests."""
+    time.sleep(delay)
 
 def paginated_users():
     """Yield all non-admin, non-system users."""
@@ -169,6 +212,7 @@ def delete_users():
         print("  No non-admin users found.")
         return
     for u in users:
+        throttle(0.2)  # 200ms between user deletions
         resp = api("DELETE", f"/admin/users/{u['id']}.json",
                    {"delete_posts": "true", "block_email": "false", "block_ip": "false"})
         ok = resp.get("deleted") or resp.get("success")
@@ -181,6 +225,7 @@ def delete_channels():
         print("  No channels found.")
         return
     for ch in channels:
+        throttle(0.15)  # 150ms between channel deletions
         resp = api("DELETE", f"/chat/api/channels/{ch['id']}")
         ok = resp.get("success") == "OK"
         print(f"  [{ch['id']}] {ch.get('title','?')} → {'OK' if ok else resp}")
@@ -192,6 +237,7 @@ def delete_groups():
         print("  No custom groups found.")
         return
     for g in groups:
+        throttle(0.15)  # 150ms between group deletions
         resp = api("DELETE", f"/admin/groups/{g['id']}.json")
         ok = resp.get("success") == "OK"
         print(f"  [{g['id']}] {g['name']} → {'OK' if ok else resp}")

@@ -212,6 +212,7 @@ export default function SeasonDetailPage() {
           socTargetBps={chart.socTargetBps}
           userAddress={userAddress}
           exchangeAddress={exchangeAddress}
+          fimAddress={fimAddress}
           openOrderBookRef={openOrderBookRef}
           tradingMask={
             <TradingMask

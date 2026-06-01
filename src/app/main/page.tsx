@@ -165,7 +165,7 @@ export default function Home() {
   <div className="hero-container">
     {/* Main Header Display - Single block for perfect scaling */}
     <h1 className="hero-title">
-      Class Warfare<br />
+      Class War<br />
       <span className="hero-gradient-text">The Game</span>
     </h1>
 

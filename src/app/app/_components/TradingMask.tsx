@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { parseUnits, formatUnits, erc20Abi, maxUint256 } from 'viem';
 import { Order } from '@/hooks/useOrderBook';
+import { useOpenOrders } from '@/hooks/useOpenOrders';
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
 import { useTradeExecution, ExecutionPayload } from '@/hooks/useTradeExecution';
@@ -65,6 +66,15 @@ export function TradingMask({
     address: core.USDC as `0x${string}`, abi: erc20Abi, functionName: 'balanceOf',
     args: [address as `0x${string}`], chainId, query: { enabled: !!address, refetchInterval: 5000 },
   });
+
+  // FIM escrowed in the user's open sell orders (buy orders lock USDC, not FIM)
+  const { data: myOpenOrders } = useOpenOrders(seasonAddress, address, 'open');
+  const lockedFim = useMemo(
+    () => (myOpenOrders || []).reduce((acc, o) => (o.isBuy ? acc : acc + o.remainingAmount), 0),
+    [myOpenOrders],
+  );
+  const availableFim = useMemo(() => Number(formatUnits(fimBalance || 0n, 18)), [fimBalance]);
+  const totalFim = availableFim + lockedFim;
 
   const groupedQueue = useMemo(() => {
     const groups: GroupedOrder[] = [];
@@ -248,12 +258,19 @@ export function TradingMask({
     return (
       <div className="flex flex-col gap-4 h-full">
         <div className="terminal-pane">
-          <div
-            className="font-display font-extrabold leading-none text-display-trading tabular-nums"
-            style={{ color: 'var(--color-gold)', textShadow: '0 0 40px var(--color-gold-35)' }}
-          >
-            {Number(formatUnits(fimBalance || 0n, 18)).toLocaleString()}
-            <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
+          <div className="flex flex-col">
+            <div
+              className="font-display font-extrabold leading-none text-display-trading tabular-nums"
+              style={{ color: 'var(--color-gold)', textShadow: '0 0 40px var(--color-gold-35)' }}
+            >
+              {totalFim.toLocaleString()}
+              <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
+            </div>
+            {lockedFim > 0 && (
+              <span className="font-mono text-text2 text-xs mt-1.5 tabular-nums">
+                ({availableFim.toLocaleString()} available to trade)
+              </span>
+            )}
           </div>
         </div>
         <div className="card-app text-center border border-border2">
@@ -269,12 +286,19 @@ export function TradingMask({
       {/* ── Wallet balances card ── */}
       <div className="terminal-pane">
         <div className="flex items-start justify-between">
-          <div
-            className="font-display font-extrabold leading-none text-display-trading mr-4"
-            style={{ color: 'var(--color-gold)', textShadow: '0 0 40px var(--color-gold-35)', fontVariantNumeric: 'tabular-nums' }}
-          >
-            {Number(formatUnits(fimBalance || 0n, 18)).toLocaleString()}
-            <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
+          <div className="flex flex-col mr-4 min-w-0">
+            <div
+              className="font-display font-extrabold leading-none text-display-trading"
+              style={{ color: 'var(--color-gold)', textShadow: '0 0 40px var(--color-gold-35)', fontVariantNumeric: 'tabular-nums' }}
+            >
+              {totalFim.toLocaleString()}
+              <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
+            </div>
+            {lockedFim > 0 && (
+              <span className="font-mono text-text2 text-xs mt-1.5 tabular-nums">
+                ({availableFim.toLocaleString()} available to trade)
+              </span>
+            )}
           </div>
           {userStats && (
             <div className="flex flex-col items-end min-w-0">
@@ -336,16 +360,20 @@ export function TradingMask({
           </div>
           <div className="bg-bg border border-border rounded-b px-3 pt-2 pb-3 flex flex-col gap-2">
             <span className="mask-label text-right">WALLET&nbsp;<span className="text-text font-semibold">{walletBalanceDisplay}</span></span>
-            <div className="flex items-baseline gap-2">
+            <div className="group flex items-center gap-2">
               <input
                 type="number"
                 min="0"
                 max={maxForSlider > 0n ? formatUnits(maxForSlider, maxDecimals) : undefined}
                 value={targetAmount}
                 onChange={(e) => handleTargetAmountChange(e.target.value)}
-                className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums"
+                className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners"
                 placeholder={isMaker ? '0.00' : 'MAX'}
               />
+              <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button className="btn-stepper" onClick={() => handleTargetAmountChange(String(Math.max(0, (parseFloat(targetAmount || '0') + 1))))}>▲</button>
+                <button className="btn-stepper" onClick={() => handleTargetAmountChange(String(Math.max(0, (parseFloat(targetAmount || '0') - 1))))}>▼</button>
+              </div>
               <span className="text-input font-mono font-bold text-text2 shrink-0">{isMaker && isBuy ? 'USDC' : 'FIM'}</span>
             </div>
             <PercentSlider value={sliderPct} onChange={handleSliderChange} disabled={isBusy} />
@@ -371,15 +399,19 @@ export function TradingMask({
             </div>
             <div className="bg-bg border border-border rounded-b px-3 pt-2 pb-3 flex flex-col gap-1">
               <span className="mask-label">{isPricePerFim ? 'Price per FIM' : 'Total Order'}</span>
-              <div className="flex items-baseline gap-2">
+              <div className="group flex items-center gap-2">
                 <input
                   type="number"
                   min="0"
                   value={price}
                   onChange={(e) => handlePriceChange(e.target.value)}
-                  className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums"
+                  className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners"
                   placeholder="0.00"
                 />
+                <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button className="btn-stepper" onClick={() => handlePriceChange(String(Math.max(0, parseFloat((parseFloat(price || '0') + (isPricePerFim ? 0.01 : 1)).toFixed(6)))))}>▲</button>
+                  <button className="btn-stepper" onClick={() => handlePriceChange(String(Math.max(0, parseFloat((parseFloat(price || '0') - (isPricePerFim ? 0.01 : 1)).toFixed(6)))))}>▼</button>
+                </div>
                 <span className="text-input font-mono font-bold text-text2 shrink-0">USDC</span>
               </div>
             </div>
@@ -390,7 +422,7 @@ export function TradingMask({
         {!isMaker && (
           <div className="flex flex-col flex-1 min-h-0">
             <p className="section-label mb-2">Order Execution Queue</p>
-            <div className="flex-1 overflow-y-auto custom-scrollbar rounded-lg p-2 border border-border bg-bg">
+            <div className="flex-1 max-h-55 overflow-y-auto custom-scrollbar rounded-lg p-2 border border-border bg-bg">
               {groupedQueue.length === 0 ? (
                 <button
                   onClick={onOpenOrderBook}

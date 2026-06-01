@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-const debug = process.env.DEBUG === 'true';
+const debug = process.env.APP_DEBUG === 'true';
 
 interface SSOOpts {
   maxRetries?: number;

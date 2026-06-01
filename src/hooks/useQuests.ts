@@ -27,14 +27,15 @@ export interface QuestsData {
 
 export function useQuests(address: string | undefined) {
   return useQuery<QuestsData>({
-    queryKey: ['quests', address?.toLowerCase()],
+    queryKey: ['quests', address?.toLowerCase() ?? null],
     queryFn: async () => {
-      const res = await fetch(`/api/quests?address=${address}`);
+      // No address → fetch the anonymous catalogue (nothing completed) so the
+      // board can render before a wallet is connected.
+      const res = await fetch(address ? `/api/quests?address=${address}` : '/api/quests');
       if (!res.ok) throw new Error('Failed to load quests');
       const json = await res.json();
       return json.data as QuestsData;
     },
-    enabled: !!address,
     refetchInterval: 15000,
   });
 }

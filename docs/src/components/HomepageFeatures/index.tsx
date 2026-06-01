@@ -1,56 +1,56 @@
 import type {ReactNode} from 'react';
 import clsx from 'clsx';
+import Link from '@docusaurus/Link';
 import Heading from '@theme/Heading';
 import styles from './styles.module.css';
 
-type FeatureItem = {
-  title: string;
-  Svg: React.ComponentType<React.ComponentProps<'svg'>>;
-  description: ReactNode;
+type Feature = {
+  icon:        string;
+  title:       string;
+  body:        string;
+  chips:       string[];
+  accentClass: string;
+  cardClass:   string;
 };
 
-const FeatureList: FeatureItem[] = [
+const FEATURES: Feature[] = [
   {
-    title: 'Easy to Use',
-    Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
-    description: (
-      <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
-      </>
-    ),
+    icon:        '📊',
+    title:       'Trading Terminal',
+    body:        'Peer-to-peer FIM exchange with a fully transparent order book. Every bid, ask, and counterparty is visible on-chain — no hidden liquidity, no dark pools.',
+    chips:       ['P2P Exchange', 'Order Book', 'Gini-Aware'],
+    accentClass: styles.accentGold,
+    cardClass:   styles.gold,
   },
   {
-    title: 'Focus on What Matters',
-    Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
-    description: (
-      <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
-      </>
-    ),
+    icon:        '⚔️',
+    title:       'The Faction War',
+    body:        'Your faction is determined by your FIM balance vs. the live 50th-percentile threshold. Capitalists concentrate wealth. Socialists redistribute it. Every trade is a political act.',
+    chips:       ['Capitalists', 'Socialists', 'Live Threshold'],
+    accentClass: styles.accentPurple,
+    cardClass:   styles.purple,
   },
   {
-    title: 'Powered by React',
-    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
-    description: (
-      <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
-      </>
-    ),
+    icon:        '🏆',
+    title:       'Real-Money Stakes',
+    body:        'Seasonal USDC prize pools deployed into DeFi yield strategies. The winning faction dictates the payout rules — oligarchy takes all, or the Solidarity Fund redistributes.',
+    chips:       ['USDC', 'Base', 'Seasonal'],
+    accentClass: styles.accentGreen,
+    cardClass:   styles.green,
   },
 ];
 
-function Feature({title, Svg, description}: FeatureItem) {
+function FeatureCard({icon, title, body, chips, accentClass, cardClass}: Feature) {
   return (
-    <div className={clsx('col col--4')}>
-      <div className="text--center">
-        <Svg className={styles.featureSvg} role="img" />
-      </div>
-      <div className="text--center padding-horiz--md">
-        <Heading as="h3">{title}</Heading>
-        <p>{description}</p>
+    <div className={clsx(styles.card, cardClass)}>
+      <div className={clsx(styles.accent, accentClass)} />
+      <div className={styles.iconWrap}>{icon}</div>
+      <Heading as="h3" className={styles.cardTitle}>{title}</Heading>
+      <p className={styles.cardBody}>{body}</p>
+      <div className={styles.chips}>
+        {chips.map((c) => (
+          <span key={c} className={styles.chip}>{c}</span>
+        ))}
       </div>
     </div>
   );
@@ -58,12 +58,26 @@ function Feature({title, Svg, description}: FeatureItem) {
 
 export default function HomepageFeatures(): ReactNode {
   return (
-    <section className={styles.features}>
+    <section className={styles.section}>
       <div className="container">
-        <div className="row">
-          {FeatureList.map((props, idx) => (
-            <Feature key={idx} {...props} />
+        <span className={styles.sectionLabel}>How it works</span>
+        <Heading as="h2" className={styles.sectionTitle}>
+          Economic Warfare On-Chain
+        </Heading>
+
+        <div className={styles.grid}>
+          {FEATURES.map((f) => (
+            <FeatureCard key={f.title} {...f} />
           ))}
+        </div>
+
+        <div className={styles.ctaStrip}>
+          <p className={styles.ctaText}>
+            Ready to understand the full mechanics?
+          </p>
+          <Link className={styles.ctaLink} to="/intro">
+            Read the complete docs →
+          </Link>
         </div>
       </div>
     </section>

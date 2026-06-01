@@ -8,7 +8,7 @@ const groupIdCache: Record<string, number> = {};
 // Tracks wallets already registered + group-added this server lifecycle.
 // Cache key: `${wallet}:${groupName}`. Mirrors the userFactionCache pattern in sync-faction.
 const registeredPlayersCache = new Set<string>();
-const debug = process.env.DEBUG === 'true';
+const debug = process.env.APP_DEBUG === 'true';
 
 export async function POST(req: Request) {
   try {

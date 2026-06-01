@@ -123,10 +123,7 @@ function SeasonCard({ season }: { season: SeasonRegistry }) {
             </span>
           </div>
           {showTimeStat && (
-            <div className="meta-data-group">
-              <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">{statusLabel}</span>
-              <CountdownTicker targetTimestamp={countdownTarget} />
-            </div>
+            <CountdownTicker targetTimestamp={countdownTarget} label={statusLabel} />
           )}
         </div>
 

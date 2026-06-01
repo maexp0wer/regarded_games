@@ -1,5 +1,5 @@
 ---
-title: "Mainnet Season 1!? — Manifest Ratification Vote"
+title: "Mainnet Season 1 — Manifest Ratification Vote"
 categorySlug: "governance"
 pollName: "manifest_s1"
 pollType: "regular"

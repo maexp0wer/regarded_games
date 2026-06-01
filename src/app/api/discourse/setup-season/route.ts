@@ -5,7 +5,7 @@ import { tenantFromRequest } from '@/lib/tenant.server';
 import { getTenant, type TenantKey } from '@/config/tenants';
 import { discourseNames } from '@/lib/discourseNames';
 
-const debug = process.env.DEBUG === 'true';
+const debug = process.env.APP_DEBUG === 'true';
 
 function parseCategoryIntros(seasonNum: number): Record<string, { title: string; body: string }> {
   const raw = readFileSync(join(process.cwd(), 'content', 'discourse-category-intros.md'), 'utf-8')

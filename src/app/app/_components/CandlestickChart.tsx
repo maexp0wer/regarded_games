@@ -120,6 +120,7 @@ export function CandlestickChart({
           gridIndex: 0,
           scale: true,
           position: 'right',
+          boundaryGap: ['15%', '15%'],
           axisLine: { show: true, lineStyle: { color: gridColor } },
           axisLabel: { color: textColor, fontSize: 10 },
           splitLine: { lineStyle: { color: gridColor } },
@@ -127,13 +128,16 @@ export function CandlestickChart({
         {
           gridIndex: 1,
           position: 'right',
-          min: -maxVol,
-          max: maxVol,
+          min: -maxVol * 1.2,
+          max: maxVol * 1.2,
           axisLine: { show: true, lineStyle: { color: gridColor } },
           axisLabel: {
             color: textColor,
             fontSize: 10,
-            formatter: (v: number) => Math.abs(v).toLocaleString(),
+            formatter: (v: number) => {
+              const abs = Math.abs(v);
+              return abs >= 1000 ? `${Math.round(abs / 1000)}k` : String(abs);
+            },
           },
           splitLine: { show: false },
         },

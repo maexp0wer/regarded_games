@@ -1,37 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { formatUnits } from 'viem';
 import Carlo from '@/components/icons/Carlo.svg';
 import Regardo from '@/components/icons/Regardo.svg';
 
 import { useSeasonPhase } from '@/hooks/useSeasonPhase';
 import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
+import { useYieldTotals } from '@/hooks/useYieldTotals';
 import { SeasonPhasePills } from './SeasonPhasePills';
-
-function useCountdown(targetTimestamp: number) {
-  const [parts, setParts] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-
-  useEffect(() => {
-    const update = () => {
-      const now = Math.floor(Date.now() / 1000);
-      const diff = Math.max(0, targetTimestamp - now);
-      setParts({
-        days:    Math.floor(diff / 86400),
-        hours:   Math.floor((diff % 86400) / 3600),
-        minutes: Math.floor((diff % 3600) / 60),
-        seconds: diff % 60,
-      });
-    };
-    update();
-    const id = setInterval(update, 1000);
-    return () => clearInterval(id);
-  }, [targetTimestamp]);
-
-  return parts;
-}
-
-const pad = (n: number) => String(n).padStart(2, '0');
+import { CountdownTicker } from './CountdownTicker';
 
 interface GiniDisplayProps {
   seasonAddress: string;
@@ -61,6 +40,7 @@ export function GiniDisplay({ seasonAddress, seasonName }: GiniDisplayProps) {
   } = useSeasonVictory(seasonAddress);
 
   const { data: giniData } = useSeasonGini(seasonAddress);
+  const { data: yieldTotals } = useYieldTotals(seasonAddress, currentPhase);
 
   const isTrading = !isAuction && !isBootstrap && !isPayout;
 
@@ -98,7 +78,6 @@ export function GiniDisplay({ seasonAddress, seasonName }: GiniDisplayProps) {
   // ── Countdown ─────────────────────────────────────────────────────────────
   const seasonNum = parseInt(seasonName.match(/\d+/)?.[0] ?? '1', 10);
   const countdownTarget = isAuctionOrBootstrap ? tradingStart : seasonEnd;
-  const { days, hours, minutes, seconds } = useCountdown(countdownTarget);
 
   const footerMode: 'countdown' | 'warning' | 'winner' =
     effectiveVictoryPending || isTradingTimeExpired ? 'warning'
@@ -109,9 +88,7 @@ export function GiniDisplay({ seasonAddress, seasonName }: GiniDisplayProps) {
     footerMode === 'warning'
       ? effectiveVictoryPending ? 'Settlement Pending' : 'Time Limit Reached'
       : footerMode === 'winner'
-      ? winningSide === 'cap' ? 'Bourgeoisie Wins'
-        : winningSide === 'soc' ? 'Proletariat Wins'
-        : 'Season Concluded'
+      ? 'Season Concluded'
       : '';
 
   const footerClass =
@@ -120,6 +97,22 @@ export function GiniDisplay({ seasonAddress, seasonName }: GiniDisplayProps) {
 
   const prizePool   = giniData?.prizePool   ?? 0;
   const playerCount = giniData?.playerCount ?? 0;
+
+  // During payout the prize pool includes the reinvested Aave yield ("Prize Pool
+  // Bonus"). Two sources, in priority order:
+  //   1. The settled distributable total (sum of every player's finalized payout),
+  //      which already bakes in the yield — the same figure that drives Season P/L
+  //      and Net Disbursable Balance in PayoutMask. Works even when the
+  //      YieldHarvested event has not been indexed.
+  //   2. The indexed reinvest bucket from /api/yield, as a fallback before the
+  //      season's player payouts are finalized.
+  const isPayoutPhase  = currentPhase === 'PAYOUT' || currentPhase === 'DISTRIBUTION';
+  const distributable  = giniData?.distributablePayout ?? 0;
+  const reinvestBonus  = parseFloat(formatUnits(BigInt(yieldTotals?.reinvest || '0'), 6));
+  const inferredBonus  = Math.max(0, distributable - prizePool);
+  const yieldBonus     = isPayoutPhase ? Math.max(inferredBonus, reinvestBonus) : 0;
+  const hasYieldBonus  = yieldBonus > 0.01; // ignore sub-cent rounding from base-pool truncation
+  const totalPrizePool = prizePool + (hasYieldBonus ? yieldBonus : 0);
 
   return (
     <div className="dark relative h-full overflow-hidden min-h-75 rounded-lg bg-[#0D0B14] bg-(image:--sunset-glow) flex flex-col md:grid md:grid-cols-[1fr_22.75rem] md:grid-rows-[auto_1fr_auto]">
@@ -151,48 +144,39 @@ export function GiniDisplay({ seasonAddress, seasonName }: GiniDisplayProps) {
 
       {/* ── 2. Prize Pool — mobile order 2 | desktop col 2, row 2 ── */}
       <div className="order-2 md:col-start-2 md:row-start-2 relative shrink-0 flex flex-col items-center justify-center px-5 py-5">
-        <span className="gini-label mb-1">Prize Pool</span>
+        <span className="gini-label mb-1">{hasYieldBonus ? 'Prize Pool + Yield' : 'Prize Pool'}</span>
         <div
           className="font-mono text-3xl font-black text-gold leading-none"
           style={{ textShadow: '0 0 16px var(--color-gold-15)' }}
         >
-          {prizePool.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          {totalPrizePool.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           <span className="text-xs text-text2 font-normal ml-1">USDC</span>
         </div>
+        {hasYieldBonus && (
+          <span className="mt-1 font-mono text-[10px] text-text2">
+            Yield Bonus{' '}
+            <b className="ml-1 font-semibold text-green">
+              ${yieldBonus.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </b>
+          </span>
+        )}
         <div className="absolute bottom-0 left-[5%] right-[5%] h-px bg-text2 md:left-5 md:right-5" />
       </div>
 
       {/* ── 3. Countdown — mobile order 3 (border-b) | desktop col 2, row 3 (no border-b) ── */}
-      <div className="order-3 md:col-start-2 md:row-start-3 relative shrink-0 px-5 pt-5 pb-6">
+      <div className="order-3 md:col-start-2 md:row-start-3 relative shrink-0 flex justify-center items-center px-5 pt-5 pb-6">
         {footerMode === 'countdown' ? (
-          <div className="flex flex-col gap-2">
-            <span className="gini-label text-center">
-              {isAuction ? 'Auction Ends In' : 'Season End'}
-            </span>
-            <div className="grid grid-cols-4 gap-1 px-14">
-              {[
-                { label: 'Days', v: days },
-                { label: 'Hrs',  v: hours },
-                { label: 'Min',  v: minutes },
-                { label: 'Sec',  v: seconds },
-              ].map((b) => (
-                <div key={b.label} className="flex flex-col items-center gap-1 py-1 px-1">
-                  <span className="font-mono font-semibold leading-none text-sm text-text tabular-nums">
-                    {pad(b.v)}
-                  </span>
-                  <span className="gini-label opacity-60">
-                    {b.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <CountdownTicker
+            targetTimestamp={countdownTarget}
+            label={isAuction ? 'Auction Ends In' : 'Season End'}
+            large
+            alwaysShowSeconds
+            transparent
+          />
         ) : (
-          <div className="flex h-full justify-center items-center">
-            <span className={`font-mono text-[11px] uppercase tracking-wider ${footerClass}`}>
-              {footerMessage}
-            </span>
-          </div>
+          <span className={`font-mono text-[11px] uppercase tracking-wider ${footerClass}`}>
+            {footerMessage}
+          </span>
         )}
         <div className="absolute bottom-0 left-[5%] right-[5%] h-px bg-text2 md:hidden" />
       </div>
@@ -210,7 +194,13 @@ export function GiniDisplay({ seasonAddress, seasonName }: GiniDisplayProps) {
         </div>
 
         <div className="hidden sm:flex flex-col items-center text-center gap-0.5">
-          <span className="font-sans text-lg font-bold uppercase tracking-widest text-text">Gini Score</span>
+          {isPayout ? (
+            <span className="font-sans text-lg font-bold uppercase tracking-widest text-text">
+              {winningSide === 'soc' ? 'Proletariat Wins' : winningSide === 'cap' ? 'Capitalists Win' : 'Season Concluded'}
+            </span>
+          ) : (
+            <span className="font-sans text-lg font-bold uppercase tracking-widest text-text">Gini Score</span>
+          )}
         </div>
 
         <div className="flex items-center gap-3 text-right flex-row-reverse">
@@ -299,7 +289,7 @@ export function GiniDisplay({ seasonAddress, seasonName }: GiniDisplayProps) {
         <div className="text-center sm:border-x sm:border-text2 px-2 self-start">
           {winningSide !== 'none' ? (
             <span>
-              <span className="gini-label">Dominance Matrix Leans:</span>{' '}
+              <span className="gini-label">Leading:</span>{' '}
               <span className={`font-bold ${winningSide === 'soc' ? 'text-purple' : 'text-gold'}`}>
                 {winningSide === 'soc' ? 'Proletariat' : 'Bourgeoisie'} ({progressPercent.toFixed(1)}%)
               </span>

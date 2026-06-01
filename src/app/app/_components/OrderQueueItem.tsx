@@ -74,18 +74,18 @@ export function OrderQueueItem({
       {/* Col 4: Shift controls + remove */}
       <div className="flex items-center gap-1">
         {groupCount > 1 && (
-          <>
+          <div className="flex flex-col gap-0.5">
             <button
               onClick={() => onMoveGroup(groupIdx, -1)}
               disabled={groupIdx === 0}
-              className="bg-text/50 p-1 px-1.5 rounded text-bg text-[8px] hover:bg-gold hover:text-bg transition-colors disabled:opacity-30"
+              className="btn-stepper"
             >▲</button>
             <button
               onClick={() => onMoveGroup(groupIdx, 1)}
               disabled={groupIdx === groupCount - 1}
-              className="bg-text/50 p-1 px-1.5 rounded text-bg text-[8px] hover:bg-gold hover:text-bg transition-colors disabled:opacity-30"
+              className="btn-stepper"
             >▼</button>
-          </>
+          </div>
         )}
         <button
           onClick={() => onRemoveGroup(group)}

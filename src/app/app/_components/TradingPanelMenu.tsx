@@ -51,6 +51,7 @@ export interface TradingPanelMenuProps {
   // Orders
   userAddress?: string;
   exchangeAddress: string;
+  fimAddress?: string;
   // Trading mask is rendered by the parent and positioned here
   tradingMask: React.ReactNode;
   openOrderBookRef?: { current: () => void };
@@ -170,6 +171,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
                   seasonAddress={props.seasonAddress}
                   userAddress={props.userAddress}
                   exchangeAddress={props.exchangeAddress}
+                  fimAddress={props.fimAddress}
                 />
               </div>
             )}

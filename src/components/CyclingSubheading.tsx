@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const words = [
-  'information asymmetry',
+  'insider knowledge',
   'market manipulation',
   'centralization',
-  "custodial ownership",
   'front running',
   'dark pools',
   'wash trading',
@@ -28,7 +27,6 @@ export const CyclingSubheading = () => {
   return (
     <span className="flex flex-col items-center text-center">
       <span>where capital fights coordination in a market free from</span>
-      
       {/* 
         Using inline-grid + place-items-center ensures that even 
         shorter words are perfectly centered in the reserved space.

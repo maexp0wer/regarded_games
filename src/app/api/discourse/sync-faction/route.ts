@@ -13,7 +13,7 @@ const userFactionCache: Record<string, string> = {};
 interface ThresholdCacheEntry { threshold: bigint; expiresAt: number; }
 const thresholdCache: Record<string, ThresholdCacheEntry> = {};
 const THRESHOLD_TTL_MS = 30_000;
-const debug = process.env.DEBUG === 'true';
+const debug = process.env.APP_DEBUG === 'true';
 
 const viemChainFor = (chainId: number) => {
   switch (chainId) {

@@ -12,7 +12,7 @@ Copy `.env.example` to `.env.local` and fill in all values:
 DISCOURSE_INIT_SECRET=<strong random secret>
 DISCOURSE_API_KEY=<your Discourse API key>
 NEXT_PUBLIC_DISCOURSE_URL=<http://community.localhost or live URL>
-NEXT_PUBLIC_ALCHEMY_API_KEY=<your Alchemy key>
+ALCHEMY_API_KEY=<your Alchemy key>
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=<your WalletConnect project ID>
 POSTGRES_URL=postgresql://postgres:<password>@localhost:5432/regarded_games
 ```

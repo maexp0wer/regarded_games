@@ -25,7 +25,8 @@ const CONTROLLER_SEASONS_ABI = [
 export interface SeasonLiveStats {
   gini: number;       // BPS (0-10000)
   playerCount: number;
-  prizePool: number;
+  prizePool: number;          // Base pool: auction-contributed USDC only (no yield)
+  distributablePayout: number; // Sum of finalized player payouts (includes reinvested yield)
 }
 
 export interface SeasonMetadata {
@@ -113,7 +114,7 @@ export function useSeasonGini(seasonAddress: string | undefined) {
       const query = `
         query GetGiniData($address: String!) {
           playerSeasonStatss(where: { seasonAddress: $address }, limit: 1000) {
-            items { playerAddress fimBalance fimBurned }
+            items { playerAddress fimBalance fimBurned totalPotentialPayout }
           }
           orderss(where: { seasonAddress: $address, active: true, isBuy: false }, limit: 1000) {
             items { maker remainingAmount }
@@ -161,10 +162,20 @@ export function useSeasonGini(seasonAddress: string | undefined) {
         }
       });
 
+      // 4. Sum every player's finalized payout. Only populated during settlement/
+      // payout; this total already includes the reinvested Aave yield, so the
+      // frontend can derive the "Prize Pool Bonus" even when the YieldHarvested
+      // event hasn't been indexed (reinvest bucket would otherwise read 0).
+      const totalDistributableRaw = rawPlayers.reduce(
+        (acc: bigint, p: any) => acc + BigInt(p.totalPotentialPayout || "0"),
+        0n
+      );
+
       return {
         gini: calculateGiniBps(balances),
         playerCount: balances.length,
-        prizePool: Number(BigInt(seasonInfo?.prizePool || "0")) / 1_000_000
+        prizePool: Number(BigInt(seasonInfo?.prizePool || "0")) / 1_000_000,
+        distributablePayout: Number(totalDistributableRaw) / 1_000_000
       };
     },
     enabled: !!seasonAddress,

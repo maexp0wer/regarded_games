@@ -1,19 +1,20 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useWriteContract, usePublicClient } from 'wagmi';
-import { useQuery } from '@tanstack/react-query';
-import { formatUnits } from 'viem';
+import { useWriteContract, usePublicClient, useReadContract } from 'wagmi';
+import { formatUnits, erc20Abi } from 'viem';
 import ExchangeAbi from '@/deployments/abis/Exchange.json';
 import { useOpenOrders, MyOrder } from '@/hooks/useOpenOrders';
 import { useMyAuctionMints, AuctionMint } from '@/hooks/useMyAuctionMints';
 import { useMyTrades, MyTrade } from '@/hooks/useMyTrades';
-import { useTenantChainId, useTenantPonderUrl } from '@/context/TenantContext';
+import { useTenantChainId } from '@/context/TenantContext';
+import { useLastTradePrice } from '@/hooks/useLastTradePrice';
 
 interface OrdersProps {
   seasonAddress: string;
   userAddress: string;
   exchangeAddress: string;
+  fimAddress?: string;
 }
 
 type TabType = 'openOrders' | 'position' | 'history';
@@ -30,38 +31,9 @@ const TABS: { key: TabType; label: string }[] = [
   { key: 'history', label: 'Trade History' },
 ];
 
-function useLastTradePrice(seasonAddress: string | undefined) {
-  const PONDER_URL = useTenantPonderUrl();
-  return useQuery({
-    queryKey: ['lastTradePrice', seasonAddress?.toLowerCase(), PONDER_URL],
-    queryFn: async () => {
-      const res = await fetch(PONDER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `query LastTrade($season: String!) {
-            tradess(where: { seasonAddress: $season }, orderBy: "timestamp", orderDirection: "desc", limit: 1) {
-              items { fimAmount usdcAmount }
-            }
-          }`,
-          variables: { season: seasonAddress!.toLowerCase() },
-        }),
-      });
-      const json = await res.json();
-      const item = json?.data?.tradess?.items?.[0];
-      if (!item) return 0;
-      const fim = Number(formatUnits(BigInt(item.fimAmount), 18));
-      const usdc = Number(formatUnits(BigInt(item.usdcAmount), 6));
-      return fim > 0 ? usdc / fim : 0;
-    },
-    enabled: !!seasonAddress,
-    refetchInterval: 5000,
-  });
-}
-
 type CancelStatus = 'idle' | 'executing' | 'mining' | 'success' | 'canceled' | 'failed';
 
-export function Orders({ seasonAddress, userAddress, exchangeAddress }: OrdersProps) {
+export function Orders({ seasonAddress, userAddress, exchangeAddress, fimAddress }: OrdersProps) {
   const [activeTab, setActiveTab] = useState<TabType>('position');
   const [cancelStatus, setCancelStatus] = useState<CancelStatus>('idle');
 
@@ -72,8 +44,19 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress }: OrdersPr
   const { data: myTrades = [] } = useMyTrades(seasonAddress, userAddress);
   const { data: lastTradePrice = 0 } = useLastTradePrice(seasonAddress);
 
-  const { writeContractAsync } = useWriteContract();
   const chainId = useTenantChainId();
+  const { data: fimBalanceRaw } = useReadContract({
+    address: fimAddress as `0x${string}`,
+    abi: erc20Abi,
+    functionName: 'balanceOf',
+    args: [userAddress as `0x${string}`],
+    chainId,
+    query: { enabled: !!userAddress && !!fimAddress, refetchInterval: 5000 },
+  });
+  const lockedFim = openOrders.reduce((acc, o) => (o.isBuy ? acc : acc + o.remainingAmount), 0);
+  const totalFim = Number(formatUnits(fimBalanceRaw || 0n, 18)) + lockedFim;
+
+  const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient({ chainId });
 
   const handleCancel = async (contractOrderId: bigint) => {
@@ -138,6 +121,7 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress }: OrdersPr
             trades={myTrades}
             auctionMints={auctionMints}
             currentPrice={lastTradePrice}
+            totalFim={totalFim}
           />
         )}
         {activeTab === 'history' && (
@@ -222,7 +206,7 @@ interface OpenOrdersViewProps {
 function OpenOrdersView({ orders, isPending, onCancel }: OpenOrdersViewProps) {
   return (
     <div className="p-2 bg-card">
-      <div className="bg-bg overflow-hidden">
+      <div className="bg-card overflow-hidden">
         <div className="overflow-y-auto custom-scrollbar relative" style={{ height: '160px' }}>
           <div className="ledger-header sticky top-0 z-10" style={{ gridTemplateColumns: OPEN_COL }}>
             <div>Time</div>
@@ -270,14 +254,9 @@ function OpenOrderRow({ order, isPending, onCancel }: OpenOrderRowProps) {
       <span className="ledger-cell-secondary">{displayTime}</span>
 
       <span
-        className="font-mono text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded w-fit"
-        style={{
-          background: isBuy ? 'var(--color-green-15)' : 'var(--color-red-15)',
-          color: isBuy ? 'var(--color-green)' : 'var(--color-red)',
-        }}
-      >
-        {direction}
-      </span>
+        className="ledger-cell-secondary"
+        style={{ color: isBuy ? 'var(--color-green)' : 'var(--color-red)' }}
+      >{direction}</span>
 
       <span className="ledger-cell-metric">{size}</span>
       <span className="ledger-cell-metric">{originalSize}</span>
@@ -351,14 +330,15 @@ interface PositionViewProps {
   trades: MyTrade[];
   auctionMints: AuctionMint[];
   currentPrice: number;
+  totalFim: number;
 }
 
-function PositionView({ trades, auctionMints, currentPrice }: PositionViewProps) {
+function PositionView({ trades, auctionMints, currentPrice, totalFim }: PositionViewProps) {
   const position = computePosition(trades, auctionMints);
 
   return (
     <div className="p-2 bg-card">
-      <div className="bg-bg overflow-hidden">
+      <div className="bg-card overflow-hidden">
         <div className="overflow-y-auto custom-scrollbar relative" style={{ height: '160px' }}>
           <div className="ledger-header sticky top-0 z-10" style={{ gridTemplateColumns: POS_COL }}>
             <div>Size</div>
@@ -367,12 +347,12 @@ function PositionView({ trades, auctionMints, currentPrice }: PositionViewProps)
             <div className="text-right">Current Price</div>
             <div className="text-right">PNL</div>
           </div>
-          {!position ? (
+          {totalFim < 0.0001 ? (
             <div className="flex items-center justify-center py-6">
               <p className="section-label opacity-30">No position</p>
             </div>
           ) : (
-            <PositionRow position={position} currentPrice={currentPrice} />
+            <PositionRow totalFim={totalFim} entryPrice={position?.entryPrice} currentPrice={currentPrice} />
           )}
         </div>
       </div>
@@ -381,33 +361,37 @@ function PositionView({ trades, auctionMints, currentPrice }: PositionViewProps)
 }
 
 interface PositionRowProps {
-  position: AggregatePosition;
+  totalFim: number;
+  entryPrice: number | undefined;
   currentPrice: number;
 }
 
-function PositionRow({ position, currentPrice }: PositionRowProps) {
-  const { netSize, entryPrice } = position;
-  const positionValue = netSize * currentPrice;
-  const pnl = (currentPrice - entryPrice) * netSize;
-  const pnlPositive = pnl >= 0;
+function PositionRow({ totalFim, entryPrice, currentPrice }: PositionRowProps) {
+  const positionValue = totalFim * currentPrice;
+  const pnl = entryPrice !== undefined ? (currentPrice - entryPrice) * totalFim : null;
+  const pnlPositive = pnl !== null && pnl >= 0;
 
   return (
     <div className="ledger-row items-center" style={{ gridTemplateColumns: POS_COL }}>
-      <span className="ledger-cell-metric" style={{ textAlign: 'left' }}>{Math.round(Math.abs(netSize)).toLocaleString()}</span>
+      <span className="ledger-cell-metric" style={{ textAlign: 'left' }}>{Math.round(totalFim).toLocaleString()}</span>
 
       <span className="ledger-cell-metric">
         ${positionValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </span>
 
-      <span className="ledger-cell-metric">${entryPrice.toFixed(4)}</span>
+      <span className="ledger-cell-metric">
+        {entryPrice !== undefined ? `$${entryPrice.toFixed(4)}` : '—'}
+      </span>
 
       <span className="ledger-cell-metric">${currentPrice.toFixed(4)}</span>
 
       <span
         className="ledger-cell-metric"
-        style={{ color: pnlPositive ? 'var(--color-green)' : 'var(--color-red)' }}
+        style={{ color: pnl !== null ? (pnlPositive ? 'var(--color-green)' : 'var(--color-red)') : 'var(--color-text2)' }}
       >
-        {pnlPositive ? '+' : ''}${pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        {pnl !== null
+          ? `${pnlPositive ? '+' : ''}$${pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : '—'}
       </span>
     </div>
   );
@@ -438,7 +422,7 @@ function TradeHistoryView({ orders, auctionMints }: TradeHistoryViewProps) {
 
   return (
     <div className="p-2 bg-card">
-      <div className="bg-bg overflow-hidden">
+      <div className="bg-card overflow-hidden">
         <div className="overflow-y-auto custom-scrollbar relative" style={{ height: '160px' }}>
           <div className="ledger-header sticky top-0 z-10" style={{ gridTemplateColumns: HIST_COL }}>
             <div>Time</div>
@@ -481,14 +465,9 @@ function TradeHistoryOrderRow({ order }: { order: MyOrder }) {
       <span className="ledger-cell-secondary">{displayTime}</span>
 
       <span
-        className="font-mono text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded w-fit"
-        style={{
-          background: isBuy ? 'var(--color-green-15)' : 'var(--color-red-15)',
-          color: isBuy ? 'var(--color-green)' : 'var(--color-red)',
-        }}
-      >
-        {direction}
-      </span>
+        className="ledger-cell-secondary"
+        style={{ color: isCancelled ? 'var(--color-text2)' : isBuy ? 'var(--color-green)' : 'var(--color-red)' }}
+      >{direction}</span>
 
       <span className="ledger-cell-metric">${pricePerFim}</span>
       <span className="ledger-cell-metric">{displaySize}</span>
@@ -515,15 +494,7 @@ function TradeHistoryAuctionRow({ mint }: { mint: AuctionMint }) {
     >
       <span className="ledger-cell-secondary">{displayTime}</span>
 
-      <span
-        className="font-mono text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded w-fit"
-        style={{
-          background: 'var(--color-gold-15)',
-          color: 'var(--color-gold)',
-        }}
-      >
-        Auction
-      </span>
+      <span className="ledger-cell-secondary" style={{ color: 'var(--color-gold)' }}>Auction</span>
 
       <span className="ledger-cell-metric">${pricePerFim}</span>
       <span className="ledger-cell-metric">{displaySize}</span>

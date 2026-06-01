@@ -1,9 +1,9 @@
 import React from 'react';
 import { isAddress } from 'viem';
 import { notFound } from 'next/navigation';
-import { PlayerActiveSeasons } from '../../_components/PlayerActiveSeasons';
+import { SeasonListDashboard } from '../../_components/SeasonListDashboard';
 import { PlayerProfile } from '../../_components/PlayerProfile';
-import { ClaimableAlerts } from '../../_components/ClaimableAlerts'; // Add this
+import { Alerts } from '../../_components/Alerts';
 
 
 // 1. Mark the component as async
@@ -25,23 +25,11 @@ export default async function UserDashboardPage({
   return (
     <div className="w-full">
       <main className="py-8 w-full">
-        
-        {/* Mobile: flex-col-reverse puts Holdings on TOP. Desktop: grid resets it. */}
-        <div className="flex flex-col-reverse lg:grid lg:grid-cols-3 gap-12 items-start">
-          
-          {/* Left Column (2/3): Main Content */}
-          <div className="w-full lg:col-span-2 space-y-8 min-w-0">
-            <ClaimableAlerts playerAddress={address} />
-            <PlayerActiveSeasons playerAddress={address} />
-          </div>
-
-          {/* Right Column (1/3): Player Stats/Profile */}
-          <div className="w-full lg:col-span-1 min-w-0">
-            <PlayerProfile profileAddress={address as `0x${string}`} />
-          </div>
-
+        <div className="flex flex-col gap-8">
+          <Alerts playerAddress={address} />
+          <PlayerProfile profileAddress={address as `0x${string}`} />
+          <SeasonListDashboard playerAddress={address} />
         </div>
-
       </main>
     </div>
   );
