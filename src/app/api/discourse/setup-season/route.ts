@@ -8,7 +8,7 @@ import { discourseNames } from '@/lib/discourseNames';
 const debug = process.env.APP_DEBUG === 'true';
 
 function parseCategoryIntros(seasonNum: number): Record<string, { title: string; body: string }> {
-  const raw = readFileSync(join(process.cwd(), 'content', 'discourse-category-intros.md'), 'utf-8')
+  const raw = readFileSync(join(process.cwd(), 'content', 'discourse', 'discourse-category-intros.md'), 'utf-8')
     .replace(/\{seasonNum\}/g, String(seasonNum));
   const result: Record<string, { title: string; body: string }> = {};
   for (const part of raw.split(/^## /m).filter(Boolean)) {

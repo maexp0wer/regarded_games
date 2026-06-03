@@ -7,7 +7,7 @@ toc_max_heading_level: 3
 
 # Whitepaper
 
-**Version 1.2 - 25.02.2026**
+**Version 1.3 - 03.06.2026**
 
 **Website:** [www.regarded.games](https://www.regarded.games)
 
@@ -110,7 +110,7 @@ Current market structures systematically capitalize on these drivers. By validat
 
 5. ***Gini-Aware Market Microstructure:*** This architecture introduces a novel strategic constraint: distributional impact. In standard order-book markets, counterparty identity is irrelevant to price discovery. In this simulation, the specific inventory of the counterparty determines the trade's impact on the global Gini score. Consequently, every transaction carries an externality. Participants must engage in "Gini-aware" execution, where the decision of whom to trade with is as mathematically significant as the price at which the trade occurs.
 
-6. **Sybil Resistance via Capital-Backed Identity:** To prevent manipulation, eligibility to trade requires the staking of the protocol's governance asset (RTD). This commitment operates on a High-Water Mark (MAX) basis, allowing a single stake to collateralize multiple active seasons, maximizing capital efficiency while maintaining strict Sybil Resistance.
+6. **Sybil Resistance via Capital-Backed Identity:** To prevent manipulation, eligibility to trade requires the staking of the protocol's governance asset (RGD). This commitment operates on a High-Water Mark (MAX) basis, allowing a single stake to collateralize multiple active seasons, maximizing capital efficiency while maintaining strict Sybil Resistance.
 
 7. **Conditional Payout Functions (The Stakes):**
 
@@ -210,11 +210,11 @@ The framework is composed of three strata:
 
 **To provide a seamless governance experience, the protocol utilises Common as its primary legislative forum and interface for Snapshot voting.** This integration unifies discussion and voting within a single environment, ensuring that the transition from debate to formal signalling is as efficient as possible.
 
-- **Frictionless Participation:** Voting is conducted via cryptographic signatures rather than on-chain transactions. By utilising Snapshot's off-chain signature protocol through the Common interface, the DAO ensures that participation incurs zero gas costs. This removes economic barriers to entry and ensures that governance remains accessible to all RTD holders, regardless of portfolio size.
+- **Frictionless Participation:** Voting is conducted via cryptographic signatures rather than on-chain transactions. By utilising Snapshot's off-chain signature protocol through the Common interface, the DAO ensures that participation incurs zero gas costs. This removes economic barriers to entry and ensures that governance remains accessible to all RGD holders, regardless of portfolio size.
 
-- **Token-Gated Discourse:** The forum utilises RTD-gated permissions to ensure that the "Parliament" of the protocol is composed strictly of stakeholders with a long-term commitment to the DAO. This filtering mechanism maintains a high signal-to-noise ratio and ensures that only those with verifiable skin in the game can influence the protocol's strategic direction.
+- **Token-Gated Discourse:** The forum utilises RGD-gated permissions to ensure that the "Parliament" of the protocol is composed strictly of stakeholders with a long-term commitment to the DAO. This filtering mechanism maintains a high signal-to-noise ratio and ensures that only those with verifiable skin in the game can influence the protocol's strategic direction.
 
-- **Flash-Loan Resistance:** To prevent "governance attacks" (where an actor borrows tokens via flash loans to manipulate a vote), voting power is calculated based on a historical block height checkpoint. A user's influence is determined by their staked RTD balance at the precise moment the proposal was created, not at the moment the vote is cast.
+- **Flash-Loan Resistance:** To prevent "governance attacks" (where an actor borrows tokens via flash loans to manipulate a vote), voting power is calculated based on a historical block height checkpoint. A user's influence is determined by their staked RGD balance at the precise moment the proposal was created, not at the moment the vote is cast.
 
 - **Auditability:** While the user interaction occurs on Common, all voting records are stored permanently and transparently on IPFS via the Snapshot protocol. This allows for independent verification of consensus by the Execution Council or any interested third party, ensuring the integrity of the legislative process.
 
@@ -232,7 +232,7 @@ The framework is composed of three strata:
 
 ### 7.3. The Operational Layer: On-Chain Enforcement
 
-Critical administrative functions within the protocol architecture (such as `GameController.startNewSeason` or `Treasury.setRevenueAllocationPolicy`) are protected by an `onlyCouncil` modifier. This cryptographic gatekeeping ensures that no changes to the game rules or financial parameters can occur without the cryptographic consensus of the Execution Council, acting on the mandate of a passed proposal.
+Critical administrative functions within the protocol architecture (such as `GameController.startNewSeason` or `Treasury.setSeasonPolicy`) are gated by OpenZeppelin's `Ownable` (`onlyOwner`). The owner of `GameController` — which in turn owns `Treasury` and `Staking` — is the Execution Council multisig. This cryptographic gatekeeping ensures that no changes to the game rules or financial parameters can occur without the consensus of the Execution Council, acting on the mandate of a passed proposal.
 
 ### 7.4. The Governance Lifecycle
 
@@ -266,6 +266,14 @@ The selection of this specific execution environment is predicated on four criti
 
 1. The DAO's treasury and participant assets remain secured by the robust cryptographic consensus of Ethereum, mitigating the security trade-offs typically associated with alternative, high-throughput chains.
 
+### 8.1. Deployment Environments
+
+The contract suite ships in two deployment profiles, selected automatically by chain ID:
+
+- **Mainnet (Base):** The full production pipeline. \$RGD is launched through the `CapitalAuction`, liquidity is paired against the real Base USDC and Uniswap V2 router, and idle principal earns yield on the live Aave V3 pool. The `Vesting` and `TestnetRewardDistributor` contracts custody the long-term and community allocations.
+
+- **Testnet (Base Sepolia):** A self-contained sandbox for rapid iteration. The external dependencies are replaced by mocks — `FakeUSDC`, a mock Aave pool, and a mock Uniswap V2 router — and a `FakeUSDCFaucet` lets testers claim play-money USDC. On testnet there is no Capital Auction, vesting, or testnet-reward distributor: \$RGD is minted directly to the deployer and a portion is seeded into the mock liquidity pool so seasons can be exercised end-to-end. The `CapitalAuction`, `Vesting`, and `TestnetRewardDistributor` contracts are **mainnet-only**, while `FakeUSDC`, `FakeUSDCFaucet`, and the mock infrastructure are **testnet-only**.
+
 ---
 
 # Part III: The Mechanical and Technical Framework
@@ -278,17 +286,17 @@ The mechanics of Regarded Games are not arbitrary gamification elements; they ar
 
 ### 9.1. The Governance Gate: Sybil Resistance via Economic Bonding
 
-**Contract Logic: `GameController.sol` / `RTD.sol`**
+**Contract Logic: `Staking.sol` / `Auction.sol`**
 
 A primary vulnerability in anonymous economic simulations is the "Sybil Attack"—specifically, the ability of a capital-rich actor (a "whale") to mimic a collective of low-capital participants by splitting funds across hundreds of wallets. This behaviour would artificially deflate the Gini Coefficient, rendering the "Socialist" victory condition trivial to exploit.
 
 **To mitigate this, the protocol enforces a strict Collateralized Identity requirement.**
 
-- **The Rule:** To participate in the Capital Initialization Phase (Auction) a wallet must hold a balance of the Governance Token (\$RGD).
+- **The Rule:** To participate in the Capital Initialization Phase (Auction) a wallet must have staked \$RGD in the `Staking` contract.
 
-- **The Mechanism:** This check is atomic. Before any transaction (mint or trade) is processed, the smart contract verifies the user's staked balance against a Static Collateral Ratio defined for the season (e.g., 10 \$RGD required per 100 \$FIM held). This ensures deterministic access requirements while maintaining the high-water mark logic: a single pool of staked \$RGD can collateralize multiple concurrent seasons, provided the user meets the maximum requirement of any single active game.
+- **The Mechanism:** The check is enforced at mint. When a player buys \$FIM in the `Auction`, the contract locks a **fixed quantity of \$RGD per whole \$FIM acquired** — the `rgdWeiLockedPerFim` parameter set for the season in the `SeasonManifest` (currently `0.1 RGD` locked per \$FIM). This is a fixed token amount, *not* a price-aware percentage of value: the lock does not float with the market price of \$RGD. If the player's staked balance is insufficient to cover the newly required lock, the purchase reverts. Note that this requirement is enforced when minting \$FIM in the Auction; secondary trades on the `Exchange` do not impose an additional per-trade collateral check.
 
-- **High-Water Mark Efficiency:** This commitment operates on a High-Water Mark (MAX) basis. A single pool of staked \$RGD can collateralize multiple concurrent seasons, provided the user meets the maximum requirement of any single active game.
+- **High-Water Mark Efficiency:** Locks operate on a High-Water Mark (MAX) basis inside `Staking`. The contract records the exact \$RGD locked for each active season and requires the staked balance to cover only the **largest** single-season lock, so one pool of staked \$RGD can collateralize multiple concurrent seasons. A player cannot unstake below this high-water mark while any season they joined is still active.
 
 **This mechanism ensures Accountability.** A player cannot anonymously manipulate the game state; they must have "skin in the game" via the governance asset. It aligns the player's incentives with the long-term health of the protocol, as cheating or attacking the game would degrade the value of the very collateral they are required to hold.
 
@@ -306,13 +314,13 @@ A primary vulnerability in anonymous economic simulations is the "Sybil Attack"�
 
 **Contract Logic: `Auction.sol`**
 
-The simulation commences with a one-month capital formation period.
+The simulation commences with a fixed-length capital formation window (the season's `auctionDuration`) — approximately **one month on mainnet**, with the public testnet using a shorter **7-day** auction so seasons cycle quickly.
 
-- **Fixed-Rate Minting:** Participants enter the simulation by exchanging stablecoin collateral (\$USDC) for \$FIM at a fixed rate (e.g., 1 USDC = 1 FIM).
+- **Fixed-Rate Minting:** Participants enter the simulation by exchanging stablecoin collateral (\$USDC) for \$FIM at a fixed `1 USDC = 1 FIM` rate (the `Auction` scales 6-decimal USDC to 18-decimal FIM).
 
-- **Accountability Ledger:** The contract records the cumulative capital injected by each address (`Money_In`). This creates a permanent, on-chain basis for the "Proof of Sacrifice" metric used in settlement.
+- **Accountability Ledger:** Every purchase calls `GameSeason.updateLedger`, which records each address's net capital committed to its \$FIM position (`netContributions`, the on-chain basis for the "Proof of Sacrifice" metric used in settlement).
 
-- **Treasury Deployment:** Capital is not held idle. The `Auction.sol` contract automatically routes deposited funds to the `Treasury.sol` vault, which deploys the assets into low-risk DeFi lending protocols. This ensures the Prize Pool generates yield for the DAO throughout the duration of the game.
+- **Treasury Deployment:** Capital is not held idle. The `Auction` contract routes deposited USDC to the `Treasury` via `depositPrincipal`, which immediately supplies it to **Aave V3** to generate yield. The Treasury tracks each season's principal separately so liabilities never commingle.
 
 ### 9.4. Phase II: The Active Simulation (The Game)
 
@@ -330,7 +338,7 @@ Unlike standard Decentralised Exchanges (AMMs) which obscure individual actors b
 
 **The Arbiter of Truth: The Gini Calculation**
 
-The game state is governed by the Gini Coefficient (`G_current`), calculated live on-chain. This metric serves as the objective arbiter of the simulation, ranging from 0 (Perfect Equality) to 1 (Absolute Concentration).
+The game state is governed by the Gini Coefficient (`G_current`). Rather than recomputing it on every trade, the coefficient is established at phase boundaries: an off-chain solver submits the player set **sorted by \$FIM balance**, and `GameSeason` verifies that ordering on-chain (rejecting any unsorted or duplicated batch) while accumulating the sums needed to derive the coefficient deterministically. This metric serves as the objective arbiter of the simulation, ranging from 0 (Perfect Equality) to 1 (Absolute Concentration), and is expressed on-chain in basis points (0–10 000).
 
 ***Victory Conditions (`GameSeason.sol`)***
 
@@ -347,7 +355,7 @@ Victory is defined as a Proportional Race. The simulation does not demand absolu
 To account for the inherent entropic tendency of markets toward concentration (often observed as the Power Law), the system applies a structural handicap in favour of the Socialist faction. The multiplier M is calculated via the following function:
 M = Beta + (1 - G_initial)^2
 
-Where Beta (The Base Multiplier) is initialised at 1.4. This formula mathematically compensates for the fundamental asymmetry of the simulation: the significantly higher coordination cost required to distribute wealth (Socialism) versus the lower entropy cost of concentrating it (Capitalism). Crucially, the parameter Beta serves as the protocol's primary Governance Lever. It is not a static constant, but a mutable variable subject to DAO ratification. This design empowers the community to engage in dynamic game balancing. By analysing empirical data from concluded seasons, the DAO can vote to adjust Beta upward or downward. This mechanism ensures that the simulation remains competitive and theoretically sound, preventing long-term statistical dominance by either ideology purely due to market mechanics.
+Where Beta (The Base Multiplier, the `baseMultiplierBps` season parameter) is currently initialised at 1.2. This formula mathematically compensates for the fundamental asymmetry of the simulation: the significantly higher coordination cost required to distribute wealth (Socialism) versus the lower entropy cost of concentrating it (Capitalism). Crucially, the parameter Beta serves as the protocol's primary Governance Lever. It is not a static constant, but a mutable variable subject to DAO ratification. This design empowers the community to engage in dynamic game balancing. By analysing empirical data from concluded seasons, the DAO can vote to adjust Beta upward or downward. This mechanism ensures that the simulation remains competitive and theoretically sound, preventing long-term statistical dominance by either ideology purely due to market mechanics.
 
 **The Existential Threshold (Dust Filter):** To prevent "Population Inflation" attacks—where an actor creates thousands of distinct wallets with negligible balances to artificially skew the inequality metric—the Gini calculation enforces a Minimum Balance Threshold. Only wallets holding \$FIM above this threshold (defined in the `SeasonManifest`, e.g., 5 units) are included in the population count. Wallets below this amount are mathematically excluded from the state calculation.
 
@@ -389,41 +397,41 @@ Where Beta (The Base Multiplier) is initialised at 1.4. This formula mathematica
 
 ### 10.1. The Permanent Infrastructural Layer
 
-**`RTD.sol` (The Governance & Access Token)**
+**`RGD.sol` (The Governance & Access Token)**
 
-- **Function:** Serves as the ERC-20 compliant governance standard and the Sybil-Resistance Key.
+- **Function:** A minimal, fixed-supply ERC-20 (`ERC20Burnable`) that serves as the governance standard and the Sybil-Resistance key. \$RGD carries no bespoke game logic itself — the collateral accounting lives in `Staking`, and access checks live in the seasonal `Auction`.
 
-- **Collateral Verification:** \$RGD serves a critical security function as the collateral anchor for the game. The contract provides view functions used by seasonal contracts to verify that a participant holds the required 10% collateral ratio relative to their seasonal game exposure.
-
-- **Supply Logic:** The token utilises a rigid supply model (1,000,000,000 \$RGD), minted once at the Token Generation Event (TGE) to prevent arbitrary dilution.
+- **Supply Logic:** The token uses a rigid supply model (1,000,000,000 \$RGD), minted once at construction (the Token Generation Event) to prevent arbitrary dilution. Being `ERC20Burnable`, supply can only ever decrease.
 
 **`Staking.sol` (The Identity & Governance Hub)**
 
-- **Function:** Manages the staking of \$RGD to enforce the "Skin in the Game" rule and track voting power. It enforces the High-Water Mark (MAX) rule using a Static Ratio model. A single RTD stake can collateralize multiple active seasons simultaneously.
+- **Function:** Manages the staking of \$RGD to enforce the "Skin in the Game" rule and to track governance weight. It enforces the High-Water Mark (MAX) rule by recording the **exact \$RGD amount** locked per season (`seasonLocks`) and requiring the staked balance to cover the largest single lock (`requiredRegStake`). One stake can therefore collateralize multiple active seasons simultaneously.
 
-- **Policy Snapshotting:** The contract utilises Historical Checkpointing to record balances at specific block heights, allowing off-chain governance interfaces to accurately query voting power based on a user's staked balance.
+- **Governance Checkpointing:** Each stake/unstake writes a `(blockNumber, value)` checkpoint, allowing off-chain governance interfaces (Snapshot) to query a user's staked balance at a historical block height — the basis for flash-loan-resistant voting power.
 
-- **Locking Mechanism:** Players are programmatically barred from unstaking \$RGD if doing so would drop their balance below the requirement for an active game season in which they are participating.
+- **Locking Mechanism:** A player cannot unstake \$RGD if doing so would drop their balance below `requiredRegStake` — i.e. below the collateral still locked by any active season they joined. Locks are released back to the player when they claim their payout at season end (`releaseCollateral`).
 
 ### 10.2. The Governance & Administrative Layer
 
-**`GameController.sol` (The Factory & Rules Engine)**
+**`GameController.sol` (The Rules Engine)**
 
-- **Function:** The administrative hub responsible for deploying new seasons. It holds the global configuration for the Collateral Ratio (set to 1000 bps, or 10%).
+- **Function:** The administrative hub that orchestrates season creation. It does not itself contain a global collateral ratio; instead `startNewSeason` forwards a full set of per-season parameters (durations, victory threshold, base multiplier, treasury splits, existential threshold, the `rgdWeiLockedPerFim` collateral lock, and the verification bond) to a dedicated `SeasonFactory`.
 
-- ***The Season Manifest:*** New seasons are initialised via a `SeasonManifest` struct—a blueprint containing the game rules (e.g., the specific Multiplier Formula M), financial strategies and the Existential Threshold.
+- ***The `SeasonFactory`:*** A separate contract whose sole job is to deploy and wire a season's four disposable contracts (`GameSeason`, `Auction`, `Exchange`, `FIM`) in one transaction, renounce/transfer their ownership appropriately, and return their addresses. `GameController` then registers the season and grants it the necessary `Staking` and `Treasury` approvals.
 
-- **Governance Interface:** Critical functions (like `startNewSeason`) are protected by modifiers that restrict access to the Execution Council.
+- ***The Season Manifest:*** The game rules are authored off-chain in `config/seasonManifest.json` (the "SeasonManifest") and read by the deployment script, which passes them into `startNewSeason`. Financial splits are in basis points; durations are in seconds.
+
+- **Governance Interface:** `GameController` is `Ownable`; `startNewSeason` is `onlyOwner`. Ownership is held by the **Execution Council multisig**, so no new season can be created without the Council's signature acting on a passed proposal.
 
 **`Treasury.sol` (The Automated Vault)**
 
-- **Function:** A non-custodial vault responsible for asset management and yield deployment.
+- **Function:** A vault (`Ownable`, owned by `GameController`) responsible for principal custody and yield deployment.
 
-- **JIT Asset Management:** The Treasury utilises Just-In-Time (JIT) Liquidity, automatically supplying idle USDC to Aave V3 to generate yield and withdrawing only when required for payouts.
+- **JIT Asset Management:** The Treasury supplies idle USDC to **Aave V3** to generate yield (`depositPrincipal`) and withdraws only when required for payouts (`payWinner`).
 
-- ***Multi-Ledger Accounting:*** It tracks `seasonPrincipals` individually, ensuring that the liabilities of one game season are cryptographically segregated from others.
+- ***Multi-Ledger Accounting:*** It tracks `seasonPrincipals` per season alongside a `totalGlobalPrincipal`, ensuring the principal owed to one season is never paid out to another. Aave yield is only ever the balance in excess of `totalGlobalPrincipal`.
 
-- **Season-Locked Policies:** Economic parameters (Buyback %, Reinvest %, Liquidity Provider %) are snapshotted at the moment a season is deployed, binding the Treasury to a fixed revenue strategy for the duration of the season.
+- **Season-Locked Policies:** Each season's revenue policy (Buyback / Liquidity / Prize-Pool-reinvest / DAO basis points) is snapshotted at deployment via `setSeasonPolicy` and must sum to 10 000. `harvestAndExecutePolicy` applies these splits **to the realized yield only** — never to principal: the DAO and liquidity shares are transferred to their recipient addresses, the prize-pool share is reinvested by adding it back to the season's principal, and the buyback share is forwarded as USDC to a `buybackRecipient`. The Treasury no longer performs an automatic on-chain buy-and-burn of \$RGD (that path was removed to eliminate an exploit vector); any buyback is executed separately by the DAO-controlled recipient.
 
 ### 10.3. The Seasonal Execution Layer (Disposable Contracts)
 
@@ -431,37 +439,37 @@ Where Beta (The Base Multiplier) is initialised at 1.4. This formula mathematica
 
 - **Function:** Manages the initial capitalisation phase.
 
-- **Gated Entry:** The `buyFIM` function verifies `ValueRTD ≥ 10% × ValueFIM` before accepting USDC. The locked collateral remains bound to the user's identity until the Season concludes.
+- **Gated Entry:** `buyFIM` computes the required lock as a fixed `rgdWeiLockedPerFim × (FIM purchased)` and calls `Staking.registerCollateral`, which reverts unless the buyer's staked \$RGD covers the new high-water mark. The lock remains bound to the player until they claim at season end.
 
-- **Accountability Tracking:** Records `Money_In` (total USDC spent) for every address.
+- **Accountability Tracking:** Each purchase records the player's committed capital through `GameSeason.updateLedger`.
 
 **`Exchange.sol` (The Peer-to-Peer Order Book)**
 
-- **Function:** A bespoke, transparent trading engine utilising a Peer-to-Peer Limit Order Book.
+- **Function:** A transparent, peer-to-peer limit order book. There is no AMM and no automatic matching engine.
 
-- **Mechanism Design:** Users create specific Buy or Sell orders indexed on-chain with the creator's address and current balance. The `fillOrder(uint256 orderId)` function requires the "Taker" to select a specific "Maker"—there is no algorithmic matching engine.
+- **Mechanism Design:** A Maker calls `createOrder(isBuy, fimAmount, usdcPrice)`, escrowing USDC (for a bid) or \$FIM (for an ask) into the contract. A Taker chooses a specific order and calls `fillOrder(orderId)` (full fill) or `fillBatch(orderIds[], amounts[])` (partial / multi-order fills). Because the Taker selects the exact counterparty by `orderId`, every trade is a deliberate choice of *whom* to trade with. `cancelOrder` refunds the Maker's escrow.
 
-- **Strategic Rationale:** This friction forces participants to evaluate the counterparty risk to the Gini Coefficient.
+- **Strategic Rationale:** This friction forces participants to evaluate each counterparty's impact on the Gini Coefficient — the counterparty's identity is the Maker's `owner` address, and balances are queryable from `GameSeason`.
 
-- **Collateral Check:** Every trade execution triggers a re-verification of the collateral ratio for the buyer.
+- **Ledger Sync:** Every fill calls `GameSeason.updateLedger` so the season's authoritative \$FIM balances and net-contribution figures stay consistent with on-chain settlement. When a season is finalized, `settleAllOrders` (called by `GameSeason`) cancels every still-open order and refunds escrow.
 
 **`GameSeason.sol` (The State Machine & Arbiter)**
 
-- **Function:** The autonomous referee managing the game state.
+- **Function:** The autonomous referee managing season state and settlement.
 
-- **The Phase Engine:** Enforces a strict linear state transition: `AUCTION → BOOTSTRAP → TRADING → SETTLING → PAYOUT`.
+- **The Phase Engine:** An internal `State` enum (`BOOTSTRAP → ACTIVE → CALCULATING → DISTRIBUTION → ENDED`) surfaces to clients through `getPhase()` as the human-readable lifecycle `AUCTION → BOOTSTRAP → TRADING → SETTLING → PAYOUT` (with a terminal `ENDED`). The auction runs while the season is still in `BOOTSTRAP`.
 
-- **The Bootstrap Phase:** Trading is paused until the Gini Solver Bot submits `G_initial` for cryptographic verification.
+- **The Bootstrap Phase:** After the auction window closes, trading stays paused until `G_initial` is established. `startBootstrap` opens the batch, `processBatch` consumes the sorted player set, and `finalizeBootstrap` records `G_initial` and transitions to `ACTIVE`.
 
-- **Trustless Verification (The Arbitrator):** Any external actor (a Keeper or Bot) can trigger a state update by posting a USDC Bond and submitting a sorted batch of player balances. The Validation Logic performs a Sort Check, Integrity Check, and Dust Filter. Valid batches return the Bond; invalid batches are slashed.
+- **Trustless Verification (The Arbitrator):** Any external actor (a Keeper or Bot) drives a state transition by posting a USDC bond (`bondAmountUsdc`) and submitting the player set in **ascending balance order**. The validation logic enforces a sort check, a no-duplicates check, and the dust filter (`existentialThresholdFim`). On a successful finalization the bond is returned to the submitter; an attempted settlement that does not yet meet a victory or time condition forfeits the bond to the Treasury.
 
-- **The Multiplier Logic:** Applies the compensation formula `M = β + (1 − G_initial)²` for the Socialist faction.
+- **The Multiplier Logic:** Applies the compensation formula `M = β + (1 − G_initial)²` (all in basis points) in favour of the Socialist faction.
 
-- **Settlement Engine:** Upon successful verification, executes the "Finalisation Cascade" routing payouts via the Treasury.
+- **Settlement Engine:** On a triggering condition `finalizeGame` locks state, closes open orders, harvests Treasury yield, computes each player's payout, and moves to `DISTRIBUTION`, where players pull their USDC via `claimPayout` (which also releases their \$RGD collateral and burns their \$FIM).
 
 **`FIM.sol` (The Seasonal Asset)**
 
-- **Function:** A restricted ERC-20 token; tokens can only move via the `Exchange.sol` contract.
+- **Function:** A restricted ERC-20. `mint` is callable only by the season's `Auction`, `burn` only by its `GameSeason`, and `transfer`/`transferFrom` are gated so that only the `Exchange` can move tokens — forcing every value transfer through the observable order book.
 
 ### 10.4. Autonomous Execution Framework
 
@@ -475,15 +483,15 @@ Where Beta (The Base Multiplier) is initialised at 1.4. This formula mathematica
 
 **The End-of-Season "Finalization Cascade":**
 
-1. *Trigger:* Keeper calls `checkAndExecuteVictory()` or `finalizeGame()`.
+1. *Trigger:* A Keeper posts the USDC bond via `startSettlement()`, submits the sorted player set through `processBatch()`, then calls `finalizeGame()`.
 
-2. State Locking: Game state is immediately frozen.
+2. State Locking: If a victory or the time limit is met, game state is frozen (`CALCULATING → DISTRIBUTION`) and any open Exchange orders are settled.
 
-3. Settlement Calculation: Winning faction determined; payout array calculated.
+3. Settlement Calculation: Winning faction and final progress determined; each player's payout is written to `finalPayoutUSDC`.
 
-4. Treasury Routing: Yield harvested; Revenue Policy executed; Prize Pool distributed.
+4. Treasury Routing: `harvestAndExecutePolicy` realizes Aave yield and applies the revenue policy; the season's prize pool is sized from `getSeasonPoolSize`.
 
-5. Incentivisation: Bounty minted to the Keeper.
+5. Incentivisation: The Keeper's bond is returned on a successful finalization (a premature settlement attempt instead forfeits the bond to the Treasury, discouraging spam).
 
 **The Operational Lifecycle:** Auction → Bootstrap → Trading → Settling → Payout
 
@@ -503,31 +511,33 @@ Where Beta (The Base Multiplier) is initialised at 1.4. This formula mathematica
 
 - **Lifecycle:** Minted during Auction, traded during the active Season, and becomes useless once the season ends.
 
-### 11.2. The Sovereign Asset: \$RGD (The Gini)
+### 11.2. The Sovereign Asset: \$RGD
 
 - **Classification:** Governance and Access Token.
 
 - **Function:** \$RGD represents ownership over the Regarded Games protocol.
 
-- ***Intrinsic Utility (Access):*** Holding \$RGD is required to play the game. The `Auction.sol` contract enforces a collateral check, ensuring that only participants with a long-term stake in the protocol can influence the game economy.
+- ***Intrinsic Utility (Access):*** Staked \$RGD is required to play the game. The seasonal `Auction` locks \$RGD collateral on entry, ensuring that only participants with a long-term stake in the protocol can influence the game economy.
 
-- **Value Accrual (Dynamic Revenue Allocation):** USDC profits from the Treasury are allocated by DAO governance to:
+- **Value Accrual (Dynamic Revenue Allocation):** The yield earned on each season's USDC principal (the surplus over principal generated on Aave) is split by a DAO-ratified, season-locked policy across four streams:
 
-1. **Deflationary Buybacks:** Purchasing and burning \$RGD to reduce total supply.
+1. **Buyback:** The buyback share is forwarded as USDC to a DAO-controlled `buybackRecipient`. (Buyback execution is deliberately *not* an automatic on-chain swap-and-burn; that path was removed to close an attack vector.)
 
-2. **Liquidity Deepening:** Providing protocol-owned liquidity to ensure market stability.
+2. **Liquidity Deepening:** Sent to a liquidity recipient to support protocol-owned liquidity and market stability.
 
-3. **Treasury Expansion:** Reinvesting in the Prize Pool to increase the "Jackpot Multiplier" for future seasons.
+3. **Prize-Pool Reinvestment:** Added back to the season's principal, increasing the payout pool for participants.
+
+4. **DAO / Operations:** Sent to the DAO recipient to fund ongoing operations.
 
 ### 11.3. Supply Distribution
 
 **The total supply of \$RGD is fixed at 1,000,000,000 tokens.** | Category | Allocation | Total Tokens | Purpose and Vesting Schedule |
 |---|---|---|---|
-| **DAO Treasury Reserve** | 40% | 500,000,000 | **Long-Term Capital.** Controlled entirely by governance. Subject to a 5-year linear unlock. |
-| **Growth & Ecosystem** | 20% | 200,000,000 | **User Acquisition.** Funds Active Incentives and marketing. Released based on DAO-approved milestones. (5% via Merkl for first-year stakers and LPs.) |
-| **Core Contributors** | 15% | 150,000,000 | **Team Alignment.** 4-year vesting schedule with a 12-month cliff. |
-| **Operational Reserve** | 10% | 100,000,000 | **Legal & Infrastructure.** Managed via multi-sig with strict spending rules. |
-| **Market Formation** | 15% | 50,000,000 | **Market Initialisation.** 3% Community Distribution / 6% Capital Auction / 6% Liquidity Pool. See Section 13 for release schedule. |
+| **DAO Treasury Reserve** | 40% | 400,000,000 | **Long-Term Capital.** Controlled by governance; held in the `Vesting` contract under a long-horizon unlock. |
+| **Growth & Ecosystem** | 20% | 200,000,000 | **User Acquisition.** Funds incentives and marketing; held in the `Vesting` contract. |
+| **Core Contributors (Team)** | 15% | 150,000,000 | **Team Alignment.** `Vesting` schedule of 4 years total with a 12-month cliff. |
+| **Operational Reserve (LLC)** | 10% | 100,000,000 | **Legal & Infrastructure.** Held in the `Vesting` contract; managed by the DAO LLC. |
+| **Market Formation** | 15% | 150,000,000 | **Market Initialisation.** 5% Capital Auction / 5% Liquidity Pool / 3% Testnet Quests / 2% Airdrops. See Section 13. |
 | **Total** | 100% | 1,000,000,000 |
 ## 12. Strategic Rationale: Temporal Distribution & Float Management
 
@@ -537,11 +547,11 @@ Where Beta (The Base Multiplier) is initialised at 1.4. This formula mathematica
 
 By restricting the initial circulating supply, the protocol mitigates "pump-and-dump" dynamics and allows for organic price discovery based on actual game utilisation. Under this model, 75% of the total \$RGD supply is designated for the community (40% Treasury, 20% Growth, 15% Market/Community):
 
-- **50%** in the DAO Treasury (Governance-controlled).
+- **40%** in the DAO Treasury Reserve (Governance-controlled).
 
-- **20%** in Ecosystem Incentives (Performance-based).
+- **20%** in Growth & Ecosystem Incentives (Performance-based).
 
-- **5%** in Genesis Liquidity (Initial access). This structure ensures that the majority of governance power is not sold to the highest bidder at launch, but is earned over time by the players, builders, and active contributors who add value to the network.
+- **15%** in Market Formation (Capital Auction, Liquidity Pool, Testnet Quests, and Airdrops). This structure ensures that the majority of governance power is not sold to the highest bidder at launch, but is earned over time by the players, builders, and active contributors who add value to the network.
 
 ### 12.2. Time-Horizon Alignment
 
@@ -553,25 +563,27 @@ Their economic success is entirely contingent on the multi-year viability and gr
 
 ### 13.1. Atomic Instantiation (TGE)
 
-The \$RGD economy is instantiated through a singular, atomic Token Generation Event (TGE). During this event, the immutable supply cap of 1,000,000,000 \$RGD is minted. Distribution to the specific vesting contracts (for Team) and holding vaults (for Treasury and Ecosystem) is executed programmatically in the same block to ensure strict adherence to the allocation table defined in Section 11.3.
+The \$RGD economy is instantiated through a Token Generation Event (TGE) anchored by the `CapitalAuction` contract. The entire immutable supply of 1,000,000,000 \$RGD is minted **into `CapitalAuction`** at deployment. When the auction window closes, anyone may call `finalize()`, which atomically: pairs 100% of the raised USDC with the 5% Liquidity tranche into a Uniswap V2 pool; sends the 5% sale tranche's pro-rata claims to depositors; routes the 85% vesting allocation to the `Vesting` contract; routes the 3% testnet-quest allocation to the `TestnetRewardDistributor`; and routes the 2% airdrop allocation to its recipient — and starts the vesting clocks (`Vesting.init` / `TestnetRewardDistributor.init`) in the same transaction. This binds the live distribution strictly to the allocation table in Section 11.3.
 
 ### 13.2. The Genesis Allocation Split
 
-The 15% of supply allocated to the initial launch is divided into three tranches to ensure decentralised ownership and a deep, stable secondary market:
+The 15% of supply allocated to Market Formation is divided into four tranches to ensure decentralised ownership and a deep, stable secondary market:
 
-1. **Retroactive Distribution (3% / 30M \$RGD):** Allocated to founding community members via the Contribution Score mechanism. 25% is liquid at TGE to facilitate Season 1 participation, with the remaining 75% vesting linearly over six months.
+1. **Capital Formation Auction (5% / 50M \$RGD):** Offered via a Batch Auction to determine a single uniform Clearing Price. Participants commit USDC during the window (`deposit`) and, after `finalize`, `claim` their pro-rata share of this tranche.
 
-2. **Capital Formation Auction (6% / 60M \$RGD):** Offered via a Batch Auction to determine the initial Clearing Price. Participants commit USDC to the contract to discover the token's fair market value in a front-running resistant environment.
+2. **Liquidity Pool (5% / 50M \$RGD):** Paired with 100% of the USDC raised in the auction to establish the initial Uniswap V2 market.
 
-3. **Market Formation — The Liquidity Pool (6% / 60M \$RGD):** Paired with USDC capital provided by the Capital Auction to establish the initial market.
+3. **Testnet Quests (3% / 30M \$RGD):** Distributed to founding community members via the Contribution Score mechanism through the `TestnetRewardDistributor` (a Merkle-claim contract). 25% is liquid at TGE to facilitate Season 1 participation, with the remaining 75% vesting linearly over 180 days.
+
+4. **Airdrops (2% / 20M \$RGD):** Reserved for direct community airdrops.
 
 ### 13.3. Market Formation via Parity Listing
 
-**Upon the conclusion of the Capital Formation Auction, the protocol executes an automated Parity Listing.** 100% of the USDC raised during the auction is paired with the 6% Liquidity Provisioning tranche to instantiate a Uniswap V3 pool. By matching the auction volume with an equal number of protocol-owned tokens, the protocol ensures that the secondary market opens at the exact clearing price discovered during the auction, eliminating Day 1 price discrepancies.
+**Upon the conclusion of the Capital Formation Auction, `finalize()` executes an automated Parity Listing.** 100% of the USDC raised during the auction is paired with the 5% Liquidity tranche to instantiate a Uniswap V2 pool. Because the auction sale tranche (5%) and the liquidity tranche (5%) are equal in size, the secondary market opens at the exact clearing price discovered during the auction, eliminating Day 1 price discrepancies.
 
 ### 13.4. Liquidity Locking: The Transition to Protocol-Owned Liquidity (POL)
 
-**To provide an absolute guarantee of market solvency and mitigate the risk of liquidity removal, the LP tokens generated from the initial provisioning are subject to a Cryptographic Time-Lock.** These LP tokens are deposited into a verifiable smart contract vault for a minimum tenure of 12 months. Upon the expiration of this lock-up period, control of the liquidity does not revert to individuals, but is transferred to the DAO Treasury. This effectively transforms the initial seed capital into permanent Protocol-Owned Liquidity (POL), ensuring that the market remains liquid in perpetuity.
+**To provide an absolute guarantee of market solvency and mitigate the risk of liquidity removal, the Uniswap V2 LP tokens minted during `finalize()` are sent directly to the `Vesting` contract under a dedicated LP schedule.** This schedule carries a 12-month cliff and a multi-year linear release, so the founding liquidity cannot be withdrawn at launch. The LP position is released gradually to the DAO over the vesting horizon, transforming the initial seed capital into long-lived Protocol-Owned Liquidity (POL) and ensuring the market remains liquid. *(On the public testnet there is no Capital Auction; instead the deploy script seeds the mock Uniswap V2 router with 5% of supply plus mock USDC so a working \$RGD/USDC market exists for testing.)*
 
 ---
 
@@ -593,7 +605,7 @@ The initial acquisition strategy targets participants capable of understanding g
 
 ### 14.2. Phase 2: The Genesis Meritocracy (Retroactive Distribution)
 
-**The initial decentralisation of the DAO is facilitated by the Genesis Airdrop**, which constitutes the 5% "Genesis Liquidity (Retroactive)" allocation. *This is not a conventional, indiscriminate distribution. It is a Meritocratic Capitalisation Event designed to identify and incentivise the protocol's founding citizenry. The allocation for each participant is derived deterministically from a Contribution Score (CS), accumulated through a structured Testnet Quest Program spanning community participation, network growth, and live simulation engagement.*
+**The initial decentralisation of the DAO is facilitated by the Genesis Airdrop**, drawn from the Market Formation tranches earmarked for the community — the 3% Testnet Quests allocation (distributed trustlessly via the Merkle-based `TestnetRewardDistributor`) together with the 2% Airdrops allocation. *This is not a conventional, indiscriminate distribution. It is a Meritocratic Capitalisation Event designed to identify and incentivise the protocol's founding citizenry. The allocation for each participant is derived deterministically from a Contribution Score (CS), accumulated through a structured Testnet Quest Program spanning community participation, network growth, and live simulation engagement.*
 
 **The Contribution Scoring Function**
 CS_p = S_community + S_spread + S_testnet
@@ -648,7 +660,7 @@ The protocol utilises a bifurcated social architecture serving as the "Deliberat
 
 ### 15.1. The Parliament (Discourse)
 
-The hosted forum at Discourse serves as the public square and legislative house for all RTD holders. Key functional features include:
+The hosted forum at Discourse serves as the public square and legislative house for all RGD holders. Key functional features include:
 
 - **Proposal Incubation (The RFC Pipeline):** Governance proposals are refined and debated prior to formal on-chain ratification.
 
@@ -761,7 +773,7 @@ G = (Σ_i Σ_j |t_i - t_j|) / (2 × n × Σ_i t_i)
 
 This formula is computed off-chain by the Solver Bot and verified on-chain via sorted batch processing to establish G_initial (during the Bootstrap Phase) and G_current (during the Settlement Phase).
 
-**Victory Conditions:** Let V_thresh = 0.25 be the Victory Threshold. *Let M = 1.4 + (1 - G_initial)² be the Compensation Multiplier.* *The Capitalist Faction wins if:* `(G_current - G_initial) / (1 - G_initial) ≥ V_thresh` *The Socialist Faction wins if:* `((G_initial - G_current) / G_initial) × M ≥ V_thresh`
+**Victory Conditions:** Let V_thresh = 0.25 be the Victory Threshold. *Let M = 1.2 + (1 - G_initial)² be the Compensation Multiplier (the base, β, is the governance-tunable `baseMultiplierBps`, currently 1.2).* *The Capitalist Faction wins if:* `(G_current - G_initial) / (1 - G_initial) ≥ V_thresh` *The Socialist Faction wins if:* `((G_initial - G_current) / G_initial) × M ≥ V_thresh`
 
 ### 21.3. Payout Logic Formalization
 
@@ -805,11 +817,11 @@ The protocol's rules are designed to be robust against common attack vectors.
 
 - ***The Threat:*** A whale creating numerous "minion" wallets during the Auction to create an artificially low G_initial and then consolidating the FIM during the game.
 
-- **The Mitigation:** The RTD Collateral Rule creates a two-fold defence:
+- **The Mitigation:** The RGD Collateral Rule creates a two-fold defence:
 
 - **Capital Cost:** It makes the funding of thousands of "minion" wallets prohibitively expensive, as the attacker must acquire and lock a proportional amount of the governance token for every active address.
 
-- **Incentive Alignment:** By forcing the attacker to hold a significant position in the governance asset, the protocol aligns their incentives with the ecosystem's health. Any manipulation that undermines the integrity of the game would likely degrade the market value of the very RTD collateral they are holding, rendering the attack economically irrational or self-defeating.
+- **Incentive Alignment:** By forcing the attacker to hold a significant position in the governance asset, the protocol aligns their incentives with the ecosystem's health. Any manipulation that undermines the integrity of the game would likely degrade the market value of the very RGD collateral they are holding, rendering the attack economically irrational or self-defeating.
 
 **The Free-Rider Problem:**
 
@@ -833,7 +845,11 @@ The protocol's rules are designed to be robust against common attack vectors.
 
 **Gini Coefficient:** A statistical measure of distribution used to gauge economic inequality. A score of 0 represents perfect equality, and 1 represents perfect inequality.
 
-**Net Contribution:** A core metric calculated as a player's total MoneyIn minus their total MoneyOut. It serves as a Sybil-resistant "Proof of Sacrifice." **Oligarchy:** In a Capitalist victory, the smallest group of top players whose combined FIM holdings equal or exceed 50% of the total supply. **\$RGD (Regards):** The governance token of the Regarded Games ecosystem. Holders govern the DAO and their stake is required as collateral to participate in the game.
+**Net Contribution:** A core metric calculated as a player's total MoneyIn minus their total MoneyOut. It serves as a Sybil-resistant "Proof of Sacrifice." **Oligarchy:** In a Capitalist victory, the smallest group of top players whose combined FIM holdings equal or exceed 50% of the total supply. **\$RGD (Regarded Games):** The governance token of the Regarded Games ecosystem (ERC-20, fixed 1,000,000,000 supply, burnable). Holders govern the DAO and their staked balance is required as collateral to participate in the game.
+
+**Capital Formation Auction (ILO):** The one-time `CapitalAuction` batch sale that bootstraps the \$RGD market at the Token Generation Event. Participants deposit USDC; on finalize, the raised USDC is paired with a protocol-owned liquidity tranche into a Uniswap V2 pool and depositors claim \$RGD pro-rata at a uniform clearing price.
+
+**Vesting Contract:** The `Vesting` contract that custodies the Team, DAO Treasury, Growth, Operational (LLC), and protocol-owned-liquidity allocations, releasing them on per-schedule cliffs and linear vesting clocks started at the TGE.
 
 **Solidarity Fund:** In a Socialist victory, the fund created by capping the winnings of the elite players, which is then redistributed to all players based on their Net Contribution.
 

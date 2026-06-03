@@ -4,9 +4,9 @@ import matter from 'gray-matter';
 import GithubSlugger from 'github-slugger';
 
 // Single source of truth, authored as one file.
-export const WHITEPAPER_SOURCE = path.resolve(__dirname, '..', 'content', 'Whitepaper.md');
+export const WHITEPAPER_SOURCE = path.resolve(__dirname, '..', 'content', 'docs', 'Whitepaper.md');
 // Generated per-Part pages consumed by the whitepaper docs plugin. Gitignored.
-export const GENERATED_DIR = path.resolve(__dirname, '..', 'content', 'whitepaper-pages');
+export const GENERATED_DIR = path.resolve(__dirname, '..', 'content', 'docs', 'whitepaper-pages');
 
 const TOC_MIN_HEADING_LEVEL = 2;
 const TOC_MAX_HEADING_LEVEL = 3;

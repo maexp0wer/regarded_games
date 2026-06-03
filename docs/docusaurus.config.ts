@@ -45,6 +45,7 @@ const config: Config = {
       'classic',
       {
         docs: {
+          path: '../content/docs',
           sidebarPath: './sidebars.ts',
           routeBasePath: '/',
         },

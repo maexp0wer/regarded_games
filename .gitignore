@@ -37,8 +37,8 @@ next-env.d.ts
 
 .dev_seed.txt
 
-# Per-Part whitepaper pages generated from content/Whitepaper.md (see docs/whitepaperSplit.ts)
-content/whitepaper-pages/
+# Per-Part whitepaper pages generated from content/docs/Whitepaper.md (see docs/whitepaperSplit.ts)
+content/docs/whitepaper-pages/
 
 
 

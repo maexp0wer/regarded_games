@@ -34,13 +34,13 @@ let _cachedConfig: QuestsConfig | null = null;
 
 export function loadQuestsConfig(): QuestsConfig {
   if (_cachedConfig) return _cachedConfig;
-  const raw = readFileSync(join(process.cwd(), 'content', 'quests.json'), 'utf-8');
+  const raw = readFileSync(join(process.cwd(), 'content', 'discourse', 'quests.json'), 'utf-8');
   _cachedConfig = JSON.parse(raw) as QuestsConfig;
   return _cachedConfig;
 }
 
 export function loadManifestVote(): ManifestVote {
-  const raw = readFileSync(join(process.cwd(), 'content', 'manifest-vote.md'), 'utf-8');
+  const raw = readFileSync(join(process.cwd(), 'content', 'discourse', 'manifest-vote.md'), 'utf-8');
   const match = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!match) throw new Error('manifest-vote.md missing frontmatter');
   const fm: Record<string, string> = {};

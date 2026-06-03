@@ -8,6 +8,7 @@ import { useOpenOrders } from '@/hooks/useOpenOrders';
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
 import { useTradeExecution, ExecutionPayload } from '@/hooks/useTradeExecution';
+import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { PercentileCircle } from './PercentileCircle';
 import { GroupedOrder, OrderQueueItem } from './OrderQueueItem';
 import { WalletButton } from './WalletButton';
@@ -75,6 +76,18 @@ export function TradingMask({
   );
   const availableFim = useMemo(() => Number(formatUnits(fimBalance || 0n, 18)), [fimBalance]);
   const totalFim = availableFim + lockedFim;
+
+  // Wallets below the on-chain existential threshold are excluded from the Gini
+  // calculation and the final payout. Warn the player so the state is visible.
+  const { data: existentialThresholdRaw } = useReadContract({
+    address: seasonAddress as `0x${string}`, abi: GameSeasonAbi as any,
+    functionName: 'existentialThresholdFim', chainId, query: { enabled: !!seasonAddress },
+  });
+  const existentialThreshold = useMemo(
+    () => Number(formatUnits((existentialThresholdRaw as bigint) ?? 0n, 18)),
+    [existentialThresholdRaw],
+  );
+  const belowThreshold = existentialThreshold > 0 && totalFim < existentialThreshold;
 
   const groupedQueue = useMemo(() => {
     const groups: GroupedOrder[] = [];
@@ -271,6 +284,11 @@ export function TradingMask({
                 ({availableFim.toLocaleString()} available to trade)
               </span>
             )}
+            {belowThreshold && (
+              <span className="font-mono text-red text-[10px] font-bold uppercase tracking-widest mt-1.5 leading-snug">
+                Below the {existentialThreshold.toLocaleString()} <span className="tabular-nums">FIM</span> existential threshold — excluded from payout
+              </span>
+            )}
           </div>
         </div>
         <div className="card-app text-center border border-border2">
@@ -297,6 +315,11 @@ export function TradingMask({
             {lockedFim > 0 && (
               <span className="font-mono text-text2 text-xs mt-1.5 tabular-nums">
                 ({availableFim.toLocaleString()} available to trade)
+              </span>
+            )}
+            {belowThreshold && (
+              <span className="font-mono text-red text-[10px] font-bold uppercase tracking-widest mt-1.5 leading-snug">
+                Below the {existentialThreshold.toLocaleString()} <span className="tabular-nums">FIM</span> existential threshold — excluded from payout
               </span>
             )}
           </div>
