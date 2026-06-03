@@ -97,7 +97,7 @@ export function useSeasonVictory(seasonAddress: Address | string | undefined): S
       gInitVal = rawGInit;
       const gI = gInitVal / 10000;
       const V2 = config.victoryThresholdBps / 10000;
-      const rawBeta2 = config.baseBeta / 10000;
+      const rawBeta2 = config.baseMultiplierBps / 10000;
       const M2 = rawBeta2 + Math.pow(1 - gI, 2);
       const capT = (gI + V2 * (1 - gI)) * 10000;
       const socT = (gI * (1 - (M2 > 0 ? V2 / M2 : 0))) * 10000;
@@ -112,7 +112,7 @@ export function useSeasonVictory(seasonAddress: Address | string | undefined): S
 
     const gI_Norm = gInitVal / 10000;
     const V = config.victoryThresholdBps / 10000;
-    const rawBeta = config.baseBeta / 10000;
+    const rawBeta = config.baseMultiplierBps / 10000;
     const M = rawBeta + Math.pow(1 - gI_Norm, 2);
 
     const capTargetNorm = gI_Norm + V * (1 - gI_Norm);

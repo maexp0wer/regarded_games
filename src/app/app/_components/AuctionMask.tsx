@@ -229,7 +229,7 @@ function AuctionMaskInner({
         {isPhaseLoading ? (
           <p className="section-label animate-pulse">Loading Phase…</p>
         ) : isPhaseError || currentPhase == null ? (
-          <div className="rounded-lg px-4 py-3 text-center surface-red-warn">
+          <div className="rounded-lg px-4 py-3 text-center bg-(--color-red-15) border border-(--color-red-35)">
             <p className="font-mono text-[10px] uppercase font-bold tracking-widest" style={{ color: 'var(--color-red)' }}>Phase data unavailable</p>
           </div>
         ) : !isAuctionPhase ? (

@@ -27,19 +27,36 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    const res = await fetch(`${DISCOURSE_URL}/chat/${channelId}`, {
-      method: 'POST',
-      headers: {
-        'Api-Key': API_KEY,
-        'Api-Username': walletAddress.toLowerCase(),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ message }),
-    });
+    const username = walletAddress.toLowerCase();
+
+    const postMessage = () =>
+      fetch(`${DISCOURSE_URL}/chat/${channelId}`, {
+        method: 'POST',
+        headers: {
+          'Api-Key': API_KEY,
+          'Api-Username': username,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message }),
+      });
+
+    let res = await postMessage();
+
+    // Discourse requires the user to be a member of the channel to post; a
+    // non-member gets a 404 ("Page Not Found"). A freshly connected/switched
+    // wallet is provisioned but not yet joined (the old SSO login used to
+    // auto-join). On 404, join the channel for this user and retry once.
+    if (res.status === 404) {
+      await fetch(`${DISCOURSE_URL}/chat/api/channels/${channelId}/memberships/me`, {
+        method: 'POST',
+        headers: { 'Api-Key': API_KEY, 'Api-Username': username },
+      }).catch(() => {});
+      res = await postMessage();
+    }
 
     const body = await res.text();
     if (!res.ok) {
-      console.error(`[chat-messages] POST failed ${res.status} as ${walletAddress.toLowerCase()}: ${body.slice(0, 300)}`);
+      console.error(`[chat-messages] POST failed ${res.status} as ${username}: ${body.slice(0, 300)}`);
       return NextResponse.json({ error: body }, { status: res.status });
     }
 

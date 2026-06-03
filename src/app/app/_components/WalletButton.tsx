@@ -90,7 +90,7 @@ export const WalletButton = () => {
                     className="chip chip-nav flex items-center gap-2"
                     style={{ color: 'var(--color-text)' }}
                   >
-                    <span className="w-2 h-2 rounded-full bg-green shrink-0 wallet-glow" />
+                    <span className="w-2 h-2 rounded-full bg-green shrink-0 shadow-[0_0_0_3px_var(--color-green-15)]" />
                     <span>{account.displayName}</span>
                   </button>
                 </div>

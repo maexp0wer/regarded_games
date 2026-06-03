@@ -26,6 +26,14 @@ import urllib.request
 import urllib.error
 import urllib.parse
 
+# Force UTF-8 output so non-ASCII characters (→, ⚠, ⏳, ❌) in log lines don't
+# crash on Windows consoles using the legacy cp1252 code page.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
+
 # ---------------------------------------------------------------------------
 # Load .env.local
 # ---------------------------------------------------------------------------
@@ -130,7 +138,7 @@ def paginated_users():
     page = 0
     while True:
         users = api("GET", f"/admin/users/list/active.json?page={page}")
-        if not users:
+        if not isinstance(users, list) or not users:
             break
         found = False
         for u in users:

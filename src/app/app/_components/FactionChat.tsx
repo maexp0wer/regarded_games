@@ -224,7 +224,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
   }
 
   return (
-    <div className="comms-panel" ref={panelRef}>
+    <div className="flex flex-col h-full w-full min-h-100 bg-card border border-border rounded-lg overflow-hidden" ref={panelRef}>
       {/* Header — only shown in auction mode; trading phase uses the selector bar instead */}
       {auctionMode && (
         <div className="terminal-pane-header mx-5 pt-5">
@@ -266,7 +266,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
       <div
         ref={messageListRef}
         onScroll={onMessageScroll}
-        className={`comms-stream custom-scrollbar ${!auctionMode && showBoard ? 'hidden lg:flex' : ''}`}
+        className={`flex-1 overflow-y-auto p-4 flex flex-col gap-3 custom-scrollbar ${!auctionMode && showBoard ? 'hidden lg:flex' : ''}`}
       >
         {!address ? (
           <div className="flex flex-col items-center gap-3 mt-8">
@@ -289,8 +289,8 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
           messages.map((msg) => {
             const isOwn = address && msg.user.username.toLowerCase() === address.toLowerCase();
             return (
-              <div key={msg.id} className={`comms-msg-row ${isOwn ? 'comms-msg-internal' : 'comms-msg-external'}`}>
-                <div className="flex items-center justify-between gap-4 msg-meta">
+              <div key={msg.id} className={`flex flex-col max-w-[85%] py-[0.6rem] px-[0.85rem] rounded-md font-display text-[0.85rem] leading-[1.4] ${isOwn ? 'self-end bg-[color-mix(in_srgb,var(--color-purple)_10%,transparent)] border border-[color-mix(in_srgb,var(--color-purple)_40%,transparent)] text-text shadow-[inset_3px_0_0_0_var(--color-gold)]' : 'self-start bg-card2 border border-border text-text'}`}>
+                <div className={`flex items-center justify-between gap-4 font-mono text-[0.7rem] font-bold uppercase tracking-[0.03em] mb-1 ${isOwn ? 'text-gold' : 'text-text2'}`}>
                   <span>{isOwn ? 'YOU' : shortAddr(msg.user.username)}</span>
                   <span className="opacity-60 font-normal">{formatTime(msg.created_at)}</span>
                 </div>
@@ -318,7 +318,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
             <textarea
               ref={textareaRef}
               rows={1}
-              className="terminal-input flex-1 min-w-0 resize-none overflow-y-hidden custom-scrollbar leading-relaxed"
+              className="inline-flex w-full py-[0.35rem] px-3 font-mono text-xs font-bold text-text bg-transparent border border-border rounded-sm outline-none transition-all duration-150 ease-in-out hover:not-focus:border-border2 hover:not-focus:bg-card2 focus:border-[color-mix(in_srgb,var(--color-purple)_40%,transparent)] focus:bg-[color-mix(in_srgb,var(--color-purple)_4%,transparent)] focus:shadow-[inset_2px_0_0_0_var(--color-purple)] placeholder:text-text2 placeholder:opacity-50 placeholder:uppercase placeholder:tracking-[0.02em] flex-1 min-w-0 resize-none overflow-y-hidden custom-scrollbar leading-relaxed"
               style={{ maxHeight: '8rem' }}
               placeholder={!discourseReady ? 'Connecting…' : 'Chat…'}
               value={input}

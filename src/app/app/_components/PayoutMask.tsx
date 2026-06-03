@@ -105,7 +105,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
 
   return (
     <>
-    <div className={`settlement-card-layout mx-auto${className ? ` ${className}` : ''}`}>
+    <div className={`flex flex-col gap-5 w-full bg-card border border-border rounded-lg p-5 mx-auto${className ? ` ${className}` : ''}`}>
 
       {/* Header */}
       <div className="terminal-pane-header">
@@ -117,7 +117,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
       </div>
 
       {/* Audit Matrix */}
-      <div className="audit-matrix-grid">
+      <div className="grid grid-cols-2 gap-3">
         <div className="terminal-pane p-2.5">
           <span className="terminal-pane-title block mb-0.5">{hasClaimed ? 'FIM Burned' : 'Your Holdings'}</span>
           <span className="font-mono text-sm font-bold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -164,7 +164,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
       </div>
 
       {/* Checkout Vault */}
-      <div className="checkout-vault-pane">
+      <div className="bg-card2 border border-border2 rounded-md p-4 flex flex-col items-center justify-center text-center relative overflow-hidden before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.75 before:bg-green">
         <span className="font-mono text-[10px] font-bold text-text2 uppercase tracking-widest mb-1">
           {canClaim && !hasClaimed ? 'Net Disbursable Balance' : hasClaimed ? 'Total Claimed' : 'No Payout Due'}
         </span>

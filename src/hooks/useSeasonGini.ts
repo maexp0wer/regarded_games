@@ -1,25 +1,13 @@
 'use client';
 
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useReadContract } from 'wagmi';
-import { formatUnits } from "viem";
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { useTenantPonderUrl, useTenantChainId } from '@/context/TenantContext';
-
-const CONTROLLER_SEASONS_ABI = [
-  {
-    type: "function",
-    name: "seasons",
-    inputs: [{ name: "", type: "uint256", internalType: "uint256" }],
-    outputs: [
-      { name: "season", type: "address" },
-      { name: "auction", type: "address" },
-      { name: "exchange", type: "address" },
-      { name: "fim", type: "address" },
-    ],
-    stateMutability: "view",
-  },
-] as const;
+import { useSeasonPlayers } from './useSeasonPlayers';
+import { useSeasonActiveOrders } from './useSeasonActiveOrders';
+import { useSeasonInfo } from './useSeasonInfo';
 
 // --- Types ---
 export interface SeasonLiveStats {
@@ -92,102 +80,82 @@ export function useSeasonById(slug: string | undefined) {
 }
 
 // --- Hook 2: The Core Logic (Gini + Unfilled Orders) ---
+// Derives entirely from the shared season primitives (players, active orders,
+// season info) plus the on-chain existential threshold. No dedicated fetch.
 export function useSeasonGini(seasonAddress: string | undefined) {
-  const PONDER_URL = useTenantPonderUrl();
   const chainId = useTenantChainId();
   const { data: thresholdRaw } = useReadContract({
     address: seasonAddress as `0x${string}`,
     abi: GameSeasonAbi as any,
-    functionName: 'existentialThreshold',
+    functionName: 'existentialThresholdFim',
     chainId,
     query: { enabled: !!seasonAddress }
   });
 
   const threshold = thresholdRaw ? BigInt(thresholdRaw.toString()) : 0n;
 
-  return useQuery<SeasonLiveStats | null>({
-    queryKey: ["seasonGini", seasonAddress?.toLowerCase(), threshold.toString(), PONDER_URL],
-    queryFn: async () => {
-      if (!seasonAddress) return null;
-      const addr = seasonAddress.toLowerCase();
+  const { data: players, isLoading: playersLoading } = useSeasonPlayers(seasonAddress);
+  const { data: activeOrders, isLoading: ordersLoading } = useSeasonActiveOrders(seasonAddress);
+  const { data: seasonInfo, isLoading: infoLoading } = useSeasonInfo(seasonAddress);
 
-      const query = `
-        query GetGiniData($address: String!) {
-          playerSeasonStatss(where: { seasonAddress: $address }, limit: 1000) {
-            items { playerAddress fimBalance fimBurned totalPotentialPayout }
-          }
-          orderss(where: { seasonAddress: $address, active: true, isBuy: false }, limit: 1000) {
-            items { maker remainingAmount }
-          }
-          seasonss(where: { address: $address }) {
-            items { prizePool exchangeAddress }
-          }
-        }
-      `;
+  const data = useMemo<SeasonLiveStats | null>(() => {
+    if (!seasonAddress || !players) return null;
 
-      const response = await fetch(PONDER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, variables: { address: addr } }),
-      });
+    const sellOrders = (activeOrders ?? []).filter((o) => !o.isBuy);
+    const exchangeAddr = seasonInfo?.exchangeAddress?.toLowerCase();
 
-      const result = await response.json();
-      const rawPlayers = result?.data?.playerSeasonStatss?.items || [];
-      const rawOrders = result?.data?.orderss?.items || [];
-      const seasonInfo = result?.data?.seasonss?.items[0];
-      const exchangeAddr = seasonInfo?.exchangeAddress?.toLowerCase();
+    // 1. Aggregate tokens locked in SELL orders
+    const orderWealth: Record<string, bigint> = {};
+    sellOrders.forEach((o) => {
+      const m = o.maker.toLowerCase();
+      orderWealth[m] = (orderWealth[m] || 0n) + BigInt(o.remainingAmount);
+    });
 
-      // 1. Aggregate tokens locked in SELL orders
-      const orderWealth: Record<string, bigint> = {};
-      rawOrders.forEach((o: any) => {
-        const m = o.maker.toLowerCase();
-        orderWealth[m] = (orderWealth[m] || 0n) + BigInt(o.remainingAmount);
-      });
+    // 2. Combine Wallet + Sell Orders (using effective balance: fimBalance + fimBurned)
+    const wealthMap = new Map<string, bigint>();
+    players.forEach((p) => {
+      const effectiveBalance = BigInt(p.fimBalance) + BigInt(p.fimBurned || "0");
+      wealthMap.set(p.playerAddress.toLowerCase(), effectiveBalance);
+    });
+    Object.entries(orderWealth).forEach(([maker, amt]) => {
+      wealthMap.set(maker, (wealthMap.get(maker) || 0n) + amt);
+    });
 
-      // 2. Combine Wallet + Sell Orders (using effective balance: fimBalance + fimBurned)
-      const wealthMap = new Map<string, bigint>();
-      rawPlayers.forEach((p: any) => {
-        const effectiveBalance = BigInt(p.fimBalance) + BigInt(p.fimBurned || "0");
-        wealthMap.set(p.playerAddress.toLowerCase(), effectiveBalance);
-      });
-      Object.entries(orderWealth).forEach(([maker, amt]) => {
-        wealthMap.set(maker, (wealthMap.get(maker) || 0n) + amt);
-      });
+    // 3. Filter by Threshold & Calculate
+    const balances: number[] = [];
+    wealthMap.forEach((total, player) => {
+      if (player !== exchangeAddr && total >= threshold) {
+        balances.push(Number(total / 1000000000000000000n));
+      }
+    });
 
-      // 3. Filter by Threshold & Calculate
-      const balances: number[] = [];
-      wealthMap.forEach((total, player) => {
-        if (player !== exchangeAddr && total >= threshold) {
-          balances.push(Number(total / 1000000000000000000n));
-        }
-      });
+    // 4. Sum every player's finalized payout. Only populated during settlement/
+    // payout; this total already includes the reinvested Aave yield, so the
+    // frontend can derive the "Prize Pool Bonus" even when the YieldHarvested
+    // event hasn't been indexed (reinvest bucket would otherwise read 0).
+    const totalDistributableRaw = players.reduce(
+      (acc, p) => acc + BigInt(p.totalPotentialPayout || "0"),
+      0n
+    );
 
-      // 4. Sum every player's finalized payout. Only populated during settlement/
-      // payout; this total already includes the reinvested Aave yield, so the
-      // frontend can derive the "Prize Pool Bonus" even when the YieldHarvested
-      // event hasn't been indexed (reinvest bucket would otherwise read 0).
-      const totalDistributableRaw = rawPlayers.reduce(
-        (acc: bigint, p: any) => acc + BigInt(p.totalPotentialPayout || "0"),
-        0n
-      );
+    return {
+      gini: calculateGiniBps(balances),
+      playerCount: balances.length,
+      prizePool: Number(BigInt(seasonInfo?.prizePool || "0")) / 1_000_000,
+      distributablePayout: Number(totalDistributableRaw) / 1_000_000
+    };
+  }, [seasonAddress, players, activeOrders, seasonInfo, threshold]);
 
-      return {
-        gini: calculateGiniBps(balances),
-        playerCount: balances.length,
-        prizePool: Number(BigInt(seasonInfo?.prizePool || "0")) / 1_000_000,
-        distributablePayout: Number(totalDistributableRaw) / 1_000_000
-      };
-    },
-    enabled: !!seasonAddress,
-    refetchInterval: 5000,
-  });
+  const isLoading = !!seasonAddress && (playersLoading || ordersLoading || infoLoading);
+
+  return { data, isLoading };
 }
 
 // --- Hook 3: Combined "By ID" Hook ---
 export function useGiniById(slug: string | undefined) {
   // First, get the address
   const { data: metadata, isLoading: loadingMeta } = useSeasonById(slug);
-  
+
   // Second, get the Gini using that address
   const giniQuery = useSeasonGini(metadata?.address);
 

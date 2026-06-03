@@ -12,10 +12,10 @@ export interface SeasonConfig {
   auctionDuration: number;
   tradingDuration: number;
   victoryThresholdBps: number;
-  baseBeta: number;
+  baseMultiplierBps: number;
   buybackBps: number;
   liquidityBps: number;
-  reinvestBps: number;
+  prizePoolBps: number;
   daoBps: number;
 }
 
@@ -87,10 +87,10 @@ export function useSeasonPhase(seasonAddress: Address | string | undefined): Sea
       auctionDuration:     Number(getVal('auctionDuration', 1)),
       tradingDuration:     Number(getVal('tradingDuration', 2)),
       victoryThresholdBps: Number(getVal('victoryThresholdBps', 3)),
-      baseBeta:            Number(getVal('beta', 4)),
+      baseMultiplierBps:   Number(getVal('baseMultiplierBps', 4)),
       buybackBps:          Number(getVal('buybackBps', 5) || 0),
       liquidityBps:        Number(getVal('liquidityBps', 6) || 0),
-      reinvestBps:         Number(getVal('reinvestBps', 7) || 0),
+      prizePoolBps:        Number(getVal('prizePoolBps', 7) || 0),
       daoBps:              Number(getVal('daoBps', 8) || 0),
     };
   }, [rawConfig]);

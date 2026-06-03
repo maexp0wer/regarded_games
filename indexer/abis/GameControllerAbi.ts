@@ -155,7 +155,7 @@ export const GameControllerAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "_baseBeta",
+        "name": "_baseMultiplierBps",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -165,7 +165,7 @@ export const GameControllerAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "_reinvestBps",
+        "name": "_prizePoolBps",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -180,12 +180,12 @@ export const GameControllerAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "_existentialThreshold",
+        "name": "_existentialThresholdFim",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "_collateralRatioBps",
+        "name": "_rgdWeiLockedPerFim",
         "type": "uint256",
         "internalType": "uint256"
       }

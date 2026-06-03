@@ -20,117 +20,66 @@ function cookieDomainAttr(host: string): string {
   return `domain=${registrable}; `;
 }
 
-const HANDSHAKE_SESSION_KEY = 'discourse_handshake_wallet';
-
-function getProceedDomain(): string {
-  if (typeof window === 'undefined') return 'localhost';
-  const hostNoPort = window.location.host.split(':')[0];
-  if (hostNoPort === 'localhost' || hostNoPort.endsWith('.localhost')) {
-    return 'localhost';
-  }
-  const parts = hostNoPort.split('.');
-  return parts.length <= 2 ? hostNoPort : parts.slice(-2).join('.');
-}
-
+/**
+ * Keeps the Discourse session aligned with the connected wallet.
+ *
+ * Modern Discourse blocks the old hidden-iframe SSO trick (it sends
+ * `X-Frame-Options: SAMEORIGIN` + CSP `frame-ancestors 'self'`, and its session
+ * cookie is `SameSite=Lax`, which a cross-site iframe can neither load nor hold).
+ * We follow the documented DiscourseConnect server-to-server flow instead
+ * (`POST /api/discourse/session`):
+ *
+ *   - connect    → log the wallet IN: `sync_sso` provisions/activates its
+ *                  Discourse account so the API-key-backed in-app chat can post
+ *                  as it (`Api-Username: <wallet>`).
+ *   - disconnect → log the wallet OUT: admin `log_out` terminates its sessions.
+ *   - switch     → both: log the previous wallet out, then the new one in.
+ *
+ * The `current_wallet` cookie still tells the SSO provider route
+ * (`/api/auth/discourse`) which wallet to authenticate when the user opens the
+ * actual forum via a top-level `/session/sso` link (see `forumLoginUrl` in
+ * `@/utils/discourseForum`, used by the forum links/alerts).
+ */
 export function DiscourseHandshake() {
   const { address, isConnected } = useAccount();
   const prevAddressRef = useRef<string | null>(null);
-  const pendingTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     const currentAddress = address?.toLowerCase() || null;
+    const prev = prevAddressRef.current;
+    if (currentAddress === prev) return;
+    prevAddressRef.current = currentAddress;
 
-    // Detect wallet disconnection or account switch
-    if (prevAddressRef.current && currentAddress !== prevAddressRef.current) {
-      // Wallet switched or disconnected — log out
-      const domainAttr = cookieDomainAttr(window.location.host);
-      document.cookie = `current_wallet=; path=/; max-age=0; ${domainAttr}SameSite=Lax`;
-      sessionStorage.removeItem(HANDSHAKE_SESSION_KEY);
+    const domainAttr = cookieDomainAttr(window.location.host);
+    const dev = process.env.NODE_ENV === 'development';
 
-      if (currentAddress) {
-        // Account switched — log out then log back in with new address
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`War Room: Account switch detected ${prevAddressRef.current} → ${currentAddress}`);
-        }
-        const logoutIframe = document.createElement('iframe');
-        logoutIframe.src = `http://community.${getProceedDomain()}/logout`;
-        logoutIframe.style.display = 'none';
-        document.body.appendChild(logoutIframe);
+    const session = (wallet: string, action: 'login' | 'logout') =>
+      fetch('/api/discourse/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet, action }),
+        keepalive: true,
+      }).catch(() => {});
 
-        const timer = setTimeout(() => {
-          const loginIframe = document.createElement('iframe');
-          loginIframe.src = `http://community.${getProceedDomain()}/session/sso?t=${Date.now()}`;
-          loginIframe.style.display = 'none';
-          document.body.appendChild(loginIframe);
-
-          setTimeout(() => {
-            if (document.body.contains(logoutIframe)) document.body.removeChild(logoutIframe);
-            if (document.body.contains(loginIframe)) document.body.removeChild(loginIframe);
-          }, 5000);
-        }, 1500);
-
-        pendingTimeoutRef.current = timer;
-      } else {
-        // Wallet disconnected — just log out
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`War Room: Wallet disconnected`);
-        }
-        const logoutIframe = document.createElement('iframe');
-        logoutIframe.src = `http://community.${getProceedDomain()}/logout`;
-        logoutIframe.style.display = 'none';
-        document.body.appendChild(logoutIframe);
-
-        setTimeout(() => {
-          if (document.body.contains(logoutIframe)) document.body.removeChild(logoutIframe);
-        }, 3000);
-      }
-      prevAddressRef.current = currentAddress;
-      return;
+    // Wallet switched or disconnected — log the previous wallet OUT of Discourse.
+    if (prev && prev !== currentAddress) {
+      if (dev) console.log(`War Room: Discourse logout ${prev}`);
+      session(prev, 'logout');
     }
 
-    // Normal login flow: connected with address and not yet handed off
     if (isConnected && currentAddress) {
-      prevAddressRef.current = currentAddress;
-
-      const domainAttr = cookieDomainAttr(window.location.host);
-      document.cookie = `current_wallet=${currentAddress}; path=/; max-age=3600; ${domainAttr}SameSite=Lax`;
-
-      // Idempotency guard
-      const last = sessionStorage.getItem(HANDSHAKE_SESSION_KEY);
-      if (last === currentAddress) return;
-      sessionStorage.setItem(HANDSHAKE_SESSION_KEY, currentAddress);
-
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`War Room: Forcing sync for ${currentAddress}`);
-      }
-
-      const logoutIframe = document.createElement('iframe');
-      logoutIframe.src = `http://community.${getProceedDomain()}/logout`;
-      logoutIframe.style.display = 'none';
-      document.body.appendChild(logoutIframe);
-
-      const timer = setTimeout(() => {
-        const loginIframe = document.createElement('iframe');
-        loginIframe.src = `http://community.${getProceedDomain()}/session/sso?t=${Date.now()}`;
-        loginIframe.style.display = 'none';
-        document.body.appendChild(loginIframe);
-
-        setTimeout(() => {
-          if (document.body.contains(logoutIframe)) document.body.removeChild(logoutIframe);
-          if (document.body.contains(loginIframe)) document.body.removeChild(loginIframe);
-        }, 5000);
-      }, 1500);
-
-      pendingTimeoutRef.current = timer;
-      return () => clearTimeout(timer);
+      // Tell the SSO provider which wallet to authenticate (used when the user
+      // opens the forum via a top-level /session/sso link).
+      document.cookie = `current_wallet=${currentAddress}; path=/; max-age=86400; ${domainAttr}SameSite=Lax`;
+      // Log the current wallet IN: provision/activate its Discourse account so the
+      // (server-side, API-key) chat can post as it.
+      if (dev) console.log(`War Room: Discourse login ${currentAddress}`);
+      session(currentAddress, 'login');
+    } else {
+      // Disconnected — clear the hint cookie (logout already issued above).
+      document.cookie = `current_wallet=; path=/; max-age=0; ${domainAttr}SameSite=Lax`;
     }
   }, [isConnected, address]);
-
-  useEffect(() => {
-    return () => {
-      if (pendingTimeoutRef.current) clearTimeout(pendingTimeoutRef.current);
-    };
-  }, []);
 
   return null;
 }

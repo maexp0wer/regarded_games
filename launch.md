@@ -85,8 +85,66 @@ This launches:
 - Anvil (Sepolia fork) on `:8546`, chain `31338`
 - Ponder (mainnet) on `:42069`
 - Ponder (Sepolia) on `:42070`
+- Discourse (WSL2 container `app`) at `http://community.localhost` — `start.bat` ensures the container is up and the port bridge is applied. The web takes ~30 s to finish booting. See [§5a](#5a-discourse-local-community-forum-wsl2) for details.
 
 Wait until both Ponder instances log `Indexed to block ...` before running the admin commands below.
+
+---
+
+## 5a. Discourse (local community forum, WSL2)
+
+Discourse runs as the official `discourse_docker` **`app` container inside WSL2 (Ubuntu)**, reachable at `http://community.localhost`. The launcher lives at `/var/discourse` in the distro; data is in `/var/discourse/shared/standalone`.
+
+**Auto-start.** A scheduled task **`WSL Discourse Keepalive`** runs at logon (highest privileges, forever). It keeps the WSL distro alive (so Docker + the container stay up) and maintains the `netsh portproxy` bridge `127.0.0.1:{80,2222} → <wsl-ip>:{80,2222}` (the WSL IP can change per boot). `start.bat` also re-triggers it. `community.localhost` resolves to `127.0.0.1` via the Windows `hosts` file.
+
+**Common operations** (run from a normal Windows terminal):
+
+```powershell
+# Status / is it up?
+wsl -d Ubuntu -u root -- docker ps
+
+# Start / stop
+wsl -d Ubuntu -u root -- docker start app
+wsl -d Ubuntu -u root -- docker stop app
+
+# Re-apply the port bridge + keepalive (e.g. after `wsl --shutdown`)
+schtasks /Run /TN "WSL Discourse Keepalive"
+
+# Logs
+wsl -d Ubuntu -u root -- docker logs --tail 50 app
+
+# Open a shell / Rails console in the container
+wsl -d Ubuntu -u root -- bash -lc "cd /var/discourse && ./launcher enter app"
+
+# Rebuild after editing /var/discourse/containers/app.yml
+wsl -d Ubuntu -u root -- bash -lc "cd /var/discourse && ./launcher rebuild app"
+
+# Create a backup (lands in /var/discourse/shared/standalone/backups/default/)
+wsl -d Ubuntu -u root -- bash -lc "cd /var/discourse && ./launcher run app 'discourse backup'"
+```
+
+> **Windows-only glue:** the container uses Docker's **iptables-legacy** backend (the nftables backend is broken on the WSL2 kernel), stays in **NAT** networking mode (mirrored mode breaks Docker port publishing), and relies on the keepalive task above (WSL's localhost relay is unreliable here and WSL idle-shuts-down the distro). **None of this is needed in production** — on a real Linux host the same `app.yml` just runs with `./launcher start app` and `restart=always`. For production, also add a real hostname + SMTP and re-enable the `443`/SSL templates in `app.yml`.
+
+---
+
+## 5b. Stop the Local Environment (dev only)
+
+```bat
+stop.bat
+```
+
+The counterpart to `start.bat`. It:
+- Stops Discourse — ends the `WSL Discourse Keepalive` task and `docker stop`s the `app` container (a manual stop overrides `restart=always`, so it stays down until next logon or the next `start.bat`).
+- Kills Anvil + Ponder on ports `8545`, `8546`, `42069`, `42070`.
+- Closes the Frontend + Docs windows (and frees ports `3000`/`3001` as a fallback).
+
+WSL itself is left running. To shut that down too (frees its RAM): `wsl --shutdown`.
+
+**Stop only Discourse**, leaving the rest of the dev env alone:
+```powershell
+wsl -d Ubuntu -u root -- docker stop app
+```
+Start it again with `wsl -d Ubuntu -u root -- docker start app` (or just `start.bat`).
 
 ---
 

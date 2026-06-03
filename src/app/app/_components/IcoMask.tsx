@@ -351,7 +351,7 @@ export function IcoMask() {
               style={{ color: 'var(--color-text2)' }}>
               Auction Window Closing In:
             </span>
-            <div className="countdown-rail">
+            <div className="flex gap-2 font-mono">
               <div className="countdown-chip">
                 <span className="countdown-val">{countdown.d}</span>
                 <span className="countdown-lbl">Days</span>
@@ -370,13 +370,13 @@ export function IcoMask() {
       </div>
 
       {/* ── Main Grid ── */}
-      <div className="ico-grid-layout">
+      <div className="grid grid-cols-1 gap-6 w-full md:grid-cols-[3fr_2fr]">
 
         {/* LEFT COLUMN: Live Valuation Matrices */}
         <div className="flex flex-col gap-4">
 
           {/* 4-cell stats grid */}
-          <div className="ico-metric-grid">
+          <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="terminal-pane">
               <div className="terminal-pane-title mb-1">Total Capital Raised</div>
               <div className="font-mono text-xl font-bold" style={{ color: 'var(--color-green)' }}>

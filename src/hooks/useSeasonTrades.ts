@@ -11,6 +11,7 @@ export interface SeasonTrade {
   fimAmount: string;
   usdcAmount: string;
   timestamp: string;
+  txHash: string;
   buyerBalance: string;
   sellerBalance: string;
   buyerPercentile: number;
@@ -30,7 +31,7 @@ const QUERY = `
       limit: $limit
     ) {
       items {
-        id buyer seller fimAmount usdcAmount timestamp
+        id buyer seller fimAmount usdcAmount timestamp txHash
         buyerBalance sellerBalance
         buyerPercentile sellerPercentile buyerIsCapitalist sellerIsCapitalist
         giniBps

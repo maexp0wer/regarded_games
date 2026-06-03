@@ -5,7 +5,7 @@ import React from 'react';
 interface PolicyCardProps {
   M_dynamic: number;
   config: {
-    baseBeta: number;
+    baseMultiplierBps: number;
     victoryThresholdBps: number;
   } | null;
 }
@@ -26,7 +26,7 @@ export function PolicyCard({ M_dynamic, config }: PolicyCardProps) {
         <div className="kv-row">
           <span className="font-mono text-[11px] text-text2">Base Multiplier (Beta)</span>
           <span className="font-mono text-[12px] font-semibold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {((config?.baseBeta || 0) / 10000).toFixed(2)}×
+            {((config?.baseMultiplierBps || 0) / 10000).toFixed(2)}×
           </span>
         </div>
         <div className="kv-row">

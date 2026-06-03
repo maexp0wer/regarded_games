@@ -53,7 +53,7 @@ export const GameSeasonAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "_existentialThreshold",
+        "name": "_existentialThresholdFim",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -212,7 +212,7 @@ export const GameSeasonAbi = [
   },
   {
     "type": "function",
-    "name": "existentialThreshold",
+    "name": "existentialThresholdFim",
     "inputs": [],
     "outputs": [
       {
@@ -373,7 +373,7 @@ export const GameSeasonAbi = [
             "internalType": "uint256"
           },
           {
-            "name": "reinvestBps",
+            "name": "prizePoolBps",
             "type": "uint256",
             "internalType": "uint256"
           },
@@ -383,7 +383,7 @@ export const GameSeasonAbi = [
             "internalType": "uint256"
           },
           {
-            "name": "existentialThreshold",
+            "name": "existentialThresholdFim",
             "type": "uint256",
             "internalType": "uint256"
           }
@@ -607,7 +607,7 @@ export const GameSeasonAbi = [
   },
   {
     "type": "function",
-    "name": "reinvestBps",
+    "name": "prizePoolBps",
     "inputs": [],
     "outputs": [
       {

@@ -3,7 +3,7 @@
     "type": "constructor",
     "inputs": [
       {
-        "name": "_FakeUSDC",
+        "name": "_fakeUSDC",
         "type": "address",
         "internalType": "address"
       }
@@ -19,7 +19,7 @@
   },
   {
     "type": "function",
-    "name": "FakeUSDC",
+    "name": "fakeUSDC",
     "inputs": [],
     "outputs": [
       {

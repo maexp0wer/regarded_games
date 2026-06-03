@@ -1,17 +1,8 @@
 'use client';
 
 import { formatUnits } from 'viem';
-import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { useTenantPonderUrl } from '@/context/TenantContext';
-
-// Interface for the general structure of a player's stat from Ponder
-interface PlayerSeasonStat {
-  playerAddress: string;
-  realizedPayout: string; // Stored as string in GraphQL results
-  totalPotentialPayout: string;
-  netContribution: string;
-}
+import { useSeasonPlayers, SeasonPlayer } from './useSeasonPlayers';
 
 export interface PlayerRankData {
   rank: number;
@@ -28,7 +19,7 @@ export interface PlayerRankData {
   loading: boolean;
 }
 
-const calculateEfficiency = (stat: PlayerSeasonStat): number => {
+const calculateEfficiency = (stat: SeasonPlayer): number => {
   try {
     const pnl = BigInt(stat.totalPotentialPayout || "0")
       - BigInt(stat.netContribution || "0");
@@ -43,7 +34,7 @@ const calculateEfficiency = (stat: PlayerSeasonStat): number => {
 };
 
 // Helper function to calculate PnL based on your request: totalPotentialPayout - netContribution
-const calculatePnl = (stat: PlayerSeasonStat): number => {
+const calculatePnl = (stat: SeasonPlayer): number => {
   try {
     const totalValueRaw = BigInt(stat.totalPotentialPayout || "0");
     const contribRaw = BigInt(stat.netContribution || "0");
@@ -59,55 +50,16 @@ const calculatePnl = (stat: PlayerSeasonStat): number => {
 };
 
 /**
- * Hook to fetch all player stats for a season, calculate PnL, and determine the rank for a specific user.
+ * Determines a player's rank within a season. Derives from the shared
+ * useSeasonPlayers cache (no dedicated fetch). Note: rankings now refresh on the
+ * shared 5s interval instead of the previous 5min staleTime — live ranks.
  * @param seasonAddress The address of the GameSeason contract.
  * @param userAddress The address of the player whose rank is being sought.
  */
 export function usePlayerRank(seasonAddress: string, userAddress: string | undefined): PlayerRankData {
-  const PONDER_URL = useTenantPonderUrl();
+  const { data: allStatsData, isLoading: statsLoading } = useSeasonPlayers(seasonAddress);
 
-  // 1. Fetch ALL Player Stats from Ponder
-  const { data: allStatsData, isLoading: statsLoading } = useQuery({
-    queryKey: ["seasonRankings", seasonAddress, PONDER_URL],
-    queryFn: async () => {
-      if (!seasonAddress) return null;
-      
-      const query = `
-        query GetRankingData($season: String!) {
-          playerSeasonStatss(where: { 
-            seasonAddress_contains: $season
-          }, limit: 1000) {
-            items {
-              playerAddress
-              realizedPayout          
-              totalPotentialPayout
-              netContribution
-            }
-          }
-        }
-      `;
-      const res = await fetch(PONDER_URL, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          query, 
-          // Addresses must be lowercase for Ponder filtering
-          variables: { season: seasonAddress.toLowerCase() } 
-        })
-      });
-
-      const json = await res.json();
-      // console.log("Ponder response:", json);
-
-      
-      // CRITICAL: Extract the 'items' array.
-      return json?.data?.playerSeasonStatss?.items as PlayerSeasonStat[] ?? [];
-    },
-    enabled: !!seasonAddress,
-    // Keep this data around to avoid refetching on every component re-render if not explicitly refetched
-    staleTime: 5 * 60 * 1000, // e.g., 5 minutes
-  });
-
-  // 2. Calculate Rank using useMemo to prevent recalculation on every render
+  // Calculate Rank using useMemo to prevent recalculation on every render
   const {
   rank,
   totalPlayers,

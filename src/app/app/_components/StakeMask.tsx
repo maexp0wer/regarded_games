@@ -176,13 +176,13 @@ export function Stake() {
 
   return (
     <>
-    <div className="staking-matrix-layout w-full">
+    <div className="grid grid-cols-1 gap-6 w-full md:grid-cols-[4fr_3fr]">
 
       {/* LEFT: Balance Registry + Info */}
       <div className="flex flex-col gap-4">
 
         {/* Three-state balance cards */}
-        <div className="balance-registry-grid">
+        <div className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-3">
 
           <div className="terminal-pane">
             <div className="terminal-pane-title mb-1">Liquid Wallet</div>
@@ -200,7 +200,7 @@ export function Stake() {
             <span className="font-mono text-[10px] text-text2 uppercase">RGD Withdrawable</span>
           </div>
 
-          <div className="terminal-pane vault-lock-pane">
+          <div className="terminal-pane border border-dashed border-border2 [background:linear-gradient(135deg,var(--color-card2)_0%,var(--color-purple-15)_100%)]">
             <div className="terminal-pane-title mb-1">Vault Locked</div>
             <div className="font-mono text-xl font-bold" style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}>
               {fmtRgd(currentLocked)}

@@ -280,17 +280,17 @@ function SubQuestTypeChip({ type }: { type: 'galxe' | 'internal' }) {
 const DIRECTIVE_ACCENTS = [
   {
     factionBg: '',
-    pillClass: 'pill-phase-gold',
+    pillClass: 'text-gold border-(--color-gold-35) bg-(--color-gold-15)',
     progressStyle: {} as React.CSSProperties,
   },
   {
-    factionBg: 'faction-bg-soc',
-    pillClass: 'pill-phase-soc',
+    factionBg: '[background:radial-gradient(400px_200px_at_50%_100%,var(--color-purple-15),transparent_60%),linear-gradient(180deg,var(--color-card2),var(--color-card))]',
+    pillClass: 'text-purple border-(--color-purple-35) bg-(--color-purple-15)',
     progressStyle: { background: 'linear-gradient(90deg, var(--color-purple) 0%, var(--color-magenta) 100%)' } as React.CSSProperties,
   },
   {
-    factionBg: 'faction-bg-cap',
-    pillClass: 'pill-phase-cap',
+    factionBg: '[background:radial-gradient(400px_200px_at_50%_100%,var(--color-gold-15),transparent_60%),linear-gradient(180deg,var(--color-card2),var(--color-card))]',
+    pillClass: 'text-gold border-(--color-gold-35) bg-(--color-gold-15)',
     progressStyle: { background: 'linear-gradient(90deg, var(--color-gold) 0%, var(--color-orange) 100%)' } as React.CSSProperties,
   },
 ];
@@ -301,11 +301,11 @@ export function QuestBoard({
   tgeConversionRate = 'Dynamic Vector',
 }: QuestBoardProps) {
   return (
-    <div className="quest-board-layout">
+    <div className="flex flex-col gap-8 max-w-250 mx-auto px-4 py-8">
 
       {/* ── HERO HEADER ─────────────────────────────────────────── */}
-      <header className="quest-header">
-        <div className="quest-header-content">
+      <header className="flex flex-col items-start justify-between gap-6 pb-8 border-b border-dashed border-border md:flex-row md:items-end">
+        <div className="flex-1 min-w-0">
           <h1
             className="hero-title"
             style={{ fontSize: 'clamp(1.8rem, 3.5vw, 2.5rem)', marginBottom: '0.5rem', letterSpacing: '-0.01em' }}
@@ -318,12 +318,12 @@ export function QuestBoard({
           </p>
         </div>
 
-        <div className="stat-grid" style={{ maxWidth: 200, width: '100%', gridTemplateColumns: '1fr' }}>
-          <div className="stat-cell">
-            <div className="stat-label">Secured Points</div>
-            <div className="stat-value green">
+        <div className="grid gap-px bg-border rounded-[14px] overflow-hidden border border-border" style={{ maxWidth: 200, width: '100%', gridTemplateColumns: '1fr' }}>
+          <div className="bg-card px-4 py-3 in-[.dark]:bg-card2">
+            <div className="font-mono text-[10px] font-semibold tracking-widest uppercase text-text2 mb-1.5">Secured Points</div>
+            <div className="font-mono font-semibold text-[18px] tracking-[-0.01em] tabular-nums text-green">
               {userTotalPoints.toLocaleString()}
-              <span className="stat-sub">PTS</span>
+              <span className="font-mono text-[13px] font-medium text-text2 ml-1">PTS</span>
             </div>
           </div>
         </div>
@@ -376,7 +376,7 @@ export function QuestBoard({
             </div>
 
             {/* Sub-quest rows */}
-            <div className="ledger-container" style={{ overflow: 'visible' }}>
+            <div className="flex flex-col w-full bg-transparent rounded-lg overflow-hidden" style={{ overflow: 'visible' }}>
               {mainQuest.subQuests.map((sub, stepIdx) => {
                 const stepLabel = showStepNumbers ? String(stepIdx + 1).padStart(2, '0') : null;
                 const locked = false;
@@ -388,8 +388,8 @@ export function QuestBoard({
                     style={{ backgroundColor: 'var(--color-card2)' }}
                   >
                     {/* Col 1: meta */}
-                    <div className="quest-meta">
-                      <div className="quest-title">
+                    <div className="flex flex-col gap-[0.3rem] min-w-0">
+                      <div className="font-display text-[0.9rem] font-bold text-text tracking-[0.02em] flex items-center gap-2 flex-wrap">
                         {stepLabel && (
                           <span className="font-mono text-[8px] font-black text-text2 tracking-widest uppercase shrink-0">
                             {stepLabel}.
@@ -409,14 +409,14 @@ export function QuestBoard({
                           </span>
                         )}
                       </div>
-                      <div className="quest-desc">
+                      <div className="font-mono text-xs text-text2 leading-[1.4] flex items-center gap-2 flex-wrap">
                         <SubQuestTypeChip type={sub.type} />
                         {sub.note && <span>{sub.note}</span>}
                       </div>
                     </div>
 
                     {/* Col 2: reward */}
-                    <div className="quest-reward">
+                    <div className="font-mono font-bold text-[0.85rem] text-right min-w-22.5 whitespace-nowrap">
                       {sub.isCompleted ? (
                         <span className="text-green">+{sub.points} PTS</span>
                       ) : locked ? (

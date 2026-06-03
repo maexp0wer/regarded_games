@@ -1,9 +1,8 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { formatUnits } from 'viem';
-import { fetchAllPonderItems } from '@/lib/ponder';
-import { useTenantPonderUrl } from '@/context/TenantContext';
+import { useSeasonTrades } from './useSeasonTrades';
 
 export interface MyTrade {
   id: string;
@@ -13,69 +12,31 @@ export interface MyTrade {
   timestamp: number;
 }
 
-const BUYER_QUERY = `
-  query GetMyBuyTrades($season: String!, $user: String!, $after: String, $limit: Int!) {
-    tradess(
-      where: { seasonAddress: $season, buyer: $user }
-      orderBy: "timestamp"
-      orderDirection: "desc"
-      after: $after
-      limit: $limit
-    ) {
-      items { id fimAmount usdcAmount timestamp }
-      pageInfo { endCursor hasNextPage }
-    }
-  }
-`;
-
-const SELLER_QUERY = `
-  query GetMySellTrades($season: String!, $user: String!, $after: String, $limit: Int!) {
-    tradess(
-      where: { seasonAddress: $season, seller: $user }
-      orderBy: "timestamp"
-      orderDirection: "desc"
-      after: $after
-      limit: $limit
-    ) {
-      items { id fimAmount usdcAmount timestamp }
-      pageInfo { endCursor hasNextPage }
-    }
-  }
-`;
-
-function mapTrade(raw: any, isBuy: boolean): MyTrade {
-  return {
-    id: raw.id,
-    isBuy,
-    fimAmount: Number(formatUnits(BigInt(raw.fimAmount), 18)),
-    usdcAmount: Number(formatUnits(BigInt(raw.usdcAmount), 6)),
-    timestamp: Number(raw.timestamp),
-  };
-}
-
+/**
+ * A player's trades (buy + sell sides) derived from the shared useSeasonTrades
+ * cache. No dedicated fetch.
+ */
 export function useMyTrades(
   seasonAddress: string | undefined,
   userAddress: string | undefined,
 ) {
-  const PONDER_URL = useTenantPonderUrl();
-  return useQuery({
-    queryKey: ['myTrades', seasonAddress?.toLowerCase(), userAddress?.toLowerCase(), PONDER_URL],
-    queryFn: async () => {
-      const season = seasonAddress!.toLowerCase();
-      const user = userAddress!.toLowerCase();
-      const vars = { season, user };
+  const { data: allTrades, isLoading } = useSeasonTrades(seasonAddress);
 
-      const [buyRaw, sellRaw] = await Promise.all([
-        fetchAllPonderItems<any>(PONDER_URL, BUYER_QUERY, vars, (d) => d.tradess),
-        fetchAllPonderItems<any>(PONDER_URL, SELLER_QUERY, vars, (d) => d.tradess),
-      ]);
+  const data = useMemo<MyTrade[]>(() => {
+    if (!seasonAddress || !userAddress || !allTrades) return [];
+    const user = userAddress.toLowerCase();
 
-      return [
-        ...buyRaw.map((t) => mapTrade(t, true)),
-        ...sellRaw.map((t) => mapTrade(t, false)),
-      ].sort((a, b) => b.timestamp - a.timestamp);
-    },
-    enabled: !!seasonAddress && !!userAddress,
-    refetchInterval: 5000,
-  });
+    return allTrades
+      .filter((t) => t.buyer.toLowerCase() === user || t.seller.toLowerCase() === user)
+      .map((t) => ({
+        id: t.id,
+        isBuy: t.buyer.toLowerCase() === user,
+        fimAmount: Number(formatUnits(BigInt(t.fimAmount), 18)),
+        usdcAmount: Number(formatUnits(BigInt(t.usdcAmount), 6)),
+        timestamp: Number(t.timestamp),
+      }))
+      .sort((a, b) => b.timestamp - a.timestamp);
+  }, [seasonAddress, userAddress, allTrades]);
+
+  return { data, isLoading };
 }

@@ -1,8 +1,8 @@
 'use client';
 
-import { useQuery } from "@tanstack/react-query";
-import { fetchAllPonderItems } from '@/lib/ponder';
-import { useTenantPonderUrl } from '@/context/TenantContext';
+import { useMemo } from "react";
+import { useSeasonActiveOrders } from './useSeasonActiveOrders';
+import { useSeasonPlayers } from './useSeasonPlayers';
 
 export interface Order {
   id: string;
@@ -19,93 +19,55 @@ export interface Order {
   makerBalance: number;
 }
 
+/**
+ * Order book ({ bids, asks }) derived from the shared active-orders + players
+ * primitives. No dedicated fetch.
+ */
 export function useOrderBook(seasonAddress: string | undefined) {
-  const PONDER_URL = useTenantPonderUrl();
-  return useQuery({
-    queryKey: ["orderBook", seasonAddress?.toLowerCase(), PONDER_URL],
-    queryFn: async () => {
-      if (!seasonAddress) return { bids: [], asks: [] };
+  const { data: orders, isLoading: ordersLoading } = useSeasonActiveOrders(seasonAddress);
+  const { data: players, isLoading: playersLoading } = useSeasonPlayers(seasonAddress);
 
-      const addr = seasonAddress.toLowerCase();
+  const data = useMemo<{ bids: Order[]; asks: Order[] }>(() => {
+    if (!seasonAddress || !orders) return { bids: [], asks: [] };
 
-      const ordersQuery = `
-        query GetOrders($season: String!, $after: String, $limit: Int!) {
-          orderss(
-            where: { seasonAddress: $season, active: true },
-            orderBy: "price",
-            orderDirection: "asc",
-            limit: $limit,
-            after: $after
-          ) {
-            items { id, maker, isBuy, price, initialAmount, remainingAmount, active, orderId, seasonAddress }
-            pageInfo { endCursor, hasNextPage }
-          }
-        }
-      `;
+    // Create a quick lookup map for balances: address -> balance
+    const balanceMap = new Map<string, number>();
+    (players ?? []).forEach((p) => {
+      // Effective balance (wallet + burned), consistent with the faction hooks.
+      const bal = Number(BigInt(p.fimBalance) + BigInt(p.fimBurned || "0")) / 1e18;
+      balanceMap.set(p.playerAddress.toLowerCase(), bal);
+    });
 
-      const playersQuery = `
-        query GetPlayers($season: String!, $after: String, $limit: Int!) {
-          playerSeasonStatss(
-            where: { seasonAddress: $season },
-            limit: $limit,
-            after: $after
-          ) {
-            items { playerAddress, fimBalance }
-            pageInfo { endCursor, hasNextPage }
-          }
-        }
-      `;
+    const format = (o: typeof orders[number]): Order => {
+      const rawPrice = BigInt(o.price);
+      const rawInitialAmount = BigInt(o.initialAmount);
+      const rawAmount = BigInt(o.remainingAmount);
+      const pricePerFim = rawInitialAmount > 0n
+        ? (Number(rawPrice) / 1_000_000) / (Number(rawInitialAmount) / 1e18)
+        : 0;
+      return {
+        id: o.id,
+        orderId: BigInt(o.orderId),
+        seasonAddress: o.seasonAddress,
+        maker: o.maker,
+        isBuy: o.isBuy,
+        price: Number(rawPrice) / 1_000_000,
+        amount: Number(rawAmount) / 1e18,
+        pricePerFim,
+        rawPrice,
+        rawAmount,
+        rawInitialAmount,
+        makerBalance: balanceMap.get(o.maker.toLowerCase()) || 0,
+      };
+    };
 
-      try {
-        const [orders, players] = await Promise.all([
-          fetchAllPonderItems<{ id: string; maker: string; isBuy: boolean; price: string; initialAmount: string; remainingAmount: string; active: boolean; orderId: string; seasonAddress: string }>(
-            PONDER_URL, ordersQuery, { season: addr }, (d) => d.orderss
-          ),
-          fetchAllPonderItems<{ playerAddress: string; fimBalance: string }>(
-            PONDER_URL, playersQuery, { season: addr }, (d) => d.playerSeasonStatss
-          ),
-        ]);
+    const bids = orders.filter((o) => o.isBuy).map(format).sort((a, b) => b.price - a.price);
+    const asks = orders.filter((o) => !o.isBuy).map(format).sort((a, b) => a.price - b.price);
 
-        // Create a quick lookup map for balances: address -> balance
-        const balanceMap = new Map<string, number>();
-        players.forEach((p) => {
-            const bal = Number(BigInt(p.fimBalance)) / 1e18;
-            balanceMap.set(p.playerAddress.toLowerCase(), bal);
-        });
+    return { bids, asks };
+  }, [seasonAddress, orders, players]);
 
-        const format = (o: typeof orders[number]): Order => {
-          const rawPrice = BigInt(o.price);
-          const rawInitialAmount = BigInt(o.initialAmount);
-          const rawAmount = BigInt(o.remainingAmount);
-          const pricePerFim = rawInitialAmount > 0n
-            ? (Number(rawPrice) / 1_000_000) / (Number(rawInitialAmount) / 1e18)
-            : 0;
-          return {
-            id: o.id,
-            orderId: BigInt(o.orderId),
-            seasonAddress: o.seasonAddress,
-            maker: o.maker,
-            isBuy: o.isBuy,
-            price: Number(rawPrice) / 1_000_000,
-            amount: Number(rawAmount) / 1e18,
-            pricePerFim,
-            rawPrice,
-            rawAmount,
-            rawInitialAmount,
-            makerBalance: balanceMap.get(o.maker.toLowerCase()) || 0,
-          };
-        };
+  const isLoading = !!seasonAddress && (ordersLoading || playersLoading);
 
-        const bids = orders.filter((o) => o.isBuy).map(format).sort((a, b) => b.price - a.price);
-        const asks = orders.filter((o) => !o.isBuy).map(format).sort((a, b) => a.price - b.price);
-
-        return { bids, asks };
-      } catch (e) {
-        console.error("OrderBook fetch failed", e);
-        return { bids: [], asks: [] };
-      }
-    },
-    enabled: !!seasonAddress,
-    refetchInterval: 3000,
-  });
+  return { data, isLoading };
 }

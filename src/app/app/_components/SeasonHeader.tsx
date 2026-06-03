@@ -64,7 +64,7 @@ export function SeasonHeader({
       }}
     >
       <p
-        className="font-display font-extrabold leading-[0.85] tracking-[-0.04em] text-text text-display-hero flex-shrink-0"
+        className="font-display font-extrabold leading-[0.85] tracking-[-0.04em] text-text text-7xl flex-shrink-0"
       >
         S
         <em className="not-italic font-medium" style={{ color: 'var(--color-text2)' }}>

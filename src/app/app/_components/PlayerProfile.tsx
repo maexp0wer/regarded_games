@@ -121,7 +121,7 @@ export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
         <div className="flex items-center gap-4 min-w-0 flex-1">
           {/* Avatar */}
           <div
-            className="relative shrink-0 overflow-hidden avatar-gold-glow"
+            className="relative shrink-0 overflow-hidden shadow-[0_0_16px_var(--color-gold-35)]"
             style={{ width: 64, height: 64, borderRadius: '50%', border: '2px solid var(--color-gold)' }}
           >
             <img

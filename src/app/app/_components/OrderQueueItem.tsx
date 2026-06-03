@@ -39,13 +39,13 @@ export function OrderQueueItem({
       onDragStart={() => onDragStart(groupIdx)}
       onDragOver={(e) => onDragOver(e, groupIdx)}
       onDragEnd={onDragEnd}
-      className={`order-queue-row cursor-grab active:cursor-grabbing transition-all
+      className={`grid grid-cols-[auto_2fr_2fr_auto] items-center gap-3 p-[0.6rem] bg-card border border-border rounded-sm mb-[0.4rem] cursor-grab active:cursor-grabbing transition-all
         ${draggedGroupIdx === groupIdx ? 'opacity-40 ring-1 ring-primary/20' : ''}
         ${localFill === 0 ? 'grayscale opacity-40' : ''}
       `}
     >
       {/* Col 1: Drag Handle */}
-      <div className="drag-handle-texture">
+      <div className="flex flex-col gap-0.5 cursor-grab px-1 [&>span]:w-3 [&>span]:h-0.5 [&>span]:bg-border2 [&>span]:rounded-[1px]">
         <span /><span /><span />
       </div>
 

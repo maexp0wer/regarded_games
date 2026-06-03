@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { useTenantKey } from '@/context/TenantContext';
 import { discourseNames } from '@/lib/discourseNames';
+import { forumLoginUrl } from '@/utils/discourseForum';
 
 interface Topic {
   id: number;
@@ -70,13 +71,13 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
 
   const factionColor = isCapitalist ? 'var(--color-gold)' : 'var(--color-purple)';
   const factionLabel = isCapitalist ? 'THE BOURGEOISIE' : 'THE PROLETARIAT';
-  const pillClass = isCapitalist ? 'pill-faction-cap' : 'pill-faction-soc';
+  const pillClass = isCapitalist ? 'bg-(--color-gold-15)' : 'bg-(--color-purple-15)';
   const hoverBorderColor = isCapitalist ? 'var(--color-gold-35)' : 'var(--color-purple-35)';
   const seasonNum = seasonSlug.match(/\d+/)?.[0] || '1';
   const tenantKey = useTenantKey();
   const names = discourseNames(tenantKey, Number(seasonNum));
   const childCat = isCapitalist ? names.categories.bourgeoisie : names.categories.proletariat;
-  const discourseNewTopicUrl = `${process.env.NEXT_PUBLIC_DISCOURSE_URL}/c/${names.categories.parent.slug}/${childCat.slug}`;
+  const discourseNewTopicUrl = forumLoginUrl(`/c/${names.categories.parent.slug}/${childCat.slug}`);
 
   // ── Fetch topic list ──────────────────────────────────────────────────────
   const fetchTopics = useCallback(async () => {
@@ -293,7 +294,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
             </button>
           )}
           <span
-            className="font-display font-extrabold uppercase tracking-tight text-faction-header truncate"
+            className="font-display font-extrabold uppercase tracking-tight text-[14px] truncate"
             style={{ color: (selectedTopic || isCreating) ? 'var(--color-text)' : factionColor }}
             title={selectedTopic?.title}
           >
@@ -301,7 +302,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
           </span>
           {selectedTopic && !isCreating && (
             <a
-              href={`${process.env.NEXT_PUBLIC_DISCOURSE_URL}/t/${selectedTopic.slug}/${selectedTopic.id}`}
+              href={forumLoginUrl(`/t/${selectedTopic.slug}/${selectedTopic.id}`)}
               target="_blank"
               rel="noopener noreferrer"
               className="shrink-0 flex items-center justify-center w-6 h-6 rounded-lg"
@@ -423,7 +424,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
           ) : listError ? (
             <div className="flex flex-col items-center justify-center py-10 gap-3">
               <p className="font-mono text-[11px] text-center" style={{ color: 'var(--color-red)' }}>{listError}</p>
-              <button onClick={fetchTopics} className="btn-primary px-4 py-2 text-[10px]">
+              <button onClick={fetchTopics} className="inline-flex items-center justify-center gap-2 w-full rounded-lg font-display font-bold tracking-[0.02em] uppercase cursor-pointer [background:linear-gradient(180deg,var(--color-gold-hover),var(--color-gold))] text-[#1a1305] shadow-[0_8px_24px_-10px_var(--color-gold-70)] transition-[filter,transform] duration-150 hover:not-disabled:brightness-110 active:not-disabled:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 text-[10px]">
                 Retry Connection
               </button>
             </div>
@@ -465,7 +466,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
                 </div>
                 {/* Discourse link — outside the onClick div, no bubbling issues */}
                 <a
-                  href={`${process.env.NEXT_PUBLIC_DISCOURSE_URL}/t/${topic.slug}/${topic.id}`}
+                  href={forumLoginUrl(`/t/${topic.slug}/${topic.id}`)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="absolute top-3 right-3 flex items-center justify-center w-6 h-6 rounded-md"

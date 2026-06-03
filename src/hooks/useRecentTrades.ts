@@ -1,8 +1,8 @@
 'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { formatUnits } from "viem";
-import { useTenantPonderUrl } from '@/context/TenantContext';
+import { useSeasonTrades } from './useSeasonTrades';
 
 export interface Trade {
   id: string;
@@ -20,52 +20,20 @@ export interface Trade {
   sellerIsCapitalist: boolean;
 }
 
+/**
+ * Most-recent-50 trades (descending) derived from the shared useSeasonTrades
+ * cache. No dedicated fetch.
+ */
 export function useRecentTrades(seasonAddress: string | undefined) {
-  const PONDER_URL = useTenantPonderUrl();
-  return useQuery({
-    queryKey: ["recentTrades", seasonAddress?.toLowerCase(), PONDER_URL],
-    queryFn: async () => {
-      if (!seasonAddress) return [];
+  const { data: allTrades, isLoading } = useSeasonTrades(seasonAddress);
 
-      const seasonAddr = seasonAddress.toLowerCase();
+  const data = useMemo<Trade[]>(() => {
+    if (!seasonAddress || !allTrades) return [];
 
-      const tradesQuery = `
-        query GetRecentTrades($season: String!) {
-          tradess(
-            where: { seasonAddress: $season },
-            orderBy: "timestamp",
-            orderDirection: "desc",
-            limit: 50
-          ) {
-            items {
-              id
-              fimAmount
-              usdcAmount
-              timestamp
-              txHash
-              buyer
-              seller
-              buyerBalance
-              sellerBalance
-              buyerPercentile
-              sellerPercentile
-              buyerIsCapitalist
-              sellerIsCapitalist
-            }
-          }
-        }
-      `;
-
-      const tradesResponse = await fetch(PONDER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: tradesQuery, variables: { season: seasonAddr } }),
-      });
-
-      const tradesResult = await tradesResponse.json();
-      const rawTrades = tradesResult?.data?.tradess?.items || [];
-
-      return rawTrades.map((t: any) => {
+    return [...allTrades]
+      .sort((a, b) => Number(b.timestamp) - Number(a.timestamp))
+      .slice(0, 50)
+      .map((t) => {
         const fim = Number(formatUnits(BigInt(t.fimAmount), 18));
         const usdc = Number(formatUnits(BigInt(t.usdcAmount), 6));
         const price = fim > 0 ? usdc / fim : 0;
@@ -85,9 +53,8 @@ export function useRecentTrades(seasonAddress: string | undefined) {
           buyerIsCapitalist: t.buyerIsCapitalist ?? false,
           sellerIsCapitalist: t.sellerIsCapitalist ?? false,
         };
-      }) as Trade[];
-    },
-    enabled: !!seasonAddress,
-    refetchInterval: 3000,
-  });
+      });
+  }, [seasonAddress, allTrades]);
+
+  return { data, isLoading };
 }

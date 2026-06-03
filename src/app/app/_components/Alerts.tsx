@@ -10,6 +10,7 @@ import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { usePayout } from '@/hooks/usePayout';
 import { useDiscourseAlerts, type PendingPoll, type ReplyGroup } from '@/hooks/useDiscourseAlerts';
+import { forumLoginUrl } from '@/utils/discourseForum';
 
 const CONTROLLER_ABI = [{
   type: 'function', name: 'seasons',
@@ -185,8 +186,7 @@ function ClaimableCard({ season, playerAddress }: { season: any; playerAddress: 
 // ─── Governance Poll (Purple) ─────────────────────────────────────────────────
 
 function PollAlertRow({ poll }: { poll: PendingPoll }) {
-  const discourseUrl = process.env.NEXT_PUBLIC_DISCOURSE_URL ?? '';
-  const href = `${discourseUrl}/t/${poll.topicSlug}/${poll.topicId}`;
+  const href = forumLoginUrl(`/t/${poll.topicSlug}/${poll.topicId}`);
 
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" className="block">
@@ -238,8 +238,7 @@ function ReplyAlertCard({
   playerAddress: string;
   onDismiss: () => void;
 }) {
-  const discourseUrl = process.env.NEXT_PUBLIC_DISCOURSE_URL ?? '';
-  const href = `${discourseUrl}/t/${reply.topicSlug}/${reply.topicId}`;
+  const href = forumLoginUrl(`/t/${reply.topicSlug}/${reply.topicId}`);
 
   function handleClick() {
     onDismiss();

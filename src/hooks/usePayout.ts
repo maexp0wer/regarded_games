@@ -2,9 +2,9 @@
 
 import { useReadContracts } from 'wagmi';
 import { formatUnits } from 'viem';
-import { useQuery } from '@tanstack/react-query';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
-import { useTenantChainId, useTenantPonderUrl } from '@/context/TenantContext';
+import { useTenantChainId } from '@/context/TenantContext';
+import { useSeasonPlayers } from './useSeasonPlayers';
 
 export interface PayoutData {
   payout: number;           // Unclaimed payout (Calculated from Ponder)
@@ -21,7 +21,6 @@ export interface PayoutData {
 
 export function usePayout(seasonAddress: string | undefined, userAddress: string | undefined): PayoutData {
   const chainId = useTenantChainId();
-  const PONDER_URL = useTenantPonderUrl();
 
   // 1. Fetch RPC Data (Only need live/changing state: FIM Balance)
   const { data: rpcData, isLoading: rpcLoading, refetch: refetchRpc } = useReadContracts({
@@ -32,53 +31,20 @@ export function usePayout(seasonAddress: string | undefined, userAddress: string
     query: { enabled: !!seasonAddress && !!userAddress }
   });
 
-  // 2. Fetch Ponder Data (All constant/historical data)
-  const { data: ponderData, isLoading: ponderLoading, refetch: refetchPonder } = useQuery({
-    queryKey: ["payoutHistory", seasonAddress, userAddress, PONDER_URL],
-    queryFn: async () => {
-      if (!seasonAddress || !userAddress) return null;
-      
-      const query = `
-    query GetHistory($season: String!, $player: String!) {
-      playerSeasonStatss(where: {
-        seasonAddress_contains: $season,
-        playerAddress_contains: $player
-      }) {
-        items {
-          realizedPayout
-          totalPotentialPayout
-          netContribution
-          fimBurned
-        }
-      }
-    }
-  `;
-      const res = await fetch(PONDER_URL, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          query, 
-          // Addresses must be lowercase for Ponder filtering
-          variables: { season: seasonAddress.toLowerCase(), player: userAddress.toLowerCase() } 
-        })
-      });
-
-      const json = await res.json();
-      
-      // CRITICAL: Extract the object from the 'items' array.
-      const result = json?.data?.playerSeasonStatss?.items?.[0] ?? null;
-      return result; 
-    },
-    enabled: !!seasonAddress && !!userAddress
-  });
+  // 2. Derive Ponder Data (constant/historical) from the shared player cache.
+  const { data: players, isLoading: playersLoading, refetch: refetchPlayers } = useSeasonPlayers(seasonAddress);
+  const ponderData = (seasonAddress && userAddress && players)
+    ? players.find(p => p.playerAddress.toLowerCase() === userAddress.toLowerCase()) ?? null
+    : null;
 
   // --- MERGE LOGIC ---
-  const isLoading = rpcLoading || ponderLoading;
-  const refetch = () => { refetchRpc(); refetchPonder(); };
+  const isLoading = rpcLoading || playersLoading;
+  const refetch = () => { refetchRpc(); refetchPlayers(); };
 
   if (isLoading || !rpcData) {
     return { payout: 0, pnl: 0, userFim: 0, userNetContrib: 0, fimBurned: 0, hasBalance: false, hasClaimed: false, realizedPayout: 0, loading: true, refetch };
   }
-  
+
   // RPC Data Access (fimBalances is rpcData[0])
   const balanceRaw = rpcData[0].result as bigint || 0n;
 

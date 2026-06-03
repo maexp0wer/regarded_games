@@ -459,7 +459,7 @@ export function TradingMask({
           <div className="flex justify-between items-end">
             <div>
               <p className="section-label mb-1">{isMaker ? 'Total' : 'Total'}</p>
-              <span className="font-mono font-bold text-summary-value" style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}>
+              <span className="font-mono font-bold text-base" style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}>
                 ${formatDynamicUsdc(isMaker ? makerTotalUsdcRaw : executionPayload.totalCostRaw)}
               </span>
             </div>
@@ -467,7 +467,7 @@ export function TradingMask({
               <div className="text-right">
                 <p className="section-label mb-1">{isBuy ? 'Buying' : 'Selling'}</p>
                 <span
-                  className="font-mono font-bold text-summary-sub tabular-nums"
+                  className="font-mono font-bold text-[18px] tabular-nums"
                   style={{ color: isBuy ? 'var(--color-green)' : 'var(--color-red)' }}
                 >
                   {Number(formatUnits(executionPayload.totalFimRaw, 18)).toLocaleString()} FIM

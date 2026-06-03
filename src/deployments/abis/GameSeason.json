@@ -28,7 +28,7 @@
         "internalType": "uint256"
       },
       {
-        "name": "_beta",
+        "name": "_baseMultiplierBps",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -53,12 +53,12 @@
         "internalType": "uint256"
       },
       {
-        "name": "_existentialThreshold",
+        "name": "_existentialThresholdFim",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "_bondAmount",
+        "name": "_bondAmountUsdc",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -119,7 +119,7 @@
   },
   {
     "type": "function",
-    "name": "beta",
+    "name": "baseMultiplierBps",
     "inputs": [],
     "outputs": [
       {
@@ -132,7 +132,7 @@
   },
   {
     "type": "function",
-    "name": "bondAmount",
+    "name": "bondAmountUsdc",
     "inputs": [],
     "outputs": [
       {
@@ -237,7 +237,7 @@
   },
   {
     "type": "function",
-    "name": "existentialThreshold",
+    "name": "existentialThresholdFim",
     "inputs": [],
     "outputs": [
       {
@@ -383,7 +383,7 @@
             "internalType": "uint256"
           },
           {
-            "name": "beta",
+            "name": "baseMultiplierBps",
             "type": "uint256",
             "internalType": "uint256"
           },
@@ -398,7 +398,7 @@
             "internalType": "uint256"
           },
           {
-            "name": "reinvestBps",
+            "name": "prizePoolBps",
             "type": "uint256",
             "internalType": "uint256"
           },
@@ -408,7 +408,7 @@
             "internalType": "uint256"
           },
           {
-            "name": "existentialThreshold",
+            "name": "existentialThresholdFim",
             "type": "uint256",
             "internalType": "uint256"
           }
@@ -593,6 +593,19 @@
   },
   {
     "type": "function",
+    "name": "prizePoolBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "processBatch",
     "inputs": [
       {
@@ -620,19 +633,6 @@
   {
     "type": "function",
     "name": "regAccumulator",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "reinvestBps",
     "inputs": [],
     "outputs": [
       {

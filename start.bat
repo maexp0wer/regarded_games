@@ -108,6 +108,24 @@ call :KILL_PORT 8546
 call :KILL_PORT 42069
 call :KILL_PORT 42070
 
+:: =========================================================================
+:: Discourse (local community forum) — ensure it is running
+::
+:: Discourse runs as the "app" Docker container inside WSL2 (Ubuntu), reachable
+:: at http://community.localhost. The "WSL Discourse Keepalive" scheduled task
+:: normally keeps it up at logon (it also maintains the 127.0.0.1:{80,2222}
+:: portproxy bridge). The two commands below are a belt-and-suspenders start so
+:: the forum is up whenever you launch the dev environment.
+::   - docker start app : container has restart=always, this is just insurance
+::   - schtasks /Run     : (re)applies the portproxy bridge; ignored if already running
+:: =========================================================================
+
+ECHO.
+ECHO --- Ensuring Discourse (WSL2 container 'app') is running ---
+wsl -d Ubuntu -u root -- bash -lc "systemctl start docker 2>/dev/null; docker start app >/dev/null 2>&1; true"
+schtasks /Run /TN "WSL Discourse Keepalive" >nul 2>&1
+ECHO Discourse: http://community.localhost  (allow ~30s for the web to finish booting)
+
 echo.
 echo [Step 2] Launching terminals...
 

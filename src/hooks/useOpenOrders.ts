@@ -1,8 +1,10 @@
 'use client';
 
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { formatUnits } from "viem";
 import { useTenantPonderUrl } from '@/context/TenantContext';
+import { useSeasonActiveOrders } from './useSeasonActiveOrders';
 
 export type OrderFilter = 'open' | 'filled' | 'cancelled';
 
@@ -18,20 +20,8 @@ export interface MyOrder {
   settledAt?: number;
 }
 
-const OPEN_QUERY = `
-  query GetMyOpenOrders($season: String!, $maker: String!) {
-    orderss(
-      where: { seasonAddress: $season, maker: $maker, active: true }
-      orderBy: "timestamp"
-      orderDirection: "desc"
-    ) {
-      items {
-        id orderId isBuy price initialAmount remainingAmount isCancelled timestamp settledAt
-      }
-    }
-  }
-`;
-
+// History (active: false) orders are NOT held by the shared active-orders
+// primitive, so the filled/cancelled variants keep their own fetch.
 const HISTORY_QUERY = `
   query GetMyHistoryOrders($season: String!, $maker: String!, $cancelled: Boolean!) {
     orderss(
@@ -67,21 +57,44 @@ export function useOpenOrders(
   filter: OrderFilter = 'open',
 ) {
   const PONDER_URL = useTenantPonderUrl();
-  return useQuery({
-    queryKey: ["myOrders", seasonAddress, userAddress, filter, PONDER_URL],
+  const isOpen = filter === 'open';
+
+  // 'open' derives from the shared active-orders cache (filter by maker).
+  const {
+    data: activeOrders,
+    isLoading: activeLoading,
+    refetch: refetchActive,
+  } = useSeasonActiveOrders(isOpen ? seasonAddress : undefined);
+
+  const openOrders = useMemo<MyOrder[]>(() => {
+    if (!isOpen || !userAddress || !activeOrders) return [];
+    const maker = userAddress.toLowerCase();
+    return activeOrders
+      .filter((o) => o.maker.toLowerCase() === maker)
+      .map(mapOrder)
+      .sort((a, b) => b.timestamp - a.timestamp);
+  }, [isOpen, userAddress, activeOrders]);
+
+  // 'filled' / 'cancelled' keep their own history fetch.
+  const {
+    data: historyOrders,
+    isLoading: historyLoading,
+    refetch: refetchHistory,
+  } = useQuery({
+    queryKey: ["myOrdersHistory", seasonAddress, userAddress, filter, PONDER_URL],
+    enabled: !isOpen && !!seasonAddress && !!userAddress,
     queryFn: async () => {
       if (!seasonAddress || !userAddress) return [];
-
-      const isOpen = filter === 'open';
-      const variables = isOpen
-        ? { season: seasonAddress.toLowerCase(), maker: userAddress.toLowerCase() }
-        : { season: seasonAddress.toLowerCase(), maker: userAddress.toLowerCase(), cancelled: filter === 'cancelled' };
-
+      const variables = {
+        season: seasonAddress.toLowerCase(),
+        maker: userAddress.toLowerCase(),
+        cancelled: filter === 'cancelled',
+      };
       try {
         const response = await fetch(PONDER_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: isOpen ? OPEN_QUERY : HISTORY_QUERY, variables }),
+          body: JSON.stringify({ query: HISTORY_QUERY, variables }),
         });
         const res = await response.json();
         const items = res.data?.orderss?.items || [];
@@ -91,7 +104,12 @@ export function useOpenOrders(
         return [];
       }
     },
-    enabled: !!seasonAddress && !!userAddress,
-    refetchInterval: filter === 'open' ? 3000 : 15000,
+    refetchInterval: 15000,
   });
+
+  return {
+    data: isOpen ? openOrders : (historyOrders ?? []),
+    isLoading: isOpen ? activeLoading : historyLoading,
+    refetch: isOpen ? refetchActive : refetchHistory,
+  };
 }

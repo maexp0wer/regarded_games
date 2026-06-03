@@ -200,7 +200,7 @@ export const TreasuryAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "reinvestBps",
+        "name": "prizePoolBps",
         "type": "uint256",
         "internalType": "uint256"
       },

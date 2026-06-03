@@ -720,8 +720,10 @@ The deployment of novel economic primitives involves inherent uncertainties. We 
 
 ## 19. Roadmap & Future Vision
 
-The protocol's evolution is structured in phases to ensure the stability of the core economic simulation before expanding the ecosystem's complexity. The future direction of the platform is governed entirely by the DAO, ensuring that expansion aligns with the community's vision. | Phase | Status | Key Milestones |
-|---|---|---|
+The protocol's evolution is structured in phases to ensure the stability of the core economic simulation before expanding the ecosystem's complexity. The future direction of the platform is governed entirely by the DAO, ensuring that expansion aligns with the community's vision.
+
+| Phase | Status | Key Milestones |
+| :--- | :--- | :--- |
 | **Phase 1** | **Complete** | Conceptualisation, Dual-Token Economic Design, US DAO LLC Legal Structure Finalised. |
 | **Phase 2** | **Q4 202X** | Community Genesis Period, Core Smart Contract Development on Base Network, Finalisation of the Collateral Mechanism. |
 | **Phase 3** | **Q1 202Y** | Competitive Audit Program Execution, Public Testnet Launch (Meritocratic Airdrop), Establishment of the Execution Council. |

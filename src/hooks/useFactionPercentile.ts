@@ -2,10 +2,10 @@
 
 'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { formatUnits } from "viem";
-import { fetchAllPonderItems } from '@/lib/ponder';
-import { useTenantPonderUrl } from '@/context/TenantContext';
+import { useSeasonPlayers } from './useSeasonPlayers';
+import { useSeasonActiveOrders } from './useSeasonActiveOrders';
 
 export interface FactionData {
   factionPercentile: number;
@@ -14,143 +14,103 @@ export interface FactionData {
   factionRank: number;
 }
 
+/**
+ * Single-player faction standing, derived from the shared season primitives.
+ * Effective balance is fimBalance + fimBurned (+ FIM locked in active sell
+ * orders), matching useBatchPlayerPercentiles so faction standing is consistent
+ * across the app.
+ */
 export function useFactionPercentile(seasonAddress: string | undefined, userAddress: string | undefined) {
-  const PONDER_URL = useTenantPonderUrl();
+  const { data: players, isLoading: playersLoading } = useSeasonPlayers(seasonAddress);
+  const { data: activeOrders, isLoading: ordersLoading } = useSeasonActiveOrders(seasonAddress);
 
-  return useQuery<FactionData | null>({
-    // Cleaned up queryKey: No longer depends on the stale contract threshold
-    queryKey: ["playerFactionStanding", seasonAddress, userAddress, PONDER_URL],
-    
-    // Starts fetching immediately once we have the addresses
-    enabled: !!seasonAddress && !!userAddress,
-    
-    queryFn: async () => {
-      if (!userAddress || !seasonAddress) return null;
+  const data = useMemo<FactionData | null>(() => {
+    if (!userAddress || !seasonAddress || !players || players.length === 0) return null;
 
-      const sAddr = seasonAddress.toLowerCase();
-      const uAddr = userAddress.toLowerCase();
+    const uAddr = userAddress.toLowerCase();
+    const sellOrders = (activeOrders ?? []).filter((o) => !o.isBuy);
 
-      const playersQuery = `
-        query GetPlayers($season: String!, $after: String, $limit: Int!) {
-          playerSeasonStatss(
-            where: { seasonAddress: $season },
-            limit: $limit,
-            after: $after
-          ) {
-            items { playerAddress, fimBalance }
-            pageInfo { endCursor, hasNextPage }
-          }
-        }
-      `;
+    // --- 1. CALCULATE EFFECTIVE BALANCES (Balance + Burned + Locked in Orders) ---
+    const playerBalances = new Map<string, bigint>();
 
-      const ordersQuery = `
-        query GetOrders($season: String!, $after: String, $limit: Int!) {
-          orderss(
-            where: { seasonAddress: $season, active: true, isBuy: false },
-            limit: $limit,
-            after: $after
-          ) {
-            items { maker, remainingAmount }
-            pageInfo { endCursor, hasNextPage }
-          }
-        }
-      `;
+    for (const p of players) {
+      const effectiveBalance = BigInt(p.fimBalance) + BigInt(p.fimBurned || "0");
+      playerBalances.set(p.playerAddress.toLowerCase(), effectiveBalance);
+    }
 
-      try {
-        const [playersData, openOrdersData] = await Promise.all([
-          fetchAllPonderItems<{ playerAddress: string; fimBalance: string }>(
-            PONDER_URL, playersQuery, { season: sAddr }, (d) => d.playerSeasonStatss
-          ),
-          fetchAllPonderItems<{ maker: string; remainingAmount: string }>(
-            PONDER_URL, ordersQuery, { season: sAddr }, (d) => d.orderss
-          ),
-        ]);
+    for (const o of sellOrders) {
+      const maker = o.maker.toLowerCase();
+      const lockedFim = BigInt(o.remainingAmount);
+      const currentBal = playerBalances.get(maker) || 0n;
+      playerBalances.set(maker, currentBal + lockedFim);
+    }
 
-        if (playersData.length === 0) return null;
+    const economy = Array.from(playerBalances.entries()).map(([address, bal]) => ({
+      address,
+      balanceRaw: bal,
+      balanceNum: Number(formatUnits(bal, 18))
+    }));
 
-        // --- 1. CALCULATE EFFECTIVE BALANCES (Raw Balance + Locked in Orders) ---
-        const playerBalances = new Map<string, bigint>();
+    // --- 2. CALCULATE LIVE MASS THRESHOLD OFF-CHAIN ---
+    economy.sort((a, b) => (a.balanceRaw < b.balanceRaw ? -1 : a.balanceRaw > b.balanceRaw ? 1 : 0));
 
-        for (const p of playersData) {
-          playerBalances.set(p.playerAddress.toLowerCase(), BigInt(p.fimBalance));
-        }
+    const totalSupply = economy.reduce((sum, p) => sum + p.balanceRaw, 0n);
+    const halfSupply = totalSupply / 2n;
 
-        for (const o of openOrdersData) {
-          const maker = o.maker.toLowerCase();
-          const lockedFim = BigInt(o.remainingAmount);
-          const currentBal = playerBalances.get(maker) || 0n;
-          playerBalances.set(maker, currentBal + lockedFim);
-        }
+    let accumulatedSupply = 0n;
+    let liveMassThresholdRaw = 0n;
 
-        const economy = Array.from(playerBalances.entries()).map(([address, bal]) => ({
-          address,
-          balanceRaw: bal,
-          balanceNum: Number(formatUnits(bal, 18))
-        }));
-
-        // --- 2. CALCULATE LIVE MASS THRESHOLD OFF-CHAIN ---
-        economy.sort((a, b) => (a.balanceRaw < b.balanceRaw ? -1 : a.balanceRaw > b.balanceRaw ? 1 : 0));
-
-        const totalSupply = economy.reduce((sum, p) => sum + p.balanceRaw, 0n);
-        const halfSupply = totalSupply / 2n;
-
-        let accumulatedSupply = 0n;
-        let liveMassThresholdRaw = 0n;
-
-        for (const p of economy) {
-          accumulatedSupply += p.balanceRaw;
-          if (accumulatedSupply <= halfSupply) {
-            liveMassThresholdRaw = p.balanceRaw;
-          } else {
-            break;
-          }
-        }
-
-        const liveThresholdNum = Number(formatUnits(liveMassThresholdRaw, 18));
-
-        // --- 3. DETERMINE USER STATE & FACTIONS ---
-        const user = economy.find(p => p.address === uAddr);
-        const userBalanceNum = user ? user.balanceNum : 0;
-        
-        const isCapitalist = userBalanceNum > liveThresholdNum; 
-
-        const capitalists = economy.filter(p => p.balanceNum > liveThresholdNum);
-        const socialists = economy.filter(p => p.balanceNum <= liveThresholdNum);
-
-        capitalists.sort((a, b) => b.balanceNum - a.balanceNum);
-        socialists.sort((a, b) => b.balanceNum - a.balanceNum);
-
-        const maxCapBalance = capitalists.length > 0 ? capitalists[0].balanceNum : liveThresholdNum;
-        const minSocBalance = socialists.length > 0 ? socialists[socialists.length - 1].balanceNum : 0;
-
-        // --- 4. CALCULATE DISTANCE-BASED PERCENTILES ---
-        let percentile = 0;
-
-        if (isCapitalist) {
-          const range = maxCapBalance - liveThresholdNum;
-          percentile = range > 0 ? ((userBalanceNum - liveThresholdNum) / range) * 100 : 100;
-        } else {
-          const range = liveThresholdNum - minSocBalance;
-          percentile = range > 0 ? ((liveThresholdNum - userBalanceNum) / range) * 100 : 100;
-        }
-
-        percentile = Math.max(0, Math.min(100, percentile));
-
-        const factionMembers = isCapitalist ? capitalists : socialists;
-        const rankIndex = factionMembers.findIndex(p => p.address === uAddr);
-
-        return {
-          factionPercentile: percentile,
-          isCapitalist,
-          totalInFaction: factionMembers.length,
-          factionRank: rankIndex === -1 ? 0 : rankIndex + 1
-        };
-
-      } catch (e) {
-        console.error("Faction Hook Error:", e);
-        return null;
+    for (const p of economy) {
+      accumulatedSupply += p.balanceRaw;
+      if (accumulatedSupply <= halfSupply) {
+        liveMassThresholdRaw = p.balanceRaw;
+      } else {
+        break;
       }
-    },
-    refetchInterval: 5000, 
-  });
+    }
+
+    const liveThresholdNum = Number(formatUnits(liveMassThresholdRaw, 18));
+
+    // --- 3. DETERMINE USER STATE & FACTIONS ---
+    const user = economy.find(p => p.address === uAddr);
+    const userBalanceNum = user ? user.balanceNum : 0;
+
+    const isCapitalist = userBalanceNum > liveThresholdNum;
+
+    const capitalists = economy.filter(p => p.balanceNum > liveThresholdNum);
+    const socialists = economy.filter(p => p.balanceNum <= liveThresholdNum);
+
+    capitalists.sort((a, b) => b.balanceNum - a.balanceNum);
+    socialists.sort((a, b) => b.balanceNum - a.balanceNum);
+
+    const maxCapBalance = capitalists.length > 0 ? capitalists[0].balanceNum : liveThresholdNum;
+    const minSocBalance = socialists.length > 0 ? socialists[socialists.length - 1].balanceNum : 0;
+
+    // --- 4. CALCULATE DISTANCE-BASED PERCENTILES ---
+    let percentile = 0;
+
+    if (isCapitalist) {
+      const range = maxCapBalance - liveThresholdNum;
+      percentile = range > 0 ? ((userBalanceNum - liveThresholdNum) / range) * 100 : 100;
+    } else {
+      const range = liveThresholdNum - minSocBalance;
+      percentile = range > 0 ? ((liveThresholdNum - userBalanceNum) / range) * 100 : 100;
+    }
+
+    percentile = Math.max(0, Math.min(100, percentile));
+
+    const factionMembers = isCapitalist ? capitalists : socialists;
+    const rankIndex = factionMembers.findIndex(p => p.address === uAddr);
+
+    return {
+      factionPercentile: percentile,
+      isCapitalist,
+      totalInFaction: factionMembers.length,
+      factionRank: rankIndex === -1 ? 0 : rankIndex + 1
+    };
+  }, [seasonAddress, userAddress, players, activeOrders]);
+
+  const isLoading = !!seasonAddress && !!userAddress && (playersLoading || ordersLoading);
+
+  return { data, isLoading };
 }

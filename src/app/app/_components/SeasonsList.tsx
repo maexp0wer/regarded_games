@@ -78,7 +78,7 @@ function SeasonCard({ season }: { season: SeasonRegistry }) {
   const statusLabel = isTrading ? 'Trading Ends' : 'Trading Starts';
   const countdownTarget = (effectiveVictoryPending || isBootstrap) ? 0 : isTrading ? seasonEnd : tradingStart;
 
-  const multiplier = (config.baseBeta / 10000 + Math.pow(1 - (gCurrent / 10000), 2)).toFixed(2);
+  const multiplier = (config.baseMultiplierBps / 10000 + Math.pow(1 - (gCurrent / 10000), 2)).toFixed(2);
 
   return (
     <Link href={`/${slug}`} className="block group">

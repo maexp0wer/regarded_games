@@ -28,7 +28,7 @@ export const AuctionAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "_collateralRatio",
+        "name": "_rgdWeiLockedPerFim",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -76,7 +76,7 @@ export const AuctionAbi = [
   },
   {
     "type": "function",
-    "name": "collateralRatio",
+    "name": "rgdWeiLockedPerFim",
     "inputs": [],
     "outputs": [
       {

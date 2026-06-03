@@ -17,7 +17,7 @@ interface LendingDistributionCardProps {
   config: {
     buybackBps: number;
     liquidityBps: number;
-    reinvestBps: number;
+    prizePoolBps: number;
     daoBps: number;
   } | null;
 }
@@ -29,7 +29,7 @@ export function LendingDistributionCard({ seasonAddress, config }: LendingDistri
   const economicItems = config ? [
     { label: 'Buyback',          value: config.buybackBps,   amt: yieldTotals?.buyback },
     { label: 'Liquidity',        value: config.liquidityBps, amt: yieldTotals?.liquidity },
-    { label: 'Prize Pool Bonus', value: config.reinvestBps,  amt: yieldTotals?.reinvest },
+    { label: 'Prize Pool Bonus', value: config.prizePoolBps, amt: yieldTotals?.reinvest },
     { label: 'DAO Treasury',     value: config.daoBps,       amt: yieldTotals?.dao },
   ].filter(item => item.value > 0).sort((a, b) => b.value - a.value)
   : [];

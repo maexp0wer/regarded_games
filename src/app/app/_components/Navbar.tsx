@@ -70,14 +70,14 @@ export function Navbar() {
 
   return (
     <>
-      <nav className={`nav-container transition-transform duration-300 ${visible ? 'translate-y-0' : '-translate-y-full'}`}>
+      <nav className={`fixed top-0 left-0 w-full h-auto min-h-18 flex items-center flex-wrap content-start justify-between px-8 z-100 bg-[color-mix(in_srgb,var(--color-bg)_80%,transparent)] backdrop-blur-md border border-border lg:h-18 lg:flex-nowrap lg:content-normal transition-transform duration-300 ${visible ? 'translate-y-0' : '-translate-y-full'}`}>
         {/* Brand */}
         <Link href={mainUrl || '/'} className="flex items-center h-18 shrink-0 no-underline" style={{ textDecoration: 'none' }}>
           <Logo className="w-36 text-white" />
         </Link>
 
         {/* Center Nav Links */}
-        <div className="nav-links-track">
+        <div className="hidden items-center gap-8 sm:flex sm:w-full sm:order-999 sm:justify-center sm:h-10 lg:w-auto lg:order-0 lg:justify-start lg:h-auto">
           {navLinks.map((link) => {
             const isActive = !link.external && pathname === link.href;
             if (link.external) {
@@ -107,7 +107,7 @@ export function Navbar() {
         </div>
 
         {/* Right Actions */}
-        <div className="nav-actions-group h-18">
+        <div className="flex items-center gap-4 h-18">
           <button
             onClick={toggleTheme}
             className="hidden sm:flex items-center justify-center w-8 h-8 rounded-full text-text2 hover:text-text hover:bg-card border border-transparent hover:border-border transition-all"
