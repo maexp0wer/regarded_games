@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-const debug = process.env.APP_DEBUG === 'true';
+const DEBUG = process.env.APP_DEBUG === 'true';
 
 interface SSOOpts {
   maxRetries?: number;
@@ -34,7 +34,7 @@ export async function ssoSync(
     if (res.ok) return true;
     if (res.status === 429) {
       const wait = baseBackoffMs * 2 ** attempt;
-      if (debug) console.log(`[ssoSync] 429 for ${wallet}, retrying in ${wait}ms (attempt ${attempt + 1}/${maxRetries})`);
+      if (DEBUG) console.log(`[ssoSync] 429 for ${wallet}, retrying in ${wait}ms (attempt ${attempt + 1}/${maxRetries})`);
       await new Promise(r => setTimeout(r, wait));
       continue;
     }

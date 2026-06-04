@@ -4,14 +4,14 @@
 import React, { useState, FormEvent } from 'react';
 import { useTheme } from '../context/ThemeContext';
 // Assuming validation functions are correctly defined in this path
-import { isValidEmail, isValidErc20Address, isValidNumber } from '@/lib/validation';
+import { isValidEmail, isValidErc20Address, isValidNumber } from '@/utils/validation';
 // Assuming options are correctly defined and exported from this path
 import {
   roleOptions,
   investorTypeOptions,
   futurePlayerTypeOptions,
   contributorTypeOptions
-} from '@/lib/formOptions'; // Adjust path as needed
+} from '@/utils/formOptions'; // Adjust path as needed
 
 
 

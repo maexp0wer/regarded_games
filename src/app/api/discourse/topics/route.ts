@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { tenantFromRequest } from '@/lib/tenant.server';
 import { getTenant, type TenantKey } from '@/config/tenants';
-import { discourseNames } from '@/lib/discourseNames';
+import { discourseNames } from '@/utils/discourseNames';
 import { getCommunitySession } from '@/lib/communitySession';
 
 function resolveTenantFromQuery(req: Request, bodyTenant?: unknown) {
@@ -54,7 +54,8 @@ export async function GET(req: Request) {
       categoryId: data.category?.id ?? null,
     });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Server error' }, { status: 500 });
+    console.error('[topics]', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
 
@@ -113,6 +114,7 @@ export async function POST(req: Request) {
     const created = await res.json();
     return NextResponse.json({ success: true, topicId: created.topic_id, topicSlug: created.topic_slug });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Server error' }, { status: 500 });
+    console.error('[topics]', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }

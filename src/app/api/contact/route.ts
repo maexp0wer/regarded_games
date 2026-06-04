@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 // Assuming db utility is correctly set up in this path
 import { query } from '@/lib/db';
 // Assuming validation functions are correctly defined in this path
-import { isValidEmail, isValidErc20Address, isValidNumber } from '@/lib/validation';
+import { isValidEmail, isValidErc20Address, isValidNumber } from '@/utils/validation';
 // Assuming options are correctly defined and exported from this path
-import { contributorTypeOptions } from '@/lib/formOptions'; // Adjust path as needed
+import { contributorTypeOptions } from '@/utils/formOptions'; // Adjust path as needed
 import crypto from 'node:crypto'; 
 
 interface ContactFormData {
@@ -79,10 +79,7 @@ function getClientIp(request: NextRequest): string | null {
 }
 
 export async function POST(request: NextRequest) {
-    // console.log("API: Received POST /api/contact request.");
-
     const clientIp = getClientIp(request);
-    // console.log("API: Detected Client IP:", clientIp); //We dont want that, really
 
     let formData: ContactFormData;
     try {
@@ -104,7 +101,6 @@ export async function POST(request: NextRequest) {
 
     // --- Server-Side Validation ---
     const errors: Record<string, string> = {};
-    // console.log("API: Starting server-side validation...");
 
     // Role Validation
     if (!Array.isArray(selectedRoles) || selectedRoles.length === 0) {
@@ -151,15 +147,11 @@ export async function POST(request: NextRequest) {
     // --- Reference Code Database Validation ---
     const referenceCodeToCheck = referenceCode?.trim() || null;
     if (referenceCodeToCheck) {
-        // console.log("API: Validating reference code existence:", referenceCodeToCheck);
         try {
             const refCheckQuery = `SELECT 1 FROM contacts WHERE requested_ref_code = $1 LIMIT 1;`;
             const refCheckResult = await query(refCheckQuery, [referenceCodeToCheck]);
             if (refCheckResult.rowCount === 0) {
-                // console.log("API Info: Provided reference code not found.");
                 errors.referenceCode = 'Invalid reference code provided.';
-            } else {
-                 // console.log("API Info: Provided reference code is valid.");
             }
         } catch (dbError: unknown) {
             console.error("API Error: Database error during reference code check:", dbError);
@@ -197,7 +189,6 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Database Interaction ---
-    // console.log("API: Proceeding to database interaction...");
     try {
         // Duplicate Checks
         if (emailToCheck) {
@@ -280,11 +271,9 @@ export async function POST(request: NextRequest) {
             RETURNING id;
         `;
 
-        // console.log("API: Executing insert query...");
         const result = await query(insertQuery, values);
 
         if (result.rowCount === 1) {
-            //console.log("API: Form submitted successfully. ID:", result.rows[0].id);
             return NextResponse.json({ success: true, data: { id: result.rows[0].id } }, { status: 201 });
         } else {
              console.error("API Error: Database insertion returned unexpected row count.", { rowCount: result.rowCount });

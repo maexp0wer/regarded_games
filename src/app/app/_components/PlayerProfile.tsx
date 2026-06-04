@@ -47,7 +47,7 @@ export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
   const currentLocked = (requiredRegStake as bigint) ?? 0n;
   const currentWallet = (walletBalance    as bigint) ?? 0n;
 
-  const { lifetimePnl, bestGlobalRank, bestTotalPlayers, bestRelativePercent, loading: statsLoading } = useLifetimeStats(profileAddress);
+  const { lifetimePnl, bestGlobalRank, bestTotalPlayers, bestRelativePercent, loading: statsLoading, error: statsError } = useLifetimeStats(profileAddress);
   const rgdPrice = useRgdPrice();
 
   const walletUsd = rgdPrice !== undefined
@@ -252,6 +252,9 @@ export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
       {/* ── CAREER PERFORMANCE ── */}
       <div className="p-6">
         <span className="section-label block mb-3">Career Performance</span>
+        {statsError && (
+          <p className="text-red-500 font-mono text-[11px] mb-3">{statsError}</p>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-px rounded-xl overflow-hidden bg-border border border-border">
 
           {/* Lifetime PnL */}

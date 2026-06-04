@@ -19,7 +19,11 @@ Local dev launched via `start.bat`: Next.js on :3000, Anvil on :8545, Ponder Gra
 
 **Naming:** PascalCase components, `use` prefix hooks, `route.ts` API files, UPPER_SNAKE_CASE constants, camelCase utils, PascalCase ABI JSONs.
 
-**State:** No Redux/Zustand. React Query for server state, `useState` for UI. Only global context is `ThemeContext`. State lifted to route component and prop-drilled.
+**State:** No Redux/Zustand. React Query for server state, `useState` for UI. Two approved contexts:
+- `ThemeContext` — UI theming, app-wide (`src/app/layout.tsx`).
+- `TenantContext` — read-only blockchain config (chain ID, contract addresses, Ponder URL), scoped to the `/app` subtree (`src/app/app/layout.tsx`). Resolved server-side once per request; never mutated client-side.
+
+A new context requires the same bar: (a) ambient config that cannot reasonably be prop-drilled (50+ call sites), (b) read-only / session-immutable, (c) single owner that sets it once. Everything else is lifted to the nearest route component and prop-drilled.
 
 **Loading:** `animate-pulse` skeleton + text `"Reading Ledger..."`. **Errors:** inline `text-red-500` / `--color-danger`. **Tx workflow:** `idle → approving → executing → success | failed`.
 

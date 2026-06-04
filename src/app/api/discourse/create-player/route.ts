@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { tenantFromRequest } from "@/lib/tenant.server";
 import { getTenant, type TenantKey } from "@/config/tenants";
-import { discourseNames } from "@/lib/discourseNames";
+import { discourseNames } from "@/utils/discourseNames";
 import { ssoSync } from "@/lib/discourseSSO";
 import { cache, nsKey } from "@/lib/serverCache";
 
 // How long a wallet is remembered as "registered + group-added" before we
 // re-verify against Discourse (the verification itself is idempotent).
 const REGISTERED_TTL_MS = 60 * 60_000;
-const debug = process.env.APP_DEBUG === 'true';
+const DEBUG = process.env.APP_DEBUG === 'true';
 
 export async function POST(req: Request) {
   try {
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
     }
 
     await cache.set(registeredKey, true, REGISTERED_TTL_MS);
-    if (debug) console.log(`[create-player] ${wallet} -> ${groupName} (userExists=${userExists}, alreadyMember=${alreadyMember})`);
+    if (DEBUG) console.log(`[create-player] ${wallet} -> ${groupName} (userExists=${userExists}, alreadyMember=${alreadyMember})`);
 
     return NextResponse.json({ success: true });
 

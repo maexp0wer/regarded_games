@@ -23,6 +23,34 @@ export type ReplyGroup = {
   notificationIds: number[];
 };
 
+interface DiscourseVoter {
+  id: number;
+  username: string;
+}
+
+interface DiscourseTopic {
+  id: number;
+  slug: string;
+  fancy_title?: string;
+  title?: string;
+}
+
+interface DiscourseNotification {
+  id: number;
+  notification_type: number;
+  read: boolean;
+  created_at: string;
+  topic_id: number;
+  slug: string;
+  fancy_title?: string;
+  data?: {
+    original_post_id?: number;
+    topic_title?: string;
+    display_username?: string;
+    excerpt?: string;
+  };
+}
+
 const GOVERNANCE_CATEGORY_SLUG = 'governance';
 const TRUNCATE_LEN = 120;
 
@@ -52,7 +80,7 @@ async function checkUserVotedOnPoll(
     for (const arr of Object.values(voters)) {
       if (!Array.isArray(arr)) continue;
       totalOnPage += arr.length;
-      if (arr.some((u: any) => u?.id === discourseUserId)) return true;
+      if ((arr as DiscourseVoter[]).some((u) => u.id === discourseUserId)) return true;
     }
     if (totalOnPage === 0) break;
   }
@@ -68,11 +96,11 @@ async function fetchGovernancePolls(
   if (!catRes.ok) return [];
 
   const catData = await catRes.json();
-  const topics: any[] = catData?.topic_list?.topics ?? [];
+  const topics: DiscourseTopic[] = catData?.topic_list?.topics ?? [];
   const now = Date.now();
 
   const results = await Promise.all(
-    topics.slice(0, 10).map(async (topic: any): Promise<PendingPoll[]> => {
+    topics.slice(0, 10).map(async (topic: DiscourseTopic): Promise<PendingPoll[]> => {
       try {
         const topicRes = await fetch(`${url}/t/${topic.id}.json`, { headers: adminHeaders });
         if (!topicRes.ok) return [];
@@ -92,7 +120,7 @@ async function fetchGovernancePolls(
             pending.push({
               topicId: topic.id,
               topicSlug: topic.slug,
-              title: topic.fancy_title ?? topic.title,
+              title: topic.fancy_title ?? topic.title ?? '',
               pollCloseAt: closeAt !== null ? Math.floor(closeAt / 1000) : null,
               postId: firstPost.id,
               pollName: poll.name,
@@ -120,15 +148,15 @@ async function fetchReplyGroups(
   if (!notifRes.ok) return [];
 
   const notifData = await notifRes.json();
-  const notifications: any[] = notifData?.notifications ?? [];
+  const notifications: DiscourseNotification[] = notifData?.notifications ?? [];
 
   // type 2 = replied, type 3 = quoted — only unread
   const replyNotifs = notifications.filter(
-    (n: any) => (n.notification_type === 2 || n.notification_type === 3) && !n.read,
+    (n) => (n.notification_type === 2 || n.notification_type === 3) && !n.read,
   );
 
   // Group by original_post_id
-  const groups = new Map<number, any[]>();
+  const groups = new Map<number, DiscourseNotification[]>();
   for (const n of replyNotifs) {
     const origId = n.data?.original_post_id;
     if (!origId) continue;
@@ -167,7 +195,7 @@ async function fetchReplyGroups(
           latestReplyAt: latest.created_at,
           latestReplierUsername: latest.data?.display_username ?? '',
           latestReplyExcerpt: truncate(latest.data?.excerpt ?? '', 100),
-          notificationIds: notifs.map((n: any) => n.id as number),
+          notificationIds: notifs.map((n) => n.id),
         };
       } catch {
         return null;

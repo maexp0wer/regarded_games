@@ -17,6 +17,7 @@ export interface PayoutData {
   hasClaimed: boolean;
   realizedPayout: number;
   loading: boolean;
+  error: string | null;
   refetch: () => void;
 }
 
@@ -46,7 +47,7 @@ export function usePayout(seasonAddress: string | undefined, userAddress: string
   const refetch = () => { refetchRpc(); refetchPlayers(); };
 
   if (isLoading || !rpcData) {
-    return { payout: 0, pnl: 0, userFim: 0, userNetContrib: 0, contribution: 0, fimBurned: 0, hasBalance: false, hasClaimed: false, realizedPayout: 0, loading: true, refetch };
+    return { payout: 0, pnl: 0, userFim: 0, userNetContrib: 0, contribution: 0, fimBurned: 0, hasBalance: false, hasClaimed: false, realizedPayout: 0, loading: true, error: null, refetch };
   }
 
   // RPC Data Access
@@ -69,6 +70,7 @@ export function usePayout(seasonAddress: string | undefined, userAddress: string
           hasClaimed: hasClaimedOnChain,
           realizedPayout: 0,
           loading: false,
+          error: null,
           refetch
       };
   }
@@ -99,10 +101,11 @@ export function usePayout(seasonAddress: string | undefined, userAddress: string
         hasClaimed: hasClaimedOnChain,
         realizedPayout: realizedPayout,
         loading: false,
+        error: null,
         refetch
     };
   } catch (e) {
     console.error("Error processing payout data:", e);
-    return { payout: 0, pnl: 0, userFim: 0, userNetContrib: 0, contribution: 0, fimBurned: 0, hasBalance: false, hasClaimed: false, realizedPayout: 0, loading: false, refetch };
+    return { payout: 0, pnl: 0, userFim: 0, userNetContrib: 0, contribution: 0, fimBurned: 0, hasBalance: false, hasClaimed: false, realizedPayout: 0, loading: false, error: 'Failed to process payout data', refetch };
   }
 }

@@ -4,7 +4,7 @@ import { foundry, base, baseSepolia } from 'viem/chains';
 import { fetchAllPonderItems } from '@/lib/ponder';
 import { tenantFromRequest } from '@/lib/tenant.server';
 import { getTenant, type TenantKey } from '@/config/tenants';
-import { discourseNames } from '@/lib/discourseNames';
+import { discourseNames } from '@/utils/discourseNames';
 import { cache, nsKey } from '@/lib/serverCache';
 
 // Threshold cache TTL. Lower = fresher faction boundary, but recomputes the
@@ -15,7 +15,7 @@ const USER_FACTION_TTL_MS = 5 * 60_000;
 // Minimum % of on-chain FIM supply the Ponder-derived distribution must cover before
 // we trust the computed threshold. Below this, the index is lagging → skip the sync.
 const MIN_SUPPLY_COVERAGE_PCT = Number(process.env.FACTION_MIN_SUPPLY_COVERAGE_PCT) || 90;
-const debug = process.env.APP_DEBUG === 'true';
+const DEBUG = process.env.APP_DEBUG === 'true';
 
 const viemChainFor = (chainId: number) => {
   switch (chainId) {
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     const cachedThreshold = await cache.get<string>(thresholdKey);
     if (cachedThreshold !== undefined) {
       threshold = BigInt(cachedThreshold);
-      if (debug) console.log(`[sync-faction] threshold cache hit: ${threshold.toString()}`);
+      if (DEBUG) console.log(`[sync-faction] threshold cache hit: ${threshold.toString()}`);
     } else {
       const seasonMetaQuery = `
         query GetSeason($season: String!, $after: String, $limit: Int!) {
@@ -176,7 +176,7 @@ export async function POST(req: Request) {
       }
 
       await cache.set(thresholdKey, threshold.toString(), THRESHOLD_TTL_MS);
-      if (debug) console.log(`[sync-faction] live threshold (off-chain): ${threshold.toString()}`);
+      if (DEBUG) console.log(`[sync-faction] live threshold (off-chain): ${threshold.toString()}`);
     }
 
     async function getGroupId(name: string): Promise<number | null> {
@@ -219,12 +219,12 @@ export async function POST(req: Request) {
 
       const factionKey = nsKey(tenant.key, 'userFaction', username, seasonNum);
       if (await cache.get<string>(factionKey) === targetGroupName) {
-        if (debug) console.log(`[sync-faction] cache hit: ${username} is already ${targetGroupName}. Skipping API.`);
+        if (DEBUG) console.log(`[sync-faction] cache hit: ${username} is already ${targetGroupName}. Skipping API.`);
         continue;
       }
 
-      if (debug) console.log(`[sync-faction] switching wallet: ${lowerWallet}`);
-      if (debug) console.log(`[sync-faction] on-chain: bal=${bal}, threshold=${threshold} -> target=${targetGroupName}`);
+      if (DEBUG) console.log(`[sync-faction] switching wallet: ${lowerWallet}`);
+      if (DEBUG) console.log(`[sync-faction] on-chain: bal=${bal}, threshold=${threshold} -> target=${targetGroupName}`);
 
       const [targetGroupId, oldGroupId] = await Promise.all([
         getGroupId(targetGroupName),
@@ -257,7 +257,7 @@ export async function POST(req: Request) {
 
       if (addOk) {
         await cache.set(factionKey, targetGroupName, USER_FACTION_TTL_MS);
-        if (debug) console.log(`[sync-faction] ${username} -> ${targetGroupName} (skippedAdd=${alreadyInTarget}, skippedRemove=${!stillInOld})`);
+        if (DEBUG) console.log(`[sync-faction] ${username} -> ${targetGroupName} (skippedAdd=${alreadyInTarget}, skippedRemove=${!stillInOld})`);
       }
     }
 

@@ -3,7 +3,7 @@ import { isAddress } from 'viem';
 import { fetchAllPonderItems } from '@/lib/ponder';
 import { tenantFromRequest } from '@/lib/tenant.server';
 import { getTenant, type TenantKey } from '@/config/tenants';
-import { discourseNames } from '@/lib/discourseNames';
+import { discourseNames } from '@/utils/discourseNames';
 import { ssoSync } from '@/lib/discourseSSO';
 
 const debug = process.env.APP_DEBUG === 'true';

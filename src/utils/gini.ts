@@ -1,4 +1,4 @@
-export function calculateGini(players: any[]): number {
+export function calculateGini(players: { fimBalance?: string | number | bigint }[]): number {
   if (!players || players.length === 0) return 0;
 
   // 1. Convert count to BigInt

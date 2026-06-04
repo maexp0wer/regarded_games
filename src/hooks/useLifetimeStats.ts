@@ -23,6 +23,7 @@ export interface LifetimeStatsData {
   bestTotalPlayers: number;
   bestRelativePercent: number;
   loading: boolean;
+  error: string | null;
 }
 
 const PLAYER_QUERY = `
@@ -46,7 +47,7 @@ const SEASON_QUERY = `
 export function useLifetimeStats(playerAddress: string | undefined): LifetimeStatsData {
   const PONDER_URL = useTenantPonderUrl();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['lifetimeStats', playerAddress, PONDER_URL],
     queryFn: async () => {
       const addr = playerAddress!.toLowerCase();
@@ -124,7 +125,7 @@ export function useLifetimeStats(playerAddress: string | undefined): LifetimeSta
   });
 
   if (isLoading || !data) {
-    return { lifetimePnl: 0, bestGlobalRank: -1, bestTotalPlayers: 0, bestRelativePercent: 0, loading: isLoading };
+    return { lifetimePnl: 0, bestGlobalRank: -1, bestTotalPlayers: 0, bestRelativePercent: 0, loading: isLoading, error: isError ? 'Failed to load lifetime stats' : null };
   }
 
   return {
@@ -133,5 +134,6 @@ export function useLifetimeStats(playerAddress: string | undefined): LifetimeSta
     bestTotalPlayers: data.bestTotalPlayers,
     bestRelativePercent: data.bestRelativePercent,
     loading: false,
+    error: null,
   };
 }

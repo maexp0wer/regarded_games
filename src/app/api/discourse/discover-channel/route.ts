@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { tenantFromRequest } from '@/lib/tenant.server';
 import { getTenant, type TenantKey } from '@/config/tenants';
-import { discourseNames } from '@/lib/discourseNames';
+import { discourseNames } from '@/utils/discourseNames';
 import { getCommunitySession } from '@/lib/communitySession';
 
 export async function POST(req: Request) {

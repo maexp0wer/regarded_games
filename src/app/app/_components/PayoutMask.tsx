@@ -27,7 +27,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
 
   const { writeContractAsync } = useWriteContract();
 
-  const { payout, pnl: livePnL, userFim, contribution, fimBurned, realizedPayout, hasClaimed: hasClaimedChain, hasBalance, loading: calcLoading, refetch: refetchPayout } =
+  const { payout, pnl: livePnL, userFim, contribution, fimBurned, realizedPayout, hasClaimed: hasClaimedChain, hasBalance, loading: calcLoading, error: payoutError, refetch: refetchPayout } =
     usePayout(seasonAddress, address);
 
   // Open sell orders escrow FIM; claimPayout() reverts (insufficient FIM to burn)
@@ -186,6 +186,10 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
           </div>
         )}
       </div>
+
+      {payoutError && (
+        <p className="text-red-500 font-mono text-[11px] text-center">{payoutError}</p>
+      )}
 
       {/* CTA */}
       {hasClaimed ? null : hasSellOrders ? (

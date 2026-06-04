@@ -3,9 +3,9 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { tenantFromRequest } from '@/lib/tenant.server';
 import { getTenant, type TenantKey } from '@/config/tenants';
-import { discourseNames } from '@/lib/discourseNames';
+import { discourseNames } from '@/utils/discourseNames';
 
-const debug = process.env.APP_DEBUG === 'true';
+const DEBUG = process.env.APP_DEBUG === 'true';
 
 function parseCategoryIntros(seasonNum: number): Record<string, { title: string; body: string }> {
   const raw = readFileSync(join(process.cwd(), 'content', 'discourse', 'discourse-category-intros.md'), 'utf-8')
@@ -52,21 +52,21 @@ export async function POST(req: Request) {
 
     const safeJson = (s: string) => { try { return JSON.parse(s); } catch { return null; } };
 
-    if (debug) console.log(`[setup-season] season ${seasonNum} (tenant=${tenant.key}) start`);
+    if (DEBUG) console.log(`[setup-season] season ${seasonNum} (tenant=${tenant.key}) start`);
 
     const intros = parseCategoryIntros(seasonNum);
 
     // ── 1. Ensure Groups (idempotent) ──────────────────────────────────
     async function ensureGroup(name: string): Promise<void> {
       const check = await fetch(`${url}/groups/${name}.json`, { headers });
-      if (check.ok) { if (debug) console.log(`[setup-season] group exists: ${name}`); return; }
+      if (check.ok) { if (DEBUG) console.log(`[setup-season] group exists: ${name}`); return; }
       const res = await fetch(`${url}/admin/groups`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ group: { name, visibility_level: 1, members_visibility_level: 2 } })
       });
       const body = await res.text();
-      if (debug) console.log(`[setup-season] created group: ${name} (${res.status}) ${body.slice(0, 200)}`);
+      if (DEBUG) console.log(`[setup-season] created group: ${name} (${res.status}) ${body.slice(0, 200)}`);
     }
 
     await ensureGroup(names.groups.players);
@@ -78,11 +78,11 @@ export async function POST(req: Request) {
       const siteRes = await fetch(`${url}/site.json`, { headers });
       const siteData = safeJson(await siteRes.text());
       const existing = ((siteData?.categories ?? []) as Array<{ slug: string; id: number; topic_id?: number }>).find((c) => c.slug === slug);
-      if (existing) { if (debug) console.log(`[setup-season] category exists: ${slug} (id=${existing.id})`); return { id: existing.id, topicId: existing.topic_id ?? null }; }
+      if (existing) { if (DEBUG) console.log(`[setup-season] category exists: ${slug} (id=${existing.id})`); return { id: existing.id, topicId: existing.topic_id ?? null }; }
       const res = await fetch(`${url}/categories.json`, { method: 'POST', headers, body: JSON.stringify(payload) });
       const body = await res.text();
       const parsed = safeJson(body)?.category;
-      if (debug) console.log(`[setup-season] created category: ${slug} (id=${parsed?.id}, status=${res.status}) ${body.slice(0, 200)}`);
+      if (DEBUG) console.log(`[setup-season] created category: ${slug} (id=${parsed?.id}, status=${res.status}) ${body.slice(0, 200)}`);
       return { id: parsed?.id ?? null, topicId: parsed?.topic_id ?? null };
     }
 
@@ -102,7 +102,7 @@ export async function POST(req: Request) {
         method: 'PUT', headers,
         body: JSON.stringify({ post: { raw: intro.body } })
       });
-      if (debug) console.log(`[setup-season] updated about topic "${introKey}" (topic=${topicId}, post=${firstPostId}, status=${postRes.status})`);
+      if (DEBUG) console.log(`[setup-season] updated about topic "${introKey}" (topic=${topicId}, post=${firstPostId}, status=${postRes.status})`);
     }
 
     const { id: parentId, topicId: parentTopicId } = await ensureCategory(names.categories.parent.slug, {
@@ -145,10 +145,10 @@ export async function POST(req: Request) {
       const existing = ((listData?.channels ?? []) as Array<{ title?: string; id: number }>).find(
         (c) => (c.title || '').toLowerCase() === name.toLowerCase()
       );
-      if (existing) { if (debug) console.log(`[setup-season] channel exists: ${name} (id=${existing.id})`); return; }
+      if (existing) { if (DEBUG) console.log(`[setup-season] channel exists: ${name} (id=${existing.id})`); return; }
       const res = await fetch(`${url}/chat/api/channels`, { method: 'POST', headers, body: JSON.stringify(payload) });
       const body = await res.text();
-      if (debug) console.log(`[setup-season] created channel: ${name} (${res.status}) ${body.slice(0, 200)}`);
+      if (DEBUG) console.log(`[setup-season] created channel: ${name} (${res.status}) ${body.slice(0, 200)}`);
     }
 
     if (parentId) {
@@ -185,7 +185,7 @@ export async function POST(req: Request) {
       });
     }
 
-    if (debug) console.log(`[setup-season] season ${seasonNum} (tenant=${tenant.key}) complete`);
+    if (DEBUG) console.log(`[setup-season] season ${seasonNum} (tenant=${tenant.key}) complete`);
     return NextResponse.json({ success: true, seasonNum, tenant: tenant.key });
 
   } catch (error) {

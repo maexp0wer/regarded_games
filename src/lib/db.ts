@@ -26,7 +26,7 @@ types.setTypeParser(FLOAT8_OID, (val: string) => parseFloat(val));
 
 let pool: Pool;
 
-const connectionOptions = {
+const CONNECTION_OPTIONS = {
   connectionString: process.env.POSTGRES_URL,
   // --- SSL Configuration ---
   // Uncomment and configure if your database provider requires SSL
@@ -43,9 +43,7 @@ if (!process.env.POSTGRES_URL) {
   // For now, create a dummy pool that will fail on connection attempts.
   pool = new Pool();
 } else {
-  // console.log("Initializing database connection pool...");
-  pool = new Pool(connectionOptions);
-  // console.log("Database connection pool initialized.");
+  pool = new Pool(CONNECTION_OPTIONS);
 }
 
 // Listen for errors on idle clients
@@ -93,7 +91,5 @@ export const query = async <T extends QueryResultRow = QueryResultRow>(
  * Optional: Gracefully closes the connection pool.
  */
 export const closePool = async () => {
-    // console.log("Closing database connection pool...");
     await pool.end();
-    // console.log("Database connection pool closed.");
 };

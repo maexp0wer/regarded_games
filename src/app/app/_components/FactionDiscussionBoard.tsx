@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import DOMPurify from 'dompurify';
 import { useAccount } from 'wagmi';
 import { useTenantKey } from '@/context/TenantContext';
-import { discourseNames } from '@/lib/discourseNames';
+import { discourseNames } from '@/utils/discourseNames';
 import { forumLoginUrl } from '@/utils/discourseForum';
 import { CommunitySignInGate } from './CommunitySignInGate';
 import { useCommunitySession } from '@/hooks/useCommunitySession';
