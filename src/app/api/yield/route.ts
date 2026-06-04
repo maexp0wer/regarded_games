@@ -39,11 +39,9 @@ export async function GET(req: Request) {
 
     return NextResponse.json(res.rows[0]);
 
-  } catch (error: any) {
-    console.error("[API] SQL Error:", error.message);
-    
-    // Fallback: If snake_case failed, maybe Ponder preserved camelCase?
-    // You will see the specific error in your terminal (e.g. "column buyback_amt does not exist")
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    // Full detail (e.g. "column buyback_amt does not exist") stays server-side.
+    console.error("[API] SQL Error:", error instanceof Error ? error.message : error);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }

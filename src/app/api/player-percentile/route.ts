@@ -85,9 +85,9 @@ export async function POST(req: Request) {
       factionRank: rank
     });
 
-  } catch (error: any) {
+  } catch (error) {
     // Keep this error log for monitoring production issues
-    console.error("Percentile API Error:", error.message);
-    return NextResponse.json({ error: error.message ?? 'Internal server error' }, { status: 500 });
+    console.error("Percentile API Error:", error instanceof Error ? error.message : error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

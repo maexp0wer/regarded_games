@@ -77,7 +77,7 @@ export async function POST(req: Request) {
     async function ensureCategory(slug: string, payload: object): Promise<{ id: number | null; topicId: number | null }> {
       const siteRes = await fetch(`${url}/site.json`, { headers });
       const siteData = safeJson(await siteRes.text());
-      const existing = (siteData?.categories as any[] || []).find((c: any) => c.slug === slug);
+      const existing = ((siteData?.categories ?? []) as Array<{ slug: string; id: number; topic_id?: number }>).find((c) => c.slug === slug);
       if (existing) { if (debug) console.log(`[setup-season] category exists: ${slug} (id=${existing.id})`); return { id: existing.id, topicId: existing.topic_id ?? null }; }
       const res = await fetch(`${url}/categories.json`, { method: 'POST', headers, body: JSON.stringify(payload) });
       const body = await res.text();
@@ -142,8 +142,8 @@ export async function POST(req: Request) {
     async function ensureChannel(name: string, payload: object): Promise<void> {
       const listRes = await fetch(`${url}/chat/api/channels`, { headers });
       const listData = safeJson(await listRes.text());
-      const existing = (listData?.channels as any[] || []).find(
-        (c: any) => (c.title || '').toLowerCase() === name.toLowerCase()
+      const existing = ((listData?.channels ?? []) as Array<{ title?: string; id: number }>).find(
+        (c) => (c.title || '').toLowerCase() === name.toLowerCase()
       );
       if (existing) { if (debug) console.log(`[setup-season] channel exists: ${name} (id=${existing.id})`); return; }
       const res = await fetch(`${url}/chat/api/channels`, { method: 'POST', headers, body: JSON.stringify(payload) });
@@ -188,8 +188,8 @@ export async function POST(req: Request) {
     if (debug) console.log(`[setup-season] season ${seasonNum} (tenant=${tenant.key}) complete`);
     return NextResponse.json({ success: true, seasonNum, tenant: tenant.key });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Setup crash:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isAddress } from 'viem';
 import { fetchAllPonderItems } from '@/lib/ponder';
 import { tenantFromRequest } from '@/lib/tenant.server';
 import { getTenant, type TenantKey } from '@/config/tenants';
@@ -18,6 +19,14 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { seasonAddress, seasonId, tenant: bodyTenant } = body;
+
+    // S12: validate inputs before they reach Ponder / Discourse.
+    if (!seasonAddress || !isAddress(seasonAddress, { strict: false })) {
+      return NextResponse.json({ error: 'seasonAddress missing or invalid' }, { status: 400 });
+    }
+    if (seasonId === undefined || seasonId === null || Number.isNaN(Number(seasonId))) {
+      return NextResponse.json({ error: 'seasonId missing or invalid' }, { status: 400 });
+    }
 
     const tenant = (bodyTenant === 'mainnet' || bodyTenant === 'sepolia')
       ? getTenant(bodyTenant as TenantKey)
@@ -93,6 +102,11 @@ export async function POST(req: Request) {
         ponderUrl, ordersQuery, { season: sAddr }, (d) => d.orderss
       ),
     ]);
+
+    // S12: reject an address that isn't a known indexed season.
+    if (seasonMeta.length === 0) {
+      return NextResponse.json({ error: 'Unknown season' }, { status: 404 });
+    }
 
     const exchangeAddress = seasonMeta[0]?.exchangeAddress?.toLowerCase();
 
@@ -225,12 +239,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, total: allWallets.length, created: syncCount });
 
-  } catch (error: any) {
-
+  } catch (error) {
     console.error("Init Crash:", error);
-
-    return NextResponse.json({
-      error: error.message
-    }, { status: 500 });
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }

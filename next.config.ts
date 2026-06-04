@@ -1,7 +1,14 @@
 import type { NextConfig } from "next";
+import { securityHeaders } from "./src/lib/securityHeaders";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+
+  // Security headers (S10) — enforced CSP + baseline hardening on every route.
+  // See src/lib/securityHeaders.ts for the policy and the Report-Only escape hatch.
+  async headers() {
+    return [{ source: '/:path*', headers: securityHeaders() }];
+  },
 
   async rewrites() {
     return [

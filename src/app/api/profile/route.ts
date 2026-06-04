@@ -30,8 +30,8 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json(result.rows[0]);
-  } catch (error: any) {
-    console.error("GET Error:", error.message);
+  } catch (error) {
+    console.error("GET Error:", error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
@@ -74,8 +74,8 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("POST Error:", error.message);
-    return NextResponse.json({ error: error.message || 'Server Error' }, { status: 500 });
+  } catch (error) {
+    console.error("POST Error:", error instanceof Error ? error.message : error);
+    return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }
 }

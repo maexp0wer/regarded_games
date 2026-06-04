@@ -12,6 +12,9 @@ import { cache, nsKey } from '@/lib/serverCache';
 const THRESHOLD_TTL_MS = Number(process.env.FACTION_THRESHOLD_TTL_MS) || 30_000;
 // Bounds how long a wallet's resolved faction is remembered before re-reconciling.
 const USER_FACTION_TTL_MS = 5 * 60_000;
+// Minimum % of on-chain FIM supply the Ponder-derived distribution must cover before
+// we trust the computed threshold. Below this, the index is lagging → skip the sync.
+const MIN_SUPPLY_COVERAGE_PCT = Number(process.env.FACTION_MIN_SUPPLY_COVERAGE_PCT) || 90;
 const debug = process.env.APP_DEBUG === 'true';
 
 const viemChainFor = (chainId: number) => {
@@ -136,13 +139,39 @@ export async function POST(req: Request) {
       if (exchangeAddress) effectiveBals.delete(exchangeAddress);
 
       const sortedBals = Array.from(effectiveBals.values()).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-      const totalSupply = sortedBals.reduce((s, v) => s + v, 0n);
-      const halfSupply = totalSupply / 2n;
+      const effectiveTotal = sortedBals.reduce((s, v) => s + v, 0n);
+
+      // S8: sanity-check the Ponder distribution against live on-chain supply before
+      // trusting it. A burn moves FIM from fimBalance→fimBurned (both summed here) and
+      // also reduces totalSupply, so effectiveTotal is normally >= on-chain supply.
+      // If it falls well below, the index is lagging and the threshold would be garbage
+      // (often 0 → everyone misclassified as Capitalist). Skip the sync; it self-corrects
+      // next cycle (the bad threshold is never cached, since we return before set()).
+      let onChainSupply: bigint | null = null;
+      try {
+        onChainSupply = await publicClient.readContract({
+          address: fimAddress as `0x${string}`,
+          abi: erc20Abi,
+          functionName: 'totalSupply',
+        });
+      } catch (e) {
+        // RPC hiccup — don't make the cross-check a hard dependency; proceed as before.
+        console.warn('[sync-faction] totalSupply read failed; skipping sanity check', e);
+      }
+
+      if (onChainSupply !== null && onChainSupply > 0n &&
+          effectiveTotal * 100n < onChainSupply * BigInt(MIN_SUPPLY_COVERAGE_PCT)) {
+        console.warn(`[sync-faction] stale index: effective=${effectiveTotal} ` +
+          `< ${MIN_SUPPLY_COVERAGE_PCT}% of onChain=${onChainSupply}; skipping reassignment`);
+        return NextResponse.json({ success: true, skipped: 'stale_index' });
+      }
+
+      const halfEffective = effectiveTotal / 2n;
       let accumulated = 0n;
       threshold = 0n;
       for (const bal of sortedBals) {
         accumulated += bal;
-        if (accumulated <= halfSupply) threshold = bal;
+        if (accumulated <= halfEffective) threshold = bal;
         else break;
       }
 

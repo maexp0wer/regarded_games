@@ -47,8 +47,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Failed to read site.json (${siteRes.status})` }, { status: siteRes.status });
     }
     const siteData = await siteRes.json();
-    let categoryId = (siteData?.categories as any[] ?? [])
-      .find((c: any) => c.slug === manifest.categorySlug)?.id;
+    let categoryId = ((siteData?.categories ?? []) as Array<{ slug: string; id: number }>)
+      .find((c) => c.slug === manifest.categorySlug)?.id;
 
     if (!categoryId) {
       const createCatRes = await fetch(`${url}/categories.json`, {
@@ -107,8 +107,8 @@ export async function POST(req: Request) {
     );
 
     return NextResponse.json({ success: true, topicId, postId, pollName: manifest.pollName });
-  } catch (err: any) {
-    console.error('POST /api/quests/admin/create-manifest-vote error:', err?.message ?? err);
+  } catch (err) {
+    console.error('POST /api/quests/admin/create-manifest-vote error:', err instanceof Error ? err.message : err);
     return NextResponse.json({ error: 'server_error' }, { status: 500 });
   }
 }
