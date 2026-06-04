@@ -8,8 +8,9 @@
 // user to `return_path`.
 //
 // `forumLoginUrl` wraps a forum path so that opening it performs that login as the
-// currently connected wallet (the SSO provider route reads the `current_wallet`
-// cookie) and lands the user on the requested page already authenticated.
+// signed-in wallet (the SSO provider route reads the verified community session
+// cookie) and lands the user on the requested page already authenticated. If the
+// user has not signed in, the SSO route redirects them to sign in first.
 
 const DISCOURSE_URL = process.env.NEXT_PUBLIC_DISCOURSE_URL ?? '';
 

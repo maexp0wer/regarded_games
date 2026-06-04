@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { tenantFromRequest } from '@/lib/tenant.server';
 import { getTenant, type TenantKey } from '@/config/tenants';
 import { discourseNames } from '@/lib/discourseNames';
+import { getCommunitySession } from '@/lib/communitySession';
 
 function resolveTenantFromQuery(req: Request, bodyTenant?: unknown) {
   if (bodyTenant === 'mainnet' || bodyTenant === 'sepolia') {
@@ -11,6 +12,12 @@ function resolveTenantFromQuery(req: Request, bodyTenant?: unknown) {
 }
 
 export async function GET(req: Request) {
+  // Identity from the verified session. Reading the category AS the user (not
+  // `system`) means Discourse enforces faction-group access — a Proletariat user
+  // requesting the Bourgeoisie category is denied at the source.
+  const wallet = getCommunitySession(req);
+  if (!wallet) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
+
   const { searchParams } = new URL(req.url);
   const seasonSlug = searchParams.get('seasonSlug');
   const isCapitalist = searchParams.get('isCapitalist') === 'true';
@@ -34,11 +41,11 @@ export async function GET(req: Request) {
 
   try {
     const res = await fetch(`${discourseUrl}/c/${categorySlug}.json`, {
-      headers: { 'Api-Key': apiKey, 'Api-Username': 'system' },
+      headers: { 'Api-Key': apiKey, 'Api-Username': wallet },
     });
 
     if (!res.ok) {
-      return NextResponse.json({ error: `Discourse returned ${res.status}` }, { status: res.status });
+      return NextResponse.json({ error: 'Category unavailable' }, { status: res.status });
     }
 
     const data = await res.json();
@@ -46,12 +53,15 @@ export async function GET(req: Request) {
       topics: data.topic_list?.topics ?? [],
       categoryId: data.category?.id ?? null,
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Server error' }, { status: 500 });
   }
 }
 
 export async function POST(req: Request) {
+  const wallet = getCommunitySession(req);
+  if (!wallet) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
+
   const discourseUrl = process.env.NEXT_PUBLIC_DISCOURSE_URL;
   const apiKey = process.env.DISCOURSE_API_KEY;
   if (!discourseUrl || !apiKey) {
@@ -59,8 +69,8 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { seasonSlug, isCapitalist, title, raw, walletAddress, tenant: bodyTenant } = await req.json();
-    if (!seasonSlug || !title || !raw || !walletAddress) {
+    const { seasonSlug, isCapitalist, title, raw, tenant: bodyTenant } = await req.json();
+    if (!seasonSlug || !title || !raw) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -72,13 +82,14 @@ export async function POST(req: Request) {
       : names.categories.proletariat.slug;
 
     const siteRes = await fetch(`${discourseUrl}/site.json`, {
-      headers: { 'Api-Key': apiKey, 'Api-Username': 'system' },
+      headers: { 'Api-Key': apiKey, 'Api-Username': wallet },
     });
     if (!siteRes.ok) {
-      return NextResponse.json({ error: `Failed to fetch site config (${siteRes.status})` }, { status: siteRes.status });
+      return NextResponse.json({ error: 'Failed to fetch site config' }, { status: siteRes.status });
     }
     const siteData = await siteRes.json();
-    const categoryId = (siteData?.categories as any[] ?? []).find((c: any) => c.slug === subcategorySlug)?.id;
+    const categories = (siteData?.categories ?? []) as Array<{ slug: string; id: number }>;
+    const categoryId = categories.find((c) => c.slug === subcategorySlug)?.id;
     if (!categoryId) {
       return NextResponse.json({ error: 'Could not resolve category ID' }, { status: 500 });
     }
@@ -87,21 +98,21 @@ export async function POST(req: Request) {
       method: 'POST',
       headers: {
         'Api-Key': apiKey,
-        'Api-Username': walletAddress.toLowerCase(),
+        'Api-Username': wallet,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ title, raw, category: categoryId }),
     });
 
-    const body = await res.text();
     if (!res.ok) {
-      console.error(`[topics] POST failed ${res.status} as ${walletAddress.toLowerCase()}: ${body.slice(0, 300)}`);
-      return NextResponse.json({ error: body }, { status: res.status });
+      const body = await res.text();
+      console.error(`[topics] POST failed ${res.status} as ${wallet}: ${body.slice(0, 300)}`);
+      return NextResponse.json({ error: 'Failed to create topic' }, { status: res.status });
     }
 
-    const created = JSON.parse(body);
+    const created = await res.json();
     return NextResponse.json({ success: true, topicId: created.topic_id, topicSlug: created.topic_slug });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Server error' }, { status: 500 });
   }
 }

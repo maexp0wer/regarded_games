@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { getCommunitySession } from '@/lib/communitySession';
 
 const debug = process.env.APP_DEBUG === 'true';
 
@@ -43,8 +44,10 @@ export async function GET(req: NextRequest) {
   const calculatedSig = hmac.update(sso).digest('hex');
   if (calculatedSig !== sig) return new NextResponse("Sig Mismatch", { status: 403 });
 
-  // 2. Identify Wallet from cookie
-  const walletAddress = req.cookies.get('current_wallet')?.value?.toLowerCase();
+  // 2. Identify wallet from the VERIFIED community session (a forged cookie can no
+  //    longer log a user into the forum as someone else — the session is HMAC-signed
+  //    and only issued after a wallet-signature check).
+  const walletAddress = getCommunitySession(req);
   if (!walletAddress) return NextResponse.redirect(new URL('/?login_required', req.url));
 
   // 3. Admin Check

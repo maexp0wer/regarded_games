@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { FactionDiscussionBoard } from './FactionDiscussionBoard';
+import { CommunitySignInGate } from './CommunitySignInGate';
+import { useCommunitySession } from '@/hooks/useCommunitySession';
 
 interface DiscourseMessage {
   id: number;
@@ -30,6 +32,7 @@ function shortAddr(addr: string) {
 
 export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = false, showBoard = false, onToggleBoard }: FactionChatProps) {
   const { address } = useAccount();
+  const { signedIn } = useCommunitySession();
   const [tab, setTab] = useState<'faction' | 'general'>(auctionMode ? 'general' : 'faction');
   const [channelId, setChannelId] = useState<number | null>(null);
   const [messages, setMessages] = useState<DiscourseMessage[]>([]);
@@ -61,6 +64,12 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
     }
 
     if (!address) {
+      setDiscovering(false);
+      return;
+    }
+
+    // Discovery — and every chat fetch — requires a verified community session.
+    if (!signedIn) {
       setDiscovering(false);
       return;
     }
@@ -119,7 +128,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
       }
     }
     discover();
-  }, [seasonSlug, isCapitalist, tab, address, refreshKey]);
+  }, [seasonSlug, isCapitalist, tab, address, refreshKey, signedIn]);
 
   function refresh() {
     tabCache.current = {};
@@ -171,7 +180,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
       const res = await fetch('/api/discourse/chat-messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channelId, message: input.trim(), walletAddress: address }),
+        body: JSON.stringify({ channelId, message: input.trim() }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -180,8 +189,8 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
         setInput('');
         await fetchMessages();
       }
-    } catch (e: any) {
-      setSendError(e.message);
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : 'Failed to send');
     } finally {
       setSending(false);
     }
@@ -272,6 +281,8 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
           <div className="flex flex-col items-center gap-3 mt-8">
             <span className="terminal-pane-title text-center" style={{ color: 'var(--color-text2)' }}>Connect your wallet to participate</span>
           </div>
+        ) : !signedIn ? (
+          <CommunitySignInGate feature="the faction chat" />
         ) : discovering && messages.length === 0 ? (
           <div className="flex flex-col items-center gap-3 mt-8">
             <span className="terminal-pane-title animate-pulse">Connecting…</span>
@@ -312,7 +323,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
       )}
 
       {/* Input deck */}
-      {channelId && address && (
+      {channelId && address && signedIn && (
         <div className={`comms-input-deck p-3 ${!auctionMode && showBoard ? 'hidden lg:block' : ''}`}>
           <div className="flex items-end gap-2">
             <textarea

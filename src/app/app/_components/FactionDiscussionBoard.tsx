@@ -6,6 +6,8 @@ import { useAccount } from 'wagmi';
 import { useTenantKey } from '@/context/TenantContext';
 import { discourseNames } from '@/lib/discourseNames';
 import { forumLoginUrl } from '@/utils/discourseForum';
+import { CommunitySignInGate } from './CommunitySignInGate';
+import { useCommunitySession } from '@/hooks/useCommunitySession';
 
 interface Topic {
   id: number;
@@ -41,6 +43,7 @@ function formatTime(iso: string) {
 
 export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = false, onClose }: FactionDiscussionBoardProps) {
   const { address } = useAccount();
+  const { signedIn } = useCommunitySession();
 
   // — Topic list state
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -91,14 +94,14 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
       if (!res.ok) throw new Error('Failed to decrypt directives.');
       const data = await res.json();
       setTopics(data.topics ?? []);
-    } catch (e: any) {
-      setListError(e.message);
+    } catch (e) {
+      setListError(e instanceof Error ? e.message : 'Failed to load topics');
     } finally {
       setListLoading(false);
     }
   }, [seasonSlug, isCapitalist]);
 
-  useEffect(() => { fetchTopics(); }, [fetchTopics]);
+  useEffect(() => { if (signedIn) fetchTopics(); }, [fetchTopics, signedIn]);
 
   // ── Fetch posts for selected topic ───────────────────────────────────────
   const fetchPosts = useCallback(async (topicId: number) => {
@@ -108,8 +111,8 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
       const data = await res.json();
       setPosts(data.posts ?? []);
       setPostsError(null);
-    } catch (e: any) {
-      setPostsError(e.message);
+    } catch (e) {
+      setPostsError(e instanceof Error ? e.message : 'Failed to load posts');
     }
   }, []);
 
@@ -183,7 +186,6 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
           isCapitalist,
           title: newTitle.trim(),
           raw: newBody.trim(),
-          walletAddress: address,
         }),
       });
       const data = await res.json();
@@ -193,8 +195,8 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
         closeNewPost();
         await fetchTopics();
       }
-    } catch (e: any) {
-      setCreateError(e.message);
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : 'Failed to create post');
     } finally {
       setCreating(false);
     }
@@ -216,7 +218,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
       const res = await fetch('/api/discourse/topic-posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topicId: selectedTopic.id, raw: reply.trim(), walletAddress: address }),
+        body: JSON.stringify({ topicId: selectedTopic.id, raw: reply.trim() }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -227,8 +229,8 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
         isAtBottom.current = true;
         await fetchPosts(selectedTopic.id);
       }
-    } catch (e: any) {
-      setSendError(e.message);
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : 'Failed to send reply');
     } finally {
       setSending(false);
     }
@@ -329,7 +331,9 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
       </div>
 
       {/* ── Body ── */}
-      {isCreating ? (
+      {!signedIn ? (
+        <CommunitySignInGate feature="the faction board" />
+      ) : isCreating ? (
         // ── New post form ──
         <>
           <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 flex flex-col gap-3">
@@ -587,7 +591,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
       )}
 
       {/* ── Footer (topic list only) ── */}
-      {!selectedTopic && !isCreating && (
+      {signedIn && !selectedTopic && !isCreating && (
         <div
           className="px-4 py-3 shrink-0"
           style={{ background: 'var(--color-card2)', borderTop: '1px solid var(--color-border)' }}
