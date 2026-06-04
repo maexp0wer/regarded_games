@@ -74,6 +74,6 @@ Tailwind utilities only — no CSS Modules. CSS variables in `globals.css`: `--c
 
 ## Known Issues (Do Not Reintroduce)
 
-1. **Discourse in-memory caches** (`groupIdCache`, `userFactionCache`) reset on restart; needs Redis/DB before multi-instance deployment.
-2. **No auth on client-facing Discourse routes** (`create-player`, `sync-faction`, `discover-channel`) — needs wallet-signature verification before production.
+1. **Discourse cache is in-memory.** `src/lib/serverCache.ts` backs the faction/group caches in `sync-faction` + `create-player` with a per-process `Map` (tenant-scoped keys, TTLs). Correct on a single instance; lost on restart and **not shared across instances**. Before a serverless/multi-replica deploy, implement the documented Redis driver in `serverCache.ts` (env-selected) — no call-site changes needed.
+2. **Auth on client-facing Discourse routes is partial.** Chat/forum read+write (`chat-messages`, `topics`, `topic-posts`) and `discover-channel` now require the verified community session (`src/lib/communitySession.ts`); `sync-faction` is admin-token gated. Still unverified: `create-player` provisioning (takes `walletAddress` from the body — low impact, idempotent).
 3. **Never commit `.env` / `.env.local`** — see `.env.example` for required keys.

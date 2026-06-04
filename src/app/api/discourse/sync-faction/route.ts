@@ -5,14 +5,13 @@ import { fetchAllPonderItems } from '@/lib/ponder';
 import { tenantFromRequest } from '@/lib/tenant.server';
 import { getTenant, type TenantKey } from '@/config/tenants';
 import { discourseNames } from '@/lib/discourseNames';
+import { cache, nsKey } from '@/lib/serverCache';
 
-// --- IN-MEMORY CACHES ---
-const groupIdCache: Record<string, number> = {};
-const userFactionCache: Record<string, string> = {};
-
-interface ThresholdCacheEntry { threshold: bigint; expiresAt: number; }
-const thresholdCache: Record<string, ThresholdCacheEntry> = {};
-const THRESHOLD_TTL_MS = 30_000;
+// Threshold cache TTL. Lower = fresher faction boundary, but recomputes the
+// expensive Ponder median more often. Tunable via env (default 30s).
+const THRESHOLD_TTL_MS = Number(process.env.FACTION_THRESHOLD_TTL_MS) || 30_000;
+// Bounds how long a wallet's resolved faction is remembered before re-reconciling.
+const USER_FACTION_TTL_MS = 5 * 60_000;
 const debug = process.env.APP_DEBUG === 'true';
 
 const viemChainFor = (chainId: number) => {
@@ -68,10 +67,12 @@ export async function POST(req: Request) {
     const sAddr = seasonAddress.toLowerCase();
 
     // --- THRESHOLD: SERVE FROM CACHE OR COMPUTE VIA PONDER ---
+    // Stored as a decimal string so the cache stays JSON/Redis-serialisable.
+    const thresholdKey = nsKey(tenant.key, 'threshold', sAddr);
     let threshold: bigint;
-    const cachedEntry = thresholdCache[sAddr];
-    if (cachedEntry && Date.now() < cachedEntry.expiresAt) {
-      threshold = cachedEntry.threshold;
+    const cachedThreshold = await cache.get<string>(thresholdKey);
+    if (cachedThreshold !== undefined) {
+      threshold = BigInt(cachedThreshold);
       if (debug) console.log(`[sync-faction] threshold cache hit: ${threshold.toString()}`);
     } else {
       const seasonMetaQuery = `
@@ -145,16 +146,18 @@ export async function POST(req: Request) {
         else break;
       }
 
-      thresholdCache[sAddr] = { threshold, expiresAt: Date.now() + THRESHOLD_TTL_MS };
+      await cache.set(thresholdKey, threshold.toString(), THRESHOLD_TTL_MS);
       if (debug) console.log(`[sync-faction] live threshold (off-chain): ${threshold.toString()}`);
     }
 
     async function getGroupId(name: string): Promise<number | null> {
-      if (groupIdCache[name]) return groupIdCache[name];
+      const key = nsKey(tenant.key, 'groupId', name);
+      const cached = await cache.get<number>(key);
+      if (cached) return cached;
       const res = await fetch(`${url}/groups/${name}.json`, { headers });
       if (!res.ok) return null;
       const data = await res.json();
-      groupIdCache[name] = data.group.id;
+      await cache.set(key, data.group.id); // group IDs are stable — no TTL
       return data.group.id;
     }
 
@@ -185,7 +188,8 @@ export async function POST(req: Request) {
       const targetGroupName = isCap ? names.groups.bourgeoisie : names.groups.proletariat;
       const oldGroupName = isCap ? names.groups.proletariat : names.groups.bourgeoisie;
 
-      if (userFactionCache[username] === targetGroupName) {
+      const factionKey = nsKey(tenant.key, 'userFaction', username, seasonNum);
+      if (await cache.get<string>(factionKey) === targetGroupName) {
         if (debug) console.log(`[sync-faction] cache hit: ${username} is already ${targetGroupName}. Skipping API.`);
         continue;
       }
@@ -223,15 +227,16 @@ export async function POST(req: Request) {
       }
 
       if (addOk) {
-        userFactionCache[username] = targetGroupName;
+        await cache.set(factionKey, targetGroupName, USER_FACTION_TTL_MS);
         if (debug) console.log(`[sync-faction] ${username} -> ${targetGroupName} (skippedAdd=${alreadyInTarget}, skippedRemove=${!stillInOld})`);
       }
     }
 
     return NextResponse.json({ success: true });
 
-  } catch (error: any) {
-    console.error("BATCH SYNC CRASH:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Server error';
+    console.error("BATCH SYNC CRASH:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

@@ -3,11 +3,11 @@ import { tenantFromRequest } from "@/lib/tenant.server";
 import { getTenant, type TenantKey } from "@/config/tenants";
 import { discourseNames } from "@/lib/discourseNames";
 import { ssoSync } from "@/lib/discourseSSO";
+import { cache, nsKey } from "@/lib/serverCache";
 
-const groupIdCache: Record<string, number> = {};
-// Tracks wallets already registered + group-added this server lifecycle.
-// Cache key: `${wallet}:${groupName}`. Mirrors the userFactionCache pattern in sync-faction.
-const registeredPlayersCache = new Set<string>();
+// How long a wallet is remembered as "registered + group-added" before we
+// re-verify against Discourse (the verification itself is idempotent).
+const REGISTERED_TTL_MS = 60 * 60_000;
 const debug = process.env.APP_DEBUG === 'true';
 
 export async function POST(req: Request) {
@@ -34,14 +34,15 @@ export async function POST(req: Request) {
     const username = wallet;
     const groupName = names.groups.players;
 
-    // Tier 1: skip all Discourse calls if we already registered this wallet this session.
-    const cacheKey = `${wallet}:${groupName}`;
-    if (registeredPlayersCache.has(cacheKey)) {
+    // Tier 1: skip all Discourse calls if we already registered this wallet recently.
+    const registeredKey = nsKey(tenant.key, 'registered', wallet, groupName);
+    if (await cache.has(registeredKey)) {
       return NextResponse.json({ success: true });
     }
 
     // ---- 1. Fetch Group ID (Using Cache) ----
-    let groupId = groupIdCache[groupName];
+    const groupIdKey = nsKey(tenant.key, 'groupId', groupName);
+    let groupId = await cache.get<number>(groupIdKey);
 
     if (!groupId) {
       const groupRes = await fetch(`${url}/groups/${groupName}.json`, { headers });
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: `Group ${groupName} not found`, seasonId, groupName }, { status: 404 });
       }
       groupId = (await groupRes.json()).group.id;
-      groupIdCache[groupName] = groupId;
+      await cache.set(groupIdKey, groupId); // group IDs are stable — no TTL
     }
 
     // Tier 2a: check user existence before SSO sync to skip the POST for returning players.
@@ -82,13 +83,13 @@ export async function POST(req: Request) {
       }
     }
 
-    registeredPlayersCache.add(cacheKey);
+    await cache.set(registeredKey, true, REGISTERED_TTL_MS);
     if (debug) console.log(`[create-player] ${wallet} -> ${groupName} (userExists=${userExists}, alreadyMember=${alreadyMember})`);
 
     return NextResponse.json({ success: true });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Create player crash:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Server error' }, { status: 500 });
   }
 }
