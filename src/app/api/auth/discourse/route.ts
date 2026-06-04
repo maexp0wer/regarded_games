@@ -35,7 +35,8 @@ export async function GET(req: NextRequest) {
 
   if (!sso || !sig) return new NextResponse("Missing SSO", { status: 400 });
 
-  const SECRET = process.env.DISCOURSE_SSO_SECRET || '91ZEewZ0XnTu&aqr';
+  const SECRET = process.env.DISCOURSE_SSO_SECRET;
+  if (!SECRET) return new NextResponse("Server misconfigured", { status: 500 });
 
   // 1. Signature Check
   const hmac = crypto.createHmac('sha256', SECRET);
@@ -47,8 +48,8 @@ export async function GET(req: NextRequest) {
   if (!walletAddress) return NextResponse.redirect(new URL('/?login_required', req.url));
 
   // 3. Admin Check
-  const ADMIN_WALLET = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266".toLowerCase();
-  const isSystemAdmin = walletAddress === ADMIN_WALLET;
+  const ADMIN_WALLET = process.env.ADMIN_WALLET?.toLowerCase() ?? '';
+  const isSystemAdmin = ADMIN_WALLET !== '' && walletAddress === ADMIN_WALLET;
 
   // 4. Fetch the profile (This is where the magic happens)
   const profileData = await getPlayerProfile(walletAddress);

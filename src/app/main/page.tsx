@@ -15,7 +15,7 @@ import Carlo from '@/components/icons/Carlo.svg';
 import FIM1 from '@/components/icons/FIM1.svg';
 import { useDocNavigation } from '@/hooks/useDocNavigation';
 import NestedPieChart from '@/components/NestedPieChart';
-import { CyclingSubheading } from '@/components/CyclingSubheading';
+import CyclingSubheading from '@/components/CyclingSubheading';
 
 const tableData = [
   {

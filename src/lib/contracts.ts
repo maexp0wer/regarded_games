@@ -1,7 +1,7 @@
 // src/lib/contracts.ts
 
 import FakeUSDCFaucetAbiRaw from '@/deployments/abis/FakeUSDCFaucet.json';
-export const FakeUSDCFaucetABI = FakeUSDCFaucetAbiRaw as const;
+export const FakeUSDCFaucetABI = FakeUSDCFaucetAbiRaw;
 
 export const AuctionTemplateABI = [
   { "type": "function", "name": "buyFIM", "inputs": [{ "name": "USDCAmount", "type": "uint256", "internalType": "uint256" }], "outputs": [], "stateMutability": "nonpayable" }

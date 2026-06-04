@@ -225,7 +225,7 @@ const ContactForm: React.FC = () => {
         const response = await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json', }, body: JSON.stringify(formData) });
         const result = await response.json();
         if (response.ok) {
-            setSubmitStatus('success'); setSubmitMessage(result.message || 'Form submitted successfully!');
+            setSubmitStatus('success'); setSubmitMessage('Form submitted successfully!');
             // Reset form fields
             setName(''); setEmail(''); setWalletAddress(''); setInvestmentAmount('');
             setPlayMoney(''); setNewsletter(false); setBountyAirdrop(false);
@@ -234,8 +234,8 @@ const ContactForm: React.FC = () => {
             setContributorTypes([]); setOtherContributorType('');
             setPartnerSpecification(''); setOtherIdentity(''); setMessage(''); setErrors({});
         } else {
-            setSubmitStatus('error'); setSubmitMessage(result.message || `An error occurred (Status: ${response.status})`);
-            if (result.errors) { setErrors(result.errors); } else { setErrors({ general: result.message || 'An unknown error occurred.'}); }
+            setSubmitStatus('error'); setSubmitMessage(result.error || `An error occurred (Status: ${response.status})`);
+            if (result.errors) { setErrors(result.errors); } else { setErrors({ general: result.error || 'An unknown error occurred.'}); }
         }
     } catch (error) {
         console.error('Submission error:', error); setSubmitStatus('error');

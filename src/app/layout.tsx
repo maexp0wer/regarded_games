@@ -3,7 +3,7 @@ import { Space_Grotesk, JetBrains_Mono, Exo_2 } from 'next/font/google';
 import { headers } from 'next/headers';
 import { cookieToInitialState } from 'wagmi';
 import { config } from '@/config/wagmi';
-import { Providers } from '@/components/Providers';
+import Providers from '@/components/Providers';
 import { TENANTS, type TenantKey } from '@/config/tenants';
 
 import './globals.css';

@@ -14,7 +14,7 @@ const words = [
 // Automatically find the longest word to set the container width
 const longestWord = words.reduce((a, b) => (a.length > b.length ? a : b));
 
-export const CyclingSubheading = () => {
+export default function CyclingSubheading() {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -52,4 +52,4 @@ export const CyclingSubheading = () => {
       </span>
     </span>
   );
-};
+}

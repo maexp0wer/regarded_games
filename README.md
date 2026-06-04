@@ -123,3 +123,14 @@ sudo -u discourse RAILS_ENV=production bundle exec rails runner "
 
 open rails console:
 sudo -u discourse RAILS_ENV=production bundle exec rails c
+
+
+
+
+
+Still Outstanding (deferred — require more design work)
+S4 — Wallet signature verification on mutation endpoints (significant frontend+backend change)
+S6 — Redis cache for faction sync (requires Redis setup)
+S8 — Threshold sanity check vs on-chain total supply
+C4 — Move pure functions from src/lib/ → src/utils/
+C2 — TenantContext review (second global context)

@@ -19,7 +19,7 @@ const StakingAbi = StakingAbiRaw as any;
 
 type WorkflowStep = 'idle' | 'approving' | 'mining_approval' | 'executing' | 'mining_execution' | 'success' | 'canceled' | 'failed' | 'no_gas';
 
-export function Stake() {
+export function StakeMask() {
   const { address, isConnected } = useAccount();
   const chainId = useTenantChainId();
   const publicClient = usePublicClient({ chainId });

@@ -3,7 +3,10 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useReadContract } from 'wagmi';
-import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
+import type { Abi } from 'viem';
+import GameSeasonAbiJson from '@/deployments/abis/GameSeason.json';
+
+const GameSeasonAbi = GameSeasonAbiJson as Abi;
 import { useTenantPonderUrl, useTenantChainId } from '@/context/TenantContext';
 import { useSeasonPlayers } from './useSeasonPlayers';
 import { useSeasonActiveOrders } from './useSeasonActiveOrders';
@@ -86,7 +89,7 @@ export function useSeasonGini(seasonAddress: string | undefined) {
   const chainId = useTenantChainId();
   const { data: thresholdRaw } = useReadContract({
     address: seasonAddress as `0x${string}`,
-    abi: GameSeasonAbi as any,
+    abi: GameSeasonAbi,
     functionName: 'existentialThresholdFim',
     chainId,
     query: { enabled: !!seasonAddress }

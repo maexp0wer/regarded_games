@@ -101,7 +101,7 @@ function RainbowKitThemeWrapper({
   );
 }
 
-export function Providers({
+export default function Providers({
   children,
   initialState,
   initialChainId,

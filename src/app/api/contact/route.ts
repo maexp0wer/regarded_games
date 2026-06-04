@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
         formData = await request.json();
     } catch (error) {
         console.error("API Error: Failed parsing JSON body.", error);
-        return NextResponse.json({ message: "Invalid request body." }, { status: 400 });
+        return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
     }
 
     // Destructure with defaults
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
 
     if (Object.keys(errors).length > 0) {
         console.warn("API Validation Failed:", errors);
-        return NextResponse.json({ message: "Validation failed.", errors }, { status: 400 });
+        return NextResponse.json({ error: "Validation failed.", errors }, { status: 400 });
     }
 
     // --- Database Interaction ---
@@ -203,12 +203,12 @@ export async function POST(request: NextRequest) {
         if (emailToCheck) {
             const checkEmailQuery = `SELECT email FROM contacts WHERE email = $1 LIMIT 1;`;
             const existingEmailResult = await query(checkEmailQuery, [emailToCheck]);
-            if (existingEmailResult.rows.length > 0) { return NextResponse.json({ message: `Email already exists.` }, { status: 409 }); }
+            if (existingEmailResult.rows.length > 0) { return NextResponse.json({ error: `Email already exists.` }, { status: 409 }); }
         }
         if (cleanWalletAddressForCheck) {
             const checkWalletQuery = `SELECT wallet_address FROM contacts WHERE wallet_address = $1 LIMIT 1;`;
             const existingWalletResult = await query(checkWalletQuery, [cleanWalletAddressForCheck]);
-            if (existingWalletResult.rows.length > 0) { return NextResponse.json({ message: `Wallet Address already exists.` }, { status: 409 }); }
+            if (existingWalletResult.rows.length > 0) { return NextResponse.json({ error: `Wallet Address already exists.` }, { status: 409 }); }
         }
 
         // Format who_are_you string including all details
@@ -285,10 +285,10 @@ export async function POST(request: NextRequest) {
 
         if (result.rowCount === 1) {
             //console.log("API: Form submitted successfully. ID:", result.rows[0].id);
-            return NextResponse.json({ message: "Form submitted successfully!", id: result.rows[0].id }, { status: 201 });
+            return NextResponse.json({ success: true, data: { id: result.rows[0].id } }, { status: 201 });
         } else {
              console.error("API Error: Database insertion returned unexpected row count.", { rowCount: result.rowCount });
-             return NextResponse.json({ message: "Failed to save submission due to unexpected database result." }, { status: 500 });
+             return NextResponse.json({ error: "Failed to save submission due to unexpected database result." }, { status: 500 });
         }
 
     } catch (err: unknown) { // 2. Catch as unknown (safe)
@@ -322,8 +322,8 @@ export async function POST(request: NextRequest) {
    
             console.warn(`API Info: Unique constraint violation (${field}), returning 409.`);
             // Return specific field error if identified
-            return NextResponse.json({ message: `${field} already exists or is already requested.`, errors: { [fieldKey]: `${field} already exists or is already requested.` } }, { status: 409 }); // Use 409 Conflict
+            return NextResponse.json({ error: `${field} already exists or is already requested.`, errors: { [fieldKey]: `${field} already exists or is already requested.` } }, { status: 409 });
         }
-        return NextResponse.json({ message: "An internal server error occurred processing your request." }, { status: 500 });
+        return NextResponse.json({ error: "An internal server error occurred processing your request." }, { status: 500 });
     }
 }

@@ -2,14 +2,17 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
-import { parseUnits, formatUnits, erc20Abi, maxUint256 } from 'viem';
+import { parseUnits, formatUnits, erc20Abi, maxUint256, type Abi } from 'viem';
 import { Order } from '@/hooks/useOrderBook';
 import { useOpenOrders } from '@/hooks/useOpenOrders';
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
 import { useTradeExecution, ExecutionPayload } from '@/hooks/useTradeExecution';
-import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
-import ExchangeAbi from '@/deployments/abis/Exchange.json';
+import GameSeasonAbiJson from '@/deployments/abis/GameSeason.json';
+import ExchangeAbiJson from '@/deployments/abis/Exchange.json';
+
+const GameSeasonAbi = GameSeasonAbiJson as Abi;
+const ExchangeAbi = ExchangeAbiJson as Abi;
 import { PercentileCircle } from './PercentileCircle';
 import { GroupedOrder, OrderQueueItem } from './OrderQueueItem';
 import { WalletButton } from './WalletButton';
@@ -98,7 +101,7 @@ export function TradingMask({
   // Wallets below the on-chain existential threshold are excluded from the Gini
   // calculation and the final payout. Warn the player so the state is visible.
   const { data: existentialThresholdRaw } = useReadContract({
-    address: seasonAddress as `0x${string}`, abi: GameSeasonAbi as any,
+    address: seasonAddress as `0x${string}`, abi: GameSeasonAbi,
     functionName: 'existentialThresholdFim', chainId, query: { enabled: !!seasonAddress },
   });
   const existentialThreshold = useMemo(
@@ -110,7 +113,7 @@ export function TradingMask({
   // Trade fee charged by the Exchange on the taker's USDC leg of every fill.
   // Immutable per season — read once. tradeFeeBps=100 → 1.00%.
   const { data: tradeFeeBpsRaw } = useReadContract({
-    address: exchangeAddress as `0x${string}`, abi: ExchangeAbi as any,
+    address: exchangeAddress as `0x${string}`, abi: ExchangeAbi,
     functionName: 'tradeFeeBps', chainId, query: { enabled: !!exchangeAddress, staleTime: Infinity },
   });
   const tradeFeeBps = (tradeFeeBpsRaw as bigint | undefined) ?? 0n;

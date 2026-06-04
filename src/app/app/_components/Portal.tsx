@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useState, useRef, useEffect } from 'react';
 
-export const PortalTooltip = ({ children, text, isVisible }: { children: React.ReactNode, text: string, isVisible: boolean }) => {
+export function Portal({ children, text, isVisible }: { children: React.ReactNode, text: string, isVisible: boolean }) {
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
 
@@ -30,4 +30,4 @@ export const PortalTooltip = ({ children, text, isVisible }: { children: React.R
       )}
     </div>
   );
-};
+}

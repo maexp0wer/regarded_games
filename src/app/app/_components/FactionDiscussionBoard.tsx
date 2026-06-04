@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import { useAccount } from 'wagmi';
 import { useTenantKey } from '@/context/TenantContext';
 import { discourseNames } from '@/lib/discourseNames';
@@ -536,7 +537,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
                         border: `1px solid ${isOwn ? hoverBorderColor : 'var(--color-border)'}`,
                         color: 'var(--color-text)',
                       }}
-                      dangerouslySetInnerHTML={{ __html: post.cooked }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.cooked) }}
                     />
                   </div>
                 );
