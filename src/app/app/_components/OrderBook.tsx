@@ -11,6 +11,7 @@ interface OrderBookProps {
   isMaker: boolean;
   userAddress?: string;
   onSelectOrder: (o: Order) => void;
+  onRemoveOrder?: (id: string) => void;
   selectedOrderIds?: string[];
 }
 
@@ -18,11 +19,12 @@ type AggregatedOrder = Order & { subOrders: Order[] };
 
 
 export function OrderBook({
-  seasonAddress, isMaker, userAddress, onSelectOrder, selectedOrderIds = [],
+  seasonAddress, isMaker, userAddress, onSelectOrder, onRemoveOrder, selectedOrderIds = [],
 }: OrderBookProps) {
   const { data } = useOrderBook(seasonAddress);
 
   const [sideFilter, setSideFilter] = useState<'ask' | 'bid' | null>(null);
+  const [clickedOwnOrderKey, setClickedOwnOrderKey] = useState<string | null>(null);
   const [factionFilter, setFactionFilter] = useState<'bourgeoisie' | 'proletariat' | null>(null);
   const [rankFilterEnabled, setRankFilterEnabled] = useState(false);
   const [minPercentile, setMinPercentile] = useState<number | ''>(0);
@@ -159,7 +161,14 @@ export function OrderBook({
     !!userAddress && order.maker.toLowerCase() === userAddress.toLowerCase();
   const isClickable = (order: AggregatedOrder | undefined): order is AggregatedOrder =>
     !isMaker && !!order && !isOwnOrder(order);
-  const handleOrderClick = (order: AggregatedOrder) => order.subOrders.forEach(sub => onSelectOrder(sub));
+  const handleOrderClick = (order: AggregatedOrder) => {
+    const anySelected = order.subOrders.some(sub => selectedOrderIds.includes(sub.id));
+    if (anySelected && onRemoveOrder) {
+      order.subOrders.forEach(sub => onRemoveOrder(sub.id));
+    } else {
+      order.subOrders.forEach(sub => onSelectOrder(sub));
+    }
+  };
 
   const renderRank = (makerAddress: string, align: 'start' | 'end') => {
     const stats = percentileMap?.[makerAddress.toLowerCase()];
@@ -347,14 +356,21 @@ export function OrderBook({
                 >
                   {displayBids && (
                     <div
-                      onClick={() => isClickable(row.bid) && handleOrderClick(row.bid)}
+                      onClick={() => {
+                        if (row.bid && isOwnOrder(row.bid)) {
+                          const key = row.uniqueKey + '-bid';
+                          setClickedOwnOrderKey(prev => prev === key ? null : key);
+                        } else if (isClickable(row.bid)) {
+                          handleOrderClick(row.bid);
+                        }
+                      }}
                       className={`group/bid ${showBoth ? 'col-span-3 grid grid-cols-3' : 'col-span-4 grid grid-cols-4'} items-center ${showBoth ? 'pl-4' : 'px-4'} py-1 transition-colors relative`}
                       style={{
                         borderRight: displayAsks ? '1px solid var(--color-border)' : undefined,
-                        cursor: isClickable(row.bid) ? 'pointer' : 'default',
+                        cursor: (isClickable(row.bid) || (row.bid && isOwnOrder(row.bid))) ? 'pointer' : 'default',
                         background: bidSelected ? 'var(--color-card3)' : undefined,
                       }}
-                      onMouseEnter={(e) => { if (isClickable(row.bid)) (e.currentTarget as HTMLElement).style.background = 'var(--color-card2)'; }}
+                      onMouseEnter={(e) => { if (isClickable(row.bid) || (row.bid && isOwnOrder(row.bid))) (e.currentTarget as HTMLElement).style.background = 'var(--color-card2)'; }}
                       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = bidSelected ? 'var(--color-card3)' : ''; }}
                     >
                       {row.bid && maxBidAmount > 0 && (
@@ -387,7 +403,7 @@ export function OrderBook({
                       {row.bid && isOwnOrder(row.bid) && (
                         <div
                           role="tooltip"
-                          className="absolute bottom-full mb-2 left-0 z-40 w-56 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                          className={`absolute bottom-full mb-2 left-0 z-40 w-56 pointer-events-none transition-opacity duration-150 ${clickedOwnOrderKey === row.uniqueKey + '-bid' ? 'opacity-100' : 'opacity-0'}`}
                           style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.25))' }}
                         >
                           <div style={{ height: 2, background: 'var(--cyber-sunset)', borderRadius: '3px 3px 0 0' }} />
@@ -403,13 +419,20 @@ export function OrderBook({
 
                   {displayAsks && (
                     <div
-                      onClick={() => isClickable(row.ask) && handleOrderClick(row.ask)}
+                      onClick={() => {
+                        if (row.ask && isOwnOrder(row.ask)) {
+                          const key = row.uniqueKey + '-ask';
+                          setClickedOwnOrderKey(prev => prev === key ? null : key);
+                        } else if (isClickable(row.ask)) {
+                          handleOrderClick(row.ask);
+                        }
+                      }}
                       className={`group/ask ${showBoth ? 'col-span-3 grid grid-cols-3' : 'col-span-4 grid grid-cols-4'} items-center ${showBoth ? 'pr-4' : 'px-4'} py-1 transition-colors relative`}
                       style={{
-                        cursor: isClickable(row.ask) ? 'pointer' : 'default',
+                        cursor: (isClickable(row.ask) || (row.ask && isOwnOrder(row.ask))) ? 'pointer' : 'default',
                         background: askSelected ? 'var(--color-card3)' : undefined,
                       }}
-                      onMouseEnter={(e) => { if (isClickable(row.ask)) (e.currentTarget as HTMLElement).style.background = 'var(--color-card2)'; }}
+                      onMouseEnter={(e) => { if (isClickable(row.ask) || (row.ask && isOwnOrder(row.ask))) (e.currentTarget as HTMLElement).style.background = 'var(--color-card2)'; }}
                       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = askSelected ? 'var(--color-card3)' : ''; }}
                     >
                       {row.ask && maxAskAmount > 0 && (
@@ -442,7 +465,7 @@ export function OrderBook({
                       {row.ask && isOwnOrder(row.ask) && (
                         <div
                           role="tooltip"
-                          className="absolute bottom-full mb-2 left-0 z-40 w-56 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                          className={`absolute bottom-full mb-2 left-0 z-40 w-56 pointer-events-none transition-opacity duration-150 ${clickedOwnOrderKey === row.uniqueKey + '-ask' ? 'opacity-100' : 'opacity-0'}`}
                           style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.25))' }}
                         >
                           <div style={{ height: 2, background: 'var(--cyber-sunset)', borderRadius: '3px 3px 0 0' }} />

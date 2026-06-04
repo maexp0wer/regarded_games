@@ -31,12 +31,17 @@ interface UseTradeExecutionParams {
   onRemoveOrder: (id: string) => void;
   setTargetAmount: (v: string) => void;
   setPrice: (v: string) => void;
+  // Mixed-trade extras: sell leg needs a separate FIM approval
+  isMixed?: boolean;
+  fimToken?: `0x${string}`;
+  sellFimAmountNeeded?: bigint;
 }
 
 export function useTradeExecution({
   isMaker, isBuy, targetAmount, makerTotalUsdcRaw, executionPayload,
   spendingToken, spendingSymbol, exchangeAddress, amountNeeded,
-  selectedOrders, onRemoveOrder, setTargetAmount, setPrice
+  selectedOrders, onRemoveOrder, setTargetAmount, setPrice,
+  isMixed, fimToken, sellFimAmountNeeded,
 }: UseTradeExecutionParams) {
   const { address } = useAccount();
   const chainId = useTenantChainId();
@@ -59,6 +64,7 @@ export function useTradeExecution({
     if (!publicClient || !address) return;
     setTxHashes([null, null]);
     try {
+      // Step 1a: USDC (or FIM for non-mixed sell) approval
       const liveAllowance = await publicClient.readContract({
         address: spendingToken,
         abi: erc20Abi,
@@ -75,9 +81,34 @@ export function useTradeExecution({
           args: [exchangeAddress, amountNeeded]
         });
         setWorkflowStatus('mining_approval');
-        await publicClient.waitForTransactionReceipt({ hash: approveHash });
+        const approvalReceipt = await publicClient.waitForTransactionReceipt({ hash: approveHash });
+        if (approvalReceipt.status === 'reverted') throw new Error('Approval reverted');
         setTxHashes([approveHash, null]);
         await refetchAllowance();
+      }
+
+      // Step 1b: FIM approval for the sell leg of a mixed trade
+      if (isMixed && fimToken && sellFimAmountNeeded && sellFimAmountNeeded > 0n) {
+        const liveFimAllowance = await publicClient.readContract({
+          address: fimToken,
+          abi: erc20Abi,
+          functionName: 'allowance',
+          args: [address, exchangeAddress]
+        }) as bigint;
+
+        if (liveFimAllowance < sellFimAmountNeeded) {
+          setWorkflowStatus('approving');
+          const fimApproveHash = await writeContractAsync({
+            address: fimToken,
+            abi: erc20Abi,
+            functionName: 'approve',
+            args: [exchangeAddress, sellFimAmountNeeded]
+          });
+          setWorkflowStatus('mining_approval');
+          const fimApprovalReceipt = await publicClient.waitForTransactionReceipt({ hash: fimApproveHash });
+          if (fimApprovalReceipt.status === 'reverted') throw new Error('FIM approval reverted');
+          setTxHashes([fimApproveHash, null]);
+        }
       }
 
       setWorkflowStatus('executing');
@@ -96,7 +127,8 @@ export function useTradeExecution({
           });
 
       setWorkflowStatus('mining_execute');
-      await publicClient.waitForTransactionReceipt({ hash: txHash });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+      if (receipt.status === 'reverted') throw new Error('Transaction reverted');
       setTxHashes(prev => [prev[0], txHash]);
 
       setWorkflowStatus('success');

@@ -45,23 +45,28 @@ export default function SeasonDetailPage() {
   const [showBoard, setShowBoard] = useState(false);
   const [isBuy, setIsBuy] = useState(true);
   const [isMaker, setIsMaker] = useState(false);
-  const [targetAmount, setTargetAmount] = useState('');
-  const [selectedOrders, setSelectedOrders] = useState<Order[]>([]);
+  const [buyTargetAmount, setBuyTargetAmount] = useState('');
+  const [sellTargetAmount, setSellTargetAmount] = useState('');
+  const [selectedAsks, setSelectedAsks] = useState<Order[]>([]);
+  const [selectedBids, setSelectedBids] = useState<Order[]>([]);
 
   // 3. Trading handlers
   const handleSelectOrder = (order: Order) => {
-    if (!selectedOrders.find((o) => o.id === order.id))
-      setSelectedOrders((prev) => [...prev, order]);
+    // maker ask (isBuy=false) → taker buys FIM; maker bid (isBuy=true) → taker sells FIM
+    if (!order.isBuy) {
+      if (!selectedAsks.find((o) => o.id === order.id))
+        setSelectedAsks((prev) => [...prev, order]);
+    } else {
+      if (!selectedBids.find((o) => o.id === order.id))
+        setSelectedBids((prev) => [...prev, order]);
+    }
   };
-  const handleRemoveOrder = (id: string) =>
-    setSelectedOrders((prev) => prev.filter((o) => o.id !== id));
-  const handleMoveOrder = (index: number, direction: -1 | 1) => {
-    const next = [...selectedOrders];
-    if (index + direction < 0 || index + direction >= next.length) return;
-    [next[index], next[index + direction]] = [next[index + direction], next[index]];
-    setSelectedOrders(next);
+  const handleRemoveOrder = (id: string) => {
+    setSelectedAsks((prev) => prev.filter((o) => o.id !== id));
+    setSelectedBids((prev) => prev.filter((o) => o.id !== id));
   };
-  const handleReorderOrders = (orders: Order[]) => setSelectedOrders(orders);
+  const handleReorderAsks = (orders: Order[]) => setSelectedAsks(orders);
+  const handleReorderBids = (orders: Order[]) => setSelectedBids(orders);
 
   // 4. Unified season state
   const phase   = useSeasonPhase(seasonAddress);
@@ -194,7 +199,8 @@ export default function SeasonDetailPage() {
           isBuy={isBuy}
           isMaker={isMaker}
           onSelectOrder={handleSelectOrder}
-          selectedOrderIds={selectedOrders.map(o => o.id)}
+          onRemoveOrder={handleRemoveOrder}
+          selectedOrderIds={[...selectedAsks, ...selectedBids].map(o => o.id)}
           trades={chart.trades}
           timeWindowMs={chart.timeWindowMs}
           selectedRange={chart.selectedRange}
@@ -224,12 +230,15 @@ export default function SeasonDetailPage() {
               setIsBuy={setIsBuy}
               isMaker={isMaker}
               setIsMaker={setIsMaker}
-              targetAmount={targetAmount}
-              setTargetAmount={setTargetAmount}
-              selectedOrders={selectedOrders}
+              buyTargetAmount={buyTargetAmount}
+              setBuyTargetAmount={setBuyTargetAmount}
+              sellTargetAmount={sellTargetAmount}
+              setSellTargetAmount={setSellTargetAmount}
+              selectedAsks={selectedAsks}
+              selectedBids={selectedBids}
               onRemoveOrder={handleRemoveOrder}
-              onMoveOrder={handleMoveOrder}
-              onReorderOrders={handleReorderOrders}
+              onReorderAsks={handleReorderAsks}
+              onReorderBids={handleReorderBids}
               isOnHold={effectiveVictoryPending}
               onOpenOrderBook={() => openOrderBookRef.current()}
             />

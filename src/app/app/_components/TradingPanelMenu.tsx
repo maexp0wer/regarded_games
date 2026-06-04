@@ -31,6 +31,7 @@ export interface TradingPanelMenuProps {
   isBuy: boolean;
   isMaker: boolean;
   onSelectOrder: (o: Order) => void;
+  onRemoveOrder?: (id: string) => void;
   selectedOrderIds?: string[];
   trades: SeasonTrade[];
   timeWindowMs: number;
@@ -185,6 +186,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
             isMaker={props.isMaker}
             userAddress={props.userAddress}
             onSelectOrder={props.onSelectOrder}
+            onRemoveOrder={props.onRemoveOrder}
             selectedOrderIds={props.selectedOrderIds}
           />
         );

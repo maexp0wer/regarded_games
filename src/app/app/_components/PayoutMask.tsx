@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { usePayout } from '@/hooks/usePayout';
+import { useOpenOrders } from '@/hooks/useOpenOrders';
 import { useTenantChainId } from '@/context/TenantContext';
 import { TxModal } from './TxModal';
 import { WalletButton } from './WalletButton';
@@ -26,15 +27,20 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
 
   const { writeContractAsync } = useWriteContract();
 
-  const { payout, pnl: livePnL, userFim, userNetContrib, fimBurned, realizedPayout, loading: calcLoading, refetch: refetchPayout } =
+  const { payout, pnl: livePnL, userFim, contribution, fimBurned, realizedPayout, hasClaimed: hasClaimedChain, hasBalance, loading: calcLoading, refetch: refetchPayout } =
     usePayout(seasonAddress, address);
 
-  const canClaim = payout > 0;
+  // Open sell orders escrow FIM; claimPayout() reverts (insufficient FIM to burn)
+  // until they're cancelled or settled. Block the claim and tell the user why.
+  const { data: openOrders = [] } = useOpenOrders(seasonAddress, address, 'open');
+  const hasSellOrders = openOrders.some(o => !o.isBuy);
 
-  const hasClaimed = useMemo(() =>
-    realizedPayout > 0 || (status === 'success' && payout === 0),
-    [realizedPayout, status, payout]
-  );
+  // hasClaimed from the contract; optimistically true the instant a claim tx confirms.
+  const hasClaimed = hasClaimedChain || status === 'success';
+
+  // Every participant can claim to release their RGD collateral & burn FIM —
+  // even with a $0 USDC payout. Gate only on having a stake and no escrow lock.
+  const canClaim = !hasClaimed && !hasSellOrders && (payout > 0 || hasBalance);
 
   const displayPnL = useMemo(() => {
     if (snapshotPnL !== null && livePnL < snapshotPnL) return snapshotPnL;
@@ -97,11 +103,11 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
   }
 
   const isBusy = status === 'executing' || status === 'mining';
-  const isButtonDisabled = isBusy || !canClaim || hasClaimed;
+  const isButtonDisabled = isBusy || !canClaim;
   const pnlPositive = displayPnL >= 0;
-  const netPositive = userNetContrib >= 0;
+  const contribPositive = contribution >= 0;
   const displayFim = hasClaimed ? fimBurned : userFim;
-  const displayPayout = canClaim && !hasClaimed ? payout : realizedPayout;
+  const displayPayout = hasClaimed ? realizedPayout : payout;
 
   return (
     <>
@@ -127,12 +133,12 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
         </div>
 
         <div className="terminal-pane p-2.5">
-          <span className="terminal-pane-title block mb-0.5">Net Contribution</span>
+          <span className="terminal-pane-title block mb-0.5">Contribution</span>
           <span
             className="font-mono text-sm font-bold"
-            style={{ color: netPositive ? 'var(--color-green)' : 'var(--color-red)', fontVariantNumeric: 'tabular-nums' }}
+            style={{ color: contribPositive ? 'var(--color-green)' : 'var(--color-red)', fontVariantNumeric: 'tabular-nums' }}
           >
-            {userNetContrib > 0 ? '+' : ''}{userNetContrib.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            {contribution > 0 ? '+' : ''}{contribution.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             <span className="ml-1 text-[10px] text-text2">USDC</span>
           </span>
         </div>
@@ -166,7 +172,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
       {/* Checkout Vault */}
       <div className="bg-card2 border border-border2 rounded-md p-4 flex flex-col items-center justify-center text-center relative overflow-hidden before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.75 before:bg-green">
         <span className="font-mono text-[10px] font-bold text-text2 uppercase tracking-widest mb-1">
-          {canClaim && !hasClaimed ? 'Net Disbursable Balance' : hasClaimed ? 'Total Claimed' : 'No Payout Due'}
+          {hasClaimed ? 'Total Claimed' : payout > 0 ? 'Net Disbursable Balance' : 'No Payout Due'}
         </span>
         {calcLoading ? (
           <div className="h-9 w-36 rounded animate-pulse" style={{ background: 'var(--color-border)' }} />
@@ -182,15 +188,32 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
       </div>
 
       {/* CTA */}
-      {canClaim && !hasClaimed ? (
-        <button
-          onClick={handleClaim}
-          disabled={isButtonDisabled}
-          className={`btn-terminal-action action-buy py-3 text-sm font-black tracking-widest ${isButtonDisabled ? 'opacity-60 cursor-not-allowed!' : ''}`}
+      {hasClaimed ? null : hasSellOrders ? (
+        <div
+          className="px-5 py-4 rounded-lg text-center"
+          style={{ background: 'var(--color-card2)', border: '1px dashed var(--color-red-35)' }}
         >
-          {isBusy ? 'Confirming on Chain…' : 'Claim'}
-        </button>
-      ) : !hasClaimed ? (
+          <p className="font-mono text-[11px] uppercase font-bold tracking-widest text-red">Open Sell Orders</p>
+          <p className="font-mono text-[10px] text-text2 mt-1">
+            Cancel your open sell orders in the Open Orders tab before claiming — escrowed FIM blocks settlement.
+          </p>
+        </div>
+      ) : payout > 0 || hasBalance ? (
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={handleClaim}
+            disabled={isButtonDisabled}
+            className={`btn-terminal-action action-buy py-3 text-sm font-black tracking-widest ${isButtonDisabled ? 'opacity-60 cursor-not-allowed!' : ''}`}
+          >
+            {isBusy ? 'Confirming on Chain…' : payout > 0 ? 'Claim' : 'Claim & Unlock Collateral'}
+          </button>
+          {payout === 0 && (
+            <p className="font-mono text-[10px] text-text2 text-center opacity-70">
+              No USDC payout due, but claiming releases your staked RGD.
+            </p>
+          )}
+        </div>
+      ) : (
         <div
           className="px-5 py-4 rounded-lg text-center"
           style={{ background: 'var(--color-card2)', border: '1px dashed var(--color-border2)' }}
@@ -198,7 +221,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
           <p className="font-mono text-[11px] uppercase font-bold tracking-widest text-text2">Ineligible</p>
           <p className="font-mono text-[10px] text-text2 mt-1 opacity-60">You did not participate in this season</p>
         </div>
-      ) : null}
+      )}
 
     </div>
 

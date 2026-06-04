@@ -10,7 +10,8 @@ export interface PayoutData {
   payout: number;           // Unclaimed payout (Calculated from Ponder)
   pnl: number;              // PnL (Calculated from Ponder)
   userFim: number;          // Live FIM Balance (from RPC)
-  userNetContrib: number;   // Final Net Contribution (from Ponder)
+  userNetContrib: number;   // Raw Net Contribution in USDC (from Ponder)
+  contribution: number;     // netContrib − fimHeld: 0 when all trades at 1 USDC/FIM
   fimBurned: number;        // FIM Burned (from Ponder)
   hasBalance: boolean;
   hasClaimed: boolean;
@@ -22,11 +23,14 @@ export interface PayoutData {
 export function usePayout(seasonAddress: string | undefined, userAddress: string | undefined): PayoutData {
   const chainId = useTenantChainId();
 
-  // 1. Fetch RPC Data (Only need live/changing state: FIM Balance)
+  // 1. Fetch RPC Data (live/changing state). `computePayout` is the contract's
+  // lazy payout calc — the source of truth for the pending figure (returns 0
+  // once claimed). `hasClaimed` distinguishes "already claimed" from "nothing owed".
   const { data: rpcData, isLoading: rpcLoading, refetch: refetchRpc } = useReadContracts({
     contracts: [
-      // fimBalances is the only value that changes frequently or is needed live.
-      { address: seasonAddress as `0x${string}`, abi: GameSeasonAbi, functionName: 'fimBalances', args: [userAddress!], chainId }
+      { address: seasonAddress as `0x${string}`, abi: GameSeasonAbi, functionName: 'fimBalances', args: [userAddress!], chainId },
+      { address: seasonAddress as `0x${string}`, abi: GameSeasonAbi, functionName: 'computePayout', args: [userAddress!], chainId },
+      { address: seasonAddress as `0x${string}`, abi: GameSeasonAbi, functionName: 'hasClaimed', args: [userAddress!], chainId },
     ],
     query: { enabled: !!seasonAddress && !!userAddress }
   });
@@ -42,22 +46,27 @@ export function usePayout(seasonAddress: string | undefined, userAddress: string
   const refetch = () => { refetchRpc(); refetchPlayers(); };
 
   if (isLoading || !rpcData) {
-    return { payout: 0, pnl: 0, userFim: 0, userNetContrib: 0, fimBurned: 0, hasBalance: false, hasClaimed: false, realizedPayout: 0, loading: true, refetch };
+    return { payout: 0, pnl: 0, userFim: 0, userNetContrib: 0, contribution: 0, fimBurned: 0, hasBalance: false, hasClaimed: false, realizedPayout: 0, loading: true, refetch };
   }
 
-  // RPC Data Access (fimBalances is rpcData[0])
+  // RPC Data Access
   const balanceRaw = rpcData[0].result as bigint || 0n;
+  const pendingPayoutRaw = (rpcData[1]?.result as bigint) || 0n;  // computePayout (0 once claimed)
+  const hasClaimedOnChain = (rpcData[2]?.result as boolean) || false;
+  const pendingPayout = Number(formatUnits(pendingPayoutRaw, 6));
 
-  // Handle case where Ponder data is not yet available (game not finalized or player never interacted)
+  // Handle case where Ponder data is not yet available (game not finalized or player never interacted).
+  // The contract reads (payout / hasClaimed) are still authoritative even without Ponder history.
   if (!ponderData) {
       return {
-          payout: 0,
+          payout: pendingPayout,
           pnl: 0,
           userFim: Number(formatUnits(balanceRaw, 18)),
           userNetContrib: 0,
+          contribution: 0,
           fimBurned: 0,
           hasBalance: balanceRaw > 0n,
-          hasClaimed: false,
+          hasClaimed: hasClaimedOnChain,
           realizedPayout: 0,
           loading: false,
           refetch
@@ -67,37 +76,33 @@ export function usePayout(seasonAddress: string | undefined, userAddress: string
   try {
     // Ponder Data (Convert string values to BigInt for safe math)
     const claimedPayoutRaw = BigInt(ponderData.realizedPayout || "0");
-    const totalValueRaw = BigInt(ponderData.totalPotentialPayout || "0");
     const contribRaw = BigInt(ponderData.netContribution || "0");
     const burnedRaw = BigInt(ponderData.fimBurned || "0");
 
-    // CALCULATE UNCLAIMED PAYOUT: Total Winnings - Total Already Claimed
-    const unclaimedPayoutRaw = totalValueRaw > claimedPayoutRaw
-        ? totalValueRaw - claimedPayoutRaw
-        : 0n;
-
     // Formatting
-    const payoutUsdc = Number(formatUnits(unclaimedPayoutRaw, 6)); // Redeemable Now (CALCULATED)
-    const totalValueUsdc = Number(formatUnits(totalValueRaw, 6));  // Total Won (Ponder)
     const contribUsdc = Number(formatUnits(contribRaw, 6));         // Net Contrib (Ponder)
     const fimBal = Number(formatUnits(balanceRaw, 18));            // Live FIM (RPC)
     const burned = Number(formatUnits(burnedRaw, 18));             // FIM Burned (Ponder)
-    const realizedPayout = Number(formatUnits(claimedPayoutRaw, 6)); // Already Claimed (Ponder)
+    const realizedPayout = Number(formatUnits(claimedPayoutRaw, 6)); // Already Claimed (Ponder, via PayoutClaimed)
+
+    // Total value won: live computePayout pre-claim, realized amount post-claim.
+    const totalValueUsdc = hasClaimedOnChain ? realizedPayout : pendingPayout;
 
     return {
-        payout: payoutUsdc,
+        payout: pendingPayout,            // Redeemable now, straight from computePayout (0 once claimed)
         pnl: totalValueUsdc - contribUsdc,
         userFim: fimBal,
         userNetContrib: contribUsdc,
+        contribution: contribUsdc - fimBal,
         fimBurned: burned,
         hasBalance: balanceRaw > 0n,
-        hasClaimed: claimedPayoutRaw > 0n,
+        hasClaimed: hasClaimedOnChain,
         realizedPayout: realizedPayout,
         loading: false,
         refetch
     };
   } catch (e) {
     console.error("Error processing payout data:", e);
-    return { payout: 0, pnl: 0, userFim: 0, userNetContrib: 0, fimBurned: 0, hasBalance: false, hasClaimed: false, realizedPayout: 0, loading: false, refetch };
+    return { payout: 0, pnl: 0, userFim: 0, userNetContrib: 0, contribution: 0, fimBurned: 0, hasBalance: false, hasClaimed: false, realizedPayout: 0, loading: false, refetch };
   }
 }

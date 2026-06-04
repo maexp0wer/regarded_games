@@ -561,6 +561,17 @@ ponder.on("Treasury:YieldHarvested", async ({ event, context }) => {
 });
 
 
+// Trade fees collected by the Exchange flow into the season prize pool on-chain.
+// Mirror that here so the indexed `seasons.prizePool` reflects fees, not just mints.
+ponder.on("Treasury:TradingFeeCollected", async ({ event, context }) => {
+  const seasonAddress = event.args.season.toLowerCase() as `0x${string}`;
+  const amount = event.args.amount;
+
+  await context.db
+    .update(schema.seasons, { address: seasonAddress })
+    .set((row) => ({ prizePool: row.prizePool + amount }));
+});
+
 ponder.on("CapitalAuction:Deposited", async ({ event, context }) => {
   const address = event.args.user.toLowerCase() as `0x${string}`;
   await context.db

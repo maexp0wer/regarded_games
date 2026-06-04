@@ -482,6 +482,25 @@ export const TreasuryAbi = [
   },
   {
     "type": "event",
+    "name": "TradingFeeCollected",
+    "inputs": [
+      {
+        "name": "season",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "YieldHarvested",
     "inputs": [
       {

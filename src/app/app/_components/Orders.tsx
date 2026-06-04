@@ -44,7 +44,7 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress, fimAddress
   const { data: auctionMints = [] } = useMyAuctionMints(seasonAddress, userAddress);
   const { data: myTrades = [] } = useMyTrades(seasonAddress, userAddress);
   const { data: lastTradePrice = 0 } = useLastTradePrice(seasonAddress);
-  const { userNetContrib } = usePayout(seasonAddress, userAddress);
+  const { contribution } = usePayout(seasonAddress, userAddress);
 
   const chainId = useTenantChainId();
   const { data: fimBalanceRaw } = useReadContract({
@@ -124,7 +124,7 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress, fimAddress
             auctionMints={auctionMints}
             currentPrice={lastTradePrice}
             totalFim={totalFim}
-            netContribution={userNetContrib}
+            contribution={contribution}
           />
         )}
         {activeTab === 'history' && (
@@ -334,10 +334,10 @@ interface PositionViewProps {
   auctionMints: AuctionMint[];
   currentPrice: number;
   totalFim: number;
-  netContribution: number;
+  contribution: number;
 }
 
-function PositionView({ trades, auctionMints, currentPrice, totalFim, netContribution }: PositionViewProps) {
+function PositionView({ trades, auctionMints, currentPrice, totalFim, contribution }: PositionViewProps) {
   const position = computePosition(trades, auctionMints);
 
   return (
@@ -350,14 +350,14 @@ function PositionView({ trades, auctionMints, currentPrice, totalFim, netContrib
             <div className="text-right">Entry Price</div>
             <div className="text-right">Current Price</div>
             <div className="text-right">PNL</div>
-            <div className="text-right">Net Contribution</div>
+            <div className="text-right">Contribution</div>
           </div>
           {totalFim < 0.0001 ? (
             <div className="flex items-center justify-center py-6">
               <p className="section-label opacity-30">No position</p>
             </div>
           ) : (
-            <PositionRow totalFim={totalFim} entryPrice={position?.entryPrice} currentPrice={currentPrice} netContribution={netContribution} />
+            <PositionRow totalFim={totalFim} entryPrice={position?.entryPrice} currentPrice={currentPrice} contribution={contribution} />
           )}
         </div>
       </div>
@@ -369,14 +369,14 @@ interface PositionRowProps {
   totalFim: number;
   entryPrice: number | undefined;
   currentPrice: number;
-  netContribution: number;
+  contribution: number;
 }
 
-function PositionRow({ totalFim, entryPrice, currentPrice, netContribution }: PositionRowProps) {
+function PositionRow({ totalFim, entryPrice, currentPrice, contribution }: PositionRowProps) {
   const positionValue = totalFim * currentPrice;
   const pnl = entryPrice !== undefined ? (currentPrice - entryPrice) * totalFim : null;
   const pnlPositive = pnl !== null && pnl >= 0;
-  const netPositive = netContribution >= 0;
+  const contribPositive = contribution >= 0;
 
   return (
     <div className="ledger-row items-center" style={{ gridTemplateColumns: POS_COL }}>
@@ -403,9 +403,9 @@ function PositionRow({ totalFim, entryPrice, currentPrice, netContribution }: Po
 
       <span
         className="ledger-cell-metric"
-        style={{ color: netPositive ? 'var(--color-green)' : 'var(--color-red)' }}
+        style={{ color: contribPositive ? 'var(--color-green)' : 'var(--color-red)' }}
       >
-        {netPositive ? '+' : '-'}${Math.abs(netContribution).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        {contribPositive ? '+' : '-'}${Math.abs(contribution).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </span>
     </div>
   );

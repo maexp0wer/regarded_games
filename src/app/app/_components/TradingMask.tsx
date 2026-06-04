@@ -9,6 +9,7 @@ import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
 import { useTradeExecution, ExecutionPayload } from '@/hooks/useTradeExecution';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
+import ExchangeAbi from '@/deployments/abis/Exchange.json';
 import { PercentileCircle } from './PercentileCircle';
 import { GroupedOrder, OrderQueueItem } from './OrderQueueItem';
 import { WalletButton } from './WalletButton';
@@ -25,12 +26,15 @@ interface TradingMaskProps {
   setIsBuy: (v: boolean) => void;
   isMaker: boolean;
   setIsMaker: (v: boolean) => void;
-  targetAmount: string;
-  setTargetAmount: (v: string) => void;
-  selectedOrders: Order[];
+  buyTargetAmount: string;
+  setBuyTargetAmount: (v: string) => void;
+  sellTargetAmount: string;
+  setSellTargetAmount: (v: string) => void;
+  selectedAsks: Order[];
+  selectedBids: Order[];
   onRemoveOrder: (id: string) => void;
-  onMoveOrder: (index: number, direction: -1 | 1) => void;
-  onReorderOrders: (newOrders: Order[]) => void;
+  onReorderAsks: (newOrders: Order[]) => void;
+  onReorderBids: (newOrders: Order[]) => void;
   isOnHold?: boolean;
   onOpenOrderBook?: () => void;
 }
@@ -38,8 +42,8 @@ interface TradingMaskProps {
 export function TradingMask({
   seasonAddress, exchangeAddress, fimAddress,
   isBuy, setIsBuy, isMaker, setIsMaker,
-  targetAmount, setTargetAmount,
-  selectedOrders, onRemoveOrder, onReorderOrders,
+  buyTargetAmount, setBuyTargetAmount, sellTargetAmount, setSellTargetAmount,
+  selectedAsks, selectedBids, onRemoveOrder, onReorderAsks, onReorderBids,
   isOnHold = false,
   onOpenOrderBook,
 }: TradingMaskProps) {
@@ -48,16 +52,30 @@ export function TradingMask({
   const chainId = useTenantChainId();
   const [price, setPrice] = useState('1.00');
   const [isPricePerFim, setIsPricePerFim] = useState(true);
-  const [draggedGroupIdx, setDraggedGroupIdx] = useState<number | null>(null);
+  const [draggedAskGroupIdx, setDraggedAskGroupIdx] = useState<number | null>(null);
+  const [draggedBidGroupIdx, setDraggedBidGroupIdx] = useState<number | null>(null);
+
+  // Combined flat array used for all execution math
+  const selectedOrders = useMemo(() => [...selectedAsks, ...selectedBids], [selectedAsks, selectedBids]);
 
   const handlePriceModeSwitch = (mode: 'Per FIM' | 'Total') => {
     const perFim = mode === 'Per FIM';
     setIsPricePerFim(perFim);
-    setPrice(perFim ? '1.00' : targetAmount || '');
+    const makerTarget = isBuy ? buyTargetAmount : sellTargetAmount;
+    setPrice(perFim ? '1.00' : makerTarget || '');
   };
 
-  const spendingToken  = isBuy ? core.USDC : fimAddress;
-  const spendingSymbol = isBuy ? 'USDC' : 'FIM';
+  // In taker mode the order queue is the source of truth for direction (the
+  // Buy/Sell toggle is locked once orders are queued). `isBuy` only drives maker
+  // mode and the empty-queue default — never read it directly for takers, or the
+  // labels, spending token, and approval amount drift out of sync with the queue.
+  const hasAsksInQueue = !isMaker && selectedAsks.length > 0;
+  const hasBidsInQueue = !isMaker && selectedBids.length > 0;
+  const isMixedQueue = hasAsksInQueue && hasBidsInQueue;
+  const directionIsBuy = isMaker || selectedOrders.length === 0 ? isBuy : hasAsksInQueue;
+
+  const spendingToken  = directionIsBuy ? core.USDC : fimAddress;
+  const spendingSymbol = directionIsBuy ? 'USDC' : 'FIM';
 
   const { data: fimBalance } = useReadContract({
     address: fimAddress as `0x${string}`, abi: erc20Abi, functionName: 'balanceOf',
@@ -89,13 +107,22 @@ export function TradingMask({
   );
   const belowThreshold = existentialThreshold > 0 && totalFim < existentialThreshold;
 
-  const groupedQueue = useMemo(() => {
+  // Trade fee charged by the Exchange on the taker's USDC leg of every fill.
+  // Immutable per season — read once. tradeFeeBps=100 → 1.00%.
+  const { data: tradeFeeBpsRaw } = useReadContract({
+    address: exchangeAddress as `0x${string}`, abi: ExchangeAbi as any,
+    functionName: 'tradeFeeBps', chainId, query: { enabled: !!exchangeAddress, staleTime: Infinity },
+  });
+  const tradeFeeBps = (tradeFeeBpsRaw as bigint | undefined) ?? 0n;
+  const feePct = Number(tradeFeeBps) / 100;
+
+  const buildGroupedQueue = (orders: Order[]): GroupedOrder[] => {
     const groups: GroupedOrder[] = [];
-    if (!selectedOrders.length) return groups;
+    if (!orders.length) return groups;
     let current: GroupedOrder | null = null;
-    selectedOrders.forEach((order) => {
+    orders.forEach((order) => {
       const unitPrice = order.pricePerFim.toFixed(4);
-      if (current && current.maker === order.maker && current.unitPrice === unitPrice) {
+      if (current && current.maker === order.maker && current.unitPrice === unitPrice && current.isBuy === order.isBuy) {
         current.amount += order.amount; current.price += order.price;
         current.ids.push(order.id); current.orders.push(order);
       } else {
@@ -105,52 +132,140 @@ export function TradingMask({
     });
     if (current) groups.push(current);
     return groups;
-  }, [selectedOrders]);
+  };
+
+  const groupedAskQueue = useMemo(() => buildGroupedQueue(selectedAsks), [selectedAsks]);
+  const groupedBidQueue = useMemo(() => buildGroupedQueue(selectedBids), [selectedBids]);
 
   const queueMakers = useMemo(() =>
-    Array.from(new Set(groupedQueue.map(g => g.maker?.toLowerCase()).filter(Boolean))),
-    [groupedQueue]
+    Array.from(new Set(
+      [...groupedAskQueue, ...groupedBidQueue].map(g => g.maker?.toLowerCase()).filter(Boolean)
+    )),
+    [groupedAskQueue, groupedBidQueue]
   );
   const { data: percentileMap } = useBatchPlayerPercentiles(seasonAddress, queueMakers, exchangeAddress);
 
   const executionPayload = useMemo<ExecutionPayload>(() => {
     if (isMaker) return { ids: [], amounts: [], totalCostRaw: 0n, totalFimRaw: 0n };
-    const targetAmountRaw = targetAmount ? parseUnits(targetAmount, 18) : maxUint256;
-    let remaining = targetAmountRaw;
     const ids: bigint[] = []; const amounts: bigint[] = [];
     let totalCostUsdcRaw = 0n; let totalFimFilledRaw = 0n;
-    for (const order of selectedOrders) {
-      if (remaining <= 0n) break;
-      const take = remaining > order.rawAmount ? order.rawAmount : remaining;
+
+    const buyLimitRaw = buyTargetAmount ? parseUnits(buyTargetAmount, 18) : maxUint256;
+    let buyRemaining = buyLimitRaw;
+    for (const order of selectedAsks) {
+      if (buyRemaining <= 0n) break;
+      const take = buyRemaining > order.rawAmount ? order.rawAmount : buyRemaining;
       ids.push(BigInt(order.orderId.toString())); amounts.push(take);
       totalCostUsdcRaw += (take * order.rawPrice) / order.rawInitialAmount;
-      totalFimFilledRaw += take; remaining -= take;
+      totalFimFilledRaw += take; buyRemaining -= take;
     }
+
+    const sellLimitRaw = sellTargetAmount ? parseUnits(sellTargetAmount, 18) : maxUint256;
+    let sellRemaining = sellLimitRaw;
+    for (const order of selectedBids) {
+      if (sellRemaining <= 0n) break;
+      const take = sellRemaining > order.rawAmount ? order.rawAmount : sellRemaining;
+      ids.push(BigInt(order.orderId.toString())); amounts.push(take);
+      totalCostUsdcRaw += (take * order.rawPrice) / order.rawInitialAmount;
+      totalFimFilledRaw += take; sellRemaining -= take;
+    }
+
     return { ids, amounts, totalCostRaw: totalCostUsdcRaw, totalFimRaw: totalFimFilledRaw };
-  }, [isMaker, targetAmount, selectedOrders]);
+  }, [isMaker, buyTargetAmount, sellTargetAmount, selectedAsks, selectedBids]);
+
+  // Per-direction USDC split of the taker fill, walked with per-leg limits.
+  // Needed for fees on mixed queues, where buy legs add a fee to USDC paid and
+  // sell legs net it out of USDC received.
+  const legs = useMemo(() => {
+    if (isMaker) return { buyCostRaw: 0n, sellProceedsRaw: 0n };
+    let buyCostRaw = 0n; let sellProceedsRaw = 0n;
+
+    const buyLimitRaw = buyTargetAmount ? parseUnits(buyTargetAmount, 18) : maxUint256;
+    let buyRemaining = buyLimitRaw;
+    for (const order of selectedAsks) {
+      if (buyRemaining <= 0n) break;
+      const take = buyRemaining > order.rawAmount ? order.rawAmount : buyRemaining;
+      buyCostRaw += (take * order.rawPrice) / order.rawInitialAmount;
+      buyRemaining -= take;
+    }
+
+    const sellLimitRaw = sellTargetAmount ? parseUnits(sellTargetAmount, 18) : maxUint256;
+    let sellRemaining = sellLimitRaw;
+    for (const order of selectedBids) {
+      if (sellRemaining <= 0n) break;
+      const take = sellRemaining > order.rawAmount ? order.rawAmount : sellRemaining;
+      sellProceedsRaw += (take * order.rawPrice) / order.rawInitialAmount;
+      sellRemaining -= take;
+    }
+
+    return { buyCostRaw, sellProceedsRaw };
+  }, [isMaker, buyTargetAmount, sellTargetAmount, selectedAsks, selectedBids]);
+
+  const legsFim = useMemo(() => {
+    if (isMaker) return { buyFimRaw: 0n, sellFimRaw: 0n };
+    let buyFimRaw = 0n; let sellFimRaw = 0n;
+
+    const buyLimitRaw = buyTargetAmount ? parseUnits(buyTargetAmount, 18) : maxUint256;
+    let buyRemaining = buyLimitRaw;
+    for (const order of selectedAsks) {
+      if (buyRemaining <= 0n) break;
+      const take = buyRemaining > order.rawAmount ? order.rawAmount : buyRemaining;
+      buyFimRaw += take; buyRemaining -= take;
+    }
+
+    const sellLimitRaw = sellTargetAmount ? parseUnits(sellTargetAmount, 18) : maxUint256;
+    let sellRemaining = sellLimitRaw;
+    for (const order of selectedBids) {
+      if (sellRemaining <= 0n) break;
+      const take = sellRemaining > order.rawAmount ? order.rawAmount : sellRemaining;
+      sellFimRaw += take; sellRemaining -= take;
+    }
+
+    return { buyFimRaw, sellFimRaw };
+  }, [isMaker, buyTargetAmount, sellTargetAmount, selectedAsks, selectedBids]);
+
+  const makerTargetAmount = isBuy ? buyTargetAmount : sellTargetAmount;
 
   const makerTotalUsdcRaw = useMemo(() => {
-    if (!isMaker || !targetAmount || !price) return 0n;
+    if (!isMaker || !makerTargetAmount || !price) return 0n;
     try {
-      const total = isPricePerFim ? Number(targetAmount) * Number(price) : Number(price);
+      const total = isPricePerFim ? Number(makerTargetAmount) * Number(price) : Number(price);
       return parseUnits(total.toFixed(6), 6);
     } catch { return 0n; }
-  }, [isMaker, isPricePerFim, targetAmount, price]);
+  }, [isMaker, isPricePerFim, makerTargetAmount, price]);
+
+  // Taker buy fills route price→maker AND fee→Exchange, so the USDC allowance
+  // must cover price + fee (rounded up) or the fill reverts. Sell fills spend
+  // FIM (allowance unaffected) and the fee is netted out of USDC received.
+  const takerBuyFeeRaw = useMemo(
+    () => (tradeFeeBps > 0n ? (legs.buyCostRaw * tradeFeeBps + 9999n) / 10000n : 0n),
+    [legs.buyCostRaw, tradeFeeBps],
+  );
 
   const amountNeeded = useMemo(() => {
     if (!isConnected) return 0n;
-    if (isMaker) return isBuy ? makerTotalUsdcRaw : parseUnits(targetAmount || '0', 18);
-    return isBuy ? executionPayload.totalCostRaw : executionPayload.totalFimRaw;
-  }, [isBuy, isMaker, targetAmount, makerTotalUsdcRaw, executionPayload, isConnected]);
+    if (isMaker) return isBuy ? makerTotalUsdcRaw : parseUnits(sellTargetAmount || '0', 18);
+    return directionIsBuy ? legs.buyCostRaw + takerBuyFeeRaw : executionPayload.totalFimRaw;
+  }, [isBuy, directionIsBuy, isMaker, sellTargetAmount, makerTotalUsdcRaw, executionPayload, legs, takerBuyFeeRaw, isConnected]);
+
+  // Sell fills net the fee out of USDC received (floor, matching the contract).
+  const takerSellFeeRaw = useMemo(
+    () => (tradeFeeBps > 0n ? (legs.sellProceedsRaw * tradeFeeBps) / 10000n : 0n),
+    [legs.sellProceedsRaw, tradeFeeBps],
+  );
+  // Net USDC delta for the taker: sell proceeds (after fee) minus buy cost (with fee).
+  const takerNetRaw = (legs.sellProceedsRaw - takerSellFeeRaw) - (legs.buyCostRaw + takerBuyFeeRaw);
+  // Contribution delta: USDC net paid minus FIM net received, both at 1:1.
+  // Buying/selling at exactly 1 USDC/FIM yields 0; deviation shows what was donated/extracted.
+  // FIM is 18 decimals, USDC 6 — divide by 1e12 to align units before subtracting.
+  const contributionDeltaRaw = (legs.buyCostRaw - legs.sellProceedsRaw) - (legsFim.buyFimRaw - legsFim.sellFimRaw) / 10n ** 12n;
+  const showTakerFee = !isMaker && (legs.buyCostRaw > 0n || legs.sellProceedsRaw > 0n);
 
   const isSelfFill = useMemo(() =>
     !isMaker && !!address && selectedOrders.some(o => o.maker.toLowerCase() === address.toLowerCase()),
     [selectedOrders, address, isMaker]
   );
 
-  const hasAsksInQueue = !isMaker && selectedOrders.some(o => !o.isBuy);
-  const hasBidsInQueue = !isMaker && selectedOrders.some(o => o.isBuy);
-  const isMixedQueue = hasAsksInQueue && hasBidsInQueue;
   const buyButtonActive = isMaker ? isBuy : hasAsksInQueue || (selectedOrders.length === 0 && isBuy);
   const sellButtonActive = isMaker ? !isBuy : hasBidsInQueue || (selectedOrders.length === 0 && !isBuy);
 
@@ -161,40 +276,83 @@ export function TradingMask({
     return v.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
   };
 
-  const maxQueueFim = useMemo(() =>
-    !isMaker ? selectedOrders.reduce((acc, o) => acc + o.rawAmount, 0n) : 0n,
-    [isMaker, selectedOrders]
+  const maxAskQueueFim = useMemo(() =>
+    !isMaker ? selectedAsks.reduce((acc, o) => acc + o.rawAmount, 0n) : 0n,
+    [isMaker, selectedAsks]
+  );
+  const maxBidQueueFim = useMemo(() =>
+    !isMaker ? selectedBids.reduce((acc, o) => acc + o.rawAmount, 0n) : 0n,
+    [isMaker, selectedBids]
   );
 
-  const maxForSlider = isMaker
+  // For the single active input (non-mixed taker or maker)
+  const activeTarget = directionIsBuy ? buyTargetAmount : sellTargetAmount;
+  const activeMaxForSlider = isMaker
     ? (isBuy ? (usdcBalance || 0n) : (fimBalance || 0n))
-    : maxQueueFim;
-  const maxDecimals = isMaker ? (isBuy ? 6 : 18) : 18;
+    : (directionIsBuy ? maxAskQueueFim : maxBidQueueFim);
+  const activeMaxDecimals = isMaker ? (isBuy ? 6 : 18) : 18;
 
   const sliderPct = useMemo(() => {
-    if (!targetAmount || maxForSlider === 0n) return 0;
+    if (!activeTarget || activeMaxForSlider === 0n) return 0;
     try {
-      const raw = parseUnits(targetAmount, maxDecimals);
-      return Math.min(100, Number((raw * 10000n) / maxForSlider) / 100);
+      const raw = parseUnits(activeTarget, activeMaxDecimals);
+      return Math.min(100, Number((raw * 10000n) / activeMaxForSlider) / 100);
     } catch { return 0; }
-  }, [targetAmount, maxForSlider, maxDecimals]);
+  }, [activeTarget, activeMaxForSlider, activeMaxDecimals]);
 
   const handleSliderChange = (pct: number) => {
-    setTargetAmount(sliderPctToAmount(pct, Number(formatUnits(maxForSlider, maxDecimals))));
+    const val = sliderPctToAmount(pct, Number(formatUnits(activeMaxForSlider, activeMaxDecimals)));
+    if (directionIsBuy) setBuyTargetAmount(val); else setSellTargetAmount(val);
   };
 
-  const handleTargetAmountChange = (val: string) => {
+  const buySliderPct = useMemo(() => {
+    if (!buyTargetAmount || maxAskQueueFim === 0n) return 0;
+    try {
+      const raw = parseUnits(buyTargetAmount, 18);
+      return Math.min(100, Number((raw * 10000n) / maxAskQueueFim) / 100);
+    } catch { return 0; }
+  }, [buyTargetAmount, maxAskQueueFim]);
+
+  const sellSliderPct = useMemo(() => {
+    if (!sellTargetAmount || maxBidQueueFim === 0n) return 0;
+    try {
+      const raw = parseUnits(sellTargetAmount, 18);
+      return Math.min(100, Number((raw * 10000n) / maxBidQueueFim) / 100);
+    } catch { return 0; }
+  }, [sellTargetAmount, maxBidQueueFim]);
+
+  const handleBuySliderChange = (pct: number) =>
+    setBuyTargetAmount(sliderPctToAmount(pct, Number(formatUnits(maxAskQueueFim, 18))));
+  const handleSellSliderChange = (pct: number) =>
+    setSellTargetAmount(sliderPctToAmount(pct, Number(formatUnits(maxBidQueueFim, 18))));
+
+  const handleBuyTargetChange = (val: string) => {
     if (val !== '' && Number(val) < 0) return;
-    if (!isMaker && maxQueueFim > 0n && val !== '') {
+    if (!isMaker && maxAskQueueFim > 0n && val !== '') {
       try {
-        if (parseUnits(val, 18) > maxQueueFim) {
-          setTargetAmount(formatUnits(maxQueueFim, 18));
+        if (parseUnits(val, 18) > maxAskQueueFim) {
+          setBuyTargetAmount(formatUnits(maxAskQueueFim, 18));
           return;
         }
       } catch { /* invalid parse, fall through */ }
     }
-    setTargetAmount(val);
+    setBuyTargetAmount(val);
   };
+
+  const handleSellTargetChange = (val: string) => {
+    if (val !== '' && Number(val) < 0) return;
+    if (!isMaker && maxBidQueueFim > 0n && val !== '') {
+      try {
+        if (parseUnits(val, 18) > maxBidQueueFim) {
+          setSellTargetAmount(formatUnits(maxBidQueueFim, 18));
+          return;
+        }
+      } catch { /* invalid parse, fall through */ }
+    }
+    setSellTargetAmount(val);
+  };
+
+  const handleActiveTargetChange = directionIsBuy ? handleBuyTargetChange : handleSellTargetChange;
 
   const handlePriceChange = (val: string) => {
     if (val !== '' && Number(val) < 0) return;
@@ -203,44 +361,67 @@ export function TradingMask({
 
   const handleSideSwitch = (newIsBuy: boolean) => {
     setIsBuy(newIsBuy);
-    if (!targetAmount || !isMaker) return;
+    if (!isMaker) return;
+    const target = newIsBuy ? buyTargetAmount : sellTargetAmount;
+    const setTarget = newIsBuy ? setBuyTargetAmount : setSellTargetAmount;
+    if (!target) return;
     const newMax = newIsBuy ? (usdcBalance || 0n) : (fimBalance || 0n);
     const newDecimals = newIsBuy ? 6 : 18;
     try {
-      if (parseUnits(targetAmount, newDecimals) > newMax) {
-        setTargetAmount(formatUnits(newMax, newDecimals));
-      }
+      if (parseUnits(target, newDecimals) > newMax) setTarget(formatUnits(newMax, newDecimals));
     } catch {
-      setTargetAmount('');
+      setTarget('');
     }
   };
 
-  const walletBalanceDisplay = isBuy
+  const walletBalanceDisplay = directionIsBuy
     ? `${Number(formatUnits(usdcBalance || 0n, 6)).toLocaleString()} USDC`
     : `${Number(formatUnits(fimBalance || 0n, 18)).toLocaleString()} FIM`;
 
   const handleRemoveGroup = (group: GroupedOrder) => group.ids.forEach(id => onRemoveOrder(id));
-  const handleMoveGroupButton = (groupIdx: number, direction: -1 | 1) => {
-    const newGroups = [...groupedQueue];
+
+  const handleMoveAskGroupButton = (groupIdx: number, direction: -1 | 1) => {
+    const newGroups = [...groupedAskQueue];
     const [moved] = newGroups.splice(groupIdx, 1);
     newGroups.splice(groupIdx + direction, 0, moved);
-    onReorderOrders(newGroups.flatMap(g => g.orders));
+    onReorderAsks(newGroups.flatMap(g => g.orders));
   };
-  const handleGroupDragOver = (e: React.DragEvent, overGroupIdx: number) => {
+  const handleAskGroupDragOver = (e: React.DragEvent, overGroupIdx: number) => {
     e.preventDefault();
-    if (draggedGroupIdx === null || draggedGroupIdx === overGroupIdx) return;
-    const newGroups = [...groupedQueue];
-    const [moved] = newGroups.splice(draggedGroupIdx, 1);
+    if (draggedAskGroupIdx === null || draggedAskGroupIdx === overGroupIdx) return;
+    const newGroups = [...groupedAskQueue];
+    const [moved] = newGroups.splice(draggedAskGroupIdx, 1);
     newGroups.splice(overGroupIdx, 0, moved);
-    setDraggedGroupIdx(overGroupIdx);
-    onReorderOrders(newGroups.flatMap(g => g.orders));
+    setDraggedAskGroupIdx(overGroupIdx);
+    onReorderAsks(newGroups.flatMap(g => g.orders));
   };
 
+  const handleMoveBidGroupButton = (groupIdx: number, direction: -1 | 1) => {
+    const newGroups = [...groupedBidQueue];
+    const [moved] = newGroups.splice(groupIdx, 1);
+    newGroups.splice(groupIdx + direction, 0, moved);
+    onReorderBids(newGroups.flatMap(g => g.orders));
+  };
+  const handleBidGroupDragOver = (e: React.DragEvent, overGroupIdx: number) => {
+    e.preventDefault();
+    if (draggedBidGroupIdx === null || draggedBidGroupIdx === overGroupIdx) return;
+    const newGroups = [...groupedBidQueue];
+    const [moved] = newGroups.splice(draggedBidGroupIdx, 1);
+    newGroups.splice(overGroupIdx, 0, moved);
+    setDraggedBidGroupIdx(overGroupIdx);
+    onReorderBids(newGroups.flatMap(g => g.orders));
+  };
+
+  const clearTargets = (v: string) => { setBuyTargetAmount(v); setSellTargetAmount(v); };
+
   const { workflowStatus, txHashes, handleStartFlow, isBusy } = useTradeExecution({
-    isMaker, isBuy, targetAmount, makerTotalUsdcRaw, executionPayload,
+    isMaker, isBuy: directionIsBuy, targetAmount: makerTargetAmount, makerTotalUsdcRaw, executionPayload,
     spendingToken: spendingToken as `0x${string}`, spendingSymbol,
     exchangeAddress: exchangeAddress as `0x${string}`,
-    amountNeeded, selectedOrders, onRemoveOrder, setTargetAmount, setPrice,
+    amountNeeded, selectedOrders, onRemoveOrder, setTargetAmount: clearTargets, setPrice,
+    isMixed: isMixedQueue,
+    fimToken: fimAddress as `0x${string}`,
+    sellFimAmountNeeded: legsFim.sellFimRaw,
   });
 
   const isButtonDisabled = isBusy || workflowStatus === 'success'
@@ -363,45 +544,52 @@ export function TradingMask({
           </button>
         </div>
 
-        {/* ── Amount input with embedded Maker/Taker rail ── */}
-        <div>
-          <div className="input-embedded-rail">
-            <button
-              disabled={isQueueLocked}
-              onClick={() => setIsMaker(false)}
-              className={`btn-input-switch ${!isMaker ? 'active' : ''}`}
-            >
-              Taker
-            </button>
-            <button
-              disabled={isQueueLocked}
-              onClick={() => setIsMaker(true)}
-              className={`btn-input-switch ${isMaker ? 'active' : ''}`}
-            >
-              Maker
-            </button>
-          </div>
-          <div className="bg-bg border border-border rounded-b px-3 pt-2 pb-3 flex flex-col gap-2">
-            <span className="mask-label text-right">WALLET&nbsp;<span className="text-text font-semibold">{walletBalanceDisplay}</span></span>
-            <div className="group flex items-center gap-2">
-              <input
-                type="number"
-                min="0"
-                max={maxForSlider > 0n ? formatUnits(maxForSlider, maxDecimals) : undefined}
-                value={targetAmount}
-                onChange={(e) => handleTargetAmountChange(e.target.value)}
-                className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners"
-                placeholder={isMaker ? '0.00' : 'MAX'}
-              />
-              <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button className="btn-stepper" onClick={() => handleTargetAmountChange(String(Math.max(0, (parseFloat(targetAmount || '0') + 1))))}>▲</button>
-                <button className="btn-stepper" onClick={() => handleTargetAmountChange(String(Math.max(0, (parseFloat(targetAmount || '0') - 1))))}>▼</button>
-              </div>
-              <span className="text-input font-mono font-bold text-text2 shrink-0">{isMaker && isBuy ? 'USDC' : 'FIM'}</span>
+        {/* ── Amount input with embedded Maker/Taker rail (single side: maker or non-mixed taker) ── */}
+        {(!isMixedQueue || isMaker) && (
+          <div>
+            <div className="input-embedded-rail">
+              <button
+                disabled={isQueueLocked}
+                onClick={() => setIsMaker(false)}
+                className={`btn-input-switch ${!isMaker ? 'active' : ''}`}
+              >
+                Taker
+              </button>
+              <button
+                disabled={isQueueLocked}
+                onClick={() => setIsMaker(true)}
+                className={`btn-input-switch ${isMaker ? 'active' : ''}`}
+              >
+                Maker
+              </button>
             </div>
-            <PercentSlider value={sliderPct} onChange={handleSliderChange} disabled={isBusy} />
+            <div className="bg-bg border border-border rounded-b px-3 pt-2 pb-3 flex flex-col gap-2">
+              <span className="mask-label text-right">
+                {!isMaker && activeMaxForSlider > 0n
+                  ? <>QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(activeMaxForSlider, 18)).toLocaleString()} FIM</span></>
+                  : <>WALLET&nbsp;<span className="text-text font-semibold">{walletBalanceDisplay}</span></>
+                }
+              </span>
+              <div className="group flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  max={activeMaxForSlider > 0n ? formatUnits(activeMaxForSlider, activeMaxDecimals) : undefined}
+                  value={activeTarget}
+                  onChange={(e) => handleActiveTargetChange(e.target.value)}
+                  className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners"
+                  placeholder={isMaker ? '0.00' : 'MAX'}
+                />
+                <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button className="btn-stepper" onClick={() => handleActiveTargetChange(String(Math.max(0, (parseFloat(activeTarget || '0') + 1))))}>▲</button>
+                  <button className="btn-stepper" onClick={() => handleActiveTargetChange(String(Math.max(0, (parseFloat(activeTarget || '0') - 1))))}>▼</button>
+                </div>
+                <span className="text-input font-mono font-bold text-text2 shrink-0">{isMaker && isBuy ? 'USDC' : 'FIM'}</span>
+              </div>
+              <PercentSlider value={sliderPct} onChange={handleSliderChange} disabled={isBusy} />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ── Maker price input with embedded Per FIM / Total rail ── */}
         {isMaker && (
@@ -441,69 +629,202 @@ export function TradingMask({
           </div>
         )}
 
-        {/* ── Taker: order queue ── */}
+        {/* ── Taker: order queue(s) ── */}
         {!isMaker && (
-          <div className="flex flex-col flex-1 min-h-0">
-            <p className="section-label mb-2">Order Execution Queue</p>
-            <div className="flex-1 max-h-55 overflow-y-auto custom-scrollbar rounded-lg p-2 border border-border bg-bg">
-              {groupedQueue.length === 0 ? (
-                <button
-                  onClick={onOpenOrderBook}
-                  disabled={!onOpenOrderBook}
-                  className="h-full w-full flex flex-col items-center justify-center py-10 gap-1.5 rounded-lg transition-colors hover:bg-card2/60 disabled:pointer-events-none"
-                >
-                  <p className="section-label opacity-50">Select orders from Order Book</p>
-                  {onOpenOrderBook && (
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-text2/30">Click to open →</p>
-                  )}
-                </button>
-              ) : (
-                groupedQueue.map((group, groupIdx) => {
-                  const filledBefore = groupedQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
-                  return (
-                    <OrderQueueItem
-                      key={group.ids[0]}
-                      group={group} groupIdx={groupIdx} groupCount={groupedQueue.length}
-                      draggedGroupIdx={draggedGroupIdx} targetAmount={targetAmount}
-                      filledBefore={filledBefore} stats={percentileMap?.[group.maker?.toLowerCase()]}
-                      onMoveGroup={handleMoveGroupButton} onRemoveGroup={handleRemoveGroup}
-                      onDragStart={setDraggedGroupIdx} onDragOver={handleGroupDragOver}
-                      onDragEnd={() => setDraggedGroupIdx(null)}
+          isMixedQueue ? (
+            /* Mixed: buy input → buy queue → sell input → sell queue */
+            <div className="flex flex-col flex-1 min-h-0 gap-3">
+              {/* Buy leg */}
+              <div>
+                <div className="input-embedded-rail">
+                  <span className="px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-green)' }}>Buy</span>
+                </div>
+                <div className="bg-bg border border-border rounded-b-none border-b-0 px-3 pt-2 pb-3 flex flex-col gap-2">
+                  <span className="mask-label text-right">QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(maxAskQueueFim, 18)).toLocaleString()} FIM</span></span>
+                  <div className="group flex items-center gap-2">
+                    <input
+                      type="number" min="0"
+                      max={maxAskQueueFim > 0n ? formatUnits(maxAskQueueFim, 18) : undefined}
+                      value={buyTargetAmount}
+                      onChange={(e) => handleBuyTargetChange(e.target.value)}
+                      className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners"
+                      placeholder="MAX"
                     />
-                  );
-                })
-              )}
+                    <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button className="btn-stepper" onClick={() => handleBuyTargetChange(String(Math.max(0, parseFloat(buyTargetAmount || '0') + 1)))}>▲</button>
+                      <button className="btn-stepper" onClick={() => handleBuyTargetChange(String(Math.max(0, parseFloat(buyTargetAmount || '0') - 1)))}>▼</button>
+                    </div>
+                    <span className="text-input font-mono font-bold text-text2 shrink-0">FIM</span>
+                  </div>
+                  <PercentSlider value={buySliderPct} onChange={handleBuySliderChange} disabled={isBusy} />
+                </div>
+                <div className="overflow-y-auto custom-scrollbar rounded-b-lg p-2 border border-t-0 border-border bg-bg max-h-51">
+                  {groupedAskQueue.map((group, groupIdx) => {
+                    const filledBefore = groupedAskQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
+                    return (
+                      <OrderQueueItem
+                        key={group.ids[0]}
+                        group={group} groupIdx={groupIdx} groupCount={groupedAskQueue.length}
+                        draggedGroupIdx={draggedAskGroupIdx} targetAmount={buyTargetAmount}
+                        filledBefore={filledBefore} stats={percentileMap?.[group.maker?.toLowerCase()]}
+                        onMoveGroup={handleMoveAskGroupButton} onRemoveGroup={handleRemoveGroup}
+                        onDragStart={setDraggedAskGroupIdx} onDragOver={handleAskGroupDragOver}
+                        onDragEnd={() => setDraggedAskGroupIdx(null)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Sell leg */}
+              <div>
+                <div className="input-embedded-rail">
+                  <span className="px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-red)' }}>Sell</span>
+                </div>
+                <div className="bg-bg border border-border rounded-b-none border-b-0 px-3 pt-2 pb-3 flex flex-col gap-2">
+                  <span className="mask-label text-right">QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(maxBidQueueFim, 18)).toLocaleString()} FIM</span></span>
+                  <div className="group flex items-center gap-2">
+                    <input
+                      type="number" min="0"
+                      max={maxBidQueueFim > 0n ? formatUnits(maxBidQueueFim, 18) : undefined}
+                      value={sellTargetAmount}
+                      onChange={(e) => handleSellTargetChange(e.target.value)}
+                      className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners"
+                      placeholder="MAX"
+                    />
+                    <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button className="btn-stepper" onClick={() => handleSellTargetChange(String(Math.max(0, parseFloat(sellTargetAmount || '0') + 1)))}>▲</button>
+                      <button className="btn-stepper" onClick={() => handleSellTargetChange(String(Math.max(0, parseFloat(sellTargetAmount || '0') - 1)))}>▼</button>
+                    </div>
+                    <span className="text-input font-mono font-bold text-text2 shrink-0">FIM</span>
+                  </div>
+                  <PercentSlider value={sellSliderPct} onChange={handleSellSliderChange} disabled={isBusy} />
+                </div>
+                <div className="overflow-y-auto custom-scrollbar rounded-b-lg p-2 border border-t-0 border-border bg-bg max-h-51">
+                  {groupedBidQueue.map((group, groupIdx) => {
+                    const filledBefore = groupedBidQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
+                    return (
+                      <OrderQueueItem
+                        key={group.ids[0]}
+                        group={group} groupIdx={groupIdx} groupCount={groupedBidQueue.length}
+                        draggedGroupIdx={draggedBidGroupIdx} targetAmount={sellTargetAmount}
+                        filledBefore={filledBefore} stats={percentileMap?.[group.maker?.toLowerCase()]}
+                        onMoveGroup={handleMoveBidGroupButton} onRemoveGroup={handleRemoveGroup}
+                        onDragStart={setDraggedBidGroupIdx} onDragOver={handleBidGroupDragOver}
+                        onDragEnd={() => setDraggedBidGroupIdx(null)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            /* Non-mixed: single queue */
+            <div className="flex flex-col flex-1 min-h-0">
+              <p className="section-label mb-2">Order Execution Queue</p>
+              <div className="flex-1 max-h-55 overflow-y-auto custom-scrollbar rounded-lg p-2 border border-border bg-bg">
+                {(hasAsksInQueue ? groupedAskQueue : groupedBidQueue).length === 0 ? (
+                  <button
+                    onClick={onOpenOrderBook}
+                    disabled={!onOpenOrderBook}
+                    className="h-full w-full flex flex-col items-center justify-center py-10 gap-1.5 rounded-lg transition-colors hover:bg-card2/60 disabled:pointer-events-none"
+                  >
+                    <p className="section-label opacity-50">Select orders from Order Book</p>
+                    {onOpenOrderBook && (
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-text2/30">Click to open →</p>
+                    )}
+                  </button>
+                ) : (
+                  (hasAsksInQueue ? groupedAskQueue : groupedBidQueue).map((group, groupIdx) => {
+                    const activeQueue = hasAsksInQueue ? groupedAskQueue : groupedBidQueue;
+                    const filledBefore = activeQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
+                    return (
+                      <OrderQueueItem
+                        key={group.ids[0]}
+                        group={group} groupIdx={groupIdx} groupCount={activeQueue.length}
+                        draggedGroupIdx={hasAsksInQueue ? draggedAskGroupIdx : draggedBidGroupIdx}
+                        targetAmount={activeTarget}
+                        filledBefore={filledBefore} stats={percentileMap?.[group.maker?.toLowerCase()]}
+                        onMoveGroup={hasAsksInQueue ? handleMoveAskGroupButton : handleMoveBidGroupButton}
+                        onRemoveGroup={handleRemoveGroup}
+                        onDragStart={hasAsksInQueue ? setDraggedAskGroupIdx : setDraggedBidGroupIdx}
+                        onDragOver={hasAsksInQueue ? handleAskGroupDragOver : handleBidGroupDragOver}
+                        onDragEnd={() => hasAsksInQueue ? setDraggedAskGroupIdx(null) : setDraggedBidGroupIdx(null)}
+                      />
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )
         )}
 
         {/* ── Summary + CTA ── */}
         <div className="mt-auto pt-4 flex flex-col gap-4 border-t border-border">
-          <div className="flex justify-between items-end">
-            <div>
-              <p className="section-label mb-1">{isMaker ? 'Total' : 'Total'}</p>
-              <span className="font-mono font-bold text-base" style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}>
-                ${formatDynamicUsdc(isMaker ? makerTotalUsdcRaw : executionPayload.totalCostRaw)}
-              </span>
-            </div>
-            {!isMaker && (
-              <div className="text-right">
-                <p className="section-label mb-1">{isBuy ? 'Buying' : 'Selling'}</p>
-                <span
-                  className="font-mono font-bold text-[18px] tabular-nums"
-                  style={{ color: isBuy ? 'var(--color-green)' : 'var(--color-red)' }}
-                >
-                  {Number(formatUnits(executionPayload.totalFimRaw, 18)).toLocaleString()} FIM
-                </span>
+          {showTakerFee && (
+            <div className="flex flex-col gap-2">
+              {legs.buyCostRaw > 0n && (
+                <div className="rounded-lg px-3 py-2.5 flex flex-col gap-1 bg-card2 border border-border">
+                  <div className="flex justify-between font-mono text-xs font-bold tabular-nums pb-1 border-b border-border" style={{ color: 'var(--color-green)' }}>
+                    <span>Buy</span>
+                    <span>{Number(formatUnits(legsFim.buyFimRaw, 18)).toLocaleString()} FIM</span>
+                  </div>
+                  <div className="flex justify-between font-mono text-[11px] text-text2">
+                    <span>Base</span>
+                    <span className="tabular-nums">${formatDynamicUsdc(legs.buyCostRaw)}</span>
+                  </div>
+                  {tradeFeeBps > 0n && (
+                    <div className="flex justify-between font-mono text-[11px] text-text2">
+                      <span>Fee ({feePct}%)</span>
+                      <span className="tabular-nums">+${formatDynamicUsdc(takerBuyFeeRaw)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-mono text-xs font-bold text-text pt-1 border-t border-border">
+                    <span>You pay</span>
+                    <span className="tabular-nums">${formatDynamicUsdc(legs.buyCostRaw + takerBuyFeeRaw)}</span>
+                  </div>
+                </div>
+              )}
+              {legs.sellProceedsRaw > 0n && (
+                <div className="rounded-lg px-3 py-2.5 flex flex-col gap-1 bg-card2 border border-border">
+                  <div className="flex justify-between font-mono text-xs font-bold tabular-nums pb-1 border-b border-border" style={{ color: 'var(--color-red)' }}>
+                    <span>Sell</span>
+                    <span>{Number(formatUnits(legsFim.sellFimRaw, 18)).toLocaleString()} FIM</span>
+                  </div>
+                  <div className="flex justify-between font-mono text-[11px] text-text2">
+                    <span>Base</span>
+                    <span className="tabular-nums">${formatDynamicUsdc(legs.sellProceedsRaw)}</span>
+                  </div>
+                  {tradeFeeBps > 0n && (
+                    <div className="flex justify-between font-mono text-[11px] text-text2">
+                      <span>Fee ({feePct}%)</span>
+                      <span className="tabular-nums">-${formatDynamicUsdc(takerSellFeeRaw)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-mono text-xs font-bold text-text pt-1 border-t border-border">
+                    <span>You receive</span>
+                    <span className="tabular-nums">${formatDynamicUsdc(legs.sellProceedsRaw - takerSellFeeRaw)}</span>
+                  </div>
+                </div>
+              )}
+              {isMixedQueue && (
+                <div className="rounded-lg px-3 py-2.5 bg-card2 border border-border">
+                  <div className="flex justify-between font-mono text-xs font-black" style={{ color: takerNetRaw > 0n ? 'var(--color-green)' : takerNetRaw < 0n ? 'var(--color-red)' : 'var(--color-text2)' }}>
+                    <span>Net USDC</span>
+                    <span className="tabular-nums">
+                      {takerNetRaw > 0n ? '+' : takerNetRaw < 0n ? '-' : ''}{takerNetRaw !== 0n && '$'}{formatDynamicUsdc(takerNetRaw >= 0n ? takerNetRaw : -takerNetRaw)}
+                    </span>
+                  </div>
+                </div>
+              )}
+              <div className="rounded-lg px-3 py-2.5 bg-card2 border border-border">
+                <div className="flex justify-between font-mono text-[11px]" style={{ color: contributionDeltaRaw > 0n ? 'var(--color-green)' : contributionDeltaRaw < 0n ? 'var(--color-red)' : 'var(--color-text2)' }}>
+                  <span>Contribution</span>
+                  <span className="tabular-nums font-bold">
+                    {contributionDeltaRaw > 0n ? '+' : contributionDeltaRaw < 0n ? '-' : ''}${formatDynamicUsdc(contributionDeltaRaw >= 0n ? contributionDeltaRaw : -contributionDeltaRaw)}
+                  </span>
+                </div>
               </div>
-            )}
-          </div>
-
-          {isMixedQueue && (
-            <div className="rounded-lg px-4 py-2.5 flex items-center gap-2" style={{ background: 'var(--color-gold-15)', border: '1px solid var(--color-gold-35)' }}>
-              <span className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-gold)' }}>
-                Warning: buying &amp; selling in same transaction
-              </span>
             </div>
           )}
 
@@ -518,11 +839,12 @@ export function TradingMask({
           <button
             disabled={isButtonDisabled}
             onClick={handleStartFlow}
-            className={`btn-terminal-action ${isMixedQueue ? '' : isBuy ? 'action-buy' : 'action-sell'} gap-2`}
-            style={isMixedQueue ? { background: 'linear-gradient(180deg, var(--color-gold-35), var(--color-gold-15))', color: 'var(--color-gold)', border: '1px solid var(--color-gold-35)' } : undefined}
+            className={isMixedQueue
+              ? 'relative w-full inline-flex items-center justify-center py-3.5 px-6 rounded-md font-display text-xs font-black uppercase tracking-[0.06em] text-bg bg-linear-to-r from-green to-red cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.25)] transition-all duration-150 ease-in-out hover:-translate-y-px hover:brightness-112 hover:shadow-[0_6px_16px_rgba(0,0,0,0.35)] active:translate-y-px active:scale-[0.98] disabled:bg-card2 disabled:text-text2 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none gap-2'
+              : `btn-terminal-action ${directionIsBuy ? 'action-buy' : 'action-sell'} gap-2`}
           >
             {isBusy && <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}
-            <span>{isMixedQueue ? 'Execute Mixed Trade' : isBuy ? 'Buy FIM' : 'Sell FIM'}</span>
+            <span>{isMixedQueue ? 'Execute Mixed Trade' : directionIsBuy ? 'Buy FIM' : 'Sell FIM'}</span>
           </button>
         </div>
 
@@ -548,7 +870,7 @@ export function TradingMask({
             completeStatuses: ['success'],
           },
         ]}
-        onClose={() => setTargetAmount('')}
+        onClose={() => clearTargets('')}
       />
 
     </div>
