@@ -49,8 +49,8 @@ All CSS color variables must map exactly to these definitions:
 - **Red (Bearish / Market Halt):** Downward price movements, negative PNL, sell/ask operations, warnings, system locked/halted indicators.
 
 ### Gradients & Transparency Layering
-- `--cyber-sunset`: `linear-gradient(90deg, var(--color-purple) 0%, var(--color-magenta) 45%, var(--color-orange) 75%, var(--color-gold) 100%)`
-- `--subtle-glow`: `linear-gradient(90deg, var(--color-purple-15) 0%, var(--color-magenta-15) 45%, var(--color-orange-15) 75%, var(--color-gold-15) 100%)`
+- `--sunset`: `linear-gradient(90deg, var(--color-purple) 0%, var(--color-magenta) 45%, var(--color-orange) 75%, var(--color-gold) 100%)`
+- `--sunset-15`: `linear-gradient(90deg, var(--color-purple-15) 0%, var(--color-magenta-15) 45%, var(--color-orange-15) 75%, var(--color-gold-15) 100%)`
 - *Transparencies:* Declare low-contrast overlays at 15%, 35%, and 70% using: `color-mix(in srgb, var(--color-[token]) [opacity]%, transparent)`.
 
 ---
@@ -87,7 +87,7 @@ All layouts must follow a 5px spacing step system.
 - **Highlight Strip:** `absolute left-0 top-0 bottom-0 w-1 bg-[color-accent] group-hover:w-1.5 transition-all` inside each cell.
 
 ### Button Hierarchy
-- **Primary Action (`btn-game-primary`):** Background `var(--cyber-sunset)`, no border, text `var(--color-bg)`. Shadow: `0 4px 14px color-mix(in srgb, var(--color-purple) 35%, transparent)`.
+- **Primary Action (`btn-game-primary`):** Background `var(--sunset)`, no border, text `var(--color-bg)`. Shadow: `0 4px 14px color-mix(in srgb, var(--color-purple) 35%, transparent)`.
 - **Secondary Action (`btn-game-secondary`):** Background `var(--color-card2)`, border `1px solid var(--color-border2)`, text `var(--color-text)`. Hover: border transitions to `border-purple` with shadow `0 0 12px var(--color-purple-15)`.
 
 ### Inline Countdowns

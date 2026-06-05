@@ -27,7 +27,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
 
   const { writeContractAsync } = useWriteContract();
 
-  const { payout, pnl: livePnL, userFim, contribution, fimBurned, realizedPayout, hasClaimed: hasClaimedChain, hasBalance, loading: calcLoading, error: payoutError, refetch: refetchPayout } =
+  const { payout, yieldPayout, pnl: livePnL, userFim, contribution, fimBurned, realizedPayout, hasClaimed: hasClaimedChain, hasBalance, loading: calcLoading, error: payoutError, refetch: refetchPayout } =
     usePayout(seasonAddress, address);
 
   // Open sell orders escrow FIM; claimPayout() reverts (insufficient FIM to burn)
@@ -46,6 +46,11 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
     if (snapshotPnL !== null && livePnL < snapshotPnL) return snapshotPnL;
     return livePnL;
   }, [snapshotPnL, livePnL]);
+
+  // `payout` (from usePayout) is already pool-proportional and yield-inclusive —
+  // it sums the base prize pool (auction USDC + trading fees) and the reinvested
+  // Aave yield bonus. No further yield adjustment here.
+  const displayPayout = hasClaimed ? realizedPayout : payout;
 
   useEffect(() => {
     if (status === 'success') refetchPayout();
@@ -106,15 +111,15 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
   const isButtonDisabled = isBusy || !canClaim;
   const pnlPositive = displayPnL >= 0;
   const contribPositive = contribution >= 0;
+  const yieldHasValue = yieldPayout > 0.005; // ignore sub-cent rounding
   const displayFim = hasClaimed ? fimBurned : userFim;
-  const displayPayout = hasClaimed ? realizedPayout : payout;
 
   return (
     <>
-    <div className={`flex flex-col gap-5 w-full bg-card border border-border rounded-lg p-5 mx-auto${className ? ` ${className}` : ''}`}>
+    <div className={`flex flex-col gap-5 w-full bg-card border border-border rounded-lg p-5 mx-auto max-h-[50vh]${className ? ` ${className}` : ''}`}>
 
       {/* Header */}
-      <div className="terminal-pane-header">
+      <div className="terminal-pane-header mb-0!">
         <span className="terminal-pane-title">Payout Settlement</span>
         <span className="font-mono text-[10px] bg-[var(--color-card2)] border border-[var(--color-border)] px-2 py-0.5 rounded text-text2 uppercase tracking-wider flex items-center gap-1.5">
           <span className={`h-1.5 w-1.5 rounded-full ${hasClaimed ? 'bg-[var(--color-text2)]' : 'bg-[var(--color-green)] animate-pulse'}`} />
@@ -143,7 +148,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
           </span>
         </div>
 
-        <div className="terminal-pane p-2.5 col-span-2">
+        <div className="terminal-pane p-2.5">
           <div className="flex justify-between items-center">
             <span className="terminal-pane-title">Season P / L</span>
             {!calcLoading && (
@@ -167,12 +172,29 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
             </span>
           )}
         </div>
+
+        {/* Yield Bonus contribution to P/L — the slice of the payout funded by
+            reinvested Aave yield, which the player paid nothing for (pure upside). */}
+        <div className="terminal-pane p-2.5">
+          <span className="terminal-pane-title block mb-0.5">Yield Bonus P / L</span>
+          {calcLoading ? (
+            <div className="h-5 w-24 rounded animate-pulse mt-1" style={{ background: 'var(--color-border)' }} />
+          ) : (
+            <span
+              className="font-mono text-base font-black block mt-0.5"
+              style={{ color: yieldHasValue ? 'var(--color-green)' : 'var(--color-text2)', fontVariantNumeric: 'tabular-nums' }}
+            >
+              +${yieldPayout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span className="ml-1 text-[10px] text-text2">USDC</span>
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Checkout Vault */}
       <div className="bg-card2 border border-border2 rounded-md p-4 flex flex-col items-center justify-center text-center relative overflow-hidden before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.75 before:bg-green">
         <span className="font-mono text-[10px] font-bold text-text2 uppercase tracking-widest mb-1">
-          {hasClaimed ? 'Total Claimed' : payout > 0 ? 'Net Disbursable Balance' : 'No Payout Due'}
+          {hasClaimed ? 'Total Claimed' : payout > 0 ? 'Claimable' : 'No Payout Due'}
         </span>
         {calcLoading ? (
           <div className="h-9 w-36 rounded animate-pulse" style={{ background: 'var(--color-border)' }} />

@@ -209,7 +209,7 @@ export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
         {/* Purple gradient badge */}
         <span
           className="font-mono text-[10px] uppercase font-bold px-3 py-1.5 rounded-full shrink-0"
-          style={{ background: 'var(--cyber-sunset)', color: '#fff' }}
+          style={{ background: 'var(--sunset)', color: '#fff' }}
         >
           Regarded Player
         </span>

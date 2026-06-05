@@ -9,6 +9,7 @@ import {
   relativePnl,
   type QuestsConfig,
 } from '@/lib/quests';
+import { getCommunitySession } from '@/lib/communitySession';
 import { TENANTS } from '@/config/tenants';
 
 const PONDER_URL = TENANTS.sepolia.ponderUrl;
@@ -160,7 +161,7 @@ async function ponderSeasonStats(seasonAddr: string): Promise<PlayerStatRow[]> {
   );
 }
 
-async function discourseLastSeen(addr: string): Promise<boolean> {
+async function discourseAccountExists(addr: string): Promise<boolean> {
   const url = process.env.NEXT_PUBLIC_DISCOURSE_URL;
   const apiKey = process.env.DISCOURSE_API_KEY;
   if (!url || !apiKey) return false;
@@ -169,7 +170,7 @@ async function discourseLastSeen(addr: string): Promise<boolean> {
   });
   if (!res.ok) return false;
   const data = await res.json();
-  return Boolean(data?.user?.last_seen_at);
+  return Boolean(data?.user?.id);
 }
 
 async function discourseHasVoted(addr: string): Promise<boolean> {
@@ -370,6 +371,34 @@ export async function GET(req: Request) {
     const config = loadQuestsConfig();
     const P = config.points;
 
+    // ── Layer 1: session gate ──────────────────────────────────────────────
+    // Writes require a matching verified session. Reads (anonymous catalogue
+    // or viewing existing completions) are always served.
+    const sessionAddr = getCommunitySession(req);
+    // If a session exists for a *different* address than the one being queried,
+    // silently treat as read-only — don't block legitimate users with stale sessions.
+    const sessionMatch = address !== null && sessionAddr === address;
+
+    // ── Layer 2: CAPTCHA gate ──────────────────────────────────────────────
+    // quest credits are only written after the user has solved a CAPTCHA once.
+    // When TURNSTILE_SECRET_KEY is absent (local dev) the widget is skipped on
+    // the frontend too, so we mirror that by treating captcha as auto-verified.
+    const captchaRequired = !!process.env.TURNSTILE_SECRET_KEY;
+    let captchaVerified = !captchaRequired;
+    if (sessionMatch && captchaRequired) {
+      try {
+        const { rows: fpRows } = await query<{ id: number }>(
+          `SELECT id FROM session_fingerprints
+           WHERE address = $1 AND captcha_verified = TRUE
+           LIMIT 1`,
+          [address],
+        );
+        captchaVerified = fpRows.length > 0;
+      } catch { /* non-fatal — fail open on DB error */ }
+    }
+
+    const canWrite = sessionMatch && captchaVerified;
+
     // Manifest topic link (DB-derived, with graceful fallback) — needed for
     // both the anonymous catalogue and the per-wallet response.
     let manifestTopicId: string | undefined;
@@ -378,8 +407,9 @@ export async function GET(req: Request) {
         `SELECT value FROM quest_config WHERE key = 'manifest_topic_id'`,
       );
       manifestTopicId = r.rows[0]?.value;
-    } catch (e: any) {
-      console.warn(`[quests] manifest_topic_id lookup failed: ${e?.message ?? e}`);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn(`[quests] manifest_topic_id lookup failed: ${msg}`);
     }
     const discourseBase = process.env.NEXT_PUBLIC_DISCOURSE_URL ?? config.externalLinks.discourseUrl;
     const manifestActionUrl = manifestTopicId
@@ -393,7 +423,7 @@ export async function GET(req: Request) {
       // unreachable service (Ponder sepolia, Discourse) does not 500 the route.
       const [
         hasFaucet, hasSwap, hasStake, hasAuctionMint, hasTrade,
-        userStats, loggedDiscourse, hasVoted, existingMap,
+        userStats, discourseExists, hasVoted, existingMap,
       ] = await Promise.all([
         safe('ponderHasFaucet',      () => ponderHasFaucet(address),      false),
         safe('ponderHasSwap',        () => ponderHasSwap(address),        false),
@@ -401,69 +431,71 @@ export async function GET(req: Request) {
         safe('ponderHasAuctionMint', () => ponderHasAuctionMint(address), false),
         safe('ponderHasTrade',       () => ponderHasTrade(address),       false),
         safe('ponderUserStats',      () => ponderUserStats(address),      [] as PlayerStatRow[]),
-        safe('discourseLastSeen',    () => discourseLastSeen(address),    false),
+        safe('discourseAccountExists', () => discourseAccountExists(address), false),
         safe('discourseHasVoted',    () => discourseHasVoted(address),    false),
         existing(address),
       ]);
 
-      // ── Internal credit insertions ─────────────────────────────────────
-      if (hasFaucet && !existingMap.has('use_faucet')) {
-        await upsertCompletion(address, 'use_faucet', P.use_faucet);
-      }
-      if (hasSwap && !existingMap.has('swap_usdc_rgd')) {
-        await upsertCompletion(address, 'swap_usdc_rgd', P.swap_usdc_rgd);
-      }
-      if (hasStake && !existingMap.has('stake_rgd')) {
-        await upsertCompletion(address, 'stake_rgd', P.stake_rgd);
-      }
-      if (hasAuctionMint && !existingMap.has('buy_fim_auction')) {
-        await upsertCompletion(address, 'buy_fim_auction', P.buy_fim_auction);
-      }
-      if (hasTrade && !existingMap.has('trade_fim')) {
-        await upsertCompletion(address, 'trade_fim', P.trade_fim);
-      }
-      const claimedAny = userStats.some((s) => BigInt(s.realizedPayout) > 0n);
-      if (claimedAny && !existingMap.has('claim_payout')) {
-        await upsertCompletion(address, 'claim_payout', P.claim_payout);
-      }
-      if (loggedDiscourse && !existingMap.has('login_discourse')) {
-        await upsertCompletion(address, 'login_discourse', P.login_discourse);
-      }
-      if (hasVoted && !existingMap.has('vote_manifest')) {
-        await upsertCompletion(address, 'vote_manifest', P.vote_manifest);
+      // ── Internal credit insertions (gated by canWrite) ─────────────────
+      if (canWrite) {
+        if (hasFaucet && !existingMap.has('use_faucet')) {
+          await upsertCompletion(address, 'use_faucet', P.use_faucet);
+        }
+        if (hasSwap && !existingMap.has('swap_usdc_rgd')) {
+          await upsertCompletion(address, 'swap_usdc_rgd', P.swap_usdc_rgd);
+        }
+        if (hasStake && !existingMap.has('stake_rgd')) {
+          await upsertCompletion(address, 'stake_rgd', P.stake_rgd);
+        }
+        if (hasAuctionMint && !existingMap.has('buy_fim_auction')) {
+          await upsertCompletion(address, 'buy_fim_auction', P.buy_fim_auction);
+        }
+        if (hasTrade && !existingMap.has('trade_fim')) {
+          await upsertCompletion(address, 'trade_fim', P.trade_fim);
+        }
+        const claimedAny = userStats.some((s) => BigInt(s.realizedPayout) > 0n);
+        if (claimedAny && !existingMap.has('claim_payout')) {
+          await upsertCompletion(address, 'claim_payout', P.claim_payout);
+        }
+        if (discourseExists && !existingMap.has('login_discourse')) {
+          await upsertCompletion(address, 'login_discourse', P.login_discourse);
+        }
+        if (hasVoted && !existingMap.has('vote_manifest')) {
+          await upsertCompletion(address, 'vote_manifest', P.vote_manifest);
+        }
+
+        // ── Win the Game (variable, lazy, best-across-seasons) ───────────
+        let bestWin = 0;
+        for (const stat of userStats) {
+          if (BigInt(stat.realizedPayout) <= 0n) continue;
+          const userPnl = relativePnl(BigInt(stat.totalPotentialPayout), BigInt(stat.netContribution));
+          if (userPnl === null) continue;
+          const allStats = await safe(
+            `ponderSeasonStats(${stat.seasonAddress})`,
+            () => ponderSeasonStats(stat.seasonAddress),
+            [] as PlayerStatRow[],
+          );
+          const pnls = allStats
+            .map((s) => relativePnl(BigInt(s.totalPotentialPayout), BigInt(s.netContribution)))
+            .filter((v): v is number => v !== null);
+          if (pnls.length < 2) continue;
+          const score = computeWinScoreForSeason(userPnl, pnls);
+          if (score > bestWin) bestWin = score;
+        }
+        const existingWin = existingMap.get('win_the_game')?.points ?? 0;
+        if (bestWin > existingWin) {
+          await upsertCompletion(address, 'win_the_game', bestWin);
+        }
+
+        // ── Referrals (variable, gated by 500-pt threshold) ──────────────
+        const qualified = await qualifyingReferralCount(address, config.referralQualifyingThreshold);
+        const totalReferralPts = computeTotalReferralPoints(qualified, config.referralTiers);
+        if (totalReferralPts > 0) {
+          await upsertCompletion(address, 'referrals', totalReferralPts);
+        }
       }
 
-      // ── Win the Game (variable, lazy, best-across-seasons) ─────────────
-      let bestWin = 0;
-      for (const stat of userStats) {
-        if (BigInt(stat.realizedPayout) <= 0n) continue;
-        const userPnl = relativePnl(BigInt(stat.totalPotentialPayout), BigInt(stat.netContribution));
-        if (userPnl === null) continue;
-        const allStats = await safe(
-          `ponderSeasonStats(${stat.seasonAddress})`,
-          () => ponderSeasonStats(stat.seasonAddress),
-          [] as PlayerStatRow[],
-        );
-        const pnls = allStats
-          .map((s) => relativePnl(BigInt(s.totalPotentialPayout), BigInt(s.netContribution)))
-          .filter((v): v is number => v !== null);
-        if (pnls.length < 2) continue;
-        const score = computeWinScoreForSeason(userPnl, pnls);
-        if (score > bestWin) bestWin = score;
-      }
-      const existingWin = existingMap.get('win_the_game')?.points ?? 0;
-      if (bestWin > existingWin) {
-        await upsertCompletion(address, 'win_the_game', bestWin);
-      }
-
-      // ── Referrals (variable, gated by 500-pt threshold) ────────────────
-      const qualified = await qualifyingReferralCount(address, config.referralQualifyingThreshold);
-      const totalReferralPts = computeTotalReferralPoints(qualified, config.referralTiers);
-      if (totalReferralPts > 0) {
-        await upsertCompletion(address, 'referrals', totalReferralPts);
-      }
-
-      // Re-read after all upserts.
+      // Re-read after any upserts (also serves as the read-only path).
       finalMap = await existing(address);
     }
 
@@ -476,6 +508,7 @@ export async function GET(req: Request) {
         mainQuests,
         totalPoints,
         tgeConversionRate: config.tgeConversionRate,
+        captchaVerified,
       },
     });
   } catch (err: any) {

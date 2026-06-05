@@ -17,6 +17,7 @@ export interface SeasonPlayer {
   totalPotentialPayout: string;
   realizedPayout: string;
   netContribution: string;
+  totalFeesPaid: string;
 }
 
 const QUERY = `
@@ -28,7 +29,7 @@ const QUERY = `
     ) {
       items {
         playerAddress fimBalance fimBurned
-        totalPotentialPayout realizedPayout netContribution
+        totalPotentialPayout realizedPayout netContribution totalFeesPaid
       }
       pageInfo { endCursor hasNextPage }
     }

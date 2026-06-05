@@ -21,7 +21,7 @@ export interface Trade {
 }
 
 /**
- * Most-recent-50 trades (descending) derived from the shared useSeasonTrades
+ * All trades (descending by timestamp) derived from the shared useSeasonTrades
  * cache. No dedicated fetch.
  */
 export function useRecentTrades(seasonAddress: string | undefined) {
@@ -32,7 +32,6 @@ export function useRecentTrades(seasonAddress: string | undefined) {
 
     return [...allTrades]
       .sort((a, b) => Number(b.timestamp) - Number(a.timestamp))
-      .slice(0, 50)
       .map((t) => {
         const fim = Number(formatUnits(BigInt(t.fimAmount), 18));
         const usdc = Number(formatUnits(BigInt(t.usdcAmount), 6));

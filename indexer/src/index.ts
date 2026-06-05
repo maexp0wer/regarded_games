@@ -2,6 +2,7 @@ import { ponder } from "ponder:registry";
 import { seasons, playerSeasonStats, yieldEvents, protocolStats, capitalAuctionParticipant, faucetClaims } from "ponder:schema";
 import { eq, and } from "ponder";
 import * as schema from "../ponder.schema";
+import { ExchangeAbi } from "../abis/ExchangeAbi";
 import mainnetCore from "../../src/deployments/mainnet/core.json";
 import sepoliaCore from "../../src/deployments/sepolia/core.json";
 
@@ -416,6 +417,20 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
     .insert(schema.playerSeasonStats)
     .values({ seasonAddress, playerAddress: buyer.toLowerCase() as `0x${string}`, fimBalance: fimAmount, netContribution: 0n })
     .onConflictDoUpdate((row) => ({ fimBalance: row.fimBalance + fimAmount }));
+
+  // 9b. Accumulate trading fees paid by the buyer (fee = usdcPrice × tradeFeeBps / 10_000)
+  const feeBps = await context.client.readContract({
+    address: event.log.address,
+    abi: ExchangeAbi,
+    functionName: 'tradeFeeBps',
+  });
+  const feePaid = (usdcPrice * feeBps) / 10_000n;
+  if (feePaid > 0n) {
+    await context.db
+      .insert(schema.playerSeasonStats)
+      .values({ seasonAddress, playerAddress: buyer.toLowerCase() as `0x${string}`, fimBalance: 0n, netContribution: 0n, totalFeesPaid: feePaid })
+      .onConflictDoUpdate((row) => ({ totalFeesPaid: row.totalFeesPaid + feePaid }));
+  }
 
   // 10. ==========================================
   // TRIGGER DISCOURSE SYNC ON TRADE

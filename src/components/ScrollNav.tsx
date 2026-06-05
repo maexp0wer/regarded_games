@@ -177,7 +177,7 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
               data-nav-id={link.id}
               className={`w-full mx-auto pl-4 pr-4 pt-2 pb-2 m-1 rounded-lg text-right text-sm font-display font-bold uppercase tracking-[0.05em] text-text transition-all duration-300 ${
                 // Active section glows with the sunset gradient; others pick up the subtle glow on hover.
-                highlightedSection === link.id ? '[background:var(--sunset-glow)]' : 'hover:[background:var(--subtle-glow)]'
+                highlightedSection === link.id ? '[background:var(--sunset-35)]' : 'hover:[background:var(--sunset-15)]'
               }`}
             >
               {link.label}
@@ -187,7 +187,7 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
           <div className='w-full mx-auto pr-2 text-right transition-colors duration-300 border-t border-card mt-3 pt-3'>
             <button
               onClick={toggleTheme}
-              className="bg-card p-2 rounded-full text-text hover:[background:var(--sunset-glow)] transition-colors duration-300"
+              className="bg-card p-2 rounded-full text-text hover:[background:var(--sunset-35)] transition-colors duration-300"
               aria-label="Toggle dark mode"
             >
               {darkMode ? <SunIcon/> : <MoonIcon />}
@@ -202,7 +202,7 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
       <div className="md:hidden">
         <button
           onClick={openModal}
-          className={`fixed top-4 right-4 [background:var(--cyber-sunset)] text-text p-3 rounded-lg shadow-lg z-50 focus:outline-none focus:ring-2 focus:ring-border transition-all duration-300 ease-in-out ${isButtonVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+          className={`fixed top-4 right-4 [background:var(--sunset)] text-text p-3 rounded-lg shadow-lg z-50 focus:outline-none focus:ring-2 focus:ring-border transition-all duration-300 ease-in-out ${isButtonVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
           aria-label="Open navigation menu"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
@@ -213,7 +213,7 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
         {isModalOpen && (
           <div className="fixed inset-0 bg-bg bg-opacity-70 flex justify-center items-center z-50 text-xl" onClick={closeModal} role="dialog" aria-modal="true">
             <div className="bg-card rounded-lg shadow-xl p-6 w-11/12 max-w-xs relative mx-auto flex flex-col max-h-[85vh]" onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
-              <button onClick={closeModal} className="absolute top-2 right-2 text-text hover:[background:var(--sunset-glow)] p-1 rounded-full" aria-label="Close navigation menu">
+              <button onClick={closeModal} className="absolute top-2 right-2 text-text hover:[background:var(--sunset-35)] p-1 rounded-full" aria-label="Close navigation menu">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                 </svg>
@@ -231,7 +231,7 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
                         data-nav-id={link.id}
                         className={`w-full block text-center py-2 px-4 rounded text-sm font-display font-bold uppercase tracking-[0.05em] text-text transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-gold ${
                           // Active section glows with the sunset gradient; others pick up the subtle glow on hover.
-                          highlightedSection === link.id ? '[background:var(--sunset-glow)]' : 'hover:[background:var(--subtle-glow)]'
+                          highlightedSection === link.id ? '[background:var(--sunset-35)]' : 'hover:[background:var(--sunset-15)]'
                         }`}
                       >
                         {link.label}
@@ -244,7 +244,7 @@ export default function ScrollNav({ navLinks, activeSection, isNavVisible, scrol
               <div className="flex items-center justify-center border-t border-card2 pt-4 ">
                 <button
                   onClick={toggleTheme}
-                  className="bg-card2 flex p-2 rounded-full text-text hover:[background:var(--sunset-glow)] transition-colors duration-300"
+                  className="bg-card2 flex p-2 rounded-full text-text hover:[background:var(--sunset-35)] transition-colors duration-300"
                   aria-label="Toggle dark mode"
                 >
                   {darkMode ? <SunIcon /> : <MoonIcon />}

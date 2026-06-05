@@ -14,6 +14,30 @@ const pool = new Pool({
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+
+    // Batch mode: ?addresses=0x1,0x2,... → { profiles: { '0x1': { name, image_url } } }.
+    // Only addresses with a stored profile appear in the map.
+    const addressesParam = searchParams.get('addresses');
+    if (addressesParam) {
+      const addresses = [...new Set(
+        addressesParam.split(',').map((a) => a.trim().toLowerCase()).filter(Boolean)
+      )];
+      if (addresses.length === 0) {
+        return NextResponse.json({ profiles: {} });
+      }
+
+      const result = await pool.query(
+        'SELECT address, name, image_url FROM player_profiles WHERE address = ANY($1::text[])',
+        [addresses]
+      );
+
+      const profiles: Record<string, { name: string | null; image_url: string | null }> = {};
+      for (const row of result.rows) {
+        profiles[row.address] = { name: row.name, image_url: row.image_url };
+      }
+      return NextResponse.json({ profiles });
+    }
+
     const address = searchParams.get('address')?.toLowerCase();
 
     if (!address) {

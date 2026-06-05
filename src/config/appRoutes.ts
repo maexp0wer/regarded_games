@@ -7,6 +7,7 @@ export interface AppRoute {
 
 export const APP_ROUTES: AppRoute[] = [
   { pattern: '/quests',              tenants: ['sepolia'] },
+  { pattern: '/community-login',     tenants: ['mainnet', 'sepolia'] },
   { pattern: '/',                    tenants: ['mainnet', 'sepolia'] },
   { pattern: '/seasons',             tenants: ['mainnet', 'sepolia'] },
   { pattern: '/stake',               tenants: ['mainnet', 'sepolia'] },

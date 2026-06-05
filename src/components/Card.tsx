@@ -31,7 +31,7 @@ const Card: React.FC<CardProps> = ({
       <div className="relative h-48 bg-card2 border-b border-border flex justify-center items-center shrink-0 p-8 overflow-hidden">
         <div
           className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-          style={{ background: 'var(--subtle-glow)' }}
+          style={{ background: 'var(--sunset-15)' }}
         />
         <div className="relative z-10 w-full h-full flex items-center justify-center">
           {sizedIcon}

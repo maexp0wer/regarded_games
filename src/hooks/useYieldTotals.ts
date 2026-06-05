@@ -1,47 +1,70 @@
-// useYieldTotals.ts
-import { useState, useEffect } from 'react';
+'use client';
 
-// Add 'trigger' as a second argument (could be the phase string or a boolean)
-export function useYieldTotals(seasonAddress: string | undefined, trigger?: any) {
-  const [data, setData] = useState({
-    buyback: "0",
-    liquidity: "0",
-    reinvest: "0",
-    dao: "0"
-  });
-  
-  const [loading, setLoading] = useState(!!seasonAddress);
+import { useQuery } from '@tanstack/react-query';
+import { fetchAllPonderItems } from '@/lib/ponder';
+import { useTenantPonderUrl } from '@/context/TenantContext';
 
-  useEffect(() => {
-    if (!seasonAddress) {
-        setLoading(false);
-        return;
+interface YieldEvent {
+  buybackAmt: string;
+  liquidityAmt: string;
+  reinvestAmt: string;
+  daoAmt: string;
+}
+
+interface YieldTotals {
+  buyback: string;
+  liquidity: string;
+  reinvest: string;
+  dao: string;
+}
+
+const QUERY = `
+  query GetYieldEvents($address: String!, $after: String, $limit: Int!) {
+    yieldEventss(where: { seasonAddress: $address }, after: $after, limit: $limit) {
+      items { buybackAmt liquidityAmt reinvestAmt daoAmt }
+      pageInfo { endCursor hasNextPage }
     }
+  }
+`;
 
-    setLoading(true);
+export function useYieldTotals(seasonAddress: string | undefined, _trigger?: unknown) {
+  const PONDER_URL = useTenantPonderUrl();
 
-    async function fetchTotals() {
-      try {
-        // Cache busting: Adding a timestamp helps ensure you don't get 
-        // a cached browser response for the API route
-        const res = await fetch(`/api/yield?address=${seasonAddress}&t=${Date.now()}`);
-        if (!res.ok) throw new Error("API failed");
-        
-        const json = await res.json();
-        
-        if (json && typeof json.buyback === 'string') {
-          setData(json);
-        }
-      } catch (err) {
-        console.error("Yield fetch error:", err);
-      } finally {
-        setLoading(false);
+  const { data, isLoading } = useQuery<YieldTotals>({
+    queryKey: ['yieldTotals', seasonAddress?.toLowerCase(), PONDER_URL],
+    enabled: !!seasonAddress,
+    queryFn: async () => {
+      const events = await fetchAllPonderItems<YieldEvent>(
+        PONDER_URL,
+        QUERY,
+        { address: seasonAddress!.toLowerCase() },
+        (d) => d.yieldEventss,
+      );
+
+      let buyback = 0n;
+      let liquidity = 0n;
+      let reinvest = 0n;
+      let dao = 0n;
+      for (const e of events) {
+        buyback  += BigInt(e.buybackAmt  || '0');
+        liquidity += BigInt(e.liquidityAmt || '0');
+        reinvest  += BigInt(e.reinvestAmt  || '0');
+        dao       += BigInt(e.daoAmt       || '0');
       }
-    }
 
-    fetchTotals();
-    // ADD 'trigger' HERE:
-  }, [seasonAddress, trigger]); 
+      return {
+        buyback:  buyback.toString(),
+        liquidity: liquidity.toString(),
+        reinvest:  reinvest.toString(),
+        dao:       dao.toString(),
+      };
+    },
+    refetchInterval: 15_000,
+    staleTime: 10_000,
+  });
 
-  return { data, loading };
+  return {
+    data: data ?? { buyback: '0', liquidity: '0', reinvest: '0', dao: '0' },
+    loading: isLoading,
+  };
 }

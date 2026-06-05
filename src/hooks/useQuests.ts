@@ -23,6 +23,7 @@ export interface QuestsData {
   mainQuests: QuestMainQuest[];
   totalPoints: number;
   tgeConversionRate: string;
+  captchaVerified: boolean;
 }
 
 export function useQuests(address: string | undefined) {

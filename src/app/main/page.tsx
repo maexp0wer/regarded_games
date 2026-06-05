@@ -184,7 +184,7 @@ export default function Home() {
           {/* Hero Section */}
           <section className="hero-section relative min-h-screen flex items-center justify-center">
 
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50rem] h-[25rem] rounded-full [background:var(--cyber-sunset)] blur-[100px] opacity-25 pointer-events-none z-0" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50rem] h-[25rem] rounded-full [background:var(--sunset)] blur-[100px] opacity-25 pointer-events-none z-0" />
 
   <div className="relative flex flex-col items-center justify-center text-center pt-32 px-6 pb-24 max-w-5xl mx-auto overflow-hidden">
     {/* Main Header Display - Single block for perfect scaling */}

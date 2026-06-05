@@ -48,7 +48,14 @@ export async function GET(req: NextRequest) {
   //    longer log a user into the forum as someone else — the session is HMAC-signed
   //    and only issued after a wallet-signature check).
   const walletAddress = getCommunitySession(req);
-  if (!walletAddress) return NextResponse.redirect(new URL('/?login_required', req.url));
+  if (!walletAddress) {
+    const mainDomain = new URL(process.env.NEXT_PUBLIC_MAIN_DOMAIN ?? 'http://localhost:3000');
+    mainDomain.hostname = `app.${mainDomain.hostname}`;
+    const loginUrl = new URL('/community-login', mainDomain);
+    loginUrl.searchParams.set('sso', sso);
+    loginUrl.searchParams.set('sig', sig);
+    return NextResponse.redirect(loginUrl);
+  }
 
   // 3. Admin Check
   const ADMIN_WALLET = process.env.ADMIN_WALLET?.toLowerCase() ?? '';

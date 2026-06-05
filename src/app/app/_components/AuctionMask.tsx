@@ -203,12 +203,12 @@ function AuctionMaskInner({
 
   return (
     <>
-    <div className="flex flex-col gap-5 h-full relative">
+    <div className="flex flex-col gap-5 h-full max-h-[50vh] relative">
 
       {/* ── FIM Balance card ── */}
       <div className="terminal-pane">
         <div className="terminal-pane-header">
-          <span className="terminal-pane-title">FIM Balance</span>
+          <span className="terminal-pane-title">Balance</span>
         </div>
         <div
           className="font-display font-extrabold leading-none text-display-trading"
@@ -220,7 +220,7 @@ function AuctionMaskInner({
       </div>
 
       {/* ── Auction panel card ── */}
-      <div className="terminal-pane flex flex-col gap-4 flex-1 min-h-0">
+      <div className="terminal-pane flex flex-col gap-0 flex-1 min-h-0">
         <div className="terminal-pane-header">
           <span className="terminal-pane-title">Auction</span>
         </div>
@@ -268,7 +268,7 @@ function AuctionMaskInner({
         )}
 
         {/* ── CTA ── */}
-        <div className="mt-auto pt-4 flex flex-col gap-3 border-t border-border">
+        <div className="mt-auto pt-3 flex flex-col gap-3 border-t border-border">
           {isAuctionPhase && (
             <button
               onClick={handleStartFlow}

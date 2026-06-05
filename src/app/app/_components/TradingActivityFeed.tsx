@@ -1,11 +1,20 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRecentTrades } from '@/hooks/useRecentTrades';
 import { PercentileCircle } from './PercentileCircle';
 
+const PAGE_SIZE = 50;
+
 export function TradingActivityFeed({ seasonAddress, className }: { seasonAddress: string; className?: string }) {
   const { data: trades, isLoading } = useRecentTrades(seasonAddress);
+
+  const [page, setPage] = useState(0);
+  useEffect(() => { setPage(0); }, [seasonAddress]);
+
+  const totalItems = trades?.length ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const pageItems = trades?.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE) ?? [];
 
   const fmt = (ts: number) =>
     new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -13,7 +22,6 @@ export function TradingActivityFeed({ seasonAddress, className }: { seasonAddres
   return (
     <div className={`flex flex-col p-2 bg-card rounded-lg ${className ?? 'max-h-130'}`}>
       <div className="bg-bg flex flex-col flex-1 min-h-0 overflow-hidden border-border2">
-        {/* Rows viewport with sticky header */}
         <div className="flex-1 overflow-y-auto custom-scrollbar relative">
           <div
             className="ledger-header sticky top-0 z-10"
@@ -33,7 +41,7 @@ export function TradingActivityFeed({ seasonAddress, className }: { seasonAddres
               <p className="section-label opacity-40">No trades found</p>
             </div>
           ) : (
-            trades.map((trade) => {
+            pageItems.map((trade) => {
               const sellerKnown = trade.sellerBalance !== '0';
               const buyerKnown  = trade.buyerBalance  !== '0';
 
@@ -69,6 +77,26 @@ export function TradingActivityFeed({ seasonAddress, className }: { seasonAddres
             })
           )}
         </div>
+
+        {totalItems > PAGE_SIZE && (
+          <div className="flex items-center justify-center gap-3 py-2 border-t border-[--color-border]">
+            <button
+              className="btn-game-secondary px-1.5 py-0.5 text-[10px] leading-none disabled:opacity-30"
+              disabled={page === 0}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              ←
+            </button>
+            <span className="section-label">{page + 1} / {totalPages}</span>
+            <button
+              className="btn-game-secondary px-1.5 py-0.5 text-[10px] leading-none disabled:opacity-30"
+              disabled={page >= totalPages - 1}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              →
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -99,7 +99,7 @@ export function ChordDiagram({
 
     const { groups, matrix } = chordData;
     const N = groups.length;
-    // cyber-sunset: socialist(purple,t=0) → magenta(t=0.45) → orange(t=0.75) → capitalist(gold,t=1)
+    // sunset: socialist(purple,t=0) → magenta(t=0.45) → orange(t=0.75) → capitalist(gold,t=1)
     const cyberStops = [
       { pos: 0,    color: SOC_COLOR     },
       { pos: 0.45, color: MAGENTA_COLOR },

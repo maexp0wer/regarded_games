@@ -37,14 +37,14 @@
   --color-orange-15:  color-mix(in srgb, var(--color-orange) 15%, transparent);
 
   /* Gradients */
-  --cyber-sunset: linear-gradient(
+  --sunset: linear-gradient(
     90deg,
     var(--color-purple)  0%,
     var(--color-magenta) 45%,
     var(--color-orange)  75%,
     var(--color-gold)    100%
   );
-  --subtle-glow: linear-gradient(
+  --sunset-15: linear-gradient(
     90deg,
     var(--color-purple-15)  0%,
     var(--color-magenta-15) 45%,
@@ -196,7 +196,7 @@ body {
   right:      0;
   bottom:     0;
   height:     1px;
-  background: var(--cyber-sunset);
+  background: var(--sunset);
   opacity:    0.4;
 }
 
@@ -206,7 +206,7 @@ body {
   font-size:      1.1rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  background:     var(--cyber-sunset);
+  background:     var(--sunset);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -284,7 +284,7 @@ h1, h2, h3, h4, h5, h6 {
   font-size:     2rem;
   text-transform: uppercase;
   letter-spacing: -0.02em;
-  background:     var(--cyber-sunset);
+  background:     var(--sunset);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -350,8 +350,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .markdown blockquote {
   border-left:   3px solid;
-  border-image:  var(--cyber-sunset) 1;
-  background:    var(--subtle-glow);
+  border-image:  var(--sunset) 1;
+  background:    var(--sunset-15);
   border-radius: 0 8px 8px 0;
   padding:       14px 20px;
   color:         var(--color-text2);
@@ -366,7 +366,7 @@ h1, h2, h3, h4, h5, h6 {
 .markdown hr {
   border: none;
   height: 1px;
-  background: var(--cyber-sunset);
+  background: var(--sunset);
   opacity: 0.25;
 }
 
@@ -400,7 +400,7 @@ h1, h2, h3, h4, h5, h6 {
   left:       0;
   right:      0;
   height:     2px;
-  background: var(--cyber-sunset);
+  background: var(--sunset);
 }
 
 .markdown pre code {
@@ -496,7 +496,7 @@ h1, h2, h3, h4, h5, h6 {
   left:       0;
   right:      0;
   height:     1px;
-  background: var(--cyber-sunset);
+  background: var(--sunset);
   opacity:    0.5;
 }
 

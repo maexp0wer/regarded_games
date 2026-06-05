@@ -18,6 +18,7 @@ export const playerSeasonStats = onchainTable("player_season_stats", (t) => ({
   netContribution: t.bigint().default(0n).notNull(),
   realizedPayout: t.bigint().default(0n).notNull(),
   totalPotentialPayout: t.bigint().default(0n).notNull(),
+  totalFeesPaid: t.bigint().default(0n).notNull(),
 }), (table) => ({
   pk: primaryKey({ columns: [table.seasonAddress, table.playerAddress] }),
 }));

@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Perfect-information strategy game with real-money stakes on Base. Players trade FIM tokens in a seasonal on-chain exchange/auction. Two factions based on each player's FIM balance vs. the live 50th-percentile threshold: **Capitalists** (above) and **Socialists** (below).
+Perfect-information strategy game with real-money stakes on Base. Players trade FIM tokens in a seasonal on-chain exchange/auction. Two factions based on each player's FIM balance vs. the live 50th-percentile threshold: **Proletariat/Socialists** (below) and **Bourgeoisie/Capitalists** (above).
 
 Three layers: **Frontend** (Next.js 15, `src/`), **Indexer** (Ponder, `indexer/`), **Community** (self-hosted Discourse via SSO).
 
@@ -15,7 +15,8 @@ Local dev launched via `start.bat`: Next.js on :3000, Anvil on :8545, Ponder Gra
 **Folder split:**
 - `src/app/app/_components/` — named exports, scoped to `/app` routes only
 - `src/components/` — default exports, shared across all routes
-- `src/lib/` — side effects / framework coupling; `src/utils/` — pure functions only
+- `src/lib/` — side effects / framework coupling (DB, auth, cache, tenant config, security, quests)
+- `src/utils/` — pure functions only (gini, validation, formOptions, discourseNames, toc, etc.)
 
 **Naming:** PascalCase components, `use` prefix hooks, `route.ts` API files, UPPER_SNAKE_CASE constants, camelCase utils, PascalCase ABI JSONs.
 
@@ -25,7 +26,7 @@ Local dev launched via `start.bat`: Next.js on :3000, Anvil on :8545, Ponder Gra
 
 A new context requires the same bar: (a) ambient config that cannot reasonably be prop-drilled (50+ call sites), (b) read-only / session-immutable, (c) single owner that sets it once. Everything else is lifted to the nearest route component and prop-drilled.
 
-**Loading:** `animate-pulse` skeleton + text `"Reading Ledger..."`. **Errors:** inline `text-red-500` / `--color-danger`. **Tx workflow:** `idle → approving → executing → success | failed`.
+**Loading:** `animate-pulse` skeleton + text `"Reading Ledger..."`. **Errors:** inline `text-[--color-red]` / `color-[--color-red]`. **Tx workflow:** `idle → approving → executing → success | failed`.
 
 **Drag-and-drop:** Native HTML5 drag API. See `TradingMask.tsx`.
 
@@ -72,7 +73,100 @@ All data-fetching hooks use `useQuery` from `@tanstack/react-query` with a stabl
 
 ## Styling
 
-Tailwind utilities only — no CSS Modules. CSS variables in `globals.css`: `--color-primary` (#CC4713), `--color-success`, `--color-danger`, `--color-bg`, `--color-surface`, `--color-text`. Global classes: `.btn-primary/secondary/success`, `.h3-app`, `.h4-app`, `.custom-scrollbar`. Dark mode via `.dark` on `<html>`. SVGs imported as React components via `@svgr/webpack`.
+Tailwind utilities only — no CSS Modules. Dark mode uses `.dark` on `<html>` — use `in-[.dark]:` to override unlayered component classes (not the `dark:` variant). SVGs imported as React components via `@svgr/webpack`.
+
+### CSS Variables (`globals.css`)
+
+**Surface layers** (light → dark: `#F8F9FC` → `#0D0B14`):
+- `--color-bg` — page canvas
+- `--color-card` — primary containers
+- `--color-card2` — raised modules / active panels
+- `--color-card3` — elevated modals / dropdowns / inner wells
+
+**Typography:**
+- `--color-text` — headings / high priority
+- `--color-text2` — muted labels / subtitles
+
+**Borders:**
+- `--color-border` — Tier 1: soft separation
+- `--color-border2` — Tier 2: high-contrast divider / interactive
+
+**Faction accents:**
+- `--color-purple` — Proletariat/Socialist (light: `#6A1B9A`, dark: `#9D4EDD`)
+- `--color-purple-hover`
+- `--color-gold` — Bourgeoisie/Capitalist (light: `#D4AF37`, dark: `#FFC300`)
+- `--color-gold-hover`
+
+**Trading signals:**
+- `--color-green` / `--color-green-hover` — bull / buy
+- `--color-red` / `--color-red-hover` — bear / sell
+
+**Gradient midpoints:**
+- `--color-magenta`, `--color-orange`
+
+**Transparency tokens** (`--color-{hue}-{15|35|70}`): pre-mixed via `color-mix()` for all of the above.
+
+**Gradients:**
+- `--sunset` — full purple→magenta→orange→gold gradient (hero accents, primary button fill)
+- `--sunset-15` — 15% opacity version
+- `--sunset-35` — 35% opacity version
+
+### Fonts
+
+- `--font-display` (`Exo 2`) — hero numbers, headings, buttons
+- `--font-sans` (`Space Grotesk`) — all UI / body text
+- `--font-mono` (`JetBrains Mono`) — every numeric value, label, mono field
+
+### Global Classes
+
+**Buttons:**
+- `.btn-game-primary` — gradient sunset fill, glow shadow; use for primary CTAs
+- `.btn-game-secondary` — card2 background, border2 border; use for secondary actions
+- `.btn-stepper` — micro ▲/▼ stepper at minimum size
+- `.btn-terminal-action.action-buy` / `.action-sell` — full-width colored execute buttons
+- `.btn-input-switch` — micro toggle inside input rails; variants: `.filter-buy`, `.filter-sell`, `.filter-all`, `.filter-gold`
+
+**Cards & Panes:**
+- `.card-app` — rounded-[25px], 24px padding, border
+- `.landing-card` — interactive hover with lift + faction glow + sunset backdrop
+- `.terminal-pane` — flat info panel with `.terminal-pane-header` / `.terminal-pane-title`
+
+**Navigation:**
+- `.terminal-view-selector-bar` — full-width tab strip with bottom border track
+- `.terminal-view-btn` — tab button; `.active` lights up purple bottom indicator
+- `.nav-link-item` — landing nav text link; `.active` uses `--color-purple`
+
+**Ledger / data rows:**
+- `.ledger-header` / `.ledger-row` — grid rows for order/activity tables
+- `.ledger-cell-secondary` — muted mono cell
+- `.ledger-cell-metric` — right-aligned numeric cell
+- `.ledger-row-passive` — disables hover accent
+
+**Typography:**
+- `.h2-app` — Exo 2 900 28px uppercase 0.08em
+- `.h3-app` — Exo 2 900 18px uppercase 0.05em
+- `.h4-app` — JetBrains Mono 9px 600 uppercase muted
+- `.section-label` — mono 10–11px 900 uppercase muted with gold dot
+- `.mask-label` — mono 8–9px 900 uppercase muted
+- `.gini-label` — mono 10px semibold uppercase muted
+- `.hero-title` / `.hero-gradient-text` / `.hero-subtitle` — landing page hero
+
+**Status / misc:**
+- `.pill` — rounded status tag (mono 11px uppercase)
+- `.chip` — quick-amount selector; `.active` uses gold tint
+- `.kv-row` — key/value pair row
+- `.countdown-chip` / `.countdown-val` / `.countdown-lbl` — countdown cells
+- `.terminal-countdown-wrapper` + `.terminal-countdown-box` + `.tcb-val` / `.tcb-unit` — inline countdown
+- `.progress-rail-container` / `.progress-rail-fill` / `.progress-rail-overlay-text` — progress bars
+- `.stat-rail-card` / `.rank-track-chassis` / `.metric-bar-chassis` / `.live-rail-container` — stat/rank rails
+- `.dial-knob.purple` / `.gold` / `.current` — faction dial indicators on the live rail
+- `.modal-overlay-blur` — frosted backdrop overlay
+- `.surface-pink-warn` — red-15 warning surface
+- `.custom-scrollbar` — thin scrollbar styling
+- `.input-embedded-rail` — toggle rail attached to top of input
+- `.season-ledger-row` — season archive card row
+- `.quest-category-pane` / `.quest-task-row` / `.quest-completed` — quest board rows
+- `.connect-gate` / `.connect-gate-body` — disconnected wallet placeholder
 
 ---
 

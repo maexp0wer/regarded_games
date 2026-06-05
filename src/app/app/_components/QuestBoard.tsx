@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { usePublicClient } from 'wagmi';
-import { useQuery } from '@tanstack/react-query';
+import { usePublicClient, useAccount } from 'wagmi';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTenantChainId, useTenantPonderUrl } from '@/context/TenantContext';
+import { useCommunitySession } from '@/hooks/useCommunitySession';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 
 const VARIABLE_REWARD_CAPS: Record<string, number> = {
@@ -108,7 +109,7 @@ function InactivePendingButton({ label, tooltipKicker, tooltipTitle, tooltipBody
         style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.25))' }}
       >
         {/* Gradient accent bar — matches btn-game-primary */}
-        <div style={{ height: 2, background: 'var(--cyber-sunset)', borderRadius: '3px 3px 0 0' }} />
+        <div style={{ height: 2, background: 'var(--sunset)', borderRadius: '3px 3px 0 0' }} />
         <div className="bg-card3 border border-t-0 border-border2 rounded-b p-3 font-mono">
           <span className="block text-[8px] uppercase tracking-widest text-text2 mb-1.5">
             {tooltipKicker}
@@ -190,6 +191,51 @@ interface QuestBoardProps {
   tgeConversionRate?: string;
 }
 
+const ACTION_BTN_CLASS =
+  'font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 border rounded font-bold transition-transform active:scale-95 whitespace-nowrap btn-game-primary block';
+
+/**
+ * Discourse login quest action. Quest credit requires a verified community session
+ * (see canWrite in /api/quests) AND a provisioned Discourse account — and signing in
+ * does both at once (the session POST runs ssoSync). So when the user has no session,
+ * the button signs them in (creating the account), then forwards to Discourse to log
+ * in. Once signed in it's a plain link to the forum.
+ */
+function DiscourseQuestButton({ sub }: { sub: SubQuest }) {
+  const { address } = useAccount();
+  const { signedIn, signIn, isSigningIn } = useCommunitySession();
+  const queryClient = useQueryClient();
+
+  if (signedIn) {
+    return (
+      <a href={sub.actionUrl} target="_blank" rel="noopener noreferrer" className={ACTION_BTN_CLASS}>
+        Discourse
+      </a>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={isSigningIn || !address}
+      className={`${ACTION_BTN_CLASS} disabled:opacity-50`}
+      onClick={async () => {
+        try {
+          await signIn();
+          if (address) {
+            await queryClient.invalidateQueries({ queryKey: ['quests', address.toLowerCase()] });
+          }
+          if (sub.actionUrl) window.open(sub.actionUrl, '_blank', 'noopener,noreferrer');
+        } catch {
+          // useCommunitySession swallows the error; user can retry.
+        }
+      }}
+    >
+      {isSigningIn ? 'Signing…' : 'Discourse'}
+    </button>
+  );
+}
+
 function SubQuestAction({ sub, locked }: { sub: SubQuest; locked: boolean }) {
   if (locked) {
     return (
@@ -238,6 +284,9 @@ function SubQuestAction({ sub, locked }: { sub: SubQuest; locked: boolean }) {
         ✓
       </div>
     );
+  }
+  if (sub.id === 'login_discourse') {
+    return <DiscourseQuestButton sub={sub} />;
   }
   if (sub.actionUrl) {
     return (

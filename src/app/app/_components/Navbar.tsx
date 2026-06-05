@@ -165,7 +165,7 @@ export function Navbar() {
           >
             <button
               onClick={() => setIsModalOpen(false)}
-              className="absolute top-2 right-2 text-text hover:[background:var(--sunset-glow)] p-1 rounded-full"
+              className="absolute top-2 right-2 text-text hover:[background:var(--sunset-35)] p-1 rounded-full"
               aria-label="Close navigation menu"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
@@ -178,7 +178,7 @@ export function Navbar() {
                 {navLinks.map((link) => {
                   const isActive = !link.external && pathname === link.href;
                   const itemClass = `w-full block text-center py-2 px-4 rounded text-sm font-display font-bold uppercase tracking-[0.05em] text-text transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-gold ${
-                    isActive ? '[background:var(--sunset-glow)]' : 'hover:[background:var(--subtle-glow)]'
+                    isActive ? '[background:var(--sunset-35)]' : 'hover:[background:var(--sunset-15)]'
                   }`;
                   return (
                     <li key={link.href}>
@@ -211,7 +211,7 @@ export function Navbar() {
             <div className="flex items-center justify-center border-t border-card2 pt-4">
               <button
                 onClick={toggleTheme}
-                className="bg-card2 flex p-2 rounded-full text-text hover:[background:var(--sunset-glow)] transition-colors duration-300"
+                className="bg-card2 flex p-2 rounded-full text-text hover:[background:var(--sunset-35)] transition-colors duration-300"
                 aria-label="Toggle dark mode"
               >
                 {darkMode ? <SunIcon /> : <MoonIcon />}

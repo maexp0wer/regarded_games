@@ -406,7 +406,7 @@ export function OrderBook({
                           className={`absolute bottom-full mb-2 left-0 z-40 w-56 pointer-events-none transition-opacity duration-150 ${clickedOwnOrderKey === row.uniqueKey + '-bid' ? 'opacity-100' : 'opacity-0'}`}
                           style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.25))' }}
                         >
-                          <div style={{ height: 2, background: 'var(--cyber-sunset)', borderRadius: '3px 3px 0 0' }} />
+                          <div style={{ height: 2, background: 'var(--sunset)', borderRadius: '3px 3px 0 0' }} />
                           <div className="bg-card3 border border-t-0 border-border2 rounded-b p-3 font-mono">
                             <h3 className="text-[11px] font-black text-text uppercase tracking-wide">
                               Own Order
@@ -468,7 +468,7 @@ export function OrderBook({
                           className={`absolute bottom-full mb-2 left-0 z-40 w-56 pointer-events-none transition-opacity duration-150 ${clickedOwnOrderKey === row.uniqueKey + '-ask' ? 'opacity-100' : 'opacity-0'}`}
                           style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.25))' }}
                         >
-                          <div style={{ height: 2, background: 'var(--cyber-sunset)', borderRadius: '3px 3px 0 0' }} />
+                          <div style={{ height: 2, background: 'var(--sunset)', borderRadius: '3px 3px 0 0' }} />
                           <div className="bg-card3 border border-t-0 border-border2 rounded-b p-3 font-mono">
                             <h3 className="text-[11px] font-black text-text uppercase tracking-wide">
                               Own Order

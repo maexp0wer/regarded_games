@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@marsidev/react-turnstile": "^1.5.2",
     "@rainbow-me/rainbowkit": "^2.2.10",
     "@reown/appkit": "^1.8.16",
     "@reown/appkit-adapter-wagmi": "^1.8.16",

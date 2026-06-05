@@ -10,7 +10,56 @@ import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
 import { useYieldTotals } from '@/hooks/useYieldTotals';
 import { SeasonPhasePills } from './SeasonPhasePills';
-import { CountdownTicker } from './CountdownTicker';
+import { useState, useEffect } from 'react';
+
+function GiniCountdown({ targetTimestamp, label }: { targetTimestamp: number; label: string }) {
+  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
+  useEffect(() => {
+    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+
+  if (!targetTimestamp) {
+    return (
+      <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-text2">
+        SHORTLY
+      </span>
+    );
+  }
+
+  const remaining = Math.max(0, targetTimestamp - now);
+  if (remaining === 0) {
+    return (
+      <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-text2">
+        FINALIZING
+      </span>
+    );
+  }
+
+  const days    = Math.floor(remaining / 86400);
+  const hours   = Math.floor((remaining % 86400) / 3600);
+  const minutes = Math.floor((remaining % 3600) / 60);
+  const seconds = remaining % 60;
+
+  return (
+    <div className="flex items-baseline gap-2">
+      {[
+        { val: pad(days),    unit: 'D' },
+        { val: pad(hours),   unit: 'H' },
+        { val: pad(minutes), unit: 'M' },
+        { val: pad(seconds), unit: 'S' },
+      ].map(({ val, unit }) => (
+        <span key={unit} className="flex items-baseline gap-0.5">
+          <span className="font-mono text-[11px] font-black text-text tabular-nums">{val}</span>
+          <span className="font-mono text-[11px] font-bold uppercase text-text2">{unit}</span>
+        </span>
+      ))}
+      <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-text2">{label}</span>
+    </div>
+  );
+}
 
 interface GiniDisplayProps {
   seasonAddress: string;
@@ -78,6 +127,7 @@ export function GiniDisplay({ seasonAddress, seasonName }: GiniDisplayProps) {
   // ── Countdown ─────────────────────────────────────────────────────────────
   const seasonNum = parseInt(seasonName.match(/\d+/)?.[0] ?? '1', 10);
   const countdownTarget = isAuctionOrBootstrap ? tradingStart : seasonEnd;
+  const countdownLabel = isAuctionOrBootstrap ? 'until Live' : 'until Payout';
 
   const footerMode: 'countdown' | 'warning' | 'winner' =
     effectiveVictoryPending || isTradingTimeExpired ? 'warning'
@@ -115,13 +165,13 @@ export function GiniDisplay({ seasonAddress, seasonName }: GiniDisplayProps) {
   const totalPrizePool = prizePool + (hasYieldBonus ? yieldBonus : 0);
 
   return (
-    <div className="dark relative h-full overflow-hidden min-h-75 rounded-lg bg-[#0D0B14] bg-(image:--sunset-glow) flex flex-col md:grid md:grid-cols-[1fr_22.75rem] md:grid-rows-[auto_1fr_auto]">
+    <div className="dark relative overflow-hidden rounded-lg bg-[#0D0B14] bg-(image:--sunset-35) flex flex-col md:grid md:grid-cols-[1fr_22.75rem] md:grid-rows-[auto_auto_auto]">
 
       {/* Vertical divider — desktop only */}
       <div className="hidden md:block absolute right-91 top-[10%] h-[80%] w-px bg-text2 z-10 pointer-events-none" />
 
       {/* ── 1. Season info — mobile order 1 | desktop col 2, row 1 ── */}
-      <div className="order-1 md:col-start-2 md:row-start-1 relative shrink-0 px-15 pt-6 pb-5 flex justify-between items-center">
+      <div className="order-1 md:col-start-2 md:row-start-1 relative shrink-0 px-15 pt-4 pb-3 flex justify-between items-center">
         <div className="flex flex-col text-left">
           <span className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-4xl">
             S<em className="not-italic font-medium text-text2">{String(seasonNum).padStart(2, '0')}</em>
@@ -143,7 +193,7 @@ export function GiniDisplay({ seasonAddress, seasonName }: GiniDisplayProps) {
       </div>
 
       {/* ── 2. Prize Pool — mobile order 2 | desktop col 2, row 2 ── */}
-      <div className="order-2 md:col-start-2 md:row-start-2 relative shrink-0 flex flex-col items-center justify-center px-5 py-5">
+      <div className="order-2 md:col-start-2 md:row-start-2 relative shrink-0 flex flex-col items-center justify-center px-5 py-3">
         <span className="gini-label mb-1">{hasYieldBonus ? 'Prize Pool + Yield' : 'Prize Pool'}</span>
         <div
           className="font-mono text-3xl font-black text-gold leading-none"
@@ -164,15 +214,9 @@ export function GiniDisplay({ seasonAddress, seasonName }: GiniDisplayProps) {
       </div>
 
       {/* ── 3. Countdown — mobile order 3 (border-b) | desktop col 2, row 3 (no border-b) ── */}
-      <div className="order-3 md:col-start-2 md:row-start-3 relative shrink-0 flex justify-center items-center px-5 pt-5 pb-6">
+      <div className="order-3 md:col-start-2 md:row-start-3 relative shrink-0 flex justify-center items-center px-5 pt-3 pb-4">
         {footerMode === 'countdown' ? (
-          <CountdownTicker
-            targetTimestamp={countdownTarget}
-            label={isAuction ? 'Auction Ends In' : 'Season End'}
-            large
-            alwaysShowSeconds
-            transparent
-          />
+          <GiniCountdown targetTimestamp={countdownTarget} label={countdownLabel} />
         ) : (
           <span className={`font-mono text-[11px] uppercase tracking-wider ${footerClass}`}>
             {footerMessage}
@@ -182,7 +226,7 @@ export function GiniDisplay({ seasonAddress, seasonName }: GiniDisplayProps) {
       </div>
 
       {/* ── 4. Faction anchors / Gini heading — mobile order 4 | desktop col 1, row 1 ── */}
-      <div className="order-4 md:col-start-1 md:row-start-1 relative px-5 pt-6 pb-5 flex justify-between items-center">
+      <div className="order-4 md:col-start-1 md:row-start-1 relative px-5 pt-4 pb-3 flex justify-between items-center">
         <div className="flex items-center gap-3">
           <Carlo className="w-10 h-auto text-purple" viewBox="0 0 600 800" />
           <div className="flex flex-col">
@@ -216,8 +260,8 @@ export function GiniDisplay({ seasonAddress, seasonName }: GiniDisplayProps) {
       </div>
 
       {/* ── 5. BPS Track / Gauge — mobile order 5 | desktop col 1, row 2 ── */}
-      <div className="order-5 md:col-start-1 md:row-start-2 relative px-5 flex items-center min-h-40">
-        <div className="w-full px-2">
+      <div className="order-5 md:col-start-1 md:row-start-2 relative px-3 py-2 flex items-center">
+        <div className="w-full px-1">
           <div className="live-rail-container">
 
             {scaleTicks.map(({ value: v, major }) => {
@@ -281,7 +325,7 @@ export function GiniDisplay({ seasonAddress, seasonName }: GiniDisplayProps) {
       </div>
 
       {/* ── 6. BPS Deltas — mobile order 6 | desktop col 1, row 3 ── */}
-      <div className="order-6 md:col-start-1 md:row-start-3 px-5 pt-5 pb-6 grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-[11px] text-text2 content-start">
+      <div className="order-6 md:col-start-1 md:row-start-3 px-5 pt-3 pb-4 grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-[11px] text-text2 content-start">
         <div className="text-left">
           <span className="text-purple font-bold">{socBpsAway.toLocaleString()} BPS</span>{' '}
           <span className="gini-label">from Proletariat Target</span>
@@ -289,7 +333,13 @@ export function GiniDisplay({ seasonAddress, seasonName }: GiniDisplayProps) {
         <div className="text-center sm:border-x sm:border-text2 px-2 self-start">
           {winningSide !== 'none' ? (
             <span>
-              <span className="gini-label">Leading:</span>{' '}
+              <span className="gini-label">
+                {isPayout
+                  ? progressPercent >= 100
+                    ? 'Victory:'
+                    : 'Partial Victory:'
+                  : 'Leading:'}
+              </span>{' '}
               <span className={`font-bold ${winningSide === 'soc' ? 'text-purple' : 'text-gold'}`}>
                 {winningSide === 'soc' ? 'Proletariat' : 'Bourgeoisie'} ({progressPercent.toFixed(1)}%)
               </span>

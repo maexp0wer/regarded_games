@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isAddress, verifyMessage } from 'viem';
+import crypto from 'crypto';
 import { buildLoginMessage, LOGIN_FRESHNESS_MS } from '@/utils/communityAuthMessage';
 import { cookieDomainFor } from '@/utils/cookieDomain';
 import { ssoSync } from '@/lib/discourseSSO';
@@ -9,6 +10,8 @@ import {
   createSessionToken,
   getCommunitySession,
 } from '@/lib/communitySession';
+import { query } from '@/lib/db';
+import { extractClientIp } from '@/utils/ipHash';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -82,6 +85,25 @@ export async function POST(req: Request) {
 
     const res = NextResponse.json({ success: true, address: wallet });
     res.cookies.set(COMMUNITY_SESSION_COOKIE, createSessionToken(wallet), cookieOptions(req, SESSION_TTL_SECONDS));
+
+    // Passively record the session IP/UA for TGE sybil clustering. Non-fatal.
+    // Skipped in local dev where TURNSTILE_SECRET_KEY is absent (fingerprinting is prod-only).
+    if (process.env.TURNSTILE_SECRET_KEY) {
+      try {
+        const rawIp = extractClientIp(req.headers);
+        const rawUa = req.headers.get('user-agent');
+        const ipHash = rawIp ? crypto.createHash('sha256').update(rawIp).digest('hex') : null;
+        const uaHash = rawUa ? crypto.createHash('sha256').update(rawUa).digest('hex') : null;
+        await query(
+          `INSERT INTO session_fingerprints (address, ip_hash, user_agent_hash, captcha_verified)
+           VALUES ($1, $2, $3, FALSE)`,
+          [wallet, ipHash, uaHash],
+        );
+      } catch (e) {
+        console.warn('[community-session] fingerprint insert failed (non-fatal):', e);
+      }
+    }
+
     return res;
   } catch (e) {
     console.error('[community-session] POST error:', e);

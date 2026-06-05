@@ -17,12 +17,37 @@ NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=<your WalletConnect project ID>
 POSTGRES_URL=postgresql://postgres:<password>@localhost:5432/regarded_games
 ```
 
+For the anti-bot CAPTCHA system (required for testnet quest protection), register a site at [dash.cloudflare.com → Turnstile](https://dash.cloudflare.com/) and add:
+
+```
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=<site key — embedded in browser widget, safe to expose>
+TURNSTILE_SECRET_KEY=<secret key — server-side only, never expose>
+```
+
+Leave both unset in local dev — CAPTCHA verification auto-passes and the widget is hidden.
+
 For mainnet launch, also set:
 ```
 NEXT_PUBLIC_ENVIRONMENT=mainnet
 NEXT_PUBLIC_PONDER_URL_MAINNET=https://your-ponder-endpoint/graphql
 NEXT_PUBLIC_PONDER_URL_SEPOLIA=https://your-ponder-sepolia-endpoint/graphql
 ```
+
+---
+
+## 1b. Run Database Migrations
+
+Run this once against your database before the first deploy. It creates the tables for quests and anti-bot fingerprinting. Safe to re-run — all statements are `CREATE TABLE IF NOT EXISTS`.
+
+```powershell
+# Quest completion + config tables
+node scripts/create-quest-tables.mjs
+
+# Anti-bot session fingerprints table (IP clustering + CAPTCHA verification log)
+node scripts/create-session-fingerprints-table.mjs
+```
+
+Both scripts read `POSTGRES_URL` from `.env` in the project root. Expected output ends with a column schema dump confirming the table exists.
 
 ---
 
@@ -213,3 +238,35 @@ Any invalid entries appear in `errors` — the rest are still awarded.
 - Visit `http://localhost:3000/app` and confirm the quest board loads.
 - Check a test wallet's quest state via `GET http://localhost:3000/api/quests?address=0x...`.
 - Confirm the Discourse poll is visible and accepting votes.
+
+---
+
+## 9. Pre-TGE: Sybil Review
+
+Run **before** distributing tokens. The script queries `session_fingerprints` and `quest_completions` and prints four flagging reports. Requires `POSTGRES_URL` in `.env`.
+
+```powershell
+# Default output (JSON-lines, thresholds: ≥3 wallets/IP, ≥5-hop referral chains)
+node scripts/tge-sybil-review.mjs
+
+# Tighten IP threshold, get CSV for spreadsheet review
+node scripts/tge-sybil-review.mjs --ip-threshold=2 --chain-threshold=3 --format=csv
+```
+
+**Report sections:**
+
+| Section | What it flags |
+|---|---|
+| **A — IP clusters** | Multiple wallets that signed in from the same IP address hash. Default: ≥3 wallets/IP. |
+| **B — Referral chains** | Wallets linked by `faucet_referrals` in a chain of N+ hops (recursive CTE, depth ≤10). Default: ≥5 hops. |
+| **C — Timestamp clusters** | 5+ wallets completing the same quest within the same clock-minute — coordinated scripted runs. |
+| **D — All wallets ≥300 pts** | Full export for manual review. Cross-reference addresses appearing in A, B, or C. |
+
+**Decision flow:**
+
+1. Export section D to a spreadsheet (`--format=csv`).
+2. Mark any address that appears in **two or more** of A/B/C as "review" — single-signal hits may be legitimate (NAT, shared VPNs).
+3. For each "review" address, check on-chain timestamps and referral patterns manually.
+4. Exclude confirmed bot farms from the token snapshot before running the TGE contract call.
+
+> **Note:** The `session_fingerprints` table only populates IPs for users who sign in through the website with `TURNSTILE_SECRET_KEY` set. Wallets that never signed in will have no IP row and will not appear in section A — that is expected behaviour (they also cannot have earned quest points through the gate).

@@ -48,3 +48,18 @@ CREATE TABLE IF NOT EXISTS faucet_referrals (
     chain_id         INTEGER     NOT NULL,
     created_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Anti-bot: session fingerprints for IP clustering (TGE sybil review) and CAPTCHA gate.
+-- Append-only log: each login creates a row; CAPTCHA verification creates a row with captcha_verified=true.
+CREATE TABLE IF NOT EXISTS session_fingerprints (
+    id               SERIAL PRIMARY KEY,
+    address          VARCHAR(42) NOT NULL,
+    ip_hash          VARCHAR(64),
+    user_agent_hash  VARCHAR(64),
+    captcha_verified BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_sf_address  ON session_fingerprints(address);
+CREATE INDEX IF NOT EXISTS idx_sf_ip_hash  ON session_fingerprints(ip_hash)
+    WHERE ip_hash IS NOT NULL;
