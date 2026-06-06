@@ -4,27 +4,30 @@ import { useEffect, useRef, useMemo, useState } from 'react';
 import * as d3 from 'd3';
 import { SeasonTrade } from '@/hooks/useSeasonTrades';
 import { buildChordData } from '@/utils/chartData';
+import { Timeframe } from './CandlestickChart';
 
 function getCSSVar(name: string): string {
   if (typeof window === 'undefined') return '';
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-interface ChordDiagramProps {
+interface TradeFlowsProps {
   trades: SeasonTrade[];
   timeWindowMs: number;
+  timeframe: Timeframe;
   selectedRange: { start: number; end: number } | null;
   onClearSelection: () => void;
   isLive: boolean;
 }
 
-export function ChordDiagram({
+export function TradeFlows({
   trades,
   timeWindowMs,
+  timeframe,
   selectedRange,
   onClearSelection,
   isLive,
-}: ChordDiagramProps) {
+}: TradeFlowsProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<d3.Selection<HTMLDivElement, unknown, HTMLElement, unknown> | null>(null);
@@ -99,7 +102,6 @@ export function ChordDiagram({
 
     const { groups, matrix } = chordData;
     const N = groups.length;
-    // sunset: socialist(purple,t=0) → magenta(t=0.45) → orange(t=0.75) → capitalist(gold,t=1)
     const cyberStops = [
       { pos: 0,    color: SOC_COLOR     },
       { pos: 0.45, color: MAGENTA_COLOR },
@@ -117,7 +119,6 @@ export function ChordDiagram({
     const numCap = groups.filter(g => g.isCapitalist).length;
     const numSoc = N - numCap;
 
-    // totalVol[i] = FIM traded where group i was buyer OR seller (outflow + inflow)
     const totalVol = Array.from({ length: N }, (_, i) => {
       let v = 0;
       for (let j = 0; j < N; j++) v += matrix[i][j] + matrix[j][i];
@@ -130,16 +131,13 @@ export function ChordDiagram({
     const innerRadius = size / 2 - 36;
     const outerRadius = size / 2 - 18;
 
-    const GAP      = 0.5;   // radians gap at 12 o'clock only (between 100% cap and 100% soc)
-    const BAND_PAD = 0.01;  // trailing gap after every band (active and empty)
-    const HALF_ARC = Math.PI - GAP / 2; // each half runs to the bottom with no gap there
+    const GAP      = 0.5;
+    const BAND_PAD = 0.01;
+    const HALF_ARC = Math.PI - GAP / 2;
     const RR = innerRadius - 1;
-    const MIN_DRAW = 0.02;             // visible arc width for zero-volume groups
-    const MIN_SLOT = MIN_DRAW + BAND_PAD; // slot = draw + gap, same trailing gap as active bands
+    const MIN_DRAW = 0.02;
+    const MIN_SLOT = MIN_DRAW + BAND_PAD;
 
-    // Compute arcs for one faction. Zero-volume groups get MIN_SLOT so every band
-    // has the same BAND_PAD trailing gap; active groups get at least MIN_SLOT so
-    // no active band is ever smaller than an empty tick.
     function computeArcs(
       vols: number[], factionTotal: number, n: number, startAngle: number
     ): { start: number; end: number }[] {
@@ -147,7 +145,6 @@ export function ChordDiagram({
       const zeroCount = vols.filter(v => v === 0).length;
       const activeCount = n - zeroCount || 1;
       const activeArc = HALF_ARC - zeroCount * MIN_SLOT;
-      // Each active band gets MIN_SLOT as a floor; remaining arc split by volume.
       const extraArc = Math.max(0, activeArc - activeCount * MIN_SLOT);
       let a = startAngle;
       for (let k = 0; k < n; k++) {
@@ -159,7 +156,7 @@ export function ChordDiagram({
           const totalSpan = extraArc > 0
             ? MIN_SLOT + frac * extraArc
             : activeArc / activeCount;
-          const drawSpan = totalSpan - BAND_PAD; // always >= MIN_DRAW since totalSpan >= MIN_SLOT
+          const drawSpan = totalSpan - BAND_PAD;
           arcs.push({ start: a, end: a + drawSpan });
           a += totalSpan;
         }
@@ -167,19 +164,14 @@ export function ChordDiagram({
       return arcs;
     }
 
-    // Cap: 12 o'clock right → 6 o'clock (bottom), clockwise down right side
     const capArcs = computeArcs(
       totalVol.slice(0, numCap), capTotal, numCap, GAP / 2
     );
-    // Soc: 6 o'clock (bottom) → 12 o'clock left, clockwise up left side (no gap at bottom)
     const socArcs = computeArcs(
       totalVol.slice(numCap), socTotal, numSoc, Math.PI
     );
     const arcAngles = [...capArcs, ...socArcs];
 
-    // Sub-arc allocation: for each group i, divide its arc proportionally among
-    // bidirectional flows to all groups j. This gives each chord a fixed width at
-    // both endpoints that is proportional to how much flow that pair represents.
     const subArcs: { start: number; end: number }[][] = Array.from({ length: N }, (_, i) => {
       const arcs: { start: number; end: number }[] = new Array(N);
       let pos = arcAngles[i].start;
@@ -212,7 +204,6 @@ export function ChordDiagram({
       .style('color', TXT1_COLOR)
       .style('display', 'none');
 
-    // Draw chord ribbons — upper triangular, one ribbon per (i,j) pair
     for (let i = 0; i < N; i++) {
       for (let j = i; j < N; j++) {
         const bidir = matrix[i][j] + matrix[j][i];
@@ -237,7 +228,6 @@ export function ChordDiagram({
       }
     }
 
-    // Draw arcs and labels
     for (let i = 0; i < N; i++) {
       const g = groups[i];
       const color = groupColor(i);
@@ -262,10 +252,8 @@ export function ChordDiagram({
           tooltip.style('left', `${event.clientX + 12}px`).style('top', `${event.clientY - 28}px`);
         })
         .on('mouseleave', () => tooltip.style('display', 'none'));
-
     }
 
-    // Fixed axis labels: 0% at bottom (6 o'clock), 100% Cap/Soc split at top (12 o'clock)
     const labelR = outerRadius + 10;
     const yTop = -labelR;
     const axisLabels = [
@@ -289,39 +277,46 @@ export function ChordDiagram({
 
   }, [chordData, tradeCount, size]);
 
-  const modeLabel = useMemo(() => {
-    if (selectedRange) {
-      const start = new Date(selectedRange.start);
-      const end = new Date(selectedRange.end);
-      const fmt = (d: Date) =>
-        d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
-        ' ' +
-        d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-      return `${fmt(start)} – ${fmt(end)} • ${tradeCount} trade${tradeCount !== 1 ? 's' : ''}`;
+  const candleRangeLabel = useMemo(() => {
+    if (!selectedRange) return null;
+    const start = new Date(selectedRange.start);
+    const end = new Date(selectedRange.end);
+    if (timeframe === '1d') {
+      return start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
-    const mins = timeWindowMs / 60_000;
-    const hours = timeWindowMs / 3_600_000;
-    const label = mins < 60 ? `${mins}m` : hours < 24 ? `${hours}h` : `${hours / 24}d`;
-    return `Last ${label} • live`;
-  }, [selectedRange, timeWindowMs, tradeCount]);
+    const timeFmt: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
+    const dateFmt: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+    return (
+      start.toLocaleDateString('en-US', dateFmt) +
+      ' ' +
+      start.toLocaleTimeString('en-US', timeFmt) +
+      ' – ' +
+      end.toLocaleTimeString('en-US', timeFmt)
+    );
+  }, [selectedRange, timeframe]);
 
   return (
-    <div
-      className="p-6 rounded-lg bg-card flex flex-col gap-2 h-full"
-    >
-      <div className="flex items-center justify-between">
-        <span className="h4-app">Trade Flows</span>
-        <div className="flex items-center gap-2 text-xs font-mono text-text2 ">
-          <span>{modeLabel}</span>
+    <div className="terminal-pane h-full" style={{ border: 'none' }}>
+      <div className="terminal-pane-header">
+        <span className="terminal-pane-title">Trade Flows</span>
+        <div className="flex items-center gap-2">
           {isLive && !selectedRange && (
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[--color-green] shadow-[0_0_8px_var(--color-green-35)] animate-pulse" />
+          )}
+          <span className="terminal-pane-title">
+            {selectedRange ? candleRangeLabel : 'LAST'}
+          </span>
+          {!selectedRange && (
+            <span className="terminal-pane-title" style={{ color: 'var(--color-text2)' }}>
+              {timeframe}
+            </span>
           )}
           {selectedRange && (
             <button
               onClick={onClearSelection}
-              className="text-text2 hover:text-text1 transition-colors"
+              className="px-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded transition-all duration-150 active:scale-[0.98] border bg-card2 border-border text-text2 hover:border-border2 hover:text-text"
             >
-              ✕
+              ⨯
             </button>
           )}
         </div>

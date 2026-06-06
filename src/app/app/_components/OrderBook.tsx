@@ -24,7 +24,6 @@ export function OrderBook({
   const { data } = useOrderBook(seasonAddress);
 
   const [sideFilter, setSideFilter] = useState<'ask' | 'bid' | null>(null);
-  const [clickedOwnOrderKey, setClickedOwnOrderKey] = useState<string | null>(null);
   const [factionFilter, setFactionFilter] = useState<'bourgeoisie' | 'proletariat' | null>(null);
   const [rankFilterEnabled, setRankFilterEnabled] = useState(false);
   const [minPercentile, setMinPercentile] = useState<number | ''>(0);
@@ -203,21 +202,36 @@ export function OrderBook({
         {/* Filter rows */}
         <div className="flex flex-col shrink-0 bg-card" style={{ borderBottom: '1px solid var(--color-border2)' }}>
           {/* Row 1: Side */}
-          <div className="flex bg-card2 border border-border rounded-sm p-[0.2rem] gap-[0.2rem] mt-1.5">
-            <button onClick={() => setSideFilter(v => v === 'ask' ? null : 'ask')} className={`btn-input-switch filter-sell ${sideFilter === 'ask' ? 'active' : ''}`}>Ask</button>
-            <button onClick={() => setSideFilter(v => v === 'bid' ? null : 'bid')} className={`btn-input-switch filter-buy ${sideFilter === 'bid' ? 'active' : ''}`}>Bid</button>
+          <div className="flex gap-1 mt-1.5">
+            <button
+              onClick={() => setSideFilter(v => v === 'ask' ? null : 'ask')}
+              className={`flex-1 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded transition-all duration-150 active:scale-[0.98] border ${sideFilter === 'ask' ? 'border-border2 text-text' : 'bg-card2 border-border text-text2 hover:border-border2 hover:text-text'}`}
+              style={sideFilter === 'ask' ? { backgroundColor: 'color-mix(in srgb, var(--color-red) 15%, var(--color-card3))' } : undefined}
+            >Ask</button>
+            <button
+              onClick={() => setSideFilter(v => v === 'bid' ? null : 'bid')}
+              className={`flex-1 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded transition-all duration-150 active:scale-[0.98] border ${sideFilter === 'bid' ? 'border-border2 text-text' : 'bg-card2 border-border text-text2 hover:border-border2 hover:text-text'}`}
+              style={sideFilter === 'bid' ? { backgroundColor: 'color-mix(in srgb, var(--color-green) 15%, var(--color-card3))' } : undefined}
+            >Bid</button>
           </div>
           {/* Row 2: Faction */}
-          <div className="flex bg-card2 border border-border rounded-sm p-[0.2rem] gap-[0.2rem] mt-1.5">
-            <button onClick={() => setFactionFilter(v => v === 'bourgeoisie' ? null : 'bourgeoisie')} className={`btn-input-switch filter-gold ${factionFilter === 'bourgeoisie' ? 'active' : ''}`}>Bourgeoisie</button>
-            <button onClick={() => setFactionFilter(v => v === 'proletariat' ? null : 'proletariat')} className={`btn-input-switch filter-all ${factionFilter === 'proletariat' ? 'active' : ''}`}>Proletariat</button>
+          <div className="flex gap-1 mt-1.5">
+            <button
+              onClick={() => setFactionFilter(v => v === 'bourgeoisie' ? null : 'bourgeoisie')}
+              className={`flex-1 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded transition-all duration-150 active:scale-[0.98] border ${factionFilter === 'bourgeoisie' ? 'border-border2 text-text' : 'bg-card2 border-border text-text2 hover:border-border2 hover:text-text'}`}
+              style={factionFilter === 'bourgeoisie' ? { backgroundColor: 'color-mix(in srgb, var(--color-gold) 15%, var(--color-card3))' } : undefined}
+            >Bourgeoisie</button>
+            <button
+              onClick={() => setFactionFilter(v => v === 'proletariat' ? null : 'proletariat')}
+              className={`flex-1 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded transition-all duration-150 active:scale-[0.98] border ${factionFilter === 'proletariat' ? 'border-border2 text-text' : 'bg-card2 border-border text-text2 hover:border-border2 hover:text-text'}`}
+              style={factionFilter === 'proletariat' ? { backgroundColor: 'color-mix(in srgb, var(--color-purple) 15%, var(--color-card3))' } : undefined}
+            >Proletariat</button>
           </div>
           {/* Row 3: Rank range */}
-          <div className="flex items-stretch w-full bg-card2 border border-border rounded-sm p-[0.2rem] gap-[0.2rem] mt-1.5 mb-1.5">
+          <div className="flex items-stretch w-full gap-1 mt-1.5 mb-1.5">
             <button
               onClick={() => setRankFilterEnabled(v => !v)}
-              className={`btn-input-switch flex-1 ${rankFilterEnabled ? 'active' : ''}`}
-              
+              className={`px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded transition-all duration-150 active:scale-[0.98] border ${rankFilterEnabled ? 'bg-card3 border-border2 text-text' : 'bg-card2 border-border text-text2 hover:border-border2 hover:text-text'}`}
             >
               Rank %
             </button>
@@ -298,7 +312,7 @@ export function OrderBook({
         </div>
 
         {/* Rows viewport — header is sticky inside so both share the same scrollbar-adjusted width */}
-        <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto overflow-x-hidden relative ${isOverflowing ? '[scrollbar-width:thin] [scrollbar-color:transparent_transparent] hover:[scrollbar-color:var(--color-text2)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-[10px] [&::-webkit-scrollbar-thumb]:transition-colors [&::-webkit-scrollbar-thumb]:duration-200 [&:hover::-webkit-scrollbar-thumb]:bg-text2' : ''}`}>
+        <div ref={scrollContainerRef} data-chrome-scroll-guard className={`flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain relative ${isOverflowing ? '[scrollbar-width:thin] [scrollbar-color:transparent_transparent] hover:[scrollbar-color:var(--color-text2)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-[10px] [&::-webkit-scrollbar-thumb]:transition-colors [&::-webkit-scrollbar-thumb]:duration-200 [&:hover::-webkit-scrollbar-thumb]:bg-text2' : ''}`}>
           <div
             className="ledger-header sticky top-0 z-10"
             style={{ gridTemplateColumns: showBoth ? 'repeat(6, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))', paddingLeft: 0, paddingRight: 0 }}
@@ -352,25 +366,19 @@ export function OrderBook({
                     padding: 0,
                     alignItems: 'stretch',
                     cursor: 'default',
+                    borderBottom: isClosestToOne ? '1px solid var(--color-border2)' : undefined,
                   }}
                 >
                   {displayBids && (
                     <div
-                      onClick={() => {
-                        if (row.bid && isOwnOrder(row.bid)) {
-                          const key = row.uniqueKey + '-bid';
-                          setClickedOwnOrderKey(prev => prev === key ? null : key);
-                        } else if (isClickable(row.bid)) {
-                          handleOrderClick(row.bid);
-                        }
-                      }}
+                      onClick={() => { if (isClickable(row.bid)) handleOrderClick(row.bid); }}
                       className={`group/bid ${showBoth ? 'col-span-3 grid grid-cols-3' : 'col-span-4 grid grid-cols-4'} items-center ${showBoth ? 'pl-4' : 'px-4'} py-1 transition-colors relative`}
                       style={{
                         borderRight: displayAsks ? '1px solid var(--color-border)' : undefined,
-                        cursor: (isClickable(row.bid) || (row.bid && isOwnOrder(row.bid))) ? 'pointer' : 'default',
+                        cursor: isClickable(row.bid) ? 'pointer' : 'default',
                         background: bidSelected ? 'var(--color-card3)' : undefined,
                       }}
-                      onMouseEnter={(e) => { if (isClickable(row.bid) || (row.bid && isOwnOrder(row.bid))) (e.currentTarget as HTMLElement).style.background = 'var(--color-card2)'; }}
+                      onMouseEnter={(e) => { if (isClickable(row.bid)) (e.currentTarget as HTMLElement).style.background = 'var(--color-card2)'; }}
                       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = bidSelected ? 'var(--color-card3)' : ''; }}
                     >
                       {row.bid && maxBidAmount > 0 && (
@@ -378,7 +386,7 @@ export function OrderBook({
                       )}
                       {row.bid ? (showBoth ? (
                         <>
-                          <div className="flex justify-end pr-2">{renderRank(row.bid.maker, 'end')}</div>
+                          <div className="flex justify-end pr-2">{isOwnOrder(row.bid) ? <span className="font-mono text-[10px] font-bold text-text2 uppercase tracking-wide">YOU</span> : renderRank(row.bid.maker, 'end')}</div>
                           <span className="ledger-cell-secondary text-right pr-2">
                             {row.bid.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
@@ -397,42 +405,21 @@ export function OrderBook({
                           <span className="ledger-cell-secondary pl-2">
                             {row.bid.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
-                          <div className="pl-2">{renderRank(row.bid.maker, 'start')}</div>
+                          <div className="pl-2">{isOwnOrder(row.bid) ? <span className="font-mono text-[10px] font-bold text-text2 uppercase tracking-wide">YOU</span> : renderRank(row.bid.maker, 'start')}</div>
                         </>
                       )) : <div className={showBoth ? 'col-span-3' : 'col-span-4'} />}
-                      {row.bid && isOwnOrder(row.bid) && (
-                        <div
-                          role="tooltip"
-                          className={`absolute bottom-full mb-2 left-0 z-40 w-56 pointer-events-none transition-opacity duration-150 ${clickedOwnOrderKey === row.uniqueKey + '-bid' ? 'opacity-100' : 'opacity-0'}`}
-                          style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.25))' }}
-                        >
-                          <div style={{ height: 2, background: 'var(--sunset)', borderRadius: '3px 3px 0 0' }} />
-                          <div className="bg-card3 border border-t-0 border-border2 rounded-b p-3 font-mono">
-                            <h3 className="text-[11px] font-black text-text uppercase tracking-wide">
-                              Own Order
-                            </h3>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
 
                   {displayAsks && (
                     <div
-                      onClick={() => {
-                        if (row.ask && isOwnOrder(row.ask)) {
-                          const key = row.uniqueKey + '-ask';
-                          setClickedOwnOrderKey(prev => prev === key ? null : key);
-                        } else if (isClickable(row.ask)) {
-                          handleOrderClick(row.ask);
-                        }
-                      }}
+                      onClick={() => { if (isClickable(row.ask)) handleOrderClick(row.ask); }}
                       className={`group/ask ${showBoth ? 'col-span-3 grid grid-cols-3' : 'col-span-4 grid grid-cols-4'} items-center ${showBoth ? 'pr-4' : 'px-4'} py-1 transition-colors relative`}
                       style={{
-                        cursor: (isClickable(row.ask) || (row.ask && isOwnOrder(row.ask))) ? 'pointer' : 'default',
+                        cursor: isClickable(row.ask) ? 'pointer' : 'default',
                         background: askSelected ? 'var(--color-card3)' : undefined,
                       }}
-                      onMouseEnter={(e) => { if (isClickable(row.ask) || (row.ask && isOwnOrder(row.ask))) (e.currentTarget as HTMLElement).style.background = 'var(--color-card2)'; }}
+                      onMouseEnter={(e) => { if (isClickable(row.ask)) (e.currentTarget as HTMLElement).style.background = 'var(--color-card2)'; }}
                       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = askSelected ? 'var(--color-card3)' : ''; }}
                     >
                       {row.ask && maxAskAmount > 0 && (
@@ -446,7 +433,7 @@ export function OrderBook({
                           <span className="ledger-cell-secondary pl-2">
                             {row.ask.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
-                          <div className="pl-2">{renderRank(row.ask.maker, 'start')}</div>
+                          <div className="pl-2">{isOwnOrder(row.ask) ? <span className="font-mono text-[10px] font-bold text-text2 uppercase tracking-wide">YOU</span> : renderRank(row.ask.maker, 'start')}</div>
                         </>
                       ) : (
                         <>
@@ -459,23 +446,9 @@ export function OrderBook({
                           <span className="ledger-cell-secondary pl-2">
                             {row.ask.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
-                          <div className="pl-2">{renderRank(row.ask.maker, 'start')}</div>
+                          <div className="pl-2">{isOwnOrder(row.ask) ? <span className="font-mono text-[10px] font-bold text-text2 uppercase tracking-wide">YOU</span> : renderRank(row.ask.maker, 'start')}</div>
                         </>
                       )) : <div className={showBoth ? 'col-span-3' : 'col-span-4'} />}
-                      {row.ask && isOwnOrder(row.ask) && (
-                        <div
-                          role="tooltip"
-                          className={`absolute bottom-full mb-2 left-0 z-40 w-56 pointer-events-none transition-opacity duration-150 ${clickedOwnOrderKey === row.uniqueKey + '-ask' ? 'opacity-100' : 'opacity-0'}`}
-                          style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.25))' }}
-                        >
-                          <div style={{ height: 2, background: 'var(--sunset)', borderRadius: '3px 3px 0 0' }} />
-                          <div className="bg-card3 border border-t-0 border-border2 rounded-b p-3 font-mono">
-                            <h3 className="text-[11px] font-black text-text uppercase tracking-wide">
-                              Own Order
-                            </h3>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>

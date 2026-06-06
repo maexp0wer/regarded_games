@@ -67,7 +67,7 @@ function PreviewTable({ category, entries, names, connectedAddress, onOpen }: Pr
     <button
       type="button"
       onClick={onOpen}
-      className="flex flex-col text-left w-full rounded-xl border border-border bg-bg px-4 pt-3 pb-4 gap-2 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:border-border2 hover:shadow-[0_12px_30px_rgba(0,0,0,0.15),0_0_20px_var(--color-purple-15)] active:scale-[0.98]"
+      className="flex flex-col text-left w-full rounded-xl border border-border bg-card2 px-4 pt-3 pb-4 gap-2 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:border-border2 hover:shadow-[0_12px_30px_rgba(0,0,0,0.15),0_0_20px_var(--color-purple-15)] active:scale-[0.98]"
     >
       <div className="flex flex-col w-full">
         <div
@@ -212,12 +212,12 @@ function LeaderboardModal({
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="bg-card border border-border rounded-2xl flex flex-col shadow-2xl w-full"
+        className="bg-bg border border-border rounded-2xl flex flex-col shadow-2xl w-full"
         style={{ maxWidth: 'min(96vw, 1400px)', maxHeight: '90vh' }}
       >
         {/* Modal header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <p className="terminal-pane-title">Full Leaderboard</p>
+          <p className="terminal-pane-title">Leaderboard</p>
           <button
             className="btn-game-secondary px-3 py-1 text-xs"
             onClick={onClose}
@@ -253,7 +253,7 @@ function LeaderboardModal({
               {visibleCols.map((col, ci) => {
                 const rankOffset = (startCol + ci) * ROWS_PER_COL;
                 return (
-                  <div key={ci} className="flex flex-col">
+                  <div key={ci} className="flex flex-col rounded-lg p-3" style={{ background: 'var(--color-bg)' }}>
                     <div
                       className="ledger-header"
                       style={{ gridTemplateColumns: '2rem 1fr auto', background: 'transparent' }}
@@ -363,7 +363,7 @@ export const SeasonLeaderboard: React.FC<SeasonLeaderboardProps> = ({ seasonAddr
 
   if (board.loading) {
     return (
-      <div className="w-full flex flex-col gap-6 p-6 rounded-xl bg-bg border border-border">
+      <div className="w-full flex flex-col gap-6 p-6 rounded-xl bg-bg! border border-border">
         <div className="h-7 w-56 rounded bg-border animate-pulse" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
           {CATEGORIES.map((c) => (
@@ -389,7 +389,7 @@ export const SeasonLeaderboard: React.FC<SeasonLeaderboardProps> = ({ seasonAddr
       {/* Non-clickable container */}
       <div className="terminal-pane gap-5 pb-2 w-full h-full">
         {/* Header */}
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 pb-4 border-b border-border">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <p className="terminal-pane-title">Leaderboard</p>
           <span className="section-label opacity-60">
             {board.totalPlayers} players

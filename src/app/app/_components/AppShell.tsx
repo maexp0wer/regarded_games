@@ -23,6 +23,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // navbar is rung 0; off a season page it's always shown.
   useEffect(() => installSeasonChromeReveal(isSeasonPage), [isSeasonPage]);
 
+  // Hide the document scrollbar on season pages: revealing the navbar briefly
+  // grows the document past the viewport, which would otherwise flash a page
+  // scrollbar. The page is still scrollable (wheel/touch); only the bar is gone.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isSeasonPage) root.classList.add('hide-scrollbar');
+    return () => root.classList.remove('hide-scrollbar');
+  }, [isSeasonPage]);
+
   const navRungVisible = useChromeRungVisible(0);
   const navVisible = !isSeasonPage || navRungVisible;
 

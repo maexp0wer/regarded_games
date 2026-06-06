@@ -454,7 +454,7 @@ export function TradingMask({
   if (isOnHold) {
     return (
       <div className="flex flex-col gap-4 h-full">
-        <div className="terminal-pane">
+        <div className="terminal-pane bg-card!">
           <div className="flex flex-col">
             <div
               className="font-display font-extrabold leading-none text-display-trading tabular-nums"
@@ -517,7 +517,7 @@ export function TradingMask({
       </div>
 
       {/* ── Trading panel card ── */}
-      <div className="terminal-pane flex flex-col gap-4 flex-1 min-h-0">
+      <div className="terminal-pane bg-card! flex flex-col gap-4 flex-1 min-h-0">
 
         {/* ── Buy / Sell toggle ── */}
         <div className="flex rounded-lg overflow-hidden border border-border bg-card2 p-1 gap-1">
@@ -566,30 +566,64 @@ export function TradingMask({
                 Maker
               </button>
             </div>
-            <div className="bg-bg border border-border rounded-b px-3 pt-2 pb-3 flex flex-col gap-2">
-              <span className="mask-label text-right">
-                {!isMaker && activeMaxForSlider > 0n
-                  ? <>QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(activeMaxForSlider, 18)).toLocaleString()} FIM</span></>
-                  : <>WALLET&nbsp;<span className="text-text font-semibold">{walletBalanceDisplay}</span></>
-                }
-              </span>
-              <div className="group flex items-center gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  max={activeMaxForSlider > 0n ? formatUnits(activeMaxForSlider, activeMaxDecimals) : undefined}
-                  value={activeTarget}
-                  onChange={(e) => handleActiveTargetChange(e.target.value)}
-                  className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners"
-                  placeholder={isMaker ? '0.00' : 'MAX'}
-                />
-                <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button className="btn-stepper" onClick={() => handleActiveTargetChange(String(Math.max(0, (parseFloat(activeTarget || '0') + 1))))}>▲</button>
-                  <button className="btn-stepper" onClick={() => handleActiveTargetChange(String(Math.max(0, (parseFloat(activeTarget || '0') - 1))))}>▼</button>
+            <div className={isMaker ? '' : 'flex flex-col min-h-0'}>
+              <div className="bg-bg border border-border rounded-t px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
+                <div className="group flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max={activeMaxForSlider > 0n ? formatUnits(activeMaxForSlider, activeMaxDecimals) : undefined}
+                    value={activeTarget}
+                    onChange={(e) => handleActiveTargetChange(e.target.value)}
+                    className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners"
+                    placeholder={isMaker ? '0.00' : 'MAX'}
+                  />
+                  <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button className="btn-stepper" onClick={() => handleActiveTargetChange(String(Math.max(0, (parseFloat(activeTarget || '0') + 1))))}>▲</button>
+                    <button className="btn-stepper" onClick={() => handleActiveTargetChange(String(Math.max(0, (parseFloat(activeTarget || '0') - 1))))}>▼</button>
+                  </div>
+                  <span className="text-input font-mono font-bold text-text2 shrink-0">{isMaker && isBuy ? 'USDC' : 'FIM'}</span>
                 </div>
-                <span className="text-input font-mono font-bold text-text2 shrink-0">{isMaker && isBuy ? 'USDC' : 'FIM'}</span>
+                <span className="mask-label text-right">
+                  {!isMaker && activeMaxForSlider > 0n
+                    ? <>QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(activeMaxForSlider, 18)).toLocaleString()} FIM</span></>
+                    : <>WALLET&nbsp;<span className="text-text font-semibold">{walletBalanceDisplay}</span></>
+                  }
+                </span>
+                <PercentSlider value={sliderPct} onChange={handleSliderChange} disabled={isBusy} />
               </div>
-              <PercentSlider value={sliderPct} onChange={handleSliderChange} disabled={isBusy} />
+              {!isMaker && (
+                <div data-chrome-scroll-guard className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar rounded-b p-2 border border-t-0 border-border bg-bg max-h-51 xl:max-h-none">
+                  {(hasAsksInQueue ? groupedAskQueue : groupedBidQueue).length === 0 ? (
+                    <button
+                      onClick={onOpenOrderBook}
+                      disabled={!onOpenOrderBook}
+                      className="h-full w-full flex items-center justify-center py-4 rounded-lg transition-colors hover:bg-card2/60 disabled:pointer-events-none"
+                    >
+                      <p className="section-label">Select orders</p>
+                    </button>
+                  ) : (
+                    (hasAsksInQueue ? groupedAskQueue : groupedBidQueue).map((group, groupIdx) => {
+                      const activeQueue = hasAsksInQueue ? groupedAskQueue : groupedBidQueue;
+                      const filledBefore = activeQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
+                      return (
+                        <OrderQueueItem
+                          key={group.ids[0]}
+                          group={group} groupIdx={groupIdx} groupCount={activeQueue.length}
+                          draggedGroupIdx={hasAsksInQueue ? draggedAskGroupIdx : draggedBidGroupIdx}
+                          targetAmount={activeTarget}
+                          filledBefore={filledBefore} stats={percentileMap?.[group.maker?.toLowerCase()]}
+                          onMoveGroup={hasAsksInQueue ? handleMoveAskGroupButton : handleMoveBidGroupButton}
+                          onRemoveGroup={handleRemoveGroup}
+                          onDragStart={hasAsksInQueue ? setDraggedAskGroupIdx : setDraggedBidGroupIdx}
+                          onDragOver={hasAsksInQueue ? handleAskGroupDragOver : handleBidGroupDragOver}
+                          onDragEnd={() => hasAsksInQueue ? setDraggedAskGroupIdx(null) : setDraggedBidGroupIdx(null)}
+                        />
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -633,17 +667,12 @@ export function TradingMask({
         )}
 
         {/* ── Taker: order queue(s) ── */}
-        {!isMaker && (
-          isMixedQueue ? (
-            /* Mixed: buy input → buy queue → sell input → sell queue */
-            <div className="flex flex-col flex-1 min-h-0 gap-3">
+        {!isMaker && isMixedQueue && (
+            /* Mixed: buy and sell legs side by side (input over queue in each). */
+            <div className="grid grid-cols-2 grid-rows-[minmax(0,1fr)] flex-1 min-h-0 gap-3">
               {/* Buy leg */}
-              <div>
-                <div className="input-embedded-rail">
-                  <span className="px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-green)' }}>Buy</span>
-                </div>
-                <div className="bg-bg border border-border rounded-b-none border-b-0 px-3 pt-2 pb-3 flex flex-col gap-2">
-                  <span className="mask-label text-right">QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(maxAskQueueFim, 18)).toLocaleString()} FIM</span></span>
+              <div className="flex flex-col min-h-0">
+                <div className="bg-bg border border-border rounded-md px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
                   <div className="group flex items-center gap-2">
                     <input
                       type="number" min="0"
@@ -659,9 +688,10 @@ export function TradingMask({
                     </div>
                     <span className="text-input font-mono font-bold text-text2 shrink-0">FIM</span>
                   </div>
+                  <span className="mask-label text-right">QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(maxAskQueueFim, 18)).toLocaleString()} FIM</span></span>
                   <PercentSlider value={buySliderPct} onChange={handleBuySliderChange} disabled={isBusy} />
                 </div>
-                <div className="overflow-y-auto custom-scrollbar rounded-b-lg p-2 border border-t-0 border-border bg-bg max-h-51">
+                <div data-chrome-scroll-guard className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar rounded-md p-2 border border-border bg-bg max-h-51 xl:max-h-none">
                   {groupedAskQueue.map((group, groupIdx) => {
                     const filledBefore = groupedAskQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
                     return (
@@ -680,12 +710,8 @@ export function TradingMask({
               </div>
 
               {/* Sell leg */}
-              <div>
-                <div className="input-embedded-rail">
-                  <span className="px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-red)' }}>Sell</span>
-                </div>
-                <div className="bg-bg border border-border rounded-b-none border-b-0 px-3 pt-2 pb-3 flex flex-col gap-2">
-                  <span className="mask-label text-right">QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(maxBidQueueFim, 18)).toLocaleString()} FIM</span></span>
+              <div className="flex flex-col min-h-0">
+                <div className="bg-bg border border-border rounded-md px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
                   <div className="group flex items-center gap-2">
                     <input
                       type="number" min="0"
@@ -701,9 +727,10 @@ export function TradingMask({
                     </div>
                     <span className="text-input font-mono font-bold text-text2 shrink-0">FIM</span>
                   </div>
+                  <span className="mask-label text-right">QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(maxBidQueueFim, 18)).toLocaleString()} FIM</span></span>
                   <PercentSlider value={sellSliderPct} onChange={handleSellSliderChange} disabled={isBusy} />
                 </div>
-                <div className="overflow-y-auto custom-scrollbar rounded-b-lg p-2 border border-t-0 border-border bg-bg max-h-51">
+                <div data-chrome-scroll-guard className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar rounded-md p-2 border border-border bg-bg max-h-51 xl:max-h-none">
                   {groupedBidQueue.map((group, groupIdx) => {
                     const filledBefore = groupedBidQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
                     return (
@@ -721,51 +748,14 @@ export function TradingMask({
                 </div>
               </div>
             </div>
-          ) : (
-            /* Non-mixed: single queue */
-            <div className="flex flex-col flex-1 min-h-0">
-              <p className="section-label mb-2">Order Execution Queue</p>
-              <div className="flex-1 max-h-55 overflow-y-auto custom-scrollbar rounded-lg p-2 border border-border bg-bg">
-                {(hasAsksInQueue ? groupedAskQueue : groupedBidQueue).length === 0 ? (
-                  <button
-                    onClick={onOpenOrderBook}
-                    disabled={!onOpenOrderBook}
-                    className="h-full w-full flex flex-col items-center justify-center py-10 gap-1.5 rounded-lg transition-colors hover:bg-card2/60 disabled:pointer-events-none"
-                  >
-                    <p className="section-label opacity-50">Select orders from Order Book</p>
-                    {onOpenOrderBook && (
-                      <p className="font-mono text-[10px] uppercase tracking-widest text-text2/30">Click to open →</p>
-                    )}
-                  </button>
-                ) : (
-                  (hasAsksInQueue ? groupedAskQueue : groupedBidQueue).map((group, groupIdx) => {
-                    const activeQueue = hasAsksInQueue ? groupedAskQueue : groupedBidQueue;
-                    const filledBefore = activeQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
-                    return (
-                      <OrderQueueItem
-                        key={group.ids[0]}
-                        group={group} groupIdx={groupIdx} groupCount={activeQueue.length}
-                        draggedGroupIdx={hasAsksInQueue ? draggedAskGroupIdx : draggedBidGroupIdx}
-                        targetAmount={activeTarget}
-                        filledBefore={filledBefore} stats={percentileMap?.[group.maker?.toLowerCase()]}
-                        onMoveGroup={hasAsksInQueue ? handleMoveAskGroupButton : handleMoveBidGroupButton}
-                        onRemoveGroup={handleRemoveGroup}
-                        onDragStart={hasAsksInQueue ? setDraggedAskGroupIdx : setDraggedBidGroupIdx}
-                        onDragOver={hasAsksInQueue ? handleAskGroupDragOver : handleBidGroupDragOver}
-                        onDragEnd={() => hasAsksInQueue ? setDraggedAskGroupIdx(null) : setDraggedBidGroupIdx(null)}
-                      />
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          )
         )}
 
         {/* ── Summary + CTA ── */}
-        <div className="mt-auto pt-4 flex flex-col gap-4 border-t border-border">
+        <div className={`flex flex-col gap-4 ${isMixedQueue ? 'lg:mt-0 lg:pt-4 lg:overflow-y-auto lg:overscroll-contain lg:custom-scrollbar' : 'mt-auto pt-4'}`}>
           {showTakerFee && (
             <div className="flex flex-col gap-2">
+              {/* Mixed: buy/sell breakdown cards side by side; otherwise stacked. */}
+              <div className={isMixedQueue ? 'grid grid-cols-2 gap-2' : 'contents'}>
               {legs.buyCostRaw > 0n && (
                 <div className="rounded-lg px-3 py-2.5 flex flex-col gap-1 bg-card2 border border-border">
                   <div className="flex justify-between font-mono text-xs font-bold tabular-nums pb-1 border-b border-border" style={{ color: 'var(--color-green)' }}>
@@ -810,6 +800,7 @@ export function TradingMask({
                   </div>
                 </div>
               )}
+              </div>
               {isMixedQueue && (
                 <div className="rounded-lg px-3 py-2.5 bg-card2 border border-border">
                   <div className="flex justify-between font-mono text-xs font-black" style={{ color: takerNetRaw > 0n ? 'var(--color-green)' : takerNetRaw < 0n ? 'var(--color-red)' : 'var(--color-text2)' }}>
@@ -843,7 +834,7 @@ export function TradingMask({
             disabled={isButtonDisabled}
             onClick={handleStartFlow}
             className={isMixedQueue
-              ? 'relative w-full inline-flex items-center justify-center py-3.5 px-6 rounded-md font-display text-xs font-black uppercase tracking-[0.06em] text-bg bg-linear-to-r from-green to-red cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.25)] transition-all duration-150 ease-in-out hover:-translate-y-px hover:brightness-112 hover:shadow-[0_6px_16px_rgba(0,0,0,0.35)] active:translate-y-px active:scale-[0.98] disabled:bg-card2 disabled:text-text2 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none gap-2'
+              ? 'relative w-full inline-flex items-center justify-center py-4 px-6 rounded-md font-display text-xs font-black uppercase tracking-[0.06em] text-bg bg-linear-to-r from-green to-red cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.25)] transition-all duration-150 ease-in-out hover:-translate-y-px hover:brightness-112 hover:shadow-[0_6px_16px_rgba(0,0,0,0.35)] active:translate-y-px active:scale-[0.98] disabled:bg-card2 disabled:text-text2 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none gap-2'
               : `btn-terminal-action ${directionIsBuy ? 'action-buy' : 'action-sell'} gap-2`}
           >
             {isBusy && <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}

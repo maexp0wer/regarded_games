@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Order } from '@/hooks/useOrderBook';
 import { SeasonTrade } from '@/hooks/useSeasonTrades';
 import { OrderBook } from './OrderBook';
-import { ChordDiagram } from './ChordDiagram';
+import { TradeFlows } from './TradeFlows';
 import { FactionChat } from './FactionChat';
 import { TradingActivityFeed } from './TradingActivityFeed';
 import { CandlestickChart, Timeframe } from './CandlestickChart';
@@ -56,18 +56,28 @@ export interface TradingPanelMenuProps {
   // Trading mask is rendered by the parent and positioned here
   tradingMask: React.ReactNode;
   openOrderBookRef?: { current: () => void };
+  // 'bundled' (lg+): mask sits in the same grid as the panel (one fold rung).
+  // 'detached' (md and below): only the panel renders here; the parent owns the
+  // mask in a separate fold rung above it.
+  maskMode?: 'bundled' | 'detached';
+  // Mixed taker trade: the mask shows buy/sell queues side by side and claims a
+  // second column from the panel in the bundled grid (xl/2xl).
+  maskWide?: boolean;
 }
 
 export function TradingPanelMenu(props: TradingPanelMenuProps) {
   const [open, setOpen] = useState<Set<PanelId>>(new Set());
   const [isXl, setIsXl] = useState(false);
+  const [is2xl, setIs2xl] = useState(false);
   const didInit = useRef(false);
   const tabBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const xl = window.matchMedia('(min-width: 1280px)');
+    const xxl = window.matchMedia('(min-width: 1536px)');
     const matches = xl.matches;
     setIsXl(matches);
+    setIs2xl(xxl.matches);
 
     if (!didInit.current) {
       didInit.current = true;
@@ -79,8 +89,13 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
     }
 
     const xlH = (e: MediaQueryListEvent) => setIsXl(e.matches);
+    const xxlH = (e: MediaQueryListEvent) => setIs2xl(e.matches);
     xl.addEventListener('change', xlH);
-    return () => xl.removeEventListener('change', xlH);
+    xxl.addEventListener('change', xxlH);
+    return () => {
+      xl.removeEventListener('change', xlH);
+      xxl.removeEventListener('change', xxlH);
+    };
   }, []);
 
   useEffect(() => {
@@ -88,18 +103,32 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
     if (el) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
   }, []);
 
-  // Enforce single-panel on lg and below
+  // The panel layout follows how many grid columns the panel area actually spans,
+  // not just the breakpoint. It's "wide" (chart can coexist with a side column of
+  // panels) only with 3+ columns: 2xl always, or xl when the mask isn't widened.
+  // Mixed mode (maskWide) squeezes the panel to 2 cols at xl / 1 at lg, so it
+  // drops to the narrow rules: chart solo, or up to 2 non-chart panels stacked.
+  const panelWide = is2xl || (isXl && !props.maskWide);
+
+  // Narrow (1–2 cols): chart is mutually exclusive with the non-chart panels —
+  // either the chart alone, or up to 2 non-chart panels stacked in two rows.
   useEffect(() => {
-    if (!isXl) {
+    if (!panelWide) {
       setOpen(prev => {
-        const visible = PRIORITY.filter(p => prev.has(p));
-        if (visible.length <= 1) return prev;
-        return new Set([visible[0]]);
+        const others = PRIORITY.filter(p => p !== 'chart-orders' && prev.has(p));
+        // Chart alongside others → collapse to chart only.
+        if (prev.has('chart-orders')) {
+          if (others.length === 0) return prev;
+          return new Set<PanelId>(['chart-orders']);
+        }
+        // More than 2 non-chart open → keep the two highest-priority.
+        if (others.length <= 2) return prev;
+        return new Set<PanelId>(others.slice(0, 2));
       });
     }
-  }, [isXl]);
+  }, [panelWide]);
 
-  // md+: chart open → max 2 non-chart panels (3 total); chart closed → max 4 non-chart panels
+  // Wide: chart open → max 2 non-chart panels (3 total); chart closed → max 4 non-chart panels
   const NON_CHART = PRIORITY.filter(p => p !== 'chart-orders');
 
   const trimNonChart = (next: Set<PanelId>, limit: number) => {
@@ -118,8 +147,14 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
         next.delete(id);
         return next;
       }
-      if (!isXl) {
-        return new Set<PanelId>([id]);
+      if (!panelWide) {
+        // Narrow (1–2 cols): chart is solo; otherwise up to 2 non-chart panels
+        // stacked in two rows.
+        if (id === 'chart-orders') return new Set<PanelId>(['chart-orders']);
+        next.delete('chart-orders');
+        trimNonChart(next, 1); // leave room so this one makes at most 2
+        next.add(id);
+        return next;
       }
       if (id === 'chart-orders') {
         // opening chart reduces non-chart limit from 4 → 2
@@ -137,7 +172,13 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
     setOpen(prev => {
       if (prev.has('chord')) return prev;
       const next = new Set(prev);
-      if (!isXl) return new Set<PanelId>(['chord']);
+      if (!panelWide) {
+        // Narrow: chord joins the stacked non-chart pair; chart steps aside.
+        next.delete('chart-orders');
+        trimNonChart(next, 1);
+        next.add('chord');
+        return next;
+      }
       const limit = next.has('chart-orders') ? 2 : 4;
       trimNonChart(next, limit - 1);
       next.add('chord');
@@ -147,7 +188,9 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
 
   const handleCandleClick = (range: { start: number; end: number } | null) => {
     props.onCandleClick(range);
-    if (range) openChord();
+    // When wide the chord opens beside the chart; when narrow it would displace
+    // the chart you just clicked, so don't auto-open there.
+    if (range && panelWide) openChord();
   };
 
   const renderPanel = (id: PanelId) => {
@@ -192,9 +235,10 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
         );
       case 'chord':
         return (
-          <ChordDiagram
+          <TradeFlows
             trades={props.trades}
             timeWindowMs={props.timeWindowMs}
+            timeframe={props.timeframe}
             selectedRange={props.selectedRange}
             onClearSelection={props.onClearSelection}
             isLive={props.isLive}
@@ -219,7 +263,13 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
       setOpen(prev => {
         if (prev.has('orderbook')) return prev;
         const next = new Set(prev);
-        if (!isXl) return new Set<PanelId>(['orderbook']);
+        if (!panelWide) {
+          // Narrow: order book joins the stacked non-chart pair; chart steps aside.
+          next.delete('chart-orders');
+          trimNonChart(next, 1);
+          next.add('orderbook');
+          return next;
+        }
         const limit = next.has('chart-orders') ? 2 : 4;
         trimNonChart(next, limit - 1);
         next.add('orderbook');
@@ -231,20 +281,42 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
   const chartOpen = open.has('chart-orders');
   const otherPanels = PRIORITY.filter(id => id !== 'chart-orders' && open.has(id));
   const hasAnyOpen = chartOpen || otherPanels.length > 0;
+  const detached = props.maskMode === 'detached';
+  const wide = !!props.maskWide;
 
-  return (
-    <div className="flex flex-col xl:flex-row gap-5 items-stretch">
-      {/* Panel area: left on xl+, below mask on lg and smaller */}
-      <div className="w-full xl:flex-1 xl:min-w-0 order-2 xl:order-1">
-        <div className="h-[70vh] max-h-[95vh] flex flex-col overflow-hidden rounded-lg border border-border bg-card">
+  // Mixed taker trade widens the mask so its buy/sell legs sit side by side.
+  //   lg : the mask takes the full row and the panel drops below it (single
+  //        column, mask order 1 / panel order 2) — at lg there isn't room for
+  //        both side by side once the mask doubles.
+  //   xl : 4 cols, 2 panel + 2 mask, side by side.
+  //   2xl: mask col-span-2 / panel col-span-3 (vs the usual 1 / 4).
+  // Order utilities live in these variant strings (not the base classes) so the
+  // lg stack order doesn't collide. Full literal class strings for Tailwind.
+  const gridColsCls = wide
+    ? 'lg:grid-cols-1 xl:grid-cols-4 2xl:grid-cols-5'
+    : 'lg:grid-cols-3 xl:grid-cols-[minmax(0,4fr)_360px] 2xl:grid-cols-5';
+  const panelSpanCls = wide
+    ? 'order-2 lg:order-2 lg:col-span-1 xl:order-1 xl:col-span-2 2xl:col-span-3'
+    : 'order-2 lg:order-1 lg:col-span-2 xl:col-span-1 2xl:col-span-4';
+  const maskSpanCls = wide
+    ? 'order-1 lg:order-1 lg:col-span-2 xl:order-2 xl:col-span-2 2xl:col-span-2'
+    : 'order-1 lg:order-2 lg:col-span-1 2xl:col-span-1';
+
+  // The panel box itself — identical in both mask modes.
+  const panelBox = (
+    <div className={`w-full min-w-0 ${panelSpanCls} xl:h-full xl:min-h-0`}>
+      {/* lg: fill the viewport free once the navbar/band fold away (100vh minus
+          the shell's pb-6 and this row's pt-5 gap). xl/2xl: the phase is
+          viewport-locked, so flex to fill the share the folds leave instead. */}
+      <div className="h-[calc(100vh-2.75rem)] xl:h-full flex flex-col overflow-hidden rounded-lg border border-border bg-card">
 
           {/* Horizontal tab bar */}
-          <div ref={tabBarRef} className="terminal-view-selector-bar shrink-0">
+          <div ref={tabBarRef} className="terminal-view-selector-bar terminal-view-selector-bar--chat shrink-0">
             {BUTTONS.map(({ id, label }) => (
               <button
                 key={id}
                 onClick={() => toggle(id)}
-                className={`terminal-view-btn text-[0.6rem] sm:text-[0.8rem] md:text-[0.6rem] lg:text-[0.8rem] ${open.has(id) ? ' active' : ''}`}
+                className={`terminal-view-btn${open.has(id) ? ' active' : ''}`}
               >
                 {label}
               </button>
@@ -253,15 +325,17 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
 
           {/* Panel content */}
           {hasAnyOpen && (
-            <div className="flex-1 min-h-0 flex flex-col xl:flex-row">
+            // Wide: chart beside a side column of panels. Narrow: only one of
+            // chart / non-chart panels shows at a time, always column-stacked.
+            <div className={`flex-1 min-h-0 flex flex-col${panelWide ? ' xl:flex-row' : ''}`}>
               {chartOpen && (
                 <div className="flex-1 min-w-0 overflow-hidden">
                   {renderPanel('chart-orders')}
                 </div>
               )}
               {otherPanels.length > 0 && (
-                chartOpen ? (
-                  /* Chart visible: others stack vertically in fixed-width column */
+                panelWide && chartOpen ? (
+                  /* Chart visible: others stack vertically in a fixed-width column */
                   <div className="shrink-0 flex flex-col border-t xl:border-t-0 xl:border-l border-border xl:w-100">
                     {otherPanels.map((id, i) => (
                       <div key={id} className={`flex-1 min-h-0 overflow-hidden${i > 0 ? ' border-t border-border' : ''}`}>
@@ -270,9 +344,10 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
                     ))}
                   </div>
                 ) : (
-                  /* No chart: grid — horizontal first, then vertical (rows of 2) */
+                  /* No chart: wide packs rows of 2 (2×2); narrow stacks one per
+                     row (up to 2 → two rows). */
                   <div className="flex-1 min-w-0 flex flex-col">
-                    {chunk(otherPanels, 2).map((row, i) => (
+                    {chunk(otherPanels, panelWide ? 2 : 1).map((row, i) => (
                       <div key={i} className={`flex-1 min-h-0 flex flex-row${i > 0 ? ' border-t border-border' : ''}`}>
                         {row.map((id, j) => (
                           <div key={id} className={`flex-1 min-w-0 overflow-hidden${j > 0 ? ' border-l border-border' : ''}`}>
@@ -286,11 +361,28 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
               )}
             </div>
           )}
-        </div>
       </div>
+    </div>
+  );
 
-      {/* Trading mask: above on lg and smaller, right on xl+ */}
-      <div className="w-full xl:w-90 xl:shrink-0 order-1 xl:order-2">
+  // Detached: only the panel renders; the parent owns the mask in its own rung.
+  if (detached) return panelBox;
+
+  return (
+    // Trading row as an explicit column grid (matching the auction/payout phase
+    // layouts): the panel area holds a fixed column share so adding panels never
+    // widens it over the mask, and the mask keeps its own rail.
+    //   lg : 3 cols — panel spans 2, mask 1.
+    //   xl : 4-col panel + a fixed 360px mask rail.
+    //   2xl: 5 cols total — panel spans 4, mask the 5th.
+    // xl/2xl: a single full-height row (grid-rows minmax(0,1fr)) so both cells get
+    // a definite, shrinkable height — the panel and mask then compress to fit the
+    // viewport-locked share instead of overflowing it.
+    <div className={`grid grid-cols-1 gap-5 items-stretch ${gridColsCls} xl:grid-rows-[minmax(0,1fr)] xl:h-full`}>
+      {panelBox}
+      {/* Trading mask: above on md and smaller, right rail on lg+ (full-width
+          above the panel at lg when mixed widens it) */}
+      <div className={`w-full min-w-0 ${maskSpanCls} xl:h-full xl:min-h-0 xl:overflow-hidden`}>
         {props.tradingMask}
       </div>
     </div>

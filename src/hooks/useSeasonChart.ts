@@ -37,7 +37,7 @@ export function useSeasonChart(seasonAddress: string | undefined) {
     onCandleClick: setSelectedRange,
     capTargetBps,
     socTargetBps,
-    // ChordDiagram props
+    // TradeFlows props
     trades,
     timeWindowMs: timeframeMs,
     onClearSelection: () => setSelectedRange(null),

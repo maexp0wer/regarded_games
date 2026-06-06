@@ -233,7 +233,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
   }
 
   return (
-    <div className="flex flex-col h-full w-full bg-bg border border-border rounded-lg overflow-hidden" ref={panelRef}>
+    <div className={`flex flex-col h-full w-full rounded-lg overflow-hidden ${auctionMode ? 'bg-card border border-border' : 'bg-card'}`} ref={panelRef}>
       {/* Header — only shown in auction mode; trading phase uses the selector bar instead */}
       {auctionMode && (
         <div className="terminal-pane-header mx-5 pt-5">

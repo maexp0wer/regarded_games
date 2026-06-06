@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { formatUnits, isAddress } from 'viem';
 import { useTenantPonderUrl } from '@/context/TenantContext';
 import { fetchAllPonderItems } from '@/lib/ponder';
 
 const DEAD_ADDRESS = '0x0000000000000000000000000000000000000000';
-const PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 20;
 
 export function AuctionActivityFeed({ seasonAddress, className }: { seasonAddress: string; className?: string }) {
   const ponderUrl = useTenantPonderUrl();
@@ -16,6 +16,11 @@ export function AuctionActivityFeed({ seasonAddress, className }: { seasonAddres
 
   const [page, setPage] = useState(0);
   useEffect(() => { setPage(0); }, [normalizedAddress]);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const { data: history, isLoading } = useQuery({
     queryKey: ['auctionHistory', normalizedAddress, ponderUrl],
@@ -38,9 +43,36 @@ export function AuctionActivityFeed({ seasonAddress, className }: { seasonAddres
     placeholderData: keepPreviousData,
   });
 
+  const recomputeRef = useRef<() => void>(() => {});
+
+  useLayoutEffect(() => {
+    const scroll = scrollRef.current;
+    if (!scroll) return;
+
+    const recompute = () => {
+      const rowH = rowRef.current?.offsetHeight ?? 0;
+      const headerH = headerRef.current?.offsetHeight ?? 0;
+      if (rowH <= 0) return;
+      const avail = scroll.clientHeight - headerH;
+      const fit = Math.floor(avail / rowH);
+      setPageSize(Math.max(1, fit));
+    };
+
+    recomputeRef.current = recompute;
+    recompute();
+    const ro = new ResizeObserver(recompute);
+    ro.observe(scroll);
+    return () => ro.disconnect();
+  }, []);
+
+  useLayoutEffect(() => {
+    recomputeRef.current();
+  }, [history]);
+
   const totalItems = history?.length ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
-  const pageItems = history?.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE) ?? [];
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safePage = Math.min(page, totalPages - 1);
+  const pageItems = history?.slice(safePage * pageSize, (safePage + 1) * pageSize) ?? [];
 
   const fmt = (ts: number) =>
     new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -48,8 +80,9 @@ export function AuctionActivityFeed({ seasonAddress, className }: { seasonAddres
   return (
     <div className={`flex flex-col p-2 bg-card rounded-lg ${className ?? ''}`}>
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden border-border2">
-        <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+        <div ref={scrollRef} className="flex-1 overflow-y-hidden custom-scrollbar relative">
           <div
+            ref={headerRef}
             className="ledger-header sticky top-0 z-10"
             style={{ gridTemplateColumns: '1fr 1fr 1fr' }}
           >
@@ -67,9 +100,10 @@ export function AuctionActivityFeed({ seasonAddress, className }: { seasonAddres
               <p className="section-label opacity-40">No activity yet</p>
             </div>
           ) : (
-            pageItems.map((mint) => (
+            pageItems.map((mint, i) => (
               <div
                 key={mint.id}
+                ref={i === 0 ? rowRef : undefined}
                 className="ledger-row"
                 style={{ gridTemplateColumns: '1fr 1fr 1fr' }}
               >
@@ -87,20 +121,20 @@ export function AuctionActivityFeed({ seasonAddress, className }: { seasonAddres
           )}
         </div>
 
-        {totalItems > PAGE_SIZE && (
+        {totalItems > pageSize && (
           <div className="flex items-center justify-center gap-3 py-2 border-t border-border bg-card pt-3">
             <button
               className="btn-stepper px-1 py-0.5 text-[12px]! leading-none disabled:opacity-30"
-              disabled={page === 0}
-              onClick={() => setPage((p) => p - 1)}
+              disabled={safePage === 0}
+              onClick={() => setPage(Math.max(0, safePage - 1))}
             >
               ◀
             </button>
-            <span className="section-label">{page + 1} / {totalPages}</span>
+            <span className="section-label">{safePage + 1} / {totalPages}</span>
             <button
               className="btn-stepper px-1 py-0.5 text-[12px]! leading-none disabled:opacity-30"
-              disabled={page >= totalPages - 1}
-              onClick={() => setPage((p) => p + 1)}
+              disabled={safePage >= totalPages - 1}
+              onClick={() => setPage(Math.min(totalPages - 1, safePage + 1))}
             >
               ▶
             </button>

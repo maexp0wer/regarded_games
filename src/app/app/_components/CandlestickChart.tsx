@@ -328,8 +328,8 @@ export function CandlestickChart({
   }), [timeframe, onCandleClick]);
 
   return (
-    <div className="flex flex-col bg-card border border-border rounded-xl overflow-hidden h-full">
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
+    <div className="flex flex-col bg-card rounded-xl overflow-hidden h-full">
+      <div className="flex items-center justify-between pl-12 pr-[75px] py-3.5 border-b border-border">
         <div className="flex items-center gap-2.5">
           <span className="font-display font-black uppercase tracking-tight text-sm text-text">
             FIM / USDC
@@ -337,34 +337,15 @@ export function CandlestickChart({
           <span className="w-1.5 h-1.5 rounded-full bg-green shadow-[0_0_8px_var(--color-green-35)] animate-pulse" />
         </div>
         <div className="flex items-center gap-2">
-          {selectedRange && (
-            <button
-              onClick={() => onCandleClick(null)}
-              className="px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded transition-all duration-150 active:scale-[0.98] border bg-card2 border-border text-text2 hover:border-border2 hover:text-text"
-            >
-              Clear
-            </button>
-          )}
           <TimeframeSelector value={timeframe} onChange={onTimeframeChange} />
         </div>
       </div>
 
-      <div className="flex items-center gap-5 px-5 py-2 border-b border-border">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-sm bg-gold" />
-          <span className="h4-app">Cap Vol</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-sm bg-purple" />
-          <span className="h4-app">Soc Vol</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-px bg-text2 opacity-50" />
-          <span className="h4-app">Gini</span>
-        </div>
-      </div>
-
-      <div ref={containerRef} className="relative w-full h-110">
+      {/* Fills the remaining height of the chart card and shrinks with it, so the
+          panel stays fully visible when the viewport-locked row compresses. The
+          card root is a bounded flex column, so flex-1 resolves; standalone
+          callers must give the card a height (see SeasonChart). */}
+      <div ref={containerRef} className="relative w-full flex-1 min-h-0">
         <ReactECharts
           option={option}
           onEvents={onEvents}

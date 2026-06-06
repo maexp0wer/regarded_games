@@ -2,7 +2,7 @@
 
 import { useSeasonChart } from '@/hooks/useSeasonChart';
 import { CandlestickChart } from './CandlestickChart';
-import { ChordDiagram } from './ChordDiagram';
+import { TradeFlows } from './TradeFlows';
 
 interface SeasonChartProps {
   seasonAddress: string;
@@ -13,7 +13,9 @@ export function SeasonChart({ seasonAddress }: SeasonChartProps) {
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-2">
-      <div className="xl:col-span-2 min-w-0">
+      {/* Bounded height: the chart card fills its parent (flex-1 inside), so a
+          standalone caller must supply one or the chart area collapses. */}
+      <div className="xl:col-span-2 min-w-0 h-136">
         <CandlestickChart
           candles={chart.candles}
           timeframe={chart.timeframe}
@@ -25,9 +27,10 @@ export function SeasonChart({ seasonAddress }: SeasonChartProps) {
         />
       </div>
       <div className="xl:col-span-1">
-        <ChordDiagram
+        <TradeFlows
           trades={chart.trades}
           timeWindowMs={chart.timeWindowMs}
+          timeframe={chart.timeframe}
           selectedRange={chart.selectedRange}
           onClearSelection={chart.onClearSelection}
           isLive={chart.isLive}

@@ -43,6 +43,10 @@ const BASE_RUNGS = 2;
 
 let foldLevel = DEFAULT_FOLD;
 let rowCount = 0;
+// When set, the ladder is pinned to this fold level: scroll gestures can't change
+// it and the band/cards can't share the screen. Used by the trading phase while
+// the order execution queue has orders, so the panel + mask own the full viewport.
+let pinnedFold: number | null = null;
 const listeners = new Set<() => void>();
 
 function totalRungs() {
@@ -61,10 +65,48 @@ function emit() {
 }
 
 function setFold(next: number) {
-  const clamped = Math.min(maxFold(), Math.max(0, next));
+  // While pinned, the fold level is forced to the pinned value.
+  const target = pinnedFold !== null ? pinnedFold : next;
+  const clamped = Math.min(maxFold(), Math.max(0, target));
   if (clamped === foldLevel) return;
   foldLevel = clamped;
   emit();
+}
+
+/**
+ * Pin the fold ladder to `level` (or release with `null`). While pinned, scroll
+ * gestures don't fold/reveal anything and the level snaps to `level`, so the
+ * pinned rung owns the screen on its own. The trading phase pins to the
+ * "trading row only" stage while the order queue is non-empty.
+ */
+export function setChromePin(level: number | null): void {
+  if (level === pinnedFold) return;
+  pinnedFold = level;
+  if (level !== null) {
+    const clamped = Math.min(maxFold(), Math.max(0, level));
+    if (clamped !== foldLevel) {
+      foldLevel = clamped;
+      emit();
+    }
+  }
+}
+
+/** Whether the ladder is currently pinned (scroll-locked). */
+export function isChromePinned(): boolean {
+  return pinnedFold !== null;
+}
+
+/**
+ * Pin the ladder to `level` for the component's lifetime when `active`, releasing
+ * on unmount or when `active` flips false. Convenience wrapper around
+ * {@link setChromePin} for use inside a phase layout.
+ */
+export function useChromePin(active: boolean, level: number): void {
+  useEffect(() => {
+    if (!active) return;
+    setChromePin(level);
+    return () => setChromePin(null);
+  }, [active, level]);
 }
 
 function subscribe(listener: () => void) {
@@ -92,6 +134,16 @@ export function useChromeFoldLevel(): number {
  */
 export function useChromeRungVisible(index: number): boolean {
   return useChromeFoldLevel() <= index;
+}
+
+/**
+ * The inverse of `useChromeRungVisible`: hidden until the ladder has folded *to*
+ * `level`, then shown. Used for content that should reveal at the deepest stage
+ * rather than fold away — e.g. the 2xl trading phase, where the trading row stays
+ * pinned and the detail cards slide in only once everything above has folded.
+ */
+export function useChromeRevealAt(level: number): boolean {
+  return useChromeFoldLevel() >= level;
 }
 
 /**
@@ -144,12 +196,35 @@ export function installSeasonChromeReveal(active: boolean): () => void {
 
   const atTop = () => window.scrollY <= 0;
 
+  // A gesture started inside a region marked `data-chrome-scroll-guard` that can
+  // still scroll in the gesture's direction belongs to that region, not the fold
+  // ladder — e.g. the trading mask's order queues. Walk up from the target; if a
+  // guarded scrollable can absorb the delta, let the browser scroll it natively
+  // (those regions also set `overscroll-contain` so they don't chain to the page
+  // once exhausted). `deltaY > 0` = scroll down.
+  const absorbedByScrollGuard = (target: EventTarget | null, deltaY: number): boolean => {
+    let el = target instanceof Element ? target : null;
+    while (el) {
+      if (el instanceof HTMLElement && el.dataset.chromeScrollGuard !== undefined) {
+        const maxScroll = el.scrollHeight - el.clientHeight;
+        if (maxScroll > 0) {
+          if (deltaY > 0 && el.scrollTop < maxScroll - 1) return true; // room below
+          if (deltaY < 0 && el.scrollTop > 0) return true;             // room above
+        }
+      }
+      el = el.parentElement;
+    }
+    return false;
+  };
+
   // Non-passive so we can preventDefault the at-top gesture that only folds a
   // rung — that gesture changes the chrome without moving the page. Once every
   // rung is folded (foldLevel === maxFold) the guards fall through and the
   // browser scrolls normally.
   const onWheel = (e: WheelEvent) => {
     if (!atTop()) return;
+    if (absorbedByScrollGuard(e.target, e.deltaY)) return;
+    if (pinnedFold !== null) return; // pinned: queues still scroll, ladder is frozen
     if (e.deltaY > 0 && foldLevel < maxFold()) {
       e.preventDefault();
       setFold(foldLevel + 1); // scroll down → fold the next rung (top-down)
@@ -160,13 +235,18 @@ export function installSeasonChromeReveal(active: boolean): () => void {
   };
 
   let touchStartY = 0;
+  let touchTarget: EventTarget | null = null;
   const onTouchStart = (e: TouchEvent) => {
     touchStartY = e.touches[0]?.clientY ?? 0;
+    touchTarget = e.target;
   };
   const onTouchMove = (e: TouchEvent) => {
     if (!atTop()) return;
     const y = e.touches[0]?.clientY ?? 0;
     const moved = y - touchStartY; // finger up (negative) = scroll-down intent
+    // moved < 0 (finger up) = scroll-down intent, so pass +1 / -1 as the deltaY sign.
+    if (absorbedByScrollGuard(touchTarget, -moved)) return;
+    if (pinnedFold !== null) return; // pinned: queues still scroll, ladder is frozen
     if (moved < -8 && foldLevel < maxFold()) {
       e.preventDefault();
       setFold(foldLevel + 1);

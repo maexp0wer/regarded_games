@@ -11,6 +11,7 @@ const formatUSDC = (val: string) => {
 };
 
 const DIST_COLORS = ['var(--color-purple)', 'var(--color-gold)','var(--color-magenta)', 'var(--color-orange)'];
+const DIST_COLORS_70 = ['var(--color-purple-70)', 'var(--color-gold-70)','var(--color-magenta-70)', 'var(--color-orange-70)'];
 
 interface LendingDistributionCardProps {
   seasonAddress: string;
@@ -51,8 +52,9 @@ export function LendingDistributionCard({ seasonAddress, config }: LendingDistri
                 className="h-full cursor-pointer transition-opacity duration-200"
                 style={{
                   flex: item.value,
-                  background: DIST_COLORS[i % DIST_COLORS.length],
-                  opacity: hoveredLabel && hoveredLabel !== item.label ? 0.3 : 1,
+                  background: hoveredLabel === item.label
+                    ? DIST_COLORS[i % DIST_COLORS.length]
+                    : DIST_COLORS_70[i % DIST_COLORS_70.length],
                 }}
                 onMouseEnter={() => setHoveredLabel(item.label)}
                 onMouseLeave={() => setHoveredLabel(null)}
@@ -65,17 +67,11 @@ export function LendingDistributionCard({ seasonAddress, config }: LendingDistri
               const hasAmount = BigInt(item.amt || '0') > 0n;
               const fill = DIST_COLORS[i % DIST_COLORS.length];
               const isHovered = hoveredLabel === item.label;
-              const isFaded = hoveredLabel && !isHovered;
               return (
                 <div
                   key={item.label}
                   className="kv-row transition-all duration-200"
-                  style={{
-                    transform: isHovered ? 'scale(1.03)' : 'scale(1)',
-                    transformOrigin: 'left center',
-                    opacity: isFaded ? 0.5 : 1,
-                    cursor: 'pointer',
-                  }}
+                  style={{ cursor: 'pointer' }}
                   onMouseEnter={() => setHoveredLabel(item.label)}
                 >
                   <span className="flex items-center gap-1.5 font-mono text-[11px] text-text2">
