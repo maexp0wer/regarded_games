@@ -6,7 +6,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { SunIcon, MoonIcon, PopoutIcon } from '@/components/icons/svg';
 import { WalletButton } from './WalletButton';
 import { useRgdPrice } from '@/hooks/useRgdPrice';
-import { useState, useEffect, useRef, MouseEvent } from 'react';
+import { useState, MouseEvent } from 'react';
 import { useAccount } from 'wagmi';
 import { Logo } from '@/components/icons/svg';
 import { useTenant } from '@/context/TenantContext';
@@ -22,31 +22,6 @@ export function Navbar() {
   const docsUrl = mainUrl?.replace('://', '://docs.');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [visible, setVisible] = useState(true);
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    const scheduleHide = () => {
-      if (hideTimer.current) clearTimeout(hideTimer.current);
-      hideTimer.current = setTimeout(() => setVisible(false), 3000);
-    };
-
-    const onScroll = () => {
-      if (window.scrollY < 10) {
-        if (hideTimer.current) clearTimeout(hideTimer.current);
-        setVisible(true);
-      } else {
-        setVisible(true);
-        scheduleHide();
-      }
-    };
-
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      if (hideTimer.current) clearTimeout(hideTimer.current);
-    };
-  }, []);
 
   const allNavLinks: {
     name: string;
@@ -70,7 +45,7 @@ export function Navbar() {
 
   return (
     <>
-      <nav className={`fixed top-0 left-0 w-full h-auto min-h-18 flex items-center flex-wrap content-start justify-between px-8 z-100 bg-[color-mix(in_srgb,var(--color-bg)_80%,transparent)] backdrop-blur-md border border-border lg:h-18 lg:flex-nowrap lg:content-normal transition-transform duration-300 ${visible ? 'translate-y-0' : '-translate-y-full'}`}>
+      <nav className="w-full h-auto min-h-18 flex items-center flex-wrap content-start justify-between px-8 z-100 bg-[color-mix(in_srgb,var(--color-bg)_80%,transparent)] backdrop-blur-md border border-border lg:h-18 lg:flex-nowrap lg:content-normal">
         {/* Brand */}
         <Link href={mainUrl || '/'} className="flex items-center h-18 shrink-0 no-underline" style={{ textDecoration: 'none' }}>
           <Logo className="w-36 text-white" />

@@ -52,7 +52,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
     return (
       <div className="card-app flex flex-col gap-4 border border-border2">
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className="stat-rail-card animate-pulse">
+          <div key={i} className="terminal-pane p-2.5 gap-2 animate-pulse">
             <div className="h-3 w-40 rounded bg-border" />
             <div className="h-5 w-full rounded bg-border" />
           </div>
@@ -73,12 +73,12 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
     <div className="terminal-pane pb-2 w-full h-full">
       <p className="terminal-pane-title pb-3 border-b border-border">Season Stats</p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }} className="pt-5">
+      <div className="pt-5 grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4 2xl:grid-cols-1 2xl:gap-3">
         {/* ROW 1: RANK SPANNING FULL WIDTH */}
-        <div style={{ gridColumn: '1 / -1' }} className="stat-rail-card">
-          <div className="flex items-baseline font-mono text-[10px] uppercase tracking-wide">
+        <div className="terminal-pane border-none! p-2.5 gap-2 lg:col-span-2 2xl:col-span-1">
+          <div className="flex items-baseline font-mono text-xs uppercase tracking-wide">
             <span className="font-bold text-text2">Rank</span>
-            <span className="flex-1 text-center font-bold text-text">{factionPercentile.toFixed(2)}% within faction</span>
+            <span className="flex-1 text-center font-bold text-text">{factionPercentile.toFixed(2)}% {isCapitalist ? 'Capitalist' : 'Proletarian'}</span>
             <span className="font-bold text-text">{isCapitalist ? 'BOURGEOISIE' : 'PROLETARIAT'}</span>
           </div>
           <div className="rank-track-chassis">
@@ -100,9 +100,9 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
         </div>
 
         {/* ROW 2, COL 1: ABSOLUTE AND RELATIVE P&L */}
-        <div className="flex flex-col gap-3">
-          <div className="stat-rail-card">
-            <div className="flex items-baseline font-mono text-[10px] uppercase tracking-wide">
+        <div className="contents lg:flex lg:flex-col lg:gap-3 2xl:contents">
+          <div className="terminal-pane border-none!  p-2.5 gap-2">
+            <div className="flex items-baseline font-mono text-xs uppercase tracking-wide">
               <span className="font-bold text-text2">Absolute P&amp;L</span>
               <span className="flex-1 text-center font-bold text-text">TOP {absoluteTopPercent < 1 ? '<1' : absoluteTopPercent.toFixed(2)}%</span>
               <span className="font-black" style={{ color: pnlColor }}>
@@ -113,14 +113,14 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
               <div style={{
                 height: '100%',
                 width: barFill(absoluteTopPercent),
-                background: 'var(--color-green)',
+                background: 'var(--color-green-70)',
                 transition: 'width 0.5s ease-out',
               }} />
             </div>
           </div>
 
-          <div className="stat-rail-card">
-            <div className="flex items-baseline font-mono text-[10px] uppercase tracking-wide">
+          <div className="terminal-pane border-none! p-2.5 gap-2">
+            <div className="flex items-baseline font-mono text-xs uppercase tracking-wide">
               <span className="font-bold text-text2">Relative P&amp;L</span>
               <span className="flex-1 text-center font-bold text-text">TOP {relativeTopPercent < 1 ? '<1' : relativeTopPercent.toFixed(2)}%</span>
               <span className="font-black text-purple">
@@ -131,7 +131,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
               <div style={{
                 height: '100%',
                 width: barFill(relativeTopPercent),
-                background: 'var(--color-purple)',
+                background: 'var(--color-purple-70)',
                 transition: 'width 0.5s ease-out',
               }} />
             </div>
@@ -139,9 +139,9 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
         </div>
 
         {/* ROW 2, COL 2: TRADE VOLUME AND TRADING FEES */}
-        <div className="flex flex-col gap-3">
-          <div className="stat-rail-card">
-            <div className="flex items-baseline font-mono text-[10px] uppercase tracking-wide">
+        <div className="contents lg:flex lg:flex-col lg:gap-3 2xl:contents">
+          <div className="terminal-pane border-none! p-2.5 gap-2">
+            <div className="flex items-baseline font-mono text-xs uppercase tracking-wide">
               <span className="font-bold text-text2">Trade Volume</span>
               <span className="flex-1 text-center font-bold text-text">TOP {volumeTopPercent < 1 ? '<1' : volumeTopPercent.toFixed(2)}%</span>
               <span className="font-black" style={{ color: 'var(--color-gold)' }}>
@@ -153,14 +153,14 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
               <div style={{
                 height: '100%',
                 width: barFill(volumeTopPercent),
-                background: 'var(--color-gold)',
+                background: 'var(--color-gold-70)',
                 transition: 'width 0.5s ease-out',
               }} />
             </div>
           </div>
 
-          <div className="stat-rail-card">
-            <div className="flex items-baseline font-mono text-[10px] uppercase tracking-wide">
+          <div className="terminal-pane border-none! p-2.5 gap-2">
+            <div className="flex items-baseline font-mono text-xs uppercase tracking-wide">
               <span className="font-bold text-text2">Trading Fees</span>
               <span className="flex-1 text-center font-bold text-text">TOP {feesTopPercent < 1 ? '<1' : feesTopPercent.toFixed(2)}%</span>
               <span className="font-black" style={{ color: 'var(--color-red)' }}>
@@ -171,7 +171,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
               <div style={{
                 height: '100%',
                 width: barFill(feesTopPercent),
-                background: 'var(--color-red)',
+                background: 'var(--color-red-70)',
                 transition: 'width 0.5s ease-out',
               }} />
             </div>

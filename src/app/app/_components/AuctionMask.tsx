@@ -199,11 +199,12 @@ function AuctionMaskInner({
 
   const isButtonDisabled = isBusy || showModal || !buyAmount || !hasStakedAnything || isMaxedOut || isOverLimit;
 
-  const widgetDisabled = !hasStakedAnything || isMaxedOut;
+  const needsStaking   = !hasStakedAnything || isMaxedOut;
+  const widgetDisabled = needsStaking;
 
   return (
     <>
-    <div className="flex flex-col gap-5 h-full max-h-[50vh] relative">
+    <div className="flex flex-col gap-5 h-full relative">
 
       {/* ── FIM Balance card ── */}
       <div className="terminal-pane">
@@ -220,7 +221,7 @@ function AuctionMaskInner({
       </div>
 
       {/* ── Auction panel card ── */}
-      <div className="terminal-pane flex flex-col gap-0 flex-1 min-h-0">
+      <div className="terminal-pane bg-card! flex flex-col gap-0 flex-1 min-h-0">
         <div className="terminal-pane-header">
           <span className="terminal-pane-title">Auction</span>
         </div>
@@ -238,20 +239,6 @@ function AuctionMaskInner({
           </div>
         ) : (
           <>
-            {/* Staking warning */}
-            {(!hasStakedAnything || isMaxedOut) && (
-              <Link href="/stake">
-                <div className="rounded-lg px-4 py-3 text-center cursor-pointer transition-opacity hover:opacity-80 surface-pink-warn">
-                  <p className="font-mono text-[10px] uppercase font-bold tracking-widest text-red">
-                    {isMaxedOut ? 'FIM Limit Reached' : 'No Collateral Staked'}
-                  </p>
-                  <p className="font-mono text-[10px] text-text2 mt-1 tracking-wide">
-                    {isMaxedOut ? 'Stake more REGARDS to increase your limit →' : 'Stake REGARDS to unlock buying →'}
-                  </p>
-                </div>
-              </Link>
-            )}
-
             {/* ── Buy widget ── */}
             <div className={`transition-opacity ${widgetDisabled ? 'opacity-40 pointer-events-none' : ''}`}>
               <AmountInput
@@ -270,13 +257,19 @@ function AuctionMaskInner({
         {/* ── CTA ── */}
         <div className="mt-auto pt-3 flex flex-col gap-3 border-t border-border">
           {isAuctionPhase && (
-            <button
-              onClick={handleStartFlow}
-              disabled={isButtonDisabled}
-              className="btn-terminal-action action-buy"
-            >
-              {getButtonLabel()}
-            </button>
+            needsStaking ? (
+              <Link href="/stake" className="btn-game-primary text-center">
+                {isMaxedOut ? 'Stake More REGARDS' : 'Stake REGARDS to Unlock'}
+              </Link>
+            ) : (
+              <button
+                onClick={handleStartFlow}
+                disabled={isButtonDisabled}
+                className="btn-terminal-action action-buy"
+              >
+                {getButtonLabel()}
+              </button>
+            )
           )}
         </div>
 

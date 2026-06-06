@@ -7,7 +7,7 @@ import { useTenantPonderUrl } from '@/context/TenantContext';
 import { fetchAllPonderItems } from '@/lib/ponder';
 
 const DEAD_ADDRESS = '0x0000000000000000000000000000000000000000';
-const PAGE_SIZE = 7;
+const PAGE_SIZE = 10;
 
 export function AuctionActivityFeed({ seasonAddress, className }: { seasonAddress: string; className?: string }) {
   const ponderUrl = useTenantPonderUrl();

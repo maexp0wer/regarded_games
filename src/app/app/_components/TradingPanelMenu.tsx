@@ -236,7 +236,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
     <div className="flex flex-col xl:flex-row gap-5 items-stretch">
       {/* Panel area: left on xl+, below mask on lg and smaller */}
       <div className="w-full xl:flex-1 xl:min-w-0 order-2 xl:order-1">
-        <div className="h-full max-h-[95vh] flex flex-col overflow-hidden rounded-lg border border-border bg-card">
+        <div className="h-[70vh] max-h-[95vh] flex flex-col overflow-hidden rounded-lg border border-border bg-card">
 
           {/* Horizontal tab bar */}
           <div ref={tabBarRef} className="terminal-view-selector-bar shrink-0">

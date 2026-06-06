@@ -9,16 +9,20 @@ export interface LeaderboardEntry {
   value: number;     // category metric (USDC, or % for relative P&L)
 }
 
+const TOP_N = 10;
+
 export interface SeasonLeaderboardData {
-  absolute: LeaderboardEntry[];   // top Season P/L (USDC)
-  relative: LeaderboardEntry[];   // top capital growth (%)
-  volume: LeaderboardEntry[];     // top net contribution / trade volume (USDC)
-  fees: LeaderboardEntry[];       // top trading fees paid (USDC)
+  absolute: LeaderboardEntry[];
+  relative: LeaderboardEntry[];
+  volume: LeaderboardEntry[];
+  fees: LeaderboardEntry[];
+  allAbsolute: LeaderboardEntry[];
+  allRelative: LeaderboardEntry[];
+  allVolume: LeaderboardEntry[];
+  allFees: LeaderboardEntry[];
   totalPlayers: number;
   loading: boolean;
 }
-
-const TOP_N = 3;
 
 /**
  * Whole-season leaderboard: the top performers across the entire player set —
@@ -32,7 +36,11 @@ export function useSeasonLeaderboard(seasonAddress: string | undefined): SeasonL
 
   const board = useMemo(() => {
     if (!players) {
-      return { absolute: [], relative: [], volume: [], fees: [], totalPlayers: 0 };
+      return {
+        absolute: [], relative: [], volume: [], fees: [],
+        allAbsolute: [], allRelative: [], allVolume: [], allFees: [],
+        totalPlayers: 0,
+      };
     }
 
     const base = players
@@ -42,25 +50,32 @@ export function useSeasonLeaderboard(seasonAddress: string | undefined): SeasonL
       .map((stat) => {
         const addr = stat.playerAddress.toLowerCase();
         const contrib = Number(formatUnits(BigInt(stat.netContribution || '0'), 6));
-        // Projected Season P/L (payout − contribution); falls back to −contrib (a
-        // total loss) before any pool exists, matching usePlayerRank.
         const pnl = projectedPnlByAddr.get(addr) ?? -contrib;
         const efficiency = contrib > 0 ? (pnl / contrib) * 100 : -Infinity;
         const fees = Number(formatUnits(BigInt(stat.totalFeesPaid || '0'), 6));
         return { addr, pnl, efficiency, contrib, fees };
       });
 
-    const top = (
+    const sorted = (
       sort: (a: typeof base[number], b: typeof base[number]) => number,
       value: (p: typeof base[number]) => number,
     ): LeaderboardEntry[] =>
-      [...base].sort(sort).slice(0, TOP_N).map((p) => ({ address: p.addr, value: value(p) }));
+      [...base].sort(sort).map((p) => ({ address: p.addr, value: value(p) }));
+
+    const allAbsolute = sorted((a, b) => b.pnl - a.pnl, (p) => p.pnl);
+    const allRelative = sorted((a, b) => b.efficiency - a.efficiency, (p) => p.efficiency);
+    const allVolume   = sorted((a, b) => b.contrib - a.contrib, (p) => p.contrib);
+    const allFees     = sorted((a, b) => b.fees - a.fees, (p) => p.fees);
 
     return {
-      absolute: top((a, b) => b.pnl - a.pnl, (p) => p.pnl),
-      relative: top((a, b) => b.efficiency - a.efficiency, (p) => p.efficiency),
-      volume: top((a, b) => b.contrib - a.contrib, (p) => p.contrib),
-      fees: top((a, b) => b.fees - a.fees, (p) => p.fees),
+      absolute:    allAbsolute.slice(0, TOP_N),
+      relative:    allRelative.slice(0, TOP_N),
+      volume:      allVolume.slice(0, TOP_N),
+      fees:        allFees.slice(0, TOP_N),
+      allAbsolute,
+      allRelative,
+      allVolume,
+      allFees,
       totalPlayers: base.length,
     };
   }, [players, projectedPnlByAddr]);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { useSeasonLeaderboard, LeaderboardEntry } from '@/hooks/useSeasonLeaderboard';
 import { usePlayerNames } from '@/hooks/usePlayerNames';
@@ -10,18 +10,12 @@ interface SeasonLeaderboardProps {
   seasonName?: string;
 }
 
+type CategoryKey = 'absolute' | 'relative' | 'volume' | 'fees';
+
 type Category = {
-  key: 'absolute' | 'relative' | 'volume' | 'fees';
+  key: CategoryKey;
   label: string;
-  tag: string;
-  // Full literal class strings so Tailwind's content scanner keeps them.
-  strip: [string, string, string]; // #1 (accent) → #2 (-70) → #3 (-35)
-  glow: string;                     // #1 strip glow shadow
-  rankTop: string;                  // #1 rank number color
-  value: string;                    // value text color
-  hoverBorder: string;
-  pill: string;                     // tag chip color set
-  signed: boolean;                  // tint value by sign (P/L only)
+  signed: boolean;
   format: (v: number) => string;
 };
 
@@ -32,137 +26,350 @@ const CATEGORIES: Category[] = [
   {
     key: 'absolute',
     label: 'Absolute P&L',
-    tag: 'USD Value',
-    strip: ['bg-green', 'bg-green-70', 'bg-green-35'],
-    glow: 'shadow-[0_0_8px_var(--color-green-35)]',
-    rankTop: 'text-green',
-    value: 'text-green',
-    hoverBorder: 'hover:border-green-35',
-    pill: 'bg-green-15 text-green border-green-35',
     signed: true,
     format: (v) => `${v >= 0 ? '+' : '-'}$${usd(Math.abs(v))}`,
   },
   {
     key: 'relative',
     label: 'Relative P&L',
-    tag: 'Multipliers',
-    strip: ['bg-purple', 'bg-purple-70', 'bg-purple-35'],
-    glow: 'shadow-[0_0_8px_var(--color-purple-35)]',
-    rankTop: 'text-purple',
-    value: 'text-purple',
-    hoverBorder: 'hover:border-purple-35',
-    pill: 'bg-purple-15 text-purple border-purple-35',
     signed: false,
-    format: (v) => `${v >= 0 ? '+' : ''}${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`,
+    format: (v) =>
+      `${v >= 0 ? '+' : ''}${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`,
   },
   {
     key: 'volume',
     label: 'Trade Volume',
-    tag: 'Turnover',
-    strip: ['bg-gold', 'bg-gold-70', 'bg-gold-35'],
-    glow: 'shadow-[0_0_8px_var(--color-gold-35)]',
-    rankTop: 'text-gold',
-    value: 'text-gold',
-    hoverBorder: 'hover:border-gold-35',
-    pill: 'bg-gold-15 text-gold border-gold-35',
     signed: false,
     format: (v) => `$${usd(v)}`,
   },
   {
     key: 'fees',
     label: 'Trading Fees',
-    tag: 'Fees Paid',
-    strip: ['bg-gold', 'bg-gold-70', 'bg-gold-35'],
-    glow: 'shadow-[0_0_8px_var(--color-gold-35)]',
-    rankTop: 'text-gold',
-    value: 'text-text',
-    hoverBorder: 'hover:border-gold-35',
-    pill: 'bg-gold-15 text-gold border-gold-35',
     signed: false,
     format: (v) => `$${usd(v)}`,
   },
 ];
 
-const truncate = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+const truncate = (addr: string) => `${addr.slice(0, 5)}…${addr.slice(-3)}`;
 
-interface SectionProps {
+// ---- Preview table (top-10 in the card, clickable to open modal) ----
+
+interface PreviewTableProps {
   category: Category;
   entries: LeaderboardEntry[];
   names: Map<string, string>;
-  connectedAddress?: string; // lowercased
+  connectedAddress?: string;
+  onOpen: () => void;
 }
 
-const LeaderboardSection: React.FC<SectionProps> = ({ category, entries, names, connectedAddress }) => (
-  <section className="flex flex-col p-5 rounded-lg bg-card2 border border-border">
-    <div className="flex items-center justify-between pb-3 border-b border-border mb-3">
-      <span className="font-mono text-xs font-bold text-text2 uppercase tracking-widest">{category.label}</span>
-      <span className={`font-mono text-[10px] px-2 py-0.5 rounded border uppercase font-bold tracking-wider ${category.pill}`}>
-        {category.tag}
-      </span>
-    </div>
-
-    <div className="flex flex-col gap-2">
-      {entries.length === 0 ? (
-        <div className="flex items-center justify-center p-3 rounded bg-card2 border border-border">
-          <span className="font-mono text-[11px] text-text2 uppercase tracking-widest opacity-60">No Entries</span>
+function PreviewTable({ category, entries, names, connectedAddress, onOpen }: PreviewTableProps) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex flex-col text-left w-full rounded-xl border border-border bg-bg px-4 pt-3 pb-4 gap-2 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:border-border2 hover:shadow-[0_12px_30px_rgba(0,0,0,0.15),0_0_20px_var(--color-purple-15)] active:scale-[0.98]"
+    >
+      <div className="flex flex-col w-full">
+        <div
+          className="ledger-header"
+          style={{ gridTemplateColumns: '2rem 1fr auto', background: 'transparent' }}
+        >
+          <div>#</div>
+          <div>Player</div>
+          <div className="text-right">{category.label}</div>
         </div>
-      ) : (
-        entries.map((entry, i) => {
-          const isTop = i === 0;
-          const isYou = !!connectedAddress && entry.address === connectedAddress;
-          const tint = category.signed
-            ? entry.value >= 0 ? 'text-green' : 'text-red'
-            : category.value;
-          const name = names.get(entry.address) ?? 'Regarded Anon';
-          return (
-            <div
-              key={entry.address}
-              className={`relative flex items-center justify-between p-3 pl-5 rounded ${category.hoverBorder} group transition-all duration-150 ease-in-out overflow-hidden ${isYou ? 'bg-(image:--sunset-15) ' : 'bg-card3'}`}
-            >
-              <div className={`absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all ${category.strip[i]} ${isTop ? category.glow : ''}`} />
-              <div className="flex items-center gap-3 min-w-0">
-                <span className={`font-display text-lg font-black tracking-tight tabular-nums shrink-0 ${isTop ? category.rankTop : 'text-text2'}`}>
-                  #{i + 1}
-                </span>
-                <div className="flex items-baseline gap-1.5 min-w-0">
-                  <span className="font-sans text-xs font-bold text-text truncate">{name}</span>
-                  <span className="font-mono text-[10px] tracking-widest text-text2 uppercase shrink-0">({truncate(entry.address)})</span>
-                </div>
-              </div>
-              <span className={`font-mono text-xs font-bold tabular-nums shrink-0 ${tint}`}>
-                {category.format(entry.value)}
-              </span>
-            </div>
-          );
-        })
-      )}
-    </div>
-  </section>
-);
 
-export const SeasonLeaderboard: React.FC<SeasonLeaderboardProps> = ({ seasonAddress, seasonName }) => {
+        {entries.length === 0 ? (
+          <div className="flex items-center justify-center py-8">
+            <p className="section-label opacity-30">No entries</p>
+          </div>
+        ) : (
+          entries.map((entry, i) => {
+            const isYou = !!connectedAddress && entry.address === connectedAddress;
+            const valueColor = category.signed
+              ? entry.value >= 0 ? 'var(--color-green)' : 'var(--color-red)'
+              : 'var(--color-text)';
+
+            return (
+              <div
+                key={entry.address}
+                className="ledger-row ledger-row-passive"
+                style={{
+                  gridTemplateColumns: '2rem 1fr auto',
+                  background: isYou ? 'var(--sunset)' : 'transparent',
+                }}
+              >
+                <span className={`ledger-cell-secondary tabular-nums ${isYou ? 'text-bg!' : ''}`}>
+                  {i + 1}
+                </span>
+
+                <div className="flex items-baseline gap-2 min-w-0 overflow-hidden">
+                  <span className={`font-sans text-xs font-semibold shrink-0 ${isYou ? 'text-bg' : 'text-text'}`}>
+                    {names.get(entry.address) ?? 'Regarded Anon'}
+                  </span>
+                  <span className={`ledger-cell-secondary truncate min-w-0 ${isYou ? 'text-bg!' : ''}`}>
+                    {truncate(entry.address)}
+                  </span>
+                </div>
+
+                <span
+                  className="ledger-cell-metric tabular-nums"
+                  style={{ color: isYou ? 'var(--color-bg)' : valueColor }}
+                >
+                  {category.format(entry.value)}
+                </span>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </button>
+  );
+}
+
+// ---- Full leaderboard modal ----
+
+const ROWS_PER_COL = 25;
+
+// Columns per page: 5 @ 2xl, 4 @ xl, 3 @ lg, 2 @ md, 1 below
+const COL_BREAKPOINTS = [
+  { minWidth: 1536, cols: 5 },
+  { minWidth: 1280, cols: 4 },
+  { minWidth: 1024, cols: 3 },
+  { minWidth: 768,  cols: 2 },
+  { minWidth: 0,    cols: 1 },
+];
+
+function useColumnsPerPage(): number {
+  const getCount = useCallback(() => {
+    if (typeof window === 'undefined') return 2;
+    const w = window.innerWidth;
+    for (const bp of COL_BREAKPOINTS) {
+      if (w >= bp.minWidth) return bp.cols;
+    }
+    return 1;
+  }, []);
+
+  const [count, setCount] = useState(getCount);
+
+  useEffect(() => {
+    const handler = () => setCount(getCount());
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, [getCount]);
+
+  return count;
+}
+
+interface ModalProps {
+  category: Category;
+  entries: LeaderboardEntry[];
+  names: Map<string, string>;
+  connectedAddress?: string;
+  activeCategory: CategoryKey;
+  onCategoryChange: (k: CategoryKey) => void;
+  onClose: () => void;
+}
+
+function LeaderboardModal({
+  category,
+  entries,
+  names,
+  connectedAddress,
+  activeCategory,
+  onCategoryChange,
+  onClose,
+}: ModalProps) {
+  const colsPerPage = useColumnsPerPage();
+  const [page, setPage] = useState(0);
+
+  // reset page when category or viewport cols change
+  useEffect(() => { setPage(0); }, [activeCategory, colsPerPage]);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  const totalCols   = Math.ceil(entries.length / ROWS_PER_COL);
+  const totalPages  = Math.max(1, Math.ceil(totalCols / colsPerPage));
+  const startCol    = page * colsPerPage;
+  const visibleCols = Array.from({ length: Math.min(colsPerPage, totalCols - startCol) }, (_, ci) => {
+    const colStart = (startCol + ci) * ROWS_PER_COL;
+    return entries.slice(colStart, colStart + ROWS_PER_COL);
+  });
+
+  const valueColor = (entry: LeaderboardEntry) =>
+    category.signed
+      ? entry.value >= 0 ? 'var(--color-green)' : 'var(--color-red)'
+      : 'var(--color-text)';
+
+  return (
+    <div
+      className="modal-overlay-blur"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="bg-card border border-border rounded-2xl flex flex-col shadow-2xl w-full"
+        style={{ maxWidth: 'min(96vw, 1400px)', maxHeight: '90vh' }}
+      >
+        {/* Modal header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <p className="terminal-pane-title">Full Leaderboard</p>
+          <button
+            className="btn-game-secondary px-3 py-1 text-xs"
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </div>
+
+        {/* Category tabs */}
+        <div className="terminal-view-selector-bar shrink-0">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c.key}
+              className={`terminal-view-btn ${activeCategory === c.key ? 'active' : ''}`}
+              onClick={() => onCategoryChange(c.key)}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Column grid — scrollable body */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4">
+          {entries.length === 0 ? (
+            <div className="flex items-center justify-center py-16">
+              <p className="section-label opacity-30">No entries</p>
+            </div>
+          ) : (
+            <div
+              className="grid gap-4"
+              style={{ gridTemplateColumns: `repeat(${colsPerPage}, minmax(0, 1fr))` }}
+            >
+              {visibleCols.map((col, ci) => {
+                const rankOffset = (startCol + ci) * ROWS_PER_COL;
+                return (
+                  <div key={ci} className="flex flex-col">
+                    <div
+                      className="ledger-header"
+                      style={{ gridTemplateColumns: '2rem 1fr auto', background: 'transparent' }}
+                    >
+                      <div>#</div>
+                      <div>Player</div>
+                      <div className="text-right">{category.label}</div>
+                    </div>
+
+                    {col.map((entry, ri) => {
+                      const rank  = rankOffset + ri + 1;
+                      const isYou = !!connectedAddress && entry.address === connectedAddress;
+
+                      return (
+                        <div
+                          key={entry.address}
+                          className="ledger-row ledger-row-passive"
+                          style={{
+                            gridTemplateColumns: '2rem 1fr auto',
+                            background: isYou ? 'var(--sunset)' : 'transparent',
+                          }}
+                        >
+                          <span
+                            className={`ledger-cell-secondary tabular-nums ${isYou ? 'text-bg!' : ''}`}
+                          >
+                            {rank}
+                          </span>
+
+                          <div className="flex items-baseline gap-1.5 min-w-0 overflow-hidden">
+                            <span
+                              className={`font-sans text-xs font-semibold truncate ${isYou ? 'text-bg' : 'text-text'}`}
+                            >
+                              {names.get(entry.address) ?? 'Regarded Anon'}
+                            </span>
+                            <span
+                              className={`ledger-cell-secondary shrink-0 ${isYou ? 'text-bg!' : ''}`}
+                            >
+                              {truncate(entry.address)}
+                            </span>
+                          </div>
+
+                          <span
+                            className="ledger-cell-metric tabular-nums"
+                            style={{ color: isYou ? 'var(--color-bg)' : valueColor(entry) }}
+                          >
+                            {category.format(entry.value)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-3 px-6 py-3 border-t border-border shrink-0">
+            <button
+              className="btn-stepper px-1 py-0.5 text-[12px]! leading-none disabled:opacity-30"
+              disabled={page === 0}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              &#9664;
+            </button>
+            <span className="section-label">{page + 1} / {totalPages}</span>
+            <button
+              className="btn-stepper px-1 py-0.5 text-[12px]! leading-none disabled:opacity-30"
+              disabled={page >= totalPages - 1}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              &#9654;
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---- Main export ----
+
+export const SeasonLeaderboard: React.FC<SeasonLeaderboardProps> = ({ seasonAddress }) => {
   const board = useSeasonLeaderboard(seasonAddress);
   const { address } = useAccount();
   const connectedAddress = address?.toLowerCase();
 
+  const [activeCategory, setActiveCategory] = useState<CategoryKey | null>(null);
+
   const rosterAddresses = useMemo(
-    () => [...board.absolute, ...board.relative, ...board.volume, ...board.fees].map((e) => e.address),
-    [board.absolute, board.relative, board.volume, board.fees],
+    () => [...board.allAbsolute].map((e) => e.address),
+    [board.allAbsolute],
   );
   const { data: names } = usePlayerNames(rosterAddresses);
   const nameMap = names ?? new Map<string, string>();
 
+  const allEntries: Record<CategoryKey, LeaderboardEntry[]> = {
+    absolute: board.allAbsolute,
+    relative: board.allRelative,
+    volume:   board.allVolume,
+    fees:     board.allFees,
+  };
+
+  const activeCategoryDef = CATEGORIES.find((c) => c.key === activeCategory)!;
+
   if (board.loading) {
     return (
-      <div className="w-full flex flex-col gap-6 p-6 rounded-xl bg-card border border-border relative overflow-hidden isolate">
+      <div className="w-full flex flex-col gap-6 p-6 rounded-xl bg-bg border border-border">
         <div className="h-7 w-56 rounded bg-border animate-pulse" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
           {CATEGORIES.map((c) => (
-            <div key={c.key} className="flex flex-col gap-3 p-5 rounded-lg bg-card border border-border animate-pulse">
+            <div key={c.key} className="flex flex-col gap-3 animate-pulse">
               <div className="h-4 w-32 rounded bg-border" />
-              <div className="h-11 w-full rounded bg-border" />
-              <div className="h-11 w-full rounded bg-border" />
-              <div className="h-11 w-full rounded bg-border" />
+              <div className="h-48 w-full rounded bg-border" />
             </div>
           ))}
         </div>
@@ -173,35 +380,49 @@ export const SeasonLeaderboard: React.FC<SeasonLeaderboardProps> = ({ seasonAddr
 
   if (board.totalPlayers < 1) return null;
 
+  const openCategory = activeCategory
+    ? CATEGORIES.find((c) => c.key === activeCategory)!
+    : null;
+
   return (
-    <div className="terminal-pane gap-5 pb-2">
-      {/* Ambient gold mist */}
-      
-      {/* Header */}
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 pb-4 border-b border-border">
-        <div className="flex flex-col gap-1.5">
+    <>
+      {/* Non-clickable container */}
+      <div className="terminal-pane gap-5 pb-2 w-full h-full">
+        {/* Header */}
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 pb-4 border-b border-border">
           <p className="terminal-pane-title">Leaderboard</p>
-        </div>
+          <span className="section-label opacity-60">
+            {board.totalPlayers} players
+          </span>
+        </header>
 
-        <div className="flex items-center gap-1 font-mono text-[11px] text-text2 bg-card2 border border-border px-3 py-1.5 rounded-md">
-          <span className="text-[9px] tracking-wider uppercase mr-1">Field:</span>
-          <span className="font-bold text-text tabular-nums">{board.totalPlayers}</span>
-          <span className="text-[9px] text-gold font-bold ml-0.5">Players</span>
-        </div>
-      </header>
+        {/* 2x2 preview grid — each table is individually clickable */}
+        <main className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+          {CATEGORIES.map((category) => (
+            <PreviewTable
+              key={category.key}
+              category={category}
+              entries={board[category.key]}
+              names={nameMap}
+              connectedAddress={connectedAddress}
+              onOpen={() => setActiveCategory(category.key)}
+            />
+          ))}
+        </main>
+      </div>
 
-      {/* 2x2 Standings */}
-      <main className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-        {CATEGORIES.map((category) => (
-          <LeaderboardSection
-            key={category.key}
-            category={category}
-            entries={board[category.key]}
-            names={nameMap}
-            connectedAddress={connectedAddress}
-          />
-        ))}
-      </main>
-    </div>
+      {/* Full leaderboard modal — opens for the clicked category */}
+      {openCategory && (
+        <LeaderboardModal
+          category={openCategory}
+          entries={allEntries[activeCategory!]}
+          names={nameMap}
+          connectedAddress={connectedAddress}
+          activeCategory={activeCategory!}
+          onCategoryChange={setActiveCategory}
+          onClose={() => setActiveCategory(null)}
+        />
+      )}
+    </>
   );
 };

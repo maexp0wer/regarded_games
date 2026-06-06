@@ -116,7 +116,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
 
   return (
     <>
-    <div className={`flex flex-col gap-5 w-full bg-card border border-border rounded-lg p-5 mx-auto max-h-[50vh]${className ? ` ${className}` : ''}`}>
+    <div className={`flex flex-col gap-5 w-full border border-border rounded-lg p-5 mx-auto max-h-[50vh] ${hasClaimed ? 'bg-bg' : 'bg-card'}${className ? ` ${className}` : ''}`}>
 
       {/* Header */}
       <div className="terminal-pane-header mb-0!">
@@ -129,7 +129,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
 
       {/* Audit Matrix */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="terminal-pane p-2.5">
+        <div className="terminal-pane border-none! p-2.5 bg-transparent!">
           <span className="terminal-pane-title block mb-0.5">{hasClaimed ? 'FIM Burned' : 'Your Holdings'}</span>
           <span className="font-mono text-sm font-bold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
             {displayFim.toLocaleString(undefined, { maximumFractionDigits: 2 })}
@@ -137,7 +137,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
           </span>
         </div>
 
-        <div className="terminal-pane p-2.5">
+        <div className="terminal-pane border-none! p-2.5 bg-transparent!">
           <span className="terminal-pane-title block mb-0.5">Contribution</span>
           <span
             className="font-mono text-sm font-bold"
@@ -148,23 +148,16 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
           </span>
         </div>
 
-        <div className="terminal-pane p-2.5">
-          <div className="flex justify-between items-center">
+        <div className="terminal-pane border-none! p-2.5 bg-transparent!">
+          <div className="flex justify-between items-center mb-0.5">
             <span className="terminal-pane-title">Season P / L</span>
-            {!calcLoading && (
-              <span
-                className="font-mono text-[10px] font-bold"
-                style={{ color: pnlPositive ? 'var(--color-green)' : 'var(--color-red)' }}
-              >
-                {pnlPositive ? '▲ SURPLUS' : '▼ DEFICIT'}
-              </span>
-            )}
+            
           </div>
           {calcLoading ? (
-            <div className="h-5 w-28 rounded animate-pulse mt-1" style={{ background: 'var(--color-border)' }} />
+            <div className="h-4 w-28 rounded animate-pulse mt-1" style={{ background: 'var(--color-border)' }} />
           ) : (
             <span
-              className="font-mono text-base font-black block mt-0.5"
+              className="font-mono text-sm font-bold"
               style={{ color: pnlPositive ? 'var(--color-green)' : 'var(--color-red)', fontVariantNumeric: 'tabular-nums' }}
             >
               {pnlPositive ? '+' : '-'}${Math.abs(displayPnL).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -175,13 +168,13 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
 
         {/* Yield Bonus contribution to P/L — the slice of the payout funded by
             reinvested Aave yield, which the player paid nothing for (pure upside). */}
-        <div className="terminal-pane p-2.5">
-          <span className="terminal-pane-title block mb-0.5">Yield Bonus P / L</span>
+        <div className="terminal-pane border-none! p-2.5 bg-transparent!">
+          <span className="terminal-pane-title block mb-0.5">Yield Bonus</span>
           {calcLoading ? (
-            <div className="h-5 w-24 rounded animate-pulse mt-1" style={{ background: 'var(--color-border)' }} />
+            <div className="h-4 w-24 rounded animate-pulse mt-1" style={{ background: 'var(--color-border)' }} />
           ) : (
             <span
-              className="font-mono text-base font-black block mt-0.5"
+              className="font-mono text-sm font-bold"
               style={{ color: yieldHasValue ? 'var(--color-green)' : 'var(--color-text2)', fontVariantNumeric: 'tabular-nums' }}
             >
               +${yieldPayout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -192,21 +185,23 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
       </div>
 
       {/* Checkout Vault */}
-      <div className="bg-card2 border border-border2 rounded-md p-4 flex flex-col items-center justify-center text-center relative overflow-hidden before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.75 before:bg-green">
-        <span className="font-mono text-[10px] font-bold text-text2 uppercase tracking-widest mb-1">
-          {hasClaimed ? 'Total Claimed' : payout > 0 ? 'Claimable' : 'No Payout Due'}
-        </span>
-        {calcLoading ? (
-          <div className="h-9 w-36 rounded animate-pulse" style={{ background: 'var(--color-border)' }} />
-        ) : (
-          <div
-            className="font-mono text-3xl font-black tracking-tighter"
-            style={{ color: displayPayout > 0 ? 'var(--color-green)' : 'var(--color-text2)', fontVariantNumeric: 'tabular-nums' }}
-          >
-            ${displayPayout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            <span className="text-xs font-bold text-text2 ml-1">USDC</span>
-          </div>
-        )}
+      <div className="rounded-md p-0.5" style={{ background: 'var(--sunset-35)' }}>
+        <div className={`${hasClaimed ? 'bg-card' : 'bg-card2'} rounded-sm p-4 flex flex-col items-center justify-center text-center`}>
+          <span className="font-mono text-[10px] font-bold text-text2 uppercase tracking-widest mb-1">
+            {hasClaimed ? 'Total Claimed' : payout > 0 ? 'Claimable' : 'No Payout Due'}
+          </span>
+          {calcLoading ? (
+            <div className="h-9 w-36 rounded animate-pulse" style={{ background: 'var(--color-border)' }} />
+          ) : (
+            <div
+              className="font-mono text-3xl font-black tracking-tighter"
+              style={{ color: displayPayout > 0 ? 'var(--color-green)' : 'var(--color-text2)', fontVariantNumeric: 'tabular-nums' }}
+            >
+              ${displayPayout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span className="text-xs font-bold text-text2 ml-1">USDC</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {payoutError && (
@@ -229,7 +224,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
           <button
             onClick={handleClaim}
             disabled={isButtonDisabled}
-            className={`btn-terminal-action action-buy py-3 text-sm font-black tracking-widest ${isButtonDisabled ? 'opacity-60 cursor-not-allowed!' : ''}`}
+            className={`btn-game-primary w-full py-3 text-sm font-black tracking-widest ${isButtonDisabled ? 'opacity-60 cursor-not-allowed!' : ''}`}
           >
             {isBusy ? 'Confirming on Chain…' : payout > 0 ? 'Claim' : 'Claim & Unlock Collateral'}
           </button>

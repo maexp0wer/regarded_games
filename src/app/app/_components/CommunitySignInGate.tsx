@@ -31,11 +31,10 @@ export function CommunitySignInGate({ feature = 'the War Room' }: CommunitySignI
     <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
       <span className="terminal-pane-title">Verify to enter {feature}</span>
       <p className="font-mono text-[11px] max-w-[22rem]" style={{ color: 'var(--color-text2)' }}>
-        Sign a message to prove this wallet. No gas, no transaction — it just unlocks
-        the faction rooms for this device.
+        Sign a message to prove this wallet.
       </p>
       <button className="btn-game-secondary" onClick={() => signIn().catch(() => {})} disabled={isSigningIn}>
-        {isSigningIn ? 'Awaiting signature…' : 'Sign in to the War Room'}
+        {isSigningIn ? 'Awaiting signature…' : 'Sign in'}
       </button>
       {signInError && (
         <p className="font-mono text-[10px] text-red-500" style={{ color: 'var(--color-red)' }}>
