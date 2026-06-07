@@ -22,6 +22,10 @@ export interface PlayerRankData {
   feesTopPercent: number;       // 0–100 percentile position (0 = top by fees paid)
   userTotalFees: number;        // USDC fees paid this season
 
+  contributionRank: number;
+  contributionTopPercent: number; // 0–100 percentile (0 = highest net contribution score)
+  userContribution: number;       // USDC contribution score (netContribution − fimBalance)
+
   loading: boolean;
 }
 
@@ -53,6 +57,9 @@ export function usePlayerRank(seasonAddress: string, userAddress: string | undef
     feesRank,
     feesTopPercent,
     userTotalFees,
+    contributionRank,
+    contributionTopPercent,
+    userContribution,
   } = useMemo(() => {
     if (!allStatsData || !userAddress) {
       return {
@@ -68,6 +75,9 @@ export function usePlayerRank(seasonAddress: string, userAddress: string | undef
         feesRank: -1,
         feesTopPercent: 0,
         userTotalFees: 0,
+        contributionRank: -1,
+        contributionTopPercent: 0,
+        userContribution: 0,
       };
     }
 
@@ -82,7 +92,8 @@ export function usePlayerRank(seasonAddress: string, userAddress: string | undef
         // total loss) only before any pool exists, when no payout can be projected.
         const pnl = projectedPnlByAddr.get(addr) ?? -contrib;
         const efficiency = contrib > 0 ? pnl / contrib : -Infinity;
-        return { ...stat, pnl, efficiency, addr };
+        const contribution = contrib - Number(formatUnits(BigInt(stat.fimBalance || "0"), 18));
+      return { ...stat, pnl, efficiency, addr, contribution };
       });
 
     const pnlSorted = [...base].sort((a, b) => b.pnl - a.pnl);
@@ -93,12 +104,14 @@ export function usePlayerRank(seasonAddress: string, userAddress: string | undef
     const feesSorted = [...base].sort((a, b) =>
       Number(BigInt(b.totalFeesPaid || "0")) - Number(BigInt(a.totalFeesPaid || "0"))
     );
+    const contributionSorted = [...base].sort((a, b) => b.contribution - a.contribution);
 
     const addr = userAddress.toLowerCase();
     const pnlIndex = pnlSorted.findIndex(p => p.addr === addr);
     const effIndex = efficiencySorted.findIndex(p => p.addr === addr);
     const volIndex = volumeSorted.findIndex(p => p.addr === addr);
     const feesIndex = feesSorted.findIndex(p => p.addr === addr);
+    const contribIndex = contributionSorted.findIndex(p => p.addr === addr);
     const userStat = base.find(p => p.addr === addr);
 
     const total = base.length;
@@ -112,6 +125,9 @@ export function usePlayerRank(seasonAddress: string, userAddress: string | undef
     const feesTopPercent =
       total > 1 && feesIndex !== -1 ? (feesIndex / (total - 1)) * 100 : 0;
 
+    const contributionTopPercent =
+      total > 1 && contribIndex !== -1 ? (contribIndex / (total - 1)) * 100 : 0;
+
     const rawEfficiency = effIndex === -1 ? 0 : efficiencySorted[effIndex].efficiency;
     const safeGrowthPercent = isFinite(rawEfficiency) ? rawEfficiency * 100 : 0;
 
@@ -122,6 +138,8 @@ export function usePlayerRank(seasonAddress: string, userAddress: string | undef
     const userTotalFees = userStat
       ? Number(formatUnits(BigInt(userStat.totalFeesPaid || "0"), 6))
       : 0;
+
+    const userContribution = userStat ? userStat.contribution : 0;
 
     return {
       rank: pnlIndex === -1 ? -1 : pnlIndex + 1,
@@ -140,6 +158,10 @@ export function usePlayerRank(seasonAddress: string, userAddress: string | undef
       feesRank: feesIndex === -1 ? -1 : feesIndex + 1,
       feesTopPercent,
       userTotalFees,
+
+      contributionRank: contribIndex === -1 ? -1 : contribIndex + 1,
+      contributionTopPercent,
+      userContribution,
     };
   }, [allStatsData, userAddress, projectedPnlByAddr]);
 
@@ -156,6 +178,9 @@ export function usePlayerRank(seasonAddress: string, userAddress: string | undef
     feesRank,
     feesTopPercent,
     userTotalFees,
+    contributionRank,
+    contributionTopPercent,
+    userContribution,
     loading: statsLoading,
   };
 }

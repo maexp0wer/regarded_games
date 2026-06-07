@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useWriteContract, usePublicClient, useReadContract } from 'wagmi';
 import { formatUnits, erc20Abi } from 'viem';
 import ExchangeAbi from '@/deployments/abis/Exchange.json';
@@ -196,6 +196,36 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress, fimAddress
   );
 }
 
+// ── Scroll Viewport ──────────────────────────────────────────────────────────────
+// Scrollbar stays invisible until the content overflows AND the user hovers the
+// container — mirrors the OrderBook behavior so both panes feel consistent.
+
+function ScrollViewport({ children }: { children: React.ReactNode }) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const update = () => setIsOverflowing(container.scrollHeight > container.clientHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(container);
+    return () => ro.disconnect();
+  });
+
+  return (
+    <div
+      ref={scrollContainerRef}
+      data-chrome-scroll-guard
+      className={`overflow-y-auto overflow-x-hidden overscroll-y-contain relative ${isOverflowing ? '[scrollbar-width:thin] [scrollbar-color:transparent_transparent] hover:[scrollbar-color:var(--color-text2)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-[10px] [&::-webkit-scrollbar-thumb]:transition-colors [&::-webkit-scrollbar-thumb]:duration-200 [&:hover::-webkit-scrollbar-thumb]:bg-text2' : ''}`}
+      style={{ height: '160px' }}
+    >
+      {children}
+    </div>
+  );
+}
+
 // ── Open Orders ────────────────────────────────────────────────────────────────
 
 const OPEN_COL = '1.6fr 0.7fr 0.9fr 1fr 1fr 1fr 1fr 72px';
@@ -210,7 +240,7 @@ function OpenOrdersView({ orders, isPending, onCancel }: OpenOrdersViewProps) {
   return (
     <div className="p-2 bg-card">
       <div className="bg-card overflow-hidden">
-        <div className="overflow-y-auto custom-scrollbar relative" style={{ height: '160px' }}>
+        <ScrollViewport>
           <div className="ledger-header sticky top-0 z-10" style={{ gridTemplateColumns: OPEN_COL }}>
             <div>Time</div>
             <div>Direction</div>
@@ -230,7 +260,7 @@ function OpenOrdersView({ orders, isPending, onCancel }: OpenOrdersViewProps) {
               <OpenOrderRow key={order.id} order={order} isPending={isPending} onCancel={onCancel} />
             ))
           )}
-        </div>
+        </ScrollViewport>
       </div>
     </div>
   );
@@ -343,7 +373,7 @@ function PositionView({ trades, auctionMints, currentPrice, totalFim, contributi
   return (
     <div className="p-2 bg-card">
       <div className="bg-card overflow-hidden">
-        <div className="overflow-y-auto custom-scrollbar relative" style={{ height: '160px' }}>
+        <ScrollViewport>
           <div className="ledger-header sticky top-0 z-10" style={{ gridTemplateColumns: POS_COL }}>
             <div>Size</div>
             <div className="text-right">Position Value</div>
@@ -359,7 +389,7 @@ function PositionView({ trades, auctionMints, currentPrice, totalFim, contributi
           ) : (
             <PositionRow totalFim={totalFim} entryPrice={position?.entryPrice} currentPrice={currentPrice} contribution={contribution} />
           )}
-        </div>
+        </ScrollViewport>
       </div>
     </div>
   );
@@ -437,7 +467,7 @@ function TradeHistoryView({ orders, auctionMints }: TradeHistoryViewProps) {
   return (
     <div className="p-2 bg-card">
       <div className="bg-card overflow-hidden">
-        <div className="overflow-y-auto custom-scrollbar relative" style={{ height: '160px' }}>
+        <ScrollViewport>
           <div className="ledger-header sticky top-0 z-10" style={{ gridTemplateColumns: HIST_COL }}>
             <div>Time</div>
             <div>Direction</div>
@@ -458,7 +488,7 @@ function TradeHistoryView({ orders, auctionMints }: TradeHistoryViewProps) {
               )
             )
           )}
-        </div>
+        </ScrollViewport>
       </div>
     </div>
   );

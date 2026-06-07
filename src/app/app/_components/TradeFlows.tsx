@@ -31,6 +31,7 @@ export function TradeFlows({
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<d3.Selection<HTMLDivElement, unknown, HTMLElement, unknown> | null>(null);
+  const [isDark, setIsDark] = useState(false);
   const [size, setSize] = useState(250);
 
   useEffect(() => {
@@ -42,6 +43,15 @@ export function TradeFlows({
     });
     ro.observe(el);
     return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    setIsDark(document.documentElement.classList.contains('dark'));
+    const mo = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    });
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => mo.disconnect();
   }, []);
 
   useEffect(() => {
@@ -275,7 +285,7 @@ export function TradeFlows({
         .text(text);
     }
 
-  }, [chordData, tradeCount, size]);
+  }, [chordData, tradeCount, size, isDark]);
 
   const candleRangeLabel = useMemo(() => {
     if (!selectedRange) return null;
@@ -298,7 +308,7 @@ export function TradeFlows({
   return (
     <div className="terminal-pane h-full" style={{ border: 'none' }}>
       <div className="terminal-pane-header">
-        <span className="terminal-pane-title">Trade Flows</span>
+        <span className="terminal-pane-title">Capital Flow</span>
         <div className="flex items-center gap-2">
           {isLive && !selectedRange && (
             <span className="w-1.5 h-1.5 rounded-full bg-[--color-green] shadow-[0_0_8px_var(--color-green-35)] animate-pulse" />
@@ -327,8 +337,8 @@ export function TradeFlows({
           No trades in this window
         </div>
       ) : (
-        <div ref={containerRef} className="flex items-center justify-center h-full w-full rounded-lg">
-          <svg ref={svgRef} width={size} height={size} />
+        <div ref={containerRef} className="flex items-center justify-center h-full w-full min-w-0 min-h-0 rounded-lg">
+          <svg ref={svgRef} className="block" width={size} height={size} />
         </div>
       )}
     </div>

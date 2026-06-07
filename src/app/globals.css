@@ -226,7 +226,7 @@ html, body {
   @apply font-mono text-[10px] font-semibold tracking-[0.14em] uppercase text-text2;
 }
 .text-display-season  { @apply text-3xl }
-.text-display-trading { @apply text-3xl }
+.text-display-trading { @apply text-xl }
 .text-input           { @apply text-2xl  }
 .text-currency-label { @apply text-sm }
 
@@ -690,17 +690,17 @@ html, body {
    ========================================================================= */
 .terminal-view-btn.active {
   color: var(--color-text);
-  
+
   /* The indicator bar lights up precisely over the matching track segment */
-  border-bottom-color: var(--color-purple); 
-  
+  border-bottom-color: var(--color-text);
+
   /* Adds a soft, high-fidelity neon color emission underneath the button text */
   background: linear-gradient(
-    to top, 
-    color-mix(in srgb, var(--color-purple) 8%, transparent) 0%, 
+    to top,
+    color-mix(in srgb, var(--color-purple) 8%, transparent) 0%,
     transparent 60%
   );
-  
+
   /* Clean high-contrast sharpening text glow */
   text-shadow: 0 0 8px color-mix(in srgb, var(--color-purple) 30%, transparent);
 }

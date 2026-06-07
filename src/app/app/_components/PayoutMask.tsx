@@ -5,6 +5,7 @@ import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { usePayout } from '@/hooks/usePayout';
 import { useOpenOrders } from '@/hooks/useOpenOrders';
+import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 import { useTenantChainId } from '@/context/TenantContext';
 import { TxModal } from './TxModal';
 import { WalletButton } from './WalletButton';
@@ -29,6 +30,8 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
 
   const { payout, yieldPayout, pnl: livePnL, userFim, contribution, fimBurned, realizedPayout, hasClaimed: hasClaimedChain, hasBalance, loading: calcLoading, error: payoutError, refetch: refetchPayout } =
     usePayout(seasonAddress, address);
+  const { winningSide } = useSeasonVictory(seasonAddress);
+  const capsWin = winningSide === 'cap';
 
   // Open sell orders escrow FIM; claimPayout() reverts (insufficient FIM to burn)
   // until they're cancelled or settled. Block the claim and tell the user why.
@@ -110,7 +113,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
   const isBusy = status === 'executing' || status === 'mining';
   const isButtonDisabled = isBusy || !canClaim;
   const pnlPositive = displayPnL >= 0;
-  const contribPositive = contribution >= 0;
+  const contribPositive = capsWin ? contribution <= 0 : contribution >= 0;
   const yieldHasValue = yieldPayout > 0.005; // ignore sub-cent rounding
   const displayFim = hasClaimed ? fimBurned : userFim;
 
@@ -128,8 +131,8 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
       </div>
 
       {/* Audit Matrix */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="terminal-pane border-none! p-2.5 bg-transparent!">
+      <div className="grid grid-cols-2 gap-5">
+        <div className="terminal-pane bg-transparent!">
           <span className="terminal-pane-title block mb-0.5">{hasClaimed ? 'FIM Burned' : 'Your Holdings'}</span>
           <span className="font-mono text-sm font-bold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
             {displayFim.toLocaleString(undefined, { maximumFractionDigits: 2 })}
@@ -137,18 +140,21 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
           </span>
         </div>
 
-        <div className="terminal-pane border-none! p-2.5 bg-transparent!">
-          <span className="terminal-pane-title block mb-0.5">Contribution</span>
+        <div className="terminal-pane">
+          <span className="terminal-pane-title block mb-0.5">{capsWin ? 'Extraction' : 'Contribution'}</span>
           <span
             className="font-mono text-sm font-bold"
             style={{ color: contribPositive ? 'var(--color-green)' : 'var(--color-red)', fontVariantNumeric: 'tabular-nums' }}
           >
-            {contribution > 0 ? '+' : ''}{contribution.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            {capsWin
+              ? <>{contribution < 0 ? '+' : contribution > 0 ? '-' : ''}{Math.abs(contribution).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
+              : <>{contribution > 0 ? '+' : ''}{contribution.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
+            }
             <span className="ml-1 text-[10px] text-text2">USDC</span>
           </span>
         </div>
 
-        <div className="terminal-pane border-none! p-2.5 bg-transparent!">
+        <div className="terminal-pane">
           <div className="flex justify-between items-center mb-0.5">
             <span className="terminal-pane-title">Season P / L</span>
             
@@ -168,7 +174,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
 
         {/* Yield Bonus contribution to P/L — the slice of the payout funded by
             reinvested Aave yield, which the player paid nothing for (pure upside). */}
-        <div className="terminal-pane border-none! p-2.5 bg-transparent!">
+        <div className="terminal-pane">
           <span className="terminal-pane-title block mb-0.5">Yield Bonus</span>
           {calcLoading ? (
             <div className="h-4 w-24 rounded animate-pulse mt-1" style={{ background: 'var(--color-border)' }} />

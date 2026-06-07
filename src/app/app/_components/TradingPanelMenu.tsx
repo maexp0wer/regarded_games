@@ -9,19 +9,21 @@ import { FactionChat } from './FactionChat';
 import { TradingActivityFeed } from './TradingActivityFeed';
 import { CandlestickChart, Timeframe } from './CandlestickChart';
 import { Orders } from './Orders';
+import { GiniCard } from './GiniCard';
 import { CandleData } from '@/utils/chartData';
 
-type PanelId = 'chart-orders' | 'orderbook' | 'trades' | 'chord' | 'chat';
+type PanelId = 'chart-orders' | 'orderbook' | 'trades' | 'gini' | 'chord' | 'chat';
 
 const BUTTONS: { id: PanelId; label: string }[] = [
   { id: 'chart-orders', label: 'Chart' },
   { id: 'orderbook',    label: 'Order Book' },
   { id: 'trades',       label: 'Trades' },
-  { id: 'chord',        label: 'Trade Flows' },
+  { id: 'gini',         label: 'Gini Score' },
+  { id: 'chord',        label: 'Capital Flow' },
   { id: 'chat',         label: 'Chat' },
 ];
 
-const PRIORITY: PanelId[] = ['chart-orders', 'orderbook', 'trades', 'chord', 'chat'];
+const PRIORITY: PanelId[] = ['chart-orders', 'orderbook', 'trades', 'gini', 'chord', 'chat'];
 
 const chunk = <T,>(arr: T[], size: number): T[][] =>
   Array.from({ length: Math.ceil(arr.length / size) }, (_, i) => arr.slice(i * size, i * size + size));
@@ -233,6 +235,17 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
             selectedOrderIds={props.selectedOrderIds}
           />
         );
+      case 'gini':
+        return (
+          <GiniCard
+            seasonAddress={props.seasonAddress}
+            candles={props.candles}
+            timeframe={props.timeframe}
+            selectedRange={props.selectedRange}
+            onClearSelection={props.onClearSelection}
+            isLive={props.isLive}
+          />
+        );
       case 'chord':
         return (
           <TradeFlows
@@ -294,13 +307,13 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
   // lg stack order doesn't collide. Full literal class strings for Tailwind.
   const gridColsCls = wide
     ? 'lg:grid-cols-1 xl:grid-cols-4 2xl:grid-cols-5'
-    : 'lg:grid-cols-3 xl:grid-cols-[minmax(0,4fr)_360px] 2xl:grid-cols-5';
+    : 'lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5';
   const panelSpanCls = wide
     ? 'order-2 lg:order-2 lg:col-span-1 xl:order-1 xl:col-span-2 2xl:col-span-3'
-    : 'order-2 lg:order-1 lg:col-span-2 xl:col-span-1 2xl:col-span-4';
+    : 'order-2 lg:order-1 lg:col-span-2 xl:col-span-3 2xl:col-span-4';
   const maskSpanCls = wide
     ? 'order-1 lg:order-1 lg:col-span-2 xl:order-2 xl:col-span-2 2xl:col-span-2'
-    : 'order-1 lg:order-2 lg:col-span-1 2xl:col-span-1';
+    : 'order-1 lg:order-2 lg:col-span-1 xl:col-span-1 2xl:col-span-1';
 
   // The panel box itself — identical in both mask modes.
   const panelBox = (
@@ -373,7 +386,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
     // layouts): the panel area holds a fixed column share so adding panels never
     // widens it over the mask, and the mask keeps its own rail.
     //   lg : 3 cols — panel spans 2, mask 1.
-    //   xl : 4-col panel + a fixed 360px mask rail.
+    //   xl : 4 cols — panel spans 3, mask 1 (matching auction/payout masks).
     //   2xl: 5 cols total — panel spans 4, mask the 5th.
     // xl/2xl: a single full-height row (grid-rows minmax(0,1fr)) so both cells get
     // a definite, shrinkable height — the panel and mask then compress to fit the

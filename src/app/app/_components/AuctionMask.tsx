@@ -207,18 +207,20 @@ function AuctionMaskInner({
     <div className="flex flex-col gap-5 h-full relative">
 
       {/* ── FIM Balance card ── */}
-      <div className="terminal-pane">
-        <div className="terminal-pane-header">
-          <span className="terminal-pane-title">Balance</span>
+      {currentFim > 0n && (
+        <div className="terminal-pane">
+          <div className="terminal-pane-header">
+            <span className="terminal-pane-title">Balance</span>
+          </div>
+          <div
+            className="font-mono font-extrabold leading-none text-display-trading tabular-nums"
+            style={{ color: 'var(--color-gold)', textShadow: '0 0 40px var(--color-gold-35)' }}
+          >
+            {fimDisplayValue}
+            <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
+          </div>
         </div>
-        <div
-          className="font-display font-extrabold leading-none text-display-trading"
-          style={{ color: 'var(--color-gold)', textShadow: '0 0 40px var(--color-gold-35)', fontVariantNumeric: 'tabular-nums' }}
-        >
-          {fimDisplayValue}
-          <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
-        </div>
-      </div>
+      )}
 
       {/* ── Auction panel card ── */}
       <div className="terminal-pane bg-card! flex flex-col gap-0 flex-1 min-h-0">

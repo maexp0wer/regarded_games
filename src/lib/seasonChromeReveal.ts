@@ -196,21 +196,19 @@ export function installSeasonChromeReveal(active: boolean): () => void {
 
   const atTop = () => window.scrollY <= 0;
 
-  // A gesture started inside a region marked `data-chrome-scroll-guard` that can
-  // still scroll in the gesture's direction belongs to that region, not the fold
-  // ladder — e.g. the trading mask's order queues. Walk up from the target; if a
-  // guarded scrollable can absorb the delta, let the browser scroll it natively
-  // (those regions also set `overscroll-contain` so they don't chain to the page
-  // once exhausted). `deltaY > 0` = scroll down.
-  const absorbedByScrollGuard = (target: EventTarget | null, deltaY: number): boolean => {
+  // A gesture started inside a scrollable region marked `data-chrome-scroll-guard`
+  // belongs to that region, not the fold ladder — e.g. the trading mask's order
+  // queues or the orders/orderbook panes. Walk up from the target; if a guarded
+  // scrollable exists (it overflows), absorb the gesture wholesale: the region
+  // scrolls natively while it has room, and at its top/bottom boundary the gesture
+  // is simply swallowed (those regions set `overscroll-contain`) so it never chains
+  // up to fold/reveal the page chrome. `deltaY` sign is irrelevant here — once a
+  // guarded scrollable owns the pointer, the page must not react in either direction.
+  const absorbedByScrollGuard = (target: EventTarget | null): boolean => {
     let el = target instanceof Element ? target : null;
     while (el) {
       if (el instanceof HTMLElement && el.dataset.chromeScrollGuard !== undefined) {
-        const maxScroll = el.scrollHeight - el.clientHeight;
-        if (maxScroll > 0) {
-          if (deltaY > 0 && el.scrollTop < maxScroll - 1) return true; // room below
-          if (deltaY < 0 && el.scrollTop > 0) return true;             // room above
-        }
+        if (el.scrollHeight - el.clientHeight > 0) return true;
       }
       el = el.parentElement;
     }
@@ -223,7 +221,7 @@ export function installSeasonChromeReveal(active: boolean): () => void {
   // browser scrolls normally.
   const onWheel = (e: WheelEvent) => {
     if (!atTop()) return;
-    if (absorbedByScrollGuard(e.target, e.deltaY)) return;
+    if (absorbedByScrollGuard(e.target)) return;
     if (pinnedFold !== null) return; // pinned: queues still scroll, ladder is frozen
     if (e.deltaY > 0 && foldLevel < maxFold()) {
       e.preventDefault();
@@ -244,8 +242,7 @@ export function installSeasonChromeReveal(active: boolean): () => void {
     if (!atTop()) return;
     const y = e.touches[0]?.clientY ?? 0;
     const moved = y - touchStartY; // finger up (negative) = scroll-down intent
-    // moved < 0 (finger up) = scroll-down intent, so pass +1 / -1 as the deltaY sign.
-    if (absorbedByScrollGuard(touchTarget, -moved)) return;
+    if (absorbedByScrollGuard(touchTarget)) return;
     if (pinnedFold !== null) return; // pinned: queues still scroll, ladder is frozen
     if (moved < -8 && foldLevel < maxFold()) {
       e.preventDefault();

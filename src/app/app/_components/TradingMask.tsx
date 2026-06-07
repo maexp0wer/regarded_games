@@ -7,6 +7,7 @@ import { Order } from '@/hooks/useOrderBook';
 import { useOpenOrders } from '@/hooks/useOpenOrders';
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
+import { useGiniImpact } from '@/hooks/useGiniImpact';
 import { useTradeExecution, ExecutionPayload } from '@/hooks/useTradeExecution';
 import GameSeasonAbiJson from '@/deployments/abis/GameSeason.json';
 import ExchangeAbiJson from '@/deployments/abis/Exchange.json';
@@ -264,6 +265,13 @@ export function TradingMask({
   const contributionDeltaRaw = (legs.buyCostRaw - legs.sellProceedsRaw) - (legsFim.buyFimRaw - legsFim.sellFimRaw) / 10n ** 12n;
   const showTakerFee = !isMaker && (legs.buyCostRaw > 0n || legs.sellProceedsRaw > 0n);
 
+  // Approximate effect of this fill on the season's live Gini (BPS). Reuses the
+  // exact live-population math so the delta is consistent with the displayed Gini.
+  const giniImpact = useGiniImpact(
+    seasonAddress, address, selectedAsks, selectedBids,
+    legsFim.buyFimRaw, legsFim.sellFimRaw,
+  );
+
   const isSelfFill = useMemo(() =>
     !isMaker && !!address && selectedOrders.some(o => o.maker.toLowerCase() === address.toLowerCase()),
     [selectedOrders, address, isMaker]
@@ -451,30 +459,39 @@ export function TradingMask({
     );
   }
 
+  const fimColor = belowThreshold
+    ? 'var(--color-red)'
+    : userStats?.isCapitalist ? 'var(--color-gold)' : 'var(--color-purple)';
+  const fimGlow = belowThreshold
+    ? 'var(--color-red-35)'
+    : userStats?.isCapitalist ? 'var(--color-gold-35)' : 'var(--color-purple-35)';
+
   if (isOnHold) {
     return (
       <div className="flex flex-col gap-4 h-full">
-        <div className="terminal-pane bg-card!">
-          <div className="flex flex-col">
-            <div
-              className="font-display font-extrabold leading-none text-display-trading tabular-nums"
-              style={{ color: 'var(--color-gold)', textShadow: '0 0 40px var(--color-gold-35)' }}
-            >
-              {totalFim.toLocaleString()}
-              <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
+        {totalFim > 0 && (
+          <div className="terminal-pane bg-card!">
+            <div className="flex flex-col">
+              <div
+                className="font-mono font-extrabold leading-none text-display-trading tabular-nums"
+                style={{ color: fimColor, textShadow: `0 0 40px ${fimGlow}` }}
+              >
+                {totalFim.toLocaleString()}
+                <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
+              </div>
+              {lockedFim > 0 && (
+                <span className="font-mono text-text2 text-xs mt-1.5 tabular-nums">
+                  ({availableFim.toLocaleString()} available)
+                </span>
+              )}
+              {belowThreshold && (
+                <span className="font-mono text-[10px] font-bold uppercase tracking-widest mt-1.5 leading-snug" style={{ color: 'var(--color-red)' }}>
+                  Below existential threshold
+                </span>
+              )}
             </div>
-            {lockedFim > 0 && (
-              <span className="font-mono text-text2 text-xs mt-1.5 tabular-nums">
-                ({availableFim.toLocaleString()} available to trade)
-              </span>
-            )}
-            {belowThreshold && (
-              <span className="font-mono text-red text-[10px] font-bold uppercase tracking-widest mt-1.5 leading-snug">
-                Below the {existentialThreshold.toLocaleString()} <span className="tabular-nums">FIM</span> existential threshold — excluded from payout
-              </span>
-            )}
           </div>
-        </div>
+        )}
         <div className="card-app text-center border border-border2">
           <p className="section-label">Season on Hold</p>
         </div>
@@ -486,35 +503,41 @@ export function TradingMask({
     <div className="flex flex-col gap-5 h-full relative">
 
       {/* ── Wallet balances card ── */}
-      <div className="terminal-pane">
-        <div className="flex items-start justify-between">
-          <div className="flex flex-col mr-4 min-w-0">
-            <div
-              className="font-display font-extrabold leading-none text-display-trading"
-              style={{ color: 'var(--color-gold)', textShadow: '0 0 40px var(--color-gold-35)', fontVariantNumeric: 'tabular-nums' }}
-            >
-              {totalFim.toLocaleString()}
-              <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
-            </div>
-            {lockedFim > 0 && (
-              <span className="font-mono text-text2 text-xs mt-1.5 tabular-nums">
-                ({availableFim.toLocaleString()} available to trade)
-              </span>
+      {(totalFim > 0 || userStats) && (
+        <div className="terminal-pane">
+          <div className="terminal-pane-header">
+            <span className="terminal-pane-title">Balance</span>
+          </div>
+          <div className="flex items-center justify-between">
+            {totalFim > 0 && (
+              <div className="flex flex-col min-w-0">
+                <div
+                  className="font-mono font-bold leading-none text-display-trading tabular-nums"
+                  style={{ color: fimColor, textShadow: `0 0 40px ${fimGlow}` }}
+                >
+                  {totalFim.toLocaleString()}
+                  <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
+                </div>
+                {lockedFim > 0 && (
+                  <span className="font-mono text-text2 text-xs mt-1.5 tabular-nums">
+                    ({availableFim.toLocaleString()} available)
+                  </span>
+                )}
+                {belowThreshold && (
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest mt-1.5 leading-snug" style={{ color: 'var(--color-red)' }}>
+                    Below existential threshold
+                  </span>
+                )}
+              </div>
             )}
-            {belowThreshold && (
-              <span className="font-mono text-red text-[10px] font-bold uppercase tracking-widest mt-1.5 leading-snug">
-                Below the {existentialThreshold.toLocaleString()} <span className="tabular-nums">FIM</span> existential threshold — excluded from payout
-              </span>
+            {userStats && (
+              <div className="flex flex-col items-end min-w-0 ml-auto shrink-0">
+                <PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="lg" />
+              </div>
             )}
           </div>
-          {userStats && (
-            <div className="flex flex-col items-end min-w-0">
-              <div className="xl:hidden"><PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="md" /></div>
-              <div className="hidden xl:block"><PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="lg" /></div>
-            </div>
-          )}
         </div>
-      </div>
+      )}
 
       {/* ── Trading panel card ── */}
       <div className="terminal-pane bg-card! flex flex-col gap-4 flex-1 min-h-0">
@@ -568,6 +591,12 @@ export function TradingMask({
             </div>
             <div className={isMaker ? '' : 'flex flex-col min-h-0'}>
               <div className="bg-bg border border-border rounded-t px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
+                <span className="mask-label text-right">
+                  {!isMaker && activeMaxForSlider > 0n
+                    ? <>QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(activeMaxForSlider, 18)).toLocaleString()} FIM</span></>
+                    : <>WALLET&nbsp;<span className="text-text font-semibold">{walletBalanceDisplay}</span></>
+                  }
+                </span>
                 <div className="group flex items-center gap-2">
                   <input
                     type="number"
@@ -584,12 +613,6 @@ export function TradingMask({
                   </div>
                   <span className="text-input font-mono font-bold text-text2 shrink-0">{isMaker && isBuy ? 'USDC' : 'FIM'}</span>
                 </div>
-                <span className="mask-label text-right">
-                  {!isMaker && activeMaxForSlider > 0n
-                    ? <>QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(activeMaxForSlider, 18)).toLocaleString()} FIM</span></>
-                    : <>WALLET&nbsp;<span className="text-text font-semibold">{walletBalanceDisplay}</span></>
-                  }
-                </span>
                 <PercentSlider value={sliderPct} onChange={handleSliderChange} disabled={isBusy} />
               </div>
               {!isMaker && (
@@ -668,11 +691,12 @@ export function TradingMask({
 
         {/* ── Taker: order queue(s) ── */}
         {!isMaker && isMixedQueue && (
-            /* Mixed: buy and sell legs side by side (input over queue in each). */
+            /* Mixed: buy and sell legs side by side — input+queue fused as one component per leg. */
             <div className="grid grid-cols-2 grid-rows-[minmax(0,1fr)] flex-1 min-h-0 gap-3">
               {/* Buy leg */}
               <div className="flex flex-col min-h-0">
-                <div className="bg-bg border border-border rounded-md px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
+                <div className="bg-bg border border-border rounded-t px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
+                  <span className="mask-label text-right">QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(maxAskQueueFim, 18)).toLocaleString()} FIM</span></span>
                   <div className="group flex items-center gap-2">
                     <input
                       type="number" min="0"
@@ -688,10 +712,9 @@ export function TradingMask({
                     </div>
                     <span className="text-input font-mono font-bold text-text2 shrink-0">FIM</span>
                   </div>
-                  <span className="mask-label text-right">QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(maxAskQueueFim, 18)).toLocaleString()} FIM</span></span>
                   <PercentSlider value={buySliderPct} onChange={handleBuySliderChange} disabled={isBusy} />
                 </div>
-                <div data-chrome-scroll-guard className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar rounded-md p-2 border border-border bg-bg max-h-51 xl:max-h-none">
+                <div data-chrome-scroll-guard className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar rounded-b p-2 border border-t-0 border-border bg-bg max-h-51 xl:max-h-none">
                   {groupedAskQueue.map((group, groupIdx) => {
                     const filledBefore = groupedAskQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
                     return (
@@ -711,7 +734,8 @@ export function TradingMask({
 
               {/* Sell leg */}
               <div className="flex flex-col min-h-0">
-                <div className="bg-bg border border-border rounded-md px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
+                <div className="bg-bg border border-border rounded-t px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
+                  <span className="mask-label text-right">QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(maxBidQueueFim, 18)).toLocaleString()} FIM</span></span>
                   <div className="group flex items-center gap-2">
                     <input
                       type="number" min="0"
@@ -727,10 +751,9 @@ export function TradingMask({
                     </div>
                     <span className="text-input font-mono font-bold text-text2 shrink-0">FIM</span>
                   </div>
-                  <span className="mask-label text-right">QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(maxBidQueueFim, 18)).toLocaleString()} FIM</span></span>
                   <PercentSlider value={sellSliderPct} onChange={handleSellSliderChange} disabled={isBusy} />
                 </div>
-                <div data-chrome-scroll-guard className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar rounded-md p-2 border border-border bg-bg max-h-51 xl:max-h-none">
+                <div data-chrome-scroll-guard className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar rounded-b p-2 border border-t-0 border-border bg-bg max-h-51 xl:max-h-none">
                   {groupedBidQueue.map((group, groupIdx) => {
                     const filledBefore = groupedBidQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
                     return (
@@ -757,7 +780,7 @@ export function TradingMask({
               {/* Mixed: buy/sell breakdown cards side by side; otherwise stacked. */}
               <div className={isMixedQueue ? 'grid grid-cols-2 gap-2' : 'contents'}>
               {legs.buyCostRaw > 0n && (
-                <div className="rounded-lg px-3 py-2.5 flex flex-col gap-1 bg-card2 border border-border">
+                <div className="rounded-lg px-3 py-2.5 flex flex-col gap-1 bg-card border border-border">
                   <div className="flex justify-between font-mono text-xs font-bold tabular-nums pb-1 border-b border-border" style={{ color: 'var(--color-green)' }}>
                     <span>Buy</span>
                     <span>{Number(formatUnits(legsFim.buyFimRaw, 18)).toLocaleString()} FIM</span>
@@ -779,7 +802,7 @@ export function TradingMask({
                 </div>
               )}
               {legs.sellProceedsRaw > 0n && (
-                <div className="rounded-lg px-3 py-2.5 flex flex-col gap-1 bg-card2 border border-border">
+                <div className="rounded-lg px-3 py-2.5 flex flex-col gap-1 bg-card border border-border">
                   <div className="flex justify-between font-mono text-xs font-bold tabular-nums pb-1 border-b border-border" style={{ color: 'var(--color-red)' }}>
                     <span>Sell</span>
                     <span>{Number(formatUnits(legsFim.sellFimRaw, 18)).toLocaleString()} FIM</span>
@@ -801,23 +824,45 @@ export function TradingMask({
                 </div>
               )}
               </div>
-              {isMixedQueue && (
-                <div className="rounded-lg px-3 py-2.5 bg-card2 border border-border">
-                  <div className="flex justify-between font-mono text-xs font-black" style={{ color: takerNetRaw > 0n ? 'var(--color-green)' : takerNetRaw < 0n ? 'var(--color-red)' : 'var(--color-text2)' }}>
-                    <span>Net USDC</span>
-                    <span className="tabular-nums">
-                      {takerNetRaw > 0n ? '+' : takerNetRaw < 0n ? '-' : ''}{takerNetRaw !== 0n && '$'}{formatDynamicUsdc(takerNetRaw >= 0n ? takerNetRaw : -takerNetRaw)}
-                    </span>
-                  </div>
-                </div>
-              )}
-              <div className="rounded-lg px-3 py-2.5 bg-card2 border border-border">
-                <div className="flex justify-between font-mono text-[11px]" style={{ color: contributionDeltaRaw > 0n ? 'var(--color-green)' : contributionDeltaRaw < 0n ? 'var(--color-red)' : 'var(--color-text2)' }}>
-                  <span>Contribution</span>
-                  <span className="tabular-nums font-bold">
+              <div className="rounded-lg px-3 py-2.5 bg-card border border-border flex flex-col gap-1.5">
+                {isMixedQueue && (() => {
+                  const netFimRaw = legsFim.buyFimRaw - legsFim.sellFimRaw;
+                  const netFim = Number(formatUnits(netFimRaw >= 0n ? netFimRaw : -netFimRaw, 18));
+                  return (
+                    <>
+                      <div className="flex justify-between font-mono text-xs font-black">
+                        <span style={{ color: 'var(--color-text)' }}>Net USDC</span>
+                        <span className="tabular-nums" style={{ color: takerNetRaw > 0n ? 'var(--color-green)' : takerNetRaw < 0n ? 'var(--color-red)' : 'var(--color-text2)' }}>
+                          {takerNetRaw > 0n ? '+' : takerNetRaw < 0n ? '-' : ''}{takerNetRaw !== 0n && '$'}{formatDynamicUsdc(takerNetRaw >= 0n ? takerNetRaw : -takerNetRaw)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between font-mono text-xs font-black">
+                        <span style={{ color: 'var(--color-text)' }}>Net FIM</span>
+                        <span className="tabular-nums" style={{ color: netFimRaw > 0n ? 'var(--color-green)' : netFimRaw < 0n ? 'var(--color-red)' : 'var(--color-text2)' }}>
+                          {netFimRaw > 0n ? '+' : netFimRaw < 0n ? '-' : ''}{netFim.toLocaleString(undefined, { maximumFractionDigits: 4 })} FIM
+                        </span>
+                      </div>
+                      <div className="border-t border-border mt-0.5 pt-1.5" />
+                    </>
+                  );
+                })()}
+                <div className="flex justify-between font-mono text-[11px]">
+                  <span style={{ color: 'var(--color-text2)' }}>Contribution</span>
+                  <span className="tabular-nums font-bold" style={{ color: contributionDeltaRaw > 0n ? 'var(--color-green)' : contributionDeltaRaw < 0n ? 'var(--color-red)' : 'var(--color-text2)' }}>
                     {contributionDeltaRaw > 0n ? '+' : contributionDeltaRaw < 0n ? '-' : ''}${formatDynamicUsdc(contributionDeltaRaw >= 0n ? contributionDeltaRaw : -contributionDeltaRaw)}
                   </span>
                 </div>
+                {/* Gini impact in BPS, colored by faction direction: a fill that
+                    widens inequality (+) leans Bourgeoisie → gold; one that
+                    narrows it (−) leans Proletariat → purple. */}
+                {giniImpact && (
+                  <div className="flex justify-between font-mono text-[11px]">
+                    <span style={{ color: 'var(--color-text2)' }}>Gini Impact</span>
+                    <span className="tabular-nums font-bold" style={{ color: giniImpact.deltaBps > 0 ? 'var(--color-gold)' : giniImpact.deltaBps < 0 ? 'var(--color-purple)' : 'var(--color-text2)' }}>
+                      {giniImpact.deltaBps > 0 ? '+' : giniImpact.deltaBps < 0 ? '−' : ''}{Math.abs(giniImpact.deltaBps)} bps
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}

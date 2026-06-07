@@ -4,6 +4,7 @@ import React from 'react';
 import { usePlayerRank } from '@/hooks/usePlayerRank';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
 import { usePayout } from '@/hooks/usePayout';
+import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 
 interface SeasonStatsProps {
   seasonAddress: string;
@@ -18,6 +19,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
     userNetContribution, growthPercent,
     volumeTopPercent,
     feesTopPercent, userTotalFees,
+    contributionTopPercent, userContribution,
     loading: rankLoading,
   } = usePlayerRank(seasonAddress, userAddress);
 
@@ -27,6 +29,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
 
   // Same source as PayoutMask — authoritative Season P/L for the current user.
   const { pnl: seasonPnl, userNetContrib, loading: payoutLoading } = usePayout(seasonAddress, userAddress);
+  const { winningSide } = useSeasonVictory(seasonAddress);
 
   const loading = rankLoading || percentileLoading || payoutLoading;
 
@@ -51,7 +54,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
   if (loading) {
     return (
       <div className="card-app flex flex-col gap-4 border border-border2">
-        {[1, 2, 3, 4].map(i => (
+        {[1, 2, 3, 4, 5].map(i => (
           <div key={i} className="terminal-pane p-2.5 gap-2 animate-pulse">
             <div className="h-3 w-40 rounded bg-border" />
             <div className="h-5 w-full rounded bg-border" />
@@ -177,6 +180,37 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
             </div>
           </div>
         </div>
+
+        {/* CONTRIBUTION VIRTUE STAT — anchoring flips with winning faction */}
+        {(() => {
+          const capsWin = winningSide === 'cap';
+          // Capitalists win: lowest contribution score wins → invert the percentile
+          // Proletarians win: highest contribution score wins → use as-is (0 = top)
+          const virtueTopPercent = capsWin ? 100 - contributionTopPercent : contributionTopPercent;
+          const label = capsWin ? 'Best Extraction' : 'Best Contribution';
+          const accentColor = capsWin ? 'var(--color-gold)' : 'var(--color-purple)';
+          const barColor = capsWin ? 'var(--color-gold-70)' : 'var(--color-purple-70)';
+          return (
+            <div className="terminal-pane border-none! p-2.5 gap-2 lg:col-span-2 2xl:col-span-1">
+              <div className="flex items-baseline font-mono text-xs uppercase tracking-wide">
+                <span className="font-bold text-text2">{label}</span>
+                <span className="flex-1 text-center font-bold text-text">TOP {virtueTopPercent < 1 ? '<1' : virtueTopPercent.toFixed(2)}%</span>
+                <span className="font-black" style={{ color: accentColor }}>
+                  {userContribution >= 0 ? '+' : ''}$
+                  {userContribution.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="rank-track-chassis">
+                <div style={{
+                  height: '100%',
+                  width: barFill(virtueTopPercent),
+                  background: barColor,
+                  transition: 'width 0.5s ease-out',
+                }} />
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
     </div>
