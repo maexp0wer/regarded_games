@@ -311,7 +311,7 @@ export function TradeFlows({
         <span className="terminal-pane-title">Capital Flow</span>
         <div className="flex items-center gap-2">
           {isLive && !selectedRange && (
-            <span className="w-1.5 h-1.5 rounded-full bg-[--color-green] shadow-[0_0_8px_var(--color-green-35)] animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[--color-green] animate-pulse" />
           )}
           <span className="terminal-pane-title">
             {selectedRange ? candleRangeLabel : 'LAST'}

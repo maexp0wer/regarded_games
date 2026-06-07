@@ -6,6 +6,7 @@ import { Address } from 'viem';
 
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
+import { useSeasonTrades } from '@/hooks/useSeasonTrades';
 import { useSeasonPhase } from '@/hooks/useSeasonPhase';
 import { useTenantChainId } from '@/context/TenantContext';
 
@@ -35,6 +36,13 @@ export function useSeasonVictory(seasonAddress: Address | string | undefined): S
   const chainId = useTenantChainId();
   const phase = useSeasonPhase(seasonAddress);
   const { data: giniData, isLoading: isGiniLoading } = useSeasonGini(seasonAddress);
+  const { data: trades } = useSeasonTrades(seasonAddress);
+
+  // Trade-only live Gini: the giniBps of the most recent fill. Frozen between
+  // trades, so (unlike useSeasonGini().gini) it never moves when limit orders are
+  // merely placed or cancelled. trades are ascending by timestamp.
+  const lastTradeGiniBps =
+    trades && trades.length > 0 ? trades[trades.length - 1].giniBps : undefined;
 
   const { isAuctionOrBootstrap, isTrading, isPayout, isTradingTimeExpired, config } = phase;
 
@@ -107,7 +115,11 @@ export function useSeasonVictory(seasonAddress: Address | string | undefined): S
         : Math.round(gInitVal - (gInitVal - socT) * finalProg);
     } else {
       gInitVal = rawGInit;
-      gCurrVal = rawGini;
+      // Trade-only: track the last filled trade's Gini, never useSeasonGini().gini.
+      // Before the first trade of the phase there is nothing to measure, so anchor
+      // to the starting Gini — this keeps winningSide 'none' / progress 0 until a
+      // real fill moves the needle.
+      gCurrVal = lastTradeGiniBps ?? rawGInit;
     }
 
     const gI_Norm = gInitVal / 10000;
@@ -156,6 +168,7 @@ export function useSeasonVictory(seasonAddress: Address | string | undefined): S
   }, [
     config,
     giniData,
+    lastTradeGiniBps,
     gInitialRaw,
     finalProgressBpsRaw,
     isOligarchyWinRaw,

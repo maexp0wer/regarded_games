@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
-import type { ECElementEvent } from 'echarts';
+import type { ECElementEvent, ECharts } from 'echarts';
 import { CandleData } from '@/utils/chartData';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -45,18 +45,46 @@ export function CandlestickChart({
 }: CandlestickChartProps) {
   const { darkMode } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<ReactECharts>(null);
   const [containerWidth, setContainerWidth] = useState(600);
 
+  // We drive the resize ourselves (echarts-for-react's built-in autoResize is
+  // disabled below) so we can pass an animation config to echarts.resize(); the
+  // library calls resize() without one, which snaps the layout into place.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(([entry]) => setContainerWidth(entry.contentRect.width));
+    let raf = 0;
+    const ro = new ResizeObserver(([entry]) => {
+      const width = entry.contentRect.width;
+      setContainerWidth(width);
+      const inst = chartRef.current?.getEchartsInstance() as ECharts | undefined;
+      if (!inst) return;
+      // Coalesce bursts of resize callbacks into one animated resize per frame.
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        inst.resize({
+          width: 'auto',
+          height: 'auto',
+          animation: { duration: 250, easing: 'cubicOut' },
+        });
+      });
+    });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
   }, []);
 
-  const barWidth = 15;
-  const nBars = Math.max(5, Math.floor((containerWidth - 48 - 75) / 26));
+  // Plot area width (container minus left/right grid insets). Kept fractional so
+  // the x-domain widens continuously as the container resizes instead of snapping
+  // by a whole bar each time an integer bar-count tick is crossed.
+  const plotWidth = Math.max(1, containerWidth - 48 - 75);
+  const nBars = Math.max(5, plotWidth / 26);
+  // Candle width scales with the plot so bars don't visually "pop" to a new size
+  // when the bar-count changes; clamped to a sensible range.
+  const barWidth = Math.max(4, Math.min(15, (plotWidth / nBars) * 0.58));
 
   const option = useMemo(() => {
     if (typeof window === 'undefined') return {};
@@ -88,7 +116,13 @@ export function CandlestickChart({
     const giniData   = candles.filter(c => c.giniBps > 0).map(c => [c.time * 1000, c.giniBps]);
 
     return {
-      animation: false,
+      // Animate layout/geometry updates so a container resize glides the candles,
+      // bars and axes to their new positions instead of snapping into place. Only
+      // the "update" phase is animated; initial draw stays instant.
+      animation: true,
+      animationDuration: 0,
+      animationDurationUpdate: 250,
+      animationEasingUpdate: 'cubicOut',
       backgroundColor: 'transparent',
       textStyle: { fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: textColor },
 
@@ -347,11 +381,14 @@ export function CandlestickChart({
           callers must give the card a height (see SeasonChart). */}
       <div ref={containerRef} className="relative w-full flex-1 min-h-0">
         <ReactECharts
+          ref={chartRef}
           option={option}
           onEvents={onEvents}
           style={{ height: '100%', width: '100%' }}
           notMerge={false}
           lazyUpdate
+          opts={{ renderer: 'canvas' }}
+          autoResize={false}
         />
       </div>
     </div>

@@ -19,7 +19,6 @@ interface GiniCardProps {
 }
 
 const TF_LABEL: Record<Timeframe, string> = { '5m': '5M', '1h': '1H', '4h': '4H', '1d': '1D' };
-const TF_MS: Record<Timeframe, number> = { '5m': 300_000, '1h': 3_600_000, '4h': 14_400_000, '1d': 86_400_000 };
 
 /**
  * Gauge-only Gini panel for the trading panel menu — the same compressed BPS rail
@@ -42,16 +41,14 @@ export function GiniCard({
   isLive,
 }: GiniCardProps) {
   const { isAuction } = useSeasonPhase(seasonAddress);
-  const { gCurrent, gInitial, capTargetBps, socTargetBps } = useSeasonVictory(seasonAddress);
+  const { gInitial, capTargetBps, socTargetBps } = useSeasonVictory(seasonAddress);
 
-  // Resolve which Gini the gauge reflects and the change to report.
-  //   - selected: the clicked candle. Gauge shows the Gini at the END of that bar's
-  //     period; delta is that end minus the prior bar's end (the change across it).
-  //   - live: the gauge shows the current Gini and the delta is a TRAILING ONE
-  //     PERIOD lookback — current vs the Gini as of one timeframe ago — so "LAST 1H"
-  //     literally means "now vs an hour ago", independent of bar boundaries.
-  // Empty bars (giniBps === 0) carry the last sampled value forward, since Gini is
-  // a state that persists between trades.
+  // Resolve which Gini the gauge reflects and the BPS change to report over the
+  // relevant period — selected candle, or the latest (current) candle when live.
+  // In both cases the gauge shows that period's END Gini and the delta is its
+  // change across the period (end minus the previous period's end). Read entirely
+  // from the candle series, which is block time and live-polled, so it is both the
+  // fresh "now" and the period boundaries with no separate block fetch.
   const { displayGini, deltaBps, hasDelta } = useMemo(() => {
     const withGini = candles.filter((c) => c.giniBps > 0);
     // The most recent Gini at or before index `idx` (inclusive). Gini is a state
@@ -64,49 +61,40 @@ export function GiniCard({
       return null;
     };
 
-    // Selected candle: match on its start time (candle.time is in seconds). Show
-    // the Gini at the END of that candle's period and the change across the bar
-    // (end value minus the value carried into the bar = the prior bar's end).
-    if (selectedRange) {
-      const sel = candles.findIndex((c) => c.time * 1000 === selectedRange.start);
-      if (sel >= 0) {
-        const end = giniAsOf(sel);
-        if (end !== null) {
-          const prior = giniAsOf(sel - 1);
-          return {
-            displayGini: end,
-            deltaBps: prior === null ? 0 : end - prior,
-            hasDelta: prior !== null,
-          };
-        }
+    // Both states report the BPS change OVER a period, read entirely from the
+    // candle series — which is block time and live (useSeasonCandles polls every
+    // 5s), so it doubles as the fresh "now" and needs no separate block fetch:
+    //   - selected: the clicked candle's period;
+    //   - trailing: the latest (current) candle's period.
+    // A candle stores only its CLOSE Gini (giniBps = last trade in the bucket), so
+    // the period's change = this period's close minus the previous period's close
+    // (the value carried into the bar). giniAsOf carries forward across empty bars.
+    const periodIdx = selectedRange
+      ? candles.findIndex((c) => c.time * 1000 === selectedRange.start)
+      : (withGini.length > 0 ? candles.lastIndexOf(withGini[withGini.length - 1]) : -1);
+
+    if (periodIdx >= 0) {
+      const end = giniAsOf(periodIdx);
+      if (end !== null) {
+        // The value carried INTO this period: the prior sampled bar's close, or the
+        // season's starting Gini when this is the first sampled bar. Either way the
+        // header always shows the change over the period.
+        const prior = giniAsOf(periodIdx - 1) ?? gInitial;
+        return {
+          displayGini: end,
+          deltaBps: end - prior,
+          hasDelta: true,
+        };
       }
-      // Selected bar precedes the first Gini sample — fall back to the live reading.
     }
 
-    // Live: trailing one period. Compare the current Gini against the Gini as of
-    // exactly one timeframe ago (now − tfMs), so "LAST 1H" literally means "now vs
-    // one hour ago" regardless of where the current bar boundary falls. The
-    // reference is the close of the latest candle whose bucket starts at or before
-    // that cutoff, carried forward (giniBps persists between trades).
-    if (withGini.length > 0) {
-      const tfMs = TF_MS[timeframe];
-      const lastCandleEnd = candles[candles.length - 1].time * 1000 + tfMs;
-      const now = Math.max(Date.now(), lastCandleEnd);
-      const cutoff = now - tfMs;
-      let refIdx = -1;
-      for (let i = candles.length - 1; i >= 0; i--) {
-        if (candles[i].time * 1000 <= cutoff) { refIdx = i; break; }
-      }
-      const prior = refIdx >= 0 ? giniAsOf(refIdx) : null;
-      return {
-        displayGini: gCurrent,
-        deltaBps: prior === null ? 0 : gCurrent - prior,
-        hasDelta: prior !== null,
-      };
-    }
-
-    return { displayGini: gCurrent, deltaBps: 0, hasDelta: false };
-  }, [candles, selectedRange, gCurrent, timeframe]);
+    // No trade-derived Gini yet (no candles with a sample): fall back to the
+    // season's starting Gini, never the live gCurrent — gCurrent folds in resting
+    // sell-order escrow and so moves when orders are merely placed/cancelled. This
+    // gauge must only move when trades actually fill, which is exactly what the
+    // candle giniBps captures. No trades → no change to report.
+    return { displayGini: gInitial, deltaBps: 0, hasDelta: false };
+  }, [candles, selectedRange, gInitial]);
 
   // Human-readable label for the selected candle's period, mirroring TradeFlows.
   const candleRangeLabel = useMemo(() => {
@@ -196,15 +184,16 @@ export function GiniCard({
         <span className="terminal-pane-title">Gini Score</span>
         <div className="flex items-center gap-2">
           {isLive && !selectedRange && (
-            <span className="w-1.5 h-1.5 rounded-full bg-[--color-green] shadow-[0_0_8px_var(--color-green-35)] animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[--color-green] animate-pulse" />
           )}
           {hasDelta && (
             <span
-              className={`font-mono text-[11px] font-bold leading-none tabular-nums ${
+              className={`font-mono text-[12px] font-bold leading-none tabular-nums uppercase ${
                 deltaBps > 0 ? 'text-gold' : deltaBps < 0 ? 'text-purple' : 'text-text2'
               }`}
             >
-              {deltaBps > 0 ? '+' : ''}{deltaBps.toLocaleString()}
+              {deltaBps > 0 ? '+' : ''}{deltaBps.toLocaleString()}{' '}
+              <span className="font-bold">BPS</span>
             </span>
           )}
           <span className="terminal-pane-title">
