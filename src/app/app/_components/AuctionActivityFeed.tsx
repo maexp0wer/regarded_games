@@ -71,8 +71,8 @@ export function AuctionActivityFeed({ seasonAddress, className }: { seasonAddres
     new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 
   return (
-    <div className={`flex flex-col p-2 bg-card rounded-lg ${className ?? ''}`}>
-      <div className="flex flex-col flex-1 min-h-0 overflow-hidden border-border2">
+    <div className={`flex flex-col bg-card border-border border rounded-lg ${className ?? ''}`}>
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
         <div
           ref={scrollRef}
           data-chrome-scroll-guard

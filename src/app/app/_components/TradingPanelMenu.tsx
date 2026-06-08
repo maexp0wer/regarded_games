@@ -7,7 +7,7 @@ import { OrderBook } from './OrderBook';
 import { TradeFlows } from './TradeFlows';
 import { FactionChat } from './FactionChat';
 import { TradingActivityFeed } from './TradingActivityFeed';
-import { CandlestickChart, Timeframe } from './CandlestickChart';
+import { TradingChart, Timeframe } from './TradingChart';
 import { Orders } from './Orders';
 import { GiniCard } from './GiniCard';
 import { CandleData } from '@/utils/chartData';
@@ -201,7 +201,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
         return (
           <div className="flex flex-col h-full">
             <div className="flex-1 min-h-0">
-              <CandlestickChart
+              <TradingChart
                 candles={props.candles}
                 timeframe={props.timeframe}
                 onTimeframeChange={props.onTimeframeChange}

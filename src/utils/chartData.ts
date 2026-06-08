@@ -8,7 +8,97 @@ export interface CandleData {
   close: number;
   capBuyerVolume: number;
   socBuyerVolume: number;
+  // Gini OHLC in basis points; giniBps is the CLOSE (kept that name for back-compat).
+  giniOpen: number;
+  giniHigh: number;
+  giniLow: number;
   giniBps: number;
+}
+
+/** One timeframe bucket of auction activity, aligned to the candle buckets. */
+export interface AuctionPoint {
+  time: number;          // Unix seconds, bucket start
+  prizePool: number;     // cumulative prize pool up to & including this bucket (USDC)
+  mintVolume: number;    // FIM minted within this bucket (human FIM)
+}
+
+/** A raw mint as returned by the indexer (pre-scaled to human units). */
+export interface AuctionMint {
+  timestamp: number;     // Unix seconds
+  usdcAmount: number;    // USDC spent (human, 6-dec divided out)
+  fimAmount: number;     // FIM minted (human, 18-dec divided out)
+}
+
+const TIMEFRAME_SECONDS: Record<string, number> = {
+  '5m':    300,
+  '1h':  3_600,
+  '4h': 14_400,
+  '1d': 86_400,
+};
+
+/**
+ * Bucket auction mints into the same timeframe grid the price candles use.
+ *
+ * Pane 1 plots `mintVolume` (FIM minted per bucket). Pane 0 plots `prizePool`,
+ * the RUNNING TOTAL of USDC contributed by mints — accumulated across buckets so
+ * the line only ever rises, matching the on-chain prize pool's monotonic growth
+ * from mint contributions. Empty buckets between activity are filled so the area
+ * line stays continuous rather than skipping gaps.
+ *
+ * When `seasonCreatedAt` is given, the series is anchored to the season's
+ * creation bucket with a prizePool of 0, so the line starts flat at zero from
+ * deployment and only rises once mints arrive (rather than jumping in at the
+ * first mint).
+ */
+export function buildAuctionPoints(
+  mints: AuctionMint[],
+  timeframe: string,
+  seasonCreatedAt?: number,
+): AuctionPoint[] {
+  const step = TIMEFRAME_SECONDS[timeframe] ?? 3_600;
+  if (mints.length === 0) {
+    // No mints yet: still draw a flat zero baseline from the creation bucket so
+    // the pane reads "0 prize pool since deployment" instead of rendering empty.
+    if (seasonCreatedAt === undefined) return [];
+    const b = Math.floor(seasonCreatedAt / step) * step;
+    return [{ time: b, prizePool: 0, mintVolume: 0 }];
+  }
+
+  // Sum mint USDC + FIM per bucket start.
+  const usdcByBucket = new Map<number, number>();
+  const fimByBucket = new Map<number, number>();
+  let minBucket = Infinity;
+  let maxBucket = -Infinity;
+  for (const m of mints) {
+    const bucket = Math.floor(m.timestamp / step) * step;
+    usdcByBucket.set(bucket, (usdcByBucket.get(bucket) ?? 0) + m.usdcAmount);
+    fimByBucket.set(bucket, (fimByBucket.get(bucket) ?? 0) + m.fimAmount);
+    if (bucket < minBucket) minBucket = bucket;
+    if (bucket > maxBucket) maxBucket = bucket;
+  }
+
+  // Anchor the series at a zero baseline so the line begins at 0 on deployment
+  // and rises into the first mint. Use the season-creation bucket, but if that
+  // shares (or follows) the first mint's bucket — common when the first mint
+  // lands seconds after creation — step one bucket earlier so there's always a
+  // distinct, strictly-earlier zero point before the data climbs.
+  let startBucket = minBucket;
+  if (seasonCreatedAt !== undefined) {
+    const createdBucket = Math.floor(seasonCreatedAt / step) * step;
+    startBucket = Math.min(createdBucket, minBucket - step);
+  }
+
+  const points: AuctionPoint[] = [];
+  let cumulative = 0;
+  for (let b = startBucket; b <= maxBucket; b += step) {
+    cumulative += usdcByBucket.get(b) ?? 0;
+    points.push({
+      time: b,
+      prizePool: cumulative,
+      mintVolume: fimByBucket.get(b) ?? 0,
+    });
+  }
+  return points;
 }
 
 export interface ChordGroup {

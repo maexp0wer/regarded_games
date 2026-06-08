@@ -1,7 +1,7 @@
 'use client';
 
 import { useSeasonChart } from '@/hooks/useSeasonChart';
-import { CandlestickChart } from './CandlestickChart';
+import { TradingChart } from './TradingChart';
 import { TradeFlows } from './TradeFlows';
 
 interface SeasonChartProps {
@@ -16,7 +16,7 @@ export function SeasonChart({ seasonAddress }: SeasonChartProps) {
       {/* Bounded height: the chart card fills its parent (flex-1 inside), so a
           standalone caller must supply one or the chart area collapses. */}
       <div className="xl:col-span-2 min-w-0 h-136">
-        <CandlestickChart
+        <TradingChart
           candles={chart.candles}
           timeframe={chart.timeframe}
           onTimeframeChange={chart.onTimeframeChange}

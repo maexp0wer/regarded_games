@@ -825,24 +825,24 @@ html, body {
 /* 1. THE LIST HEADER STRIP */
 .ledger-header {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr; /* Adjust ratios based on your layout needs */
-  padding: 1.25rem 1rem 0.5rem 1rem;
+  grid-template-columns: 1fr 1fr 1fr; /* Adjust ratios based on your layout needs */
+  padding: 1.25rem 1.5rem 0.5rem 1.5rem;
   background-color: var(--color-card); /* Grounds the header slightly */
-  border-bottom: 1px solid var(--color-border2); /* High-contrast tier-2 separation boundary */
+  border-bottom: 1px solid var(--color-border); /* High-contrast tier-2 separation boundary */
 
   font-family: var(--font-mono); /* Monospace alignment safety */
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-text2); /* Muted baseline label color */
+  color: var(--color-text2); /* Muted baseline label color */  
 }
 
 /* 2. THE LIST INDIVIDUAL ROWS */
 .ledger-row {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr; /* Must match .ledger-header columns perfectly */
-  padding: 0.25rem 1rem;
+  grid-template-columns: 1fr 1fr 1fr; /* Must match .ledger-header columns perfectly */
+  padding: 0.25rem 1.5rem;
   align-items: center;
   background-color: var(--color-card);
   border-bottom: 1px solid var(--color-border); /* Soft separation line */
@@ -860,7 +860,7 @@ html, body {
 .ledger-row:hover {
   background-color: var(--color-card2);
   color: var(--color-text);
-  box-shadow: inset 3px 0 0 0 var(--color-purple);
+  /*box-shadow: inset 3px 0 0 0 var(--color-text2);*/
 }
 
 .ledger-row.ledger-row-passive:hover {
@@ -911,15 +911,19 @@ html, body {
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--color-border); /* Interior data separation split */
+  margin-left: -1.25rem;
+  margin-right: -1.25rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
 }
 
 /* Title typography treatment (JetBrains Mono for utility) */
 .terminal-pane-title {
   font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.7rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.07em;
   color: var(--color-text2); /* Clean, muted baseline tracking */
   
 }

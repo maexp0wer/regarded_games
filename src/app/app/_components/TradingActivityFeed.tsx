@@ -45,7 +45,7 @@ export function TradingActivityFeed({ seasonAddress, className }: { seasonAddres
     new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 
   return (
-    <div className={`flex flex-col p-2 bg-card rounded-lg ${className ?? 'max-h-130'}`}>
+    <div className={`flex flex-col p-0 bg-card rounded-lg ${className ?? 'max-h-130'}`}>
       <div className="bg-card flex flex-col flex-1 min-h-0 overflow-hidden border-border2">
         <div
           ref={scrollRef}
@@ -84,13 +84,13 @@ export function TradingActivityFeed({ seasonAddress, className }: { seasonAddres
                     {fmt(trade.timestamp)}
                   </span>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 ledger-cell-primary">
                     {sellerKnown ? (
                       <PercentileCircle percentage={trade.sellerPercentile} isCapitalist={trade.sellerIsCapitalist} size="xxs" />
                     ) : (
                       <span className="font-mono text-[10px] text-text2 opacity-30">anon</span>
                     )}
-                    <span className="font-mono text-[10px] text-text2 opacity-30">→</span>
+                    <span className="font-mono text-[12px] text-text2 pl-1">➜</span>
                     {buyerKnown ? (
                       <PercentileCircle percentage={trade.buyerPercentile} isCapitalist={trade.buyerIsCapitalist} size="xxs" />
                     ) : (

@@ -126,6 +126,11 @@ export const candles = onchainTable("candles", (t) => ({
   // Raw fimAmount sums (18-decimal); frontend divides by 1e18
   capBuyerVolume: t.bigint().notNull().default(0n),
   socBuyerVolume: t.bigint().notNull().default(0n),
+  // Gini OHLC in basis points. giniBps is the CLOSE (kept that name so downstream
+  // that already reads it as the close is unaffected); open/high/low are new.
+  giniOpen:       t.integer().notNull().default(0),
+  giniHigh:       t.integer().notNull().default(0),
+  giniLow:        t.integer().notNull().default(0),
   giniBps:        t.integer().notNull().default(0),
   tradeCount:     t.integer().notNull().default(0),
 }), (table) => ({

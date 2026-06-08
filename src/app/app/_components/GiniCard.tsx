@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 import { useSeasonPhase } from '@/hooks/useSeasonPhase';
 import { CandleData } from '@/utils/chartData';
-import { Timeframe } from './CandlestickChart';
+import { Timeframe } from './TradingChart';
 
 interface GiniCardProps {
   seasonAddress: string;

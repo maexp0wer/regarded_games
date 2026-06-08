@@ -395,7 +395,10 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
             closePrice:     tradePrice,
             capBuyerVolume: capVol,
             socBuyerVolume: socVol,
-            giniBps,
+            giniOpen:       giniBps,
+            giniHigh:       giniBps,
+            giniLow:        giniBps,
+            giniBps,        // close
             tradeCount:     1,
           })
           .onConflictDoUpdate((row) => ({
@@ -405,7 +408,16 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
             closePrice:     tradePrice,
             capBuyerVolume: row.capBuyerVolume + capVol,
             socBuyerVolume: row.socBuyerVolume + socVol,
-            giniBps,
+            // Gini OHLC: only real samples (giniBps>0) move the bucket; giniBps===0
+            // means "no meaningful sample" (≤1 player → computeGiniBps returns 0,
+            // and such trades are filtered out anyway), so carry the bucket forward.
+            // The first NON-ZERO trade sets the open and REPLACES the seeded 0 in
+            // high/low (row.gini{Open,Low}===0 sentinels) — without this, giniLow
+            // would lock at 0 and draw a body spanning 0→the real value.
+            giniOpen:       (row.giniOpen === 0 && giniBps > 0) ? giniBps : row.giniOpen,
+            giniHigh:       giniBps > 0 ? (row.giniHigh < giniBps ? giniBps : row.giniHigh) : row.giniHigh,
+            giniLow:        giniBps > 0 ? (row.giniLow === 0 ? giniBps : (row.giniLow > giniBps ? giniBps : row.giniLow)) : row.giniLow,
+            giniBps:        giniBps > 0 ? giniBps : row.giniBps, // close, carry forward when 0
             tradeCount:     row.tradeCount + 1,
           }));
       })

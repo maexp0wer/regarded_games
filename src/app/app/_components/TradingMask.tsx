@@ -505,8 +505,9 @@ export function TradingMask({
       {/* ── Wallet balances card ── */}
       {(totalFim > 0 || userStats) && (
         <div className="terminal-pane">
-          <div className="terminal-pane-header">
+          <div className="terminal-pane-header flex items-center justify-between">
             <span className="terminal-pane-title">Balance</span>
+            <span className="terminal-pane-title">Class Rank</span>
           </div>
           <div className="flex items-center justify-between">
             {totalFim > 0 && (

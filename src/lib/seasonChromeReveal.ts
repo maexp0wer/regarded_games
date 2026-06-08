@@ -204,10 +204,15 @@ export function installSeasonChromeReveal(active: boolean): () => void {
   // is simply swallowed (those regions set `overscroll-contain`) so it never chains
   // up to fold/reveal the page chrome. `deltaY` sign is irrelevant here — once a
   // guarded scrollable owns the pointer, the page must not react in either direction.
+  //
+  // `data-chrome-scroll-guard="always"` absorbs unconditionally, for regions that
+  // own the wheel without scrolling — e.g. the candlestick chart, which consumes
+  // the wheel to zoom/pan and so must never fold the page chrome.
   const absorbedByScrollGuard = (target: EventTarget | null): boolean => {
     let el = target instanceof Element ? target : null;
     while (el) {
       if (el instanceof HTMLElement && el.dataset.chromeScrollGuard !== undefined) {
+        if (el.dataset.chromeScrollGuard === 'always') return true;
         if (el.scrollHeight - el.clientHeight > 0) return true;
       }
       el = el.parentElement;

@@ -179,12 +179,12 @@ if /i "!APP_ENV!"=="fork" (
     "%PSQL_PATH%" "%PG_APP_URL%" -c "TRUNCATE TABLE faucet_referrals, quest_completions, quest_config RESTART IDENTITY CASCADE;"
 
     :: --- Anvil A: Base mainnet fork ---
-    set "ANVIL_CMD_M=anvil --fork-url !ALCHEMY_BASE_URL! --fork-block-number !PONDER_START_BLOCK_MAINNET! --chain-id !MAINNET_CHAIN_ID! --port !MAINNET_ANVIL_PORT! --block-time 1"
+    set "ANVIL_CMD_M=anvil --fork-url !ALCHEMY_BASE_URL! --fork-block-number !PONDER_START_BLOCK_MAINNET! --chain-id !MAINNET_CHAIN_ID! --port !MAINNET_ANVIL_PORT! --block-time 2"
     echo Starting Anvil ^(Base mainnet fork, port !MAINNET_ANVIL_PORT!, chain !MAINNET_CHAIN_ID!, block !PONDER_START_BLOCK_MAINNET!^)...
     start "Anvil (mainnet fork)" cmd /k "cd /d "%PATH_B%" && !ANVIL_CMD_M!"
 
     :: --- Anvil B: Base Sepolia fork ---
-    set "ANVIL_CMD_S=anvil --fork-url !ALCHEMY_SEPOLIA_URL! --fork-block-number !PONDER_START_BLOCK_SEPOLIA! --chain-id !SEPOLIA_CHAIN_ID! --port !SEPOLIA_ANVIL_PORT! --block-time 1"
+    set "ANVIL_CMD_S=anvil --fork-url !ALCHEMY_SEPOLIA_URL! --fork-block-number !PONDER_START_BLOCK_SEPOLIA! --chain-id !SEPOLIA_CHAIN_ID! --port !SEPOLIA_ANVIL_PORT! --block-time 2"
     echo Starting Anvil ^(Base Sepolia fork, port !SEPOLIA_ANVIL_PORT!, chain !SEPOLIA_CHAIN_ID!, block !PONDER_START_BLOCK_SEPOLIA!^)...
     start "Anvil (sepolia fork)" cmd /k "cd /d "%PATH_B%" && !ANVIL_CMD_S!"
 

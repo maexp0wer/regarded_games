@@ -4,7 +4,7 @@ import { useEffect, useRef, useMemo, useState } from 'react';
 import * as d3 from 'd3';
 import { SeasonTrade } from '@/hooks/useSeasonTrades';
 import { buildChordData } from '@/utils/chartData';
-import { Timeframe } from './CandlestickChart';
+import { Timeframe } from './TradingChart';
 
 function getCSSVar(name: string): string {
   if (typeof window === 'undefined') return '';

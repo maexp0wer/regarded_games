@@ -201,7 +201,7 @@ export function SeasonBand({ seasonAddress, seasonName, className = '' }: Season
             <div className="flex flex-col">
               <span className="gini-label mb-2">Prize Pool</span>
               <div
-                className="font-mono text-2xl font-bold text-gold leading-none tabular-nums"
+                className="font-mono text-2xl font-bold text-text leading-none tabular-nums"
                 style={{ textShadow: '0 0 16px var(--color-gold-15)' }}
               >
                 {totalPrizePool.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

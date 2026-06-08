@@ -9,6 +9,8 @@ import Link from 'next/link';
 import { WalletButton } from './WalletButton';
 import AmountInput from '@/components/AmountInput';
 import { sliderPctToAmount } from '@/utils/sliderAmount';
+import { PercentileCircle } from './PercentileCircle';
+import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
 
 import ERC20Abi from '@/deployments/abis/FakeUSDC.json';
 import StakingAbi from '@/deployments/abis/Staking.json';
@@ -117,6 +119,10 @@ function AuctionMaskInner({
   const { data: usdcWallet,  refetch: refetchUsdcWallet }            = useReadContract({ address: usdcAddr,    abi: ERC20Abi, functionName: 'balanceOf', args: [address], chainId });
   const { refetch: refetchUsdcAllowance } = useReadContract({ address: usdcAddr, abi: ERC20Abi, functionName: 'allowance', args: [address, auctionAddress as `0x${string}`], chainId, query: { staleTime: 0 } });
 
+  const userMakers = useMemo(() => (address ? [address.toLowerCase()] : []), [address]);
+  const { data: userStatsMap } = useBatchPlayerPercentiles(seasonAddress, userMakers, auctionAddress);
+  const userStats = address ? userStatsMap?.[address.toLowerCase()] : undefined;
+
   const { writeContractAsync } = useWriteContract();
 
   const isAuctionPhase = currentPhase === 'AUCTION';
@@ -207,17 +213,27 @@ function AuctionMaskInner({
     <div className="flex flex-col gap-5 h-full relative">
 
       {/* ── FIM Balance card ── */}
-      {currentFim > 0n && (
+      {(currentFim > 0n || userStats) && (
         <div className="terminal-pane">
-          <div className="terminal-pane-header">
+          <div className="terminal-pane-header flex items-center justify-between">
             <span className="terminal-pane-title">Balance</span>
+            <span className="terminal-pane-title">Expected Class Rank</span>
           </div>
-          <div
-            className="font-mono font-extrabold leading-none text-display-trading tabular-nums"
-            style={{ color: 'var(--color-gold)', textShadow: '0 0 40px var(--color-gold-35)' }}
-          >
-            {fimDisplayValue}
-            <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
+          <div className="flex items-center justify-between">
+            {currentFim > 0n && (
+              <div
+                className="font-mono font-extrabold leading-none text-display-trading tabular-nums"
+                style={{ color: userStats?.isCapitalist ? 'var(--color-gold)' : 'var(--color-purple)', textShadow: `0 0 40px ${userStats?.isCapitalist ? 'var(--color-gold-35)' : 'var(--color-purple-35)'}` }}
+              >
+                {fimDisplayValue}
+                <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
+              </div>
+            )}
+            {userStats && (
+              <div className="flex flex-col items-end min-w-0 ml-auto shrink-0">
+                <PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="lg" />
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useSeasonCandles } from './useSeasonCandles';
 import { useSeasonTrades } from './useSeasonTrades';
 import { useSeasonVictory } from './useSeasonVictory';
-import { Timeframe } from '@/app/app/_components/CandlestickChart';
+import { Timeframe } from '@/app/app/_components/TradingChart';
 
 const TIMEFRAME_MS: Record<Timeframe, number> = {
   '5m':    300_000,
@@ -29,7 +29,7 @@ export function useSeasonChart(seasonAddress: string | undefined) {
   };
 
   return {
-    // CandlestickChart props
+    // TradingChart props
     candles,
     timeframe,
     onTimeframeChange: handleTimeframeChange,

@@ -13,6 +13,9 @@ interface SeasonCandle {
   closePrice: string;
   capBuyerVolume: string;
   socBuyerVolume: string;
+  giniOpen: number;
+  giniHigh: number;
+  giniLow: number;
   giniBps: number;
 }
 
@@ -27,7 +30,7 @@ const QUERY = `
     ) {
       items {
         bucketTs openPrice highPrice lowPrice closePrice
-        capBuyerVolume socBuyerVolume giniBps
+        capBuyerVolume socBuyerVolume giniOpen giniHigh giniLow giniBps
       }
       pageInfo { endCursor hasNextPage }
     }
@@ -57,6 +60,9 @@ export function useSeasonCandles(
         close:          Number(BigInt(c.closePrice)) / 1e6,
         capBuyerVolume: Number(BigInt(c.capBuyerVolume)) / 1e18,
         socBuyerVolume: Number(BigInt(c.socBuyerVolume)) / 1e18,
+        giniOpen:       c.giniOpen,
+        giniHigh:       c.giniHigh,
+        giniLow:        c.giniLow,
         giniBps:        c.giniBps,
       }));
     },

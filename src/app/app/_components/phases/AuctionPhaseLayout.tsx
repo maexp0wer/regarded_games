@@ -11,7 +11,10 @@ import { ScheduleCard } from '../ScheduleCard';
 import { LendingDistributionCard } from '../LendingDistributionCard';
 import { AuctionMask } from '../AuctionMask';
 import { AuctionActivityFeed } from '../AuctionActivityFeed';
+import { AuctionChart } from '../AuctionChart';
+import { FimDistributionChart } from '../FimDistributionChart';
 import { FactionChat } from '../FactionChat';
+import { useSeasonAuctionChart } from '@/hooks/useSeasonAuctionChart';
 import type { SeasonConfig } from '@/hooks/useSeasonPhase';
 
 interface AuctionPhaseLayoutProps {
@@ -59,6 +62,7 @@ export function AuctionPhaseLayout({
   M_dynamic,
 }: AuctionPhaseLayoutProps) {
   const bp = useBreakpoint();
+  const auctionChart = useSeasonAuctionChart(seasonAddress);
 
   // The breakpoint variants render different DOM and fold-row counts, so the
   // exact size must be known before we pick one. useBreakpoint reports a
@@ -74,10 +78,13 @@ export function AuctionPhaseLayout({
   const isSm = bp === 'sm' || bp === 'xs';
 
   // Content fold-row count per breakpoint (the last is the non-folding floor).
-  // xl/2xl pin all content (one floor rung, nothing folds); lg folds in 2.
-  const rowCount = isXl || is2xl ? 1 : isLg ? 2 : isMd ? 5 : 7;
+  // xl/2xl/lg: FimDistributionChart sits beside AuctionChart in the same rung.
+  // md: FimDistributionChart gets its own rung after the chart (+1 vs. original 6).
+  // sm: same pattern (+1 vs. original 8).
+  const rowCount = isXl || is2xl ? 2 : isLg ? 3 : isMd ? 7 : 9;
   useChromeRowCount(mounted ? rowCount : 0);
-  const r = firstRowRung(); // first content rung (2)
+  const r = firstRowRung(); // first content rung (2) — the AuctionChart
+  const c = r + 1;          // content rungs below the chart start here
 
   // ── Component renderers (kept DRY across the breakpoint variants) ──
   const mask = (
@@ -104,6 +111,19 @@ export function AuctionPhaseLayout({
   const lending = <LendingDistributionCard seasonAddress={seasonAddress} config={config} />;
   const chat = <FactionChat seasonSlug={seasonSlug} auctionMode />;
   const feed = <AuctionActivityFeed seasonAddress={seasonAddress} className="h-full" />;
+  const chart = (
+    <AuctionChart
+      points={auctionChart.points}
+      timeframe={auctionChart.timeframe}
+      onTimeframeChange={auctionChart.onTimeframeChange}
+    />
+  );
+  const fimDistribution = (
+    <FimDistributionChart
+      seasonAddress={seasonAddress}
+      exchangeAddress={exchangeAddress}
+    />
+  );
 
   return (
     // Root fills at least the viewport (minus the AppShell's pb-6 = 1.5rem). No
@@ -112,13 +132,36 @@ export function AuctionPhaseLayout({
       {/* SeasonBand — reveal rung 1: folds on the staged scroll-down ladder. */}
       <SeasonBandReveal seasonAddress={seasonAddress} seasonName={formattedName} />
 
+      {/* AuctionChart + FimDistributionChart — first content rung (r).
+          xl/2xl/lg: side-by-side in the same h-112 row (dist chart fixed w-72).
+          md/sm: AuctionChart full-width here; FimDistributionChart in a separate
+          rung below (c+0 rung; all subsequent content rungs shift by +1). */}
+      {mounted && (isXl || is2xl || isLg) && (
+        <ChromeRevealRow index={r}>
+          <div className="flex gap-5 h-112">
+            <div className="flex-1 min-w-0 h-full">{chart}</div>
+            <div className="w-72 h-full">{fimDistribution}</div>
+          </div>
+        </ChromeRevealRow>
+      )}
+      {mounted && (isMd || isSm) && (
+        <>
+          <ChromeRevealRow index={r}>
+            <div className="h-112">{chart}</div>
+          </ChromeRevealRow>
+          <ChromeRevealRow index={c}>
+            <div className="h-72">{fimDistribution}</div>
+          </ChromeRevealRow>
+        </>
+      )}
+
       {/* ── xl : 4 cols — [Protocol/Policy] [Schedule/Lending] [Chat/Feed] [mask].
           Nothing in the content folds here (one rung = the resting floor); only
           the navbar and band fold above it. The two card columns stack their
           pair as equal-height rows (2 cols × 2 rows); col 3 stacks Chat over Feed
           (reversed), both spanning the row height; col 4 is the mask. ── */}
       {mounted && isXl && (
-        <ChromeRevealRow index={r} className="grid grid-cols-4 grid-rows-2 gap-5">
+        <ChromeRevealRow index={c} className="grid grid-cols-4 grid-rows-2 gap-5">
           {/* Col 1: Protocol over Policy — equal-height rows. */}
           <div className="col-start-1 row-start-1 flex flex-col">{protocol}</div>
           <div className="col-start-1 row-start-2 flex flex-col">{policy}</div>
@@ -143,7 +186,7 @@ export function AuctionPhaseLayout({
           last three spanning both rows. Nothing in the content folds (one floor
           rung); only the navbar and band fold above it. ── */}
       {mounted && is2xl && (
-        <ChromeRevealRow index={r} className="grid grid-cols-5 grid-rows-2 gap-5">
+        <ChromeRevealRow index={c} className="grid grid-cols-5 grid-rows-2 gap-5">
           {/* Col 1: Protocol over Policy — equal-height rows. */}
           <div className="col-start-1 row-start-1 flex flex-col">{protocol}</div>
           <div className="col-start-1 row-start-2 flex flex-col">{policy}</div>
@@ -167,7 +210,7 @@ export function AuctionPhaseLayout({
       {mounted && isLg && (
         <>
           <ChromeRevealRow
-            index={r}
+            index={c}
             className="grid grid-cols-3 grid-rows-2 gap-5"
           >
             <div className="col-start-1 row-start-1 flex flex-col">{protocol}</div>
@@ -176,62 +219,64 @@ export function AuctionPhaseLayout({
             <div className="col-start-2 row-start-2 flex flex-col">{lending}</div>
             <div className="col-start-3 row-span-2 row-start-1 flex min-h-112 flex-col">{mask}</div>
           </ChromeRevealRow>
-          <ChromeRevealRow index={r + 1} className="grid grid-cols-2 gap-5">
+          <ChromeRevealRow index={c + 1} className="grid grid-cols-2 gap-5">
             <div className="flex min-h-112 flex-col">{feed}</div>
             <div className="flex min-h-112 flex-col">{chat}</div>
           </ChromeRevealRow>
         </>
       )}
 
-      {/* ── md : [mask] → [Protocol+Policy] → [Schedule+Lending] → [Feed] → [Chat floor] ── */}
+      {/* ── md : [dist] → [mask] → [Protocol+Policy] → [Schedule+Lending] → [Feed] → [Chat floor]
+          FimDistributionChart is rung c (rendered above); content rungs start at c+1. ── */}
       {mounted && isMd && (
         <>
-          <ChromeRevealRow index={r} className="flex min-h-112 flex-col">
+          <ChromeRevealRow index={c + 1} className="flex min-h-112 flex-col">
             {mask}
           </ChromeRevealRow>
-          <ChromeRevealRow index={r + 1} className="grid grid-cols-2 gap-5">
+          <ChromeRevealRow index={c + 2} className="grid grid-cols-2 gap-5">
             <div className="flex flex-col">{protocol}</div>
             <div className="flex flex-col">{policy}</div>
           </ChromeRevealRow>
-          <ChromeRevealRow index={r + 2} className="grid grid-cols-2 gap-5">
+          <ChromeRevealRow index={c + 3} className="grid grid-cols-2 gap-5">
             <div className="flex flex-col">{schedule}</div>
             <div className="flex flex-col">{lending}</div>
           </ChromeRevealRow>
           {/* Feed sizes to its content (no min-h) so its short table doesn't
               leave a tall empty box above the Chat. */}
-          <ChromeRevealRow index={r + 3} className="flex flex-col">
+          <ChromeRevealRow index={c + 4} className="flex flex-col">
             {feed}
           </ChromeRevealRow>
-          <ChromeRevealRow index={r + 4} className="flex min-h-112 flex-col">
+          <ChromeRevealRow index={c + 5} className="flex min-h-112 flex-col">
             {chat}
           </ChromeRevealRow>
         </>
       )}
 
-      {/* ── sm and below : each component its own stage ── */}
+      {/* ── sm and below : each component its own stage.
+          FimDistributionChart is rung c (rendered above); content rungs start at c+1. ── */}
       {mounted && isSm && (
         <>
-          <ChromeRevealRow index={r} className="flex min-h-112 flex-col">
+          <ChromeRevealRow index={c + 1} className="flex min-h-112 flex-col">
             {mask}
           </ChromeRevealRow>
-          <ChromeRevealRow index={r + 1} className="flex flex-col">
+          <ChromeRevealRow index={c + 2} className="flex flex-col">
             {protocol}
           </ChromeRevealRow>
-          <ChromeRevealRow index={r + 2} className="flex flex-col">
+          <ChromeRevealRow index={c + 3} className="flex flex-col">
             {policy}
           </ChromeRevealRow>
-          <ChromeRevealRow index={r + 3} className="flex flex-col">
+          <ChromeRevealRow index={c + 4} className="flex flex-col">
             {schedule}
           </ChromeRevealRow>
-          <ChromeRevealRow index={r + 4} className="flex flex-col">
+          <ChromeRevealRow index={c + 5} className="flex flex-col">
             {lending}
           </ChromeRevealRow>
           {/* Feed sizes to its content (no min-h) so its short table doesn't
               leave a tall empty box above the Chat. */}
-          <ChromeRevealRow index={r + 5} className="flex flex-col">
+          <ChromeRevealRow index={c + 6} className="flex flex-col">
             {feed}
           </ChromeRevealRow>
-          <ChromeRevealRow index={r + 6} className="flex min-h-112 flex-col">
+          <ChromeRevealRow index={c + 7} className="flex min-h-112 flex-col">
             {chat}
           </ChromeRevealRow>
         </>

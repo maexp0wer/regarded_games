@@ -25,7 +25,6 @@ export function OrderBook({
 
   const [sideFilter, setSideFilter] = useState<'ask' | 'bid' | null>(null);
   const [factionFilter, setFactionFilter] = useState<'bourgeoisie' | 'proletariat' | null>(null);
-  const [rankFilterEnabled, setRankFilterEnabled] = useState(false);
   const [minPercentile, setMinPercentile] = useState<number | ''>(0);
   const [maxPercentile, setMaxPercentile] = useState<number | ''>(100);
 
@@ -106,15 +105,14 @@ export function OrderBook({
         if (!stats) return false;
         if (factionFilter === 'bourgeoisie' && !stats.isCapitalist) return false;
         if (factionFilter === 'proletariat' && stats.isCapitalist) return false;
-      }
 
-      if (rankFilterEnabled && stats) {
+        // Filter automatically by rank when faction filter is active
         if (stats.factionPercentile < parsedMin || stats.factionPercentile > parsedMax) return false;
       }
 
       return true;
     });
-  }, [data, percentileMap, sideFilter, factionFilter, rankFilterEnabled, minPercentile, maxPercentile]);
+  }, [data, percentileMap, sideFilter, factionFilter, minPercentile, maxPercentile]);
 
   const maxAskAmount = useMemo(
     () => Math.max(0, ...priceRows.map(r => r.ask?.amount ?? 0)),
@@ -156,6 +154,14 @@ export function OrderBook({
     }
   }, [closestRowKey]);
 
+  // Reset range inputs when the faction filter is disabled
+  useEffect(() => {
+    if (factionFilter === null) {
+      setMinPercentile(0);
+      setMaxPercentile(100);
+    }
+  }, [factionFilter]);
+
   const isOwnOrder = (order: AggregatedOrder) =>
     !!userAddress && order.maker.toLowerCase() === userAddress.toLowerCase();
   const isClickable = (order: AggregatedOrder | undefined): order is AggregatedOrder =>
@@ -193,121 +199,257 @@ export function OrderBook({
   const showBoth = displayAsks && displayBids;
 
 
+  // Refs to track absolute latest state values for safe intervals
+  const minPercentileRef = useRef(minPercentile);
+  const maxPercentileRef = useRef(maxPercentile);
+
+  useEffect(() => {
+    minPercentileRef.current = minPercentile;
+  }, [minPercentile]);
+
+  useEffect(() => {
+    maxPercentileRef.current = maxPercentile;
+  }, [maxPercentile]);
+
+  // Refs to hold interval/timeout IDs
+  const stepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stepTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Helper to execute a single step with cross-input collision boundaries
+  // Helper to execute a single step with "push/pull" collision logic
+  const step = (direction: 'up' | 'down', target: 'min' | 'max') => {
+    const minFallback = 0;
+    const maxFallback = 100;
+
+    const currentMin = minPercentileRef.current === '' ? minFallback : (parseInt(String(minPercentileRef.current)) || 0);
+    const currentMax = maxPercentileRef.current === '' ? maxFallback : (parseInt(String(maxPercentileRef.current)) || 0);
+
+    if (target === 'min') {
+      if (direction === 'up') {
+        const nextMin = Math.min(100, currentMin + 1);
+        setMinPercentile(nextMin);
+        
+        // Push max up if min crosses it
+        if (nextMin > currentMax) {
+          setMaxPercentile(nextMin);
+        }
+      } else {
+        const nextMin = Math.max(0, currentMin - 1);
+        setMinPercentile(nextMin);
+      }
+    } else {
+      if (direction === 'up') {
+        const nextMax = Math.min(100, currentMax + 1);
+        setMaxPercentile(nextMax);
+      } else {
+        const nextMax = Math.max(0, currentMax - 1);
+        setMaxPercentile(nextMax);
+        
+        // Pull min down if max crosses it
+        if (nextMax < currentMin) {
+          setMinPercentile(nextMax);
+        }
+      }
+    }
+  };
+
+  // Triggers stepping immediately, then begins continuous looping after a delay
+  const startStepping = (direction: 'up' | 'down', target: 'min' | 'max') => {
+    stopStepping();
+    step(direction, target); // Trigger first change immediately
+
+    // After 300ms of holding, start cycling at a moderate pace (100ms interval)
+    stepTimeoutRef.current = setTimeout(() => {
+      stepIntervalRef.current = setInterval(() => {
+        step(direction, target);
+      }, 100); 
+    }, 300);
+  };
+
+  // Clear timers to stop counting
+  const stopStepping = () => {
+    if (stepTimeoutRef.current) {
+      clearTimeout(stepTimeoutRef.current);
+      stepTimeoutRef.current = null;
+    }
+    if (stepIntervalRef.current) {
+      clearInterval(stepIntervalRef.current);
+      stepIntervalRef.current = null;
+    }
+  };
+
+  // Clean up timers on component unmount
+  useEffect(() => {
+    return () => stopStepping();
+  }, []);
+
+  const renderPercentileInputs = () => {
+    // Calculate character length dynamically for precise sizing
+    const minLength = String(minPercentile === '' ? 0 : minPercentile).length;
+    const maxLength = String(maxPercentile === '' ? 100 : maxPercentile).length;
+
+    return (
+      <div className="flex items-center gap-1 w-full mt-1.5 animate-in fade-in duration-200">
+        {/* MINIMUM PERCENTILE */}
+        <div className="flex items-center bg-card3 flex-1 rounded border border-transparent h-[26px] focus-within:border-border2 focus-within:ring-1 focus-within:ring-purple-500/20 transition-all">
+          <div className="flex-1 flex justify-center items-center h-full">
+            <input
+              type="number" 
+              min="0" 
+              max="100" 
+              placeholder="0"
+              value={minPercentile}
+              onChange={(e) => {
+                const raw = e.target.value;
+                setMinPercentile(raw === '' ? '' : Math.min(100, Math.max(0, parseInt(raw) || 0)));
+              }}
+              // Removed fixed padding/margins so browser styles don't push the layout around
+              className="no-spinners text-text bg-transparent text-center font-mono text-[12px] tracking-wide uppercase h-full p-0 m-0 outline-none border-none min-w-0"
+              style={{ width: `${minLength}ch` }}
+            />
+            <span className="font-mono text-[12px] text-text2 select-none pointer-events-none pl-1">%</span>
+          </div>
+          
+          {/* Minimalist Stepper (Right) */}
+          <div className="flex flex-col gap-[2px] pr-2 justify-center shrink-0 select-none">
+            <button
+              type="button"
+              tabIndex={-1}
+              onMouseDown={(e) => { e.preventDefault(); startStepping('up', 'min'); }}
+              onMouseUp={stopStepping}
+              onMouseLeave={stopStepping}
+              onTouchStart={(e) => { e.preventDefault(); startStepping('up', 'min'); }}
+              onTouchEnd={stopStepping}
+              className="text-[8px] leading-[1] text-text2 hover:text-text transition-colors"
+            >
+              ▲
+            </button>
+            <button
+              type="button"
+              tabIndex={-1}
+              onMouseDown={(e) => { e.preventDefault(); startStepping('down', 'min'); }}
+              onMouseUp={stopStepping}
+              onMouseLeave={stopStepping}
+              onTouchStart={(e) => { e.preventDefault(); startStepping('down', 'min'); }}
+              onTouchEnd={stopStepping}
+              className="text-[8px] leading-[1] text-text2 hover:text-text transition-colors"
+            >
+              ▼
+          </button>
+          </div>
+        </div>
+
+        <span className="font-mono shrink-0 text-[10px] px-0.5 text-text2 self-center">—</span>
+
+        {/* MAXIMUM PERCENTILE */}
+        <div className="flex items-center bg-card3 flex-1 rounded border border-transparent h-[26px] focus-within:border-border2 focus-within:ring-1 focus-within:ring-purple-500/20 transition-all">
+          <div className="flex-1 flex justify-center items-center h-full">
+            <input
+              type="number" 
+              min="0" 
+              max="100" 
+              placeholder="100"
+              value={maxPercentile}
+              onChange={(e) => {
+                const raw = e.target.value;
+                setMaxPercentile(raw === '' ? '' : Math.min(100, Math.max(0, parseInt(raw) || 0)));
+              }}
+              className="no-spinners text-text bg-transparent text-center font-mono text-[12px] tracking-wide uppercase h-full p-0 m-0 outline-none border-none min-w-0"
+              style={{ width: `${maxLength}ch` }}
+            />
+            <span className="font-mono text-[12px] text-text2 select-none pointer-events-none pl-2">%</span>
+          </div>
+
+          {/* Minimalist Stepper (Right) */}
+          <div className="flex flex-col gap-[2px] pr-2 justify-center shrink-0 select-none">
+            <button
+              type="button"
+              tabIndex={-1}
+              onMouseDown={(e) => { e.preventDefault(); startStepping('up', 'max'); }}
+              onMouseUp={stopStepping}
+              onMouseLeave={stopStepping}
+              onTouchStart={(e) => { e.preventDefault(); startStepping('up', 'max'); }}
+              onTouchEnd={stopStepping}
+              className="text-[8px] leading-[1] text-text2 hover:text-text transition-colors"
+            >
+              ▲
+            </button>
+            <button
+              type="button"
+              tabIndex={-1}
+              onMouseDown={(e) => { e.preventDefault(); startStepping('down', 'max'); }}
+              onMouseUp={stopStepping}
+              onMouseLeave={stopStepping}
+              onTouchStart={(e) => { e.preventDefault(); startStepping('down', 'max'); }}
+              onTouchEnd={stopStepping}
+              className="text-[8px] leading-[1] text-text2 hover:text-text transition-colors"
+            >
+              ▼
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
   return (
-    <div className="flex flex-col h-full p-2 bg-card rounded-lg">
+    <div className="flex flex-col h-full bg-card rounded-lg">
       {/* Order book card */}
       <div
-        className="bg-card flex flex-col flex-1 min-h-0 overflow-hidden max-h-200 border-border2 p-0"
+        className="bg-card flex flex-col flex-1 min-h-0 overflow-hidden max-h-200 border-border p-0"
       >
         {/* Filter rows */}
-        <div className="flex flex-col shrink-0 bg-card" style={{ borderBottom: '1px solid var(--color-border2)' }}>
+        <div className="flex flex-col shrink-0 px-5 py-2 bg-card" style={{ borderBottom: '1px solid var(--color-border)' }}>
           {/* Row 1: Side */}
           <div className="flex gap-1 mt-1.5">
             <button
-              onClick={() => setSideFilter(v => v === 'ask' ? null : 'ask')}
-              className={`flex-1 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded transition-all duration-150 active:scale-[0.98] border ${sideFilter === 'ask' ? 'border-border2 text-text' : 'bg-card2 border-border text-text2 hover:border-border2 hover:text-text'}`}
-              style={sideFilter === 'ask' ? { backgroundColor: 'color-mix(in srgb, var(--color-red) 15%, var(--color-card3))' } : undefined}
-            >Ask</button>
-            <button
               onClick={() => setSideFilter(v => v === 'bid' ? null : 'bid')}
-              className={`flex-1 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded transition-all duration-150 active:scale-[0.98] border ${sideFilter === 'bid' ? 'border-border2 text-text' : 'bg-card2 border-border text-text2 hover:border-border2 hover:text-text'}`}
-              style={sideFilter === 'bid' ? { backgroundColor: 'color-mix(in srgb, var(--color-green) 15%, var(--color-card3))' } : undefined}
-            >Bid</button>
-          </div>
-          {/* Row 2: Faction */}
-          <div className="flex gap-1 mt-1.5">
-            <button
-              onClick={() => setFactionFilter(v => v === 'bourgeoisie' ? null : 'bourgeoisie')}
-              className={`flex-1 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded transition-all duration-150 active:scale-[0.98] border ${factionFilter === 'bourgeoisie' ? 'border-border2 text-text' : 'bg-card2 border-border text-text2 hover:border-border2 hover:text-text'}`}
-              style={factionFilter === 'bourgeoisie' ? { backgroundColor: 'color-mix(in srgb, var(--color-gold) 15%, var(--color-card3))' } : undefined}
-            >Bourgeoisie</button>
-            <button
-              onClick={() => setFactionFilter(v => v === 'proletariat' ? null : 'proletariat')}
-              className={`flex-1 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded transition-all duration-150 active:scale-[0.98] border ${factionFilter === 'proletariat' ? 'border-border2 text-text' : 'bg-card2 border-border text-text2 hover:border-border2 hover:text-text'}`}
-              style={factionFilter === 'proletariat' ? { backgroundColor: 'color-mix(in srgb, var(--color-purple) 15%, var(--color-card3))' } : undefined}
-            >Proletariat</button>
-          </div>
-          {/* Row 3: Rank range */}
-          <div className="flex items-stretch w-full gap-1 mt-1.5 mb-1.5">
-            <button
-              onClick={() => setRankFilterEnabled(v => !v)}
-              className={`px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded transition-all duration-150 active:scale-[0.98] border ${rankFilterEnabled ? 'bg-card3 border-border2 text-text' : 'bg-card2 border-border text-text2 hover:border-border2 hover:text-text'}`}
+              className={`flex-1 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
+                sideFilter === 'bid' ? 'text-text' : 'bg-card2 text-text2 hover:text-text'
+              }`}
+              style={sideFilter === 'bid' ? { backgroundColor: 'color-mix(in srgb, var(--color-green) 30%, var(--color-card3))' } : undefined}
             >
-              Rank %
+              Bid
             </button>
-            {rankFilterEnabled && (
-              <>
-                {/* MINIMUM PERCENTILE */}
-                <div className="flex items-center bg-card3 ml-8 flex-1 rounded-sm focus-within:ring-1 focus-within:ring-purple-500/50 transition-all">
-                  <input
-                    type="number" 
-                    min="0" 
-                    max="100" 
-                    placeholder="0"
-                    value={minPercentile}
-                    onChange={(e) => {
-                      const raw = e.target.value;
-                      setMinPercentile(raw === '' ? '' : Math.min(100, Math.max(0, parseInt(raw) || 0)));
-                    }}
-                    className="no-spinners text-text bg-transparent flex-1 min-w-0 border-none outline-none text-center font-mono text-[0.65rem] tracking-wide uppercase py-1 pl-2 pr-1"
-                  />
-                  <div className="flex flex-col gap-[2px] pr-1 py-[2px] justify-center">
-                    <button
-                      type="button"
-                      tabIndex={-1}
-                      onClick={() => setMinPercentile(prev => Math.min(100, (parseInt(String(prev)) || 0) + 1))}
-                      className="btn-stepper"
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      tabIndex={-1}
-                      onClick={() => setMinPercentile(prev => Math.max(0, (parseInt(String(prev)) || 0) - 1))}
-                      className="btn-stepper"
-                    >
-                      ▼
-                    </button>
-                  </div>
-                </div>
+            <button
+              onClick={() => setSideFilter(v => v === 'ask' ? null : 'ask')}
+              className={`flex-1 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
+                sideFilter === 'ask' ? 'text-text' : 'bg-card2 text-text2 hover:text-text'
+              }`}
+              style={sideFilter === 'ask' ? { backgroundColor: 'color-mix(in srgb, var(--color-red) 30%, var(--color-card3))' } : undefined}
+            >
+              Ask
+            </button>
+          </div>
+          {/* Row 2: Faction Buttons & Nested Ranks */}
+          <div className="flex gap-1.5 mt-1.5 mb-1.5">
+            {/* Proletarians Column */}
+            <div className="flex-1 flex flex-col">
+              <button
+                onClick={() => setFactionFilter(v => v === 'proletariat' ? null : 'proletariat')}
+                className={`w-full px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
+                  factionFilter === 'proletariat' ? 'text-text' : 'bg-card2 text-text2 hover:text-text'
+                }`}
+                style={factionFilter === 'proletariat' ? { backgroundColor: 'color-mix(in srgb, var(--color-purple) 30%, var(--color-card3))' } : undefined}
+              >
+                Proletarians
+              </button>
+              {factionFilter === 'proletariat' && renderPercentileInputs()}
+            </div>
 
-                <span className="font-mono shrink-0 text-[0.65rem] px-3 text-text self-center">—</span>
-
-                {/* MAXIMUM PERCENTILE */}
-                <div className="flex items-center bg-card3 flex-1 rounded-sm focus-within:ring-1 focus-within:ring-purple-500/50 transition-all">
-                  <input
-                    type="number" 
-                    min="0" 
-                    max="100" 
-                    placeholder="100"
-                    value={maxPercentile}
-                    onChange={(e) => {
-                      const raw = e.target.value;
-                      setMaxPercentile(raw === '' ? '' : Math.min(100, Math.max(0, parseInt(raw) || 0)));
-                    }}
-                    className="no-spinners text-text bg-transparent flex-1 min-w-0 border-none outline-none text-center font-mono text-[0.65rem] tracking-wide uppercase py-1 pl-2 pr-1"
-                  />
-                  <div className="flex flex-col gap-[2px] pr-1 py-[2px] justify-center">
-                    <button
-                      type="button"
-                      tabIndex={-1}
-                      onClick={() => setMaxPercentile(prev => Math.min(100, (parseInt(String(prev === '' ? 100 : prev)) || 0) + 1))}
-                      className="btn-stepper"
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      tabIndex={-1}
-                      onClick={() => setMaxPercentile(prev => Math.max(0, (parseInt(String(prev === '' ? 100 : prev)) || 0) - 1))}
-                      className="btn-stepper"
-                    >
-                      ▼
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
+            {/* Capitalists Column */}
+            <div className="flex-1 flex flex-col">
+              <button
+                onClick={() => setFactionFilter(v => v === 'bourgeoisie' ? null : 'bourgeoisie')}
+                className={`w-full px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
+                  factionFilter === 'bourgeoisie' ? 'text-text' : 'bg-card2 text-text2 hover:text-text'
+                }`}
+                style={factionFilter === 'bourgeoisie' ? { backgroundColor: 'color-mix(in srgb, var(--color-gold) 30%, var(--color-card3))' } : undefined}
+              >
+                Capitalists
+              </button>
+              {factionFilter === 'bourgeoisie' && renderPercentileInputs()}
+            </div>
           </div>
         </div>
 
@@ -319,7 +461,7 @@ export function OrderBook({
           >
             {displayBids && (showBoth ? (
               <>
-                <div className="text-right pl-4 pr-2">Rank</div>
+                <div className="text-right pl-4 pr-2">Class</div>
                 <div className="text-right pr-2">Amount</div>
                 <div className="text-right pr-3" style={{ color: 'var(--color-green)' }}>Bid</div>
               </>
@@ -328,21 +470,21 @@ export function OrderBook({
                 <div className="pl-4" style={{ color: 'var(--color-green)' }}>Bid</div>
                 <div className="pl-2">Total</div>
                 <div className="pl-2">Amount</div>
-                <div className="pl-2 pr-4">Rank</div>
+                <div className="pl-2 pr-4">Class</div>
               </>
             ))}
             {displayAsks && (showBoth ? (
               <>
                 <div className="pl-3" style={{ color: 'var(--color-red)' }}>Ask</div>
                 <div className="pl-2">Amount</div>
-                <div className="pl-2 pr-4">Rank</div>
+                <div className="pl-2 pr-4">Class</div>
               </>
             ) : (
               <>
                 <div className="pl-4" style={{ color: 'var(--color-red)' }}>Ask</div>
                 <div className="pl-2">Total</div>
                 <div className="pl-2">Amount</div>
-                <div className="pl-2 pr-4">Rank</div>
+                <div className="pl-2 pr-4">Class</div>
               </>
             ))}
           </div>
@@ -366,7 +508,7 @@ export function OrderBook({
                     padding: 0,
                     alignItems: 'stretch',
                     cursor: 'default',
-                    borderBottom: isClosestToOne ? '1px solid var(--color-border2)' : undefined,
+                    borderBottom: isClosestToOne ? '1px solid var(--color-border)' : undefined,
                   }}
                 >
                   {displayBids && (
