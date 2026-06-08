@@ -505,9 +505,8 @@ export function TradingMask({
       {/* ── Wallet balances card ── */}
       {(totalFim > 0 || userStats) && (
         <div className="terminal-pane">
-          <div className="terminal-pane-header flex items-center justify-between">
+          <div className="terminal-pane-header">
             <span className="terminal-pane-title">Balance</span>
-            <span className="terminal-pane-title">Class Rank</span>
           </div>
           <div className="flex items-center justify-between">
             {totalFim > 0 && (
@@ -541,8 +540,26 @@ export function TradingMask({
       )}
 
       {/* ── Trading panel card ── */}
-      <div className="terminal-pane bg-card! flex flex-col gap-4 flex-1 min-h-0">
-
+      <div className="rounded-md bg-card flex flex-col flex-1 min-h-0">
+        
+        {/* ── Maker/Taker Selector Bar ── */}
+        <div className="terminal-view-selector-bar--full">
+          <button
+            disabled={isQueueLocked}
+            onClick={() => setIsMaker(false)}
+            className={`terminal-view-btn${!isMaker ? ' active' : ''}`}
+          >
+            Taker
+          </button>
+          <button
+            disabled={isQueueLocked}
+            onClick={() => setIsMaker(true)}
+            className={`terminal-view-btn${isMaker ? ' active' : ''}`}
+          >
+            Maker
+          </button>
+        </div>
+        <div className="flex flex-col gap-4 p-4 h-full">
         {/* ── Buy / Sell toggle ── */}
         <div className="flex rounded-lg overflow-hidden border border-border bg-card2 p-1 gap-1">
           <button
@@ -574,22 +591,6 @@ export function TradingMask({
         {/* ── Amount input with embedded Maker/Taker rail (single side: maker or non-mixed taker) ── */}
         {(!isMixedQueue || isMaker) && (
           <div>
-            <div className="input-embedded-rail">
-              <button
-                disabled={isQueueLocked}
-                onClick={() => setIsMaker(false)}
-                className={`btn-input-switch ${!isMaker ? 'active' : ''}`}
-              >
-                Taker
-              </button>
-              <button
-                disabled={isQueueLocked}
-                onClick={() => setIsMaker(true)}
-                className={`btn-input-switch ${isMaker ? 'active' : ''}`}
-              >
-                Maker
-              </button>
-            </div>
             <div className={isMaker ? '' : 'flex flex-col min-h-0'}>
               <div className="bg-bg border border-border rounded-t px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
                 <span className="mask-label text-right">
@@ -913,6 +914,7 @@ export function TradingMask({
         onClose={() => clearTargets('')}
       />
 
+    </div>
     </div>
   );
 }

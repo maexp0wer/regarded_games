@@ -707,13 +707,41 @@ html, body {
 
 /* Chat-panel compact variant — replaces the terminal-pane-header */
 .terminal-view-selector-bar--chat {
-  padding: 1.25rem 1.25rem 0;
+  padding: 0 1.25rem 0;
 }
 
 .terminal-view-selector-bar--chat .terminal-view-btn {
   font-family: var(--font-mono);
   font-size: 0.75rem;
-  padding: 0 1.25rem 0.5rem;
+  padding: 0.85rem 1.25rem 0.5rem; /* Changed first value from 0 to 1.25rem */
+}
+
+/* Container: keeps the 1.25rem horizontal padding, while its bottom border spans edge-to-edge */
+/* Container: side padding remains, but top padding is set to 0 */
+.terminal-view-selector-bar--full {
+  display: flex;
+  width: 100%;
+  align-items: flex-end;
+  background-color: var(--color-card);
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 1.25rem 0; /* Shifted top padding to 0 */
+  border-top-left-radius: inherit;  /* Automatically copies parent card's top-left radius */
+  border-top-right-radius: inherit; /* Automatically copies parent card's top-right radius */
+  overflow: hidden;
+}
+
+/* Buttons: top padding is now 1.25rem to contain the upper vertical space */
+.terminal-view-selector-bar--full .terminal-view-btn {
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex-basis: 0%;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 1.25rem 1.25rem 0.5rem; /* Moved the 1.25rem spacing to button top padding */
 }
 
 /* ==========================================================================
