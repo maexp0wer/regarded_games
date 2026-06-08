@@ -55,19 +55,11 @@ export function TradingMask({
   const core = useTenantDeployment();
   const chainId = useTenantChainId();
   const [price, setPrice] = useState('1.00');
-  const [isPricePerFim, setIsPricePerFim] = useState(true);
   const [draggedAskGroupIdx, setDraggedAskGroupIdx] = useState<number | null>(null);
   const [draggedBidGroupIdx, setDraggedBidGroupIdx] = useState<number | null>(null);
 
   // Combined flat array used for all execution math
   const selectedOrders = useMemo(() => [...selectedAsks, ...selectedBids], [selectedAsks, selectedBids]);
-
-  const handlePriceModeSwitch = (mode: 'Per FIM' | 'Total') => {
-    const perFim = mode === 'Per FIM';
-    setIsPricePerFim(perFim);
-    const makerTarget = isBuy ? buyTargetAmount : sellTargetAmount;
-    setPrice(perFim ? '1.00' : makerTarget || '');
-  };
 
   // In taker mode the order queue is the source of truth for direction (the
   // Buy/Sell toggle is locked once orders are queued). `isBuy` only drives maker
@@ -230,13 +222,13 @@ export function TradingMask({
 
   const makerTargetAmount = isBuy ? buyTargetAmount : sellTargetAmount;
 
-  const makerTotalUsdcRaw = useMemo(() => {
+const makerTotalUsdcRaw = useMemo(() => {
     if (!isMaker || !makerTargetAmount || !price) return 0n;
     try {
-      const total = isPricePerFim ? Number(makerTargetAmount) * Number(price) : Number(price);
+      const total = Number(makerTargetAmount) * Number(price);
       return parseUnits(total.toFixed(6), 6);
     } catch { return 0n; }
-  }, [isMaker, isPricePerFim, makerTargetAmount, price]);
+  }, [isMaker, makerTargetAmount, price]);
 
   // Taker buy fills route price→maker AND fee→Exchange, so the USDC allowance
   // must cover price + fee (rounded up) or the fill reverts. Sell fills spend
@@ -561,7 +553,7 @@ export function TradingMask({
         </div>
         <div className="flex flex-col gap-4 p-4 h-full">
         {/* ── Buy / Sell toggle ── */}
-        <div className="flex rounded-lg overflow-hidden border border-border bg-card2 p-1 gap-1">
+        <div className="flex rounded-lg overflow-hidden border border-border bg-card2 gap-1">
           <button
             disabled={isQueueLocked}
             onClick={() => handleSideSwitch(true)}
@@ -588,11 +580,11 @@ export function TradingMask({
           </button>
         </div>
 
-        {/* ── Amount input with embedded Maker/Taker rail (single side: maker or non-mixed taker) ── */}
+        {/* ── Amount input (single side: maker or non-mixed taker) ── */}
         {(!isMixedQueue || isMaker) && (
           <div>
             <div className={isMaker ? '' : 'flex flex-col min-h-0'}>
-              <div className="bg-bg border border-border rounded-t px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
+              <div className="bg-card2 border border-border rounded-t px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
                 <span className="mask-label text-right">
                   {!isMaker && activeMaxForSlider > 0n
                     ? <>QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(activeMaxForSlider, 18)).toLocaleString()} FIM</span></>
@@ -609,7 +601,7 @@ export function TradingMask({
                     className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners"
                     placeholder={isMaker ? '0.00' : 'MAX'}
                   />
-                  <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex flex-col gap-0 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button className="btn-stepper" onClick={() => handleActiveTargetChange(String(Math.max(0, (parseFloat(activeTarget || '0') + 1))))}>▲</button>
                     <button className="btn-stepper" onClick={() => handleActiveTargetChange(String(Math.max(0, (parseFloat(activeTarget || '0') - 1))))}>▼</button>
                   </div>
@@ -618,14 +610,14 @@ export function TradingMask({
                 <PercentSlider value={sliderPct} onChange={handleSliderChange} disabled={isBusy} />
               </div>
               {!isMaker && (
-                <div data-chrome-scroll-guard className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar rounded-b p-2 border border-t-0 border-border bg-bg max-h-51 xl:max-h-none">
+                <div data-chrome-scroll-guard className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar rounded-b p-2  border border-border border-t-border2 bg-card2 max-h-51 xl:max-h-none">
                   {(hasAsksInQueue ? groupedAskQueue : groupedBidQueue).length === 0 ? (
                     <button
                       onClick={onOpenOrderBook}
                       disabled={!onOpenOrderBook}
-                      className="h-full w-full flex items-center justify-center py-4 rounded-lg transition-colors hover:bg-card2/60 disabled:pointer-events-none"
+                      className="h-full w-full flex items-center text-text2 justify-center py-4 rounded-lg transition-colors hover:bg-card3 hover:text-text disabled:pointer-events-none"
                     >
-                      <p className="section-label">Select orders</p>
+                      <p className="font-mono text-[11px] uppercase">Select orders</p>
                     </button>
                   ) : (
                     (hasAsksInQueue ? groupedAskQueue : groupedBidQueue).map((group, groupIdx) => {
@@ -653,40 +645,24 @@ export function TradingMask({
           </div>
         )}
 
-        {/* ── Maker price input with embedded Per FIM / Total rail ── */}
+        {/* ── Maker price input ── */}
         {isMaker && (
-          <div>
-            <div className="input-embedded-rail">
-              <button
-                onClick={() => handlePriceModeSwitch('Per FIM')}
-                className={`btn-input-switch ${isPricePerFim ? 'active' : ''}`}
-              >
-                Per FIM
-              </button>
-              <button
-                onClick={() => handlePriceModeSwitch('Total')}
-                className={`btn-input-switch ${!isPricePerFim ? 'active' : ''}`}
-              >
-                Total
-              </button>
-            </div>
-            <div className="bg-bg border border-border rounded-b px-3 pt-2 pb-3 flex flex-col gap-1">
-              <span className="mask-label">{isPricePerFim ? 'Price per FIM' : 'Total Order'}</span>
-              <div className="group flex items-center gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  value={price}
-                  onChange={(e) => handlePriceChange(e.target.value)}
-                  className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners"
-                  placeholder="0.00"
-                />
-                <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button className="btn-stepper" onClick={() => handlePriceChange(String(Math.max(0, parseFloat((parseFloat(price || '0') + (isPricePerFim ? 0.01 : 1)).toFixed(6)))))}>▲</button>
-                  <button className="btn-stepper" onClick={() => handlePriceChange(String(Math.max(0, parseFloat((parseFloat(price || '0') - (isPricePerFim ? 0.01 : 1)).toFixed(6)))))}>▼</button>
-                </div>
-                <span className="text-input font-mono font-bold text-text2 shrink-0">USDC</span>
+          <div className="bg-card2 border border-border rounded px-3 pt-3 pb-3 flex flex-col gap-1">
+            <span className="mask-label">Price per FIM</span>
+            <div className="group flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                value={price}
+                onChange={(e) => handlePriceChange(e.target.value)}
+                className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners"
+                placeholder="0.00"
+              />
+              <div className="flex flex-col shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button className="btn-stepper" onClick={() => handlePriceChange(String(Math.max(0, parseFloat((parseFloat(price || '0') + 0.01).toFixed(6)))))}>▲</button>
+                <button className="btn-stepper" onClick={() => handlePriceChange(String(Math.max(0, parseFloat((parseFloat(price || '0') - 0.01).toFixed(6)))))}>▼</button>
               </div>
+              <span className="text-input font-mono font-bold text-text2 shrink-0">USDC</span>
             </div>
           </div>
         )}
@@ -697,7 +673,7 @@ export function TradingMask({
             <div className="grid grid-cols-2 grid-rows-[minmax(0,1fr)] flex-1 min-h-0 gap-3">
               {/* Buy leg */}
               <div className="flex flex-col min-h-0">
-                <div className="bg-bg border border-border rounded-t px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
+                <div className="bg-card2 border border-border rounded-t px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
                   <span className="mask-label text-right">QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(maxAskQueueFim, 18)).toLocaleString()} FIM</span></span>
                   <div className="group flex items-center gap-2">
                     <input
@@ -716,7 +692,7 @@ export function TradingMask({
                   </div>
                   <PercentSlider value={buySliderPct} onChange={handleBuySliderChange} disabled={isBusy} />
                 </div>
-                <div data-chrome-scroll-guard className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar rounded-b p-2 border border-t-0 border-border bg-bg max-h-51 xl:max-h-none">
+                <div data-chrome-scroll-guard className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar rounded-b p-2 border border-border border-t-border2 bg-card2 max-h-51 xl:max-h-none">
                   {groupedAskQueue.map((group, groupIdx) => {
                     const filledBefore = groupedAskQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
                     return (
@@ -736,7 +712,7 @@ export function TradingMask({
 
               {/* Sell leg */}
               <div className="flex flex-col min-h-0">
-                <div className="bg-bg border border-border rounded-t px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
+                <div className="bg-card2 border border-border rounded-t px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
                   <span className="mask-label text-right">QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(maxBidQueueFim, 18)).toLocaleString()} FIM</span></span>
                   <div className="group flex items-center gap-2">
                     <input
@@ -755,7 +731,7 @@ export function TradingMask({
                   </div>
                   <PercentSlider value={sellSliderPct} onChange={handleSellSliderChange} disabled={isBusy} />
                 </div>
-                <div data-chrome-scroll-guard className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar rounded-b p-2 border border-t-0 border-border bg-bg max-h-51 xl:max-h-none">
+                <div data-chrome-scroll-guard className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar rounded-b p-2 border border-border border-t-border2 bg-card2 max-h-51 xl:max-h-none">
                   {groupedBidQueue.map((group, groupIdx) => {
                     const filledBefore = groupedBidQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
                     return (
@@ -885,7 +861,7 @@ export function TradingMask({
               : `btn-terminal-action ${directionIsBuy ? 'action-buy' : 'action-sell'} gap-2`}
           >
             {isBusy && <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}
-            <span>{isMixedQueue ? 'Execute Mixed Trade' : directionIsBuy ? 'Buy FIM' : 'Sell FIM'}</span>
+            <span>{isMixedQueue ? 'Shuffle' : directionIsBuy ? 'Buy FIM' : 'Sell FIM'}</span>
           </button>
         </div>
 

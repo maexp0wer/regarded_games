@@ -62,14 +62,13 @@ export const PercentileCircle: React.FC<PercentileCircleProps> = ({
       
       {/* 2. TEXT AND SUBTEXT BLOCK */}
       {showText && (
-        <div className="flex flex-col justify-center leading-none -translate-y-0.5">
-          {/* ^ leading-none strips default vertical padding, -translate-y-[2px] nudges it up optically */}
+        <div className={`flex flex-col justify-center leading-none ${(size === 'lg' || size === 'xl') ? '-translate-y-[2px]' : ''}`}>
+          {/* ^ Only applies the upward offset for larger, two-line text layouts */}
           <span className={`font-mono font-black whitespace-nowrap leading-none ${s.font} ${isCapitalist ? 'text-gold' : 'text-purple'}`}>
             {Math.round(percentage)}%
           </span>
           {(size === 'lg' || size === 'xl') && (
             <span className={`text-[11px] font-semibold uppercase tracking-wider leading-none mt-1.5 ${isCapitalist ? 'text-gold/80' : 'text-purple/80'}`}>
-              {/* ^ leading-none and explicit mt-1.5 margin gives you exact spacing control */}
               {isCapitalist ? 'Capitalist' : 'Proletarian'}
             </span>
           )}

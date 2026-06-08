@@ -340,7 +340,7 @@ export function SeasonBand({ seasonAddress, seasonName, className = '' }: Season
               {winningSide !== 'none' ? (
                 <span>
                   <span className="gini-label">
-                    {isPayout ? (progressPercent >= 100 ? 'Victory:' : 'Partial Victory:') : 'Leading:'}
+                    {isPayout ? (progressPercent >= 100 ? 'Victory:' : 'Partial Victory:') : 'Leader:'}
                   </span>{' '}
                   <span className={`font-bold ${winningSide === 'soc' ? 'text-purple' : 'text-gold'}`}>
                     {winningSide === 'soc' ? 'Proletariat' : 'Bourgeoisie'} ({progressPercent.toFixed(1)}%)
