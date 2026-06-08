@@ -686,17 +686,17 @@ html, body {
   color: var(--color-text);
 
   /* The indicator bar lights up precisely over the matching track segment */
-  border-bottom-color: var(--color-text);
+  border-bottom-color: var(--color-text2);
 
-  /* Adds a soft, high-fidelity neon color emission underneath the button text */
+  /* Adds a soft, high-fidelity neon color emission underneath the button text 
   background: linear-gradient(
     to top,
-    color-mix(in srgb, var(--color-purple) 8%, transparent) 0%,
+    color-mix(in srgb, var(--color-text2) 5%, transparent) 0%,
     transparent 60%
-  );
+  );*/
 
   /* Clean high-contrast sharpening text glow */
-  text-shadow: 0 0 8px color-mix(in srgb, var(--color-purple) 30%, transparent);
+  /*text-shadow: 0 0 8px color-mix(in srgb, var(--color-text) 30%, transparent);*/
 }
 
 /* Chat-panel compact variant — replaces the terminal-pane-header */
