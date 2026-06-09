@@ -238,29 +238,29 @@ export function StakeMask() {
       </div>
 
       {/* RIGHT: Interactive Execution Panel */}
-      <div className="terminal-pane p-0 overflow-hidden self-start">
+      <div className="rounded-md bg-card flex flex-col self-start w-full min-h-0">
 
-        {/* Stake / Unstake toggle */}
-        <div className="terminal-view-selector-bar">
+        {/* Stake / Unstake Selector Bar */}
+        <div className="terminal-view-selector-bar--full">
           <button
             disabled={isBusy}
             onClick={() => { setMode('stake'); setAmount(""); }}
-            className={`terminal-view-btn flex-1 text-center uppercase tracking-wider font-mono text-xs disabled:opacity-50 ${isStakeMode ? 'active' : ''}`}
+            className={`terminal-view-btn${isStakeMode ? ' active' : ''}`}
           >
             Stake
           </button>
           <button
             disabled={isBusy}
             onClick={() => { setMode('unstake'); setAmount(""); }}
-            className={`terminal-view-btn flex-1 text-center uppercase tracking-wider font-mono text-xs disabled:opacity-50 ${!isStakeMode ? 'active' : ''}`}
+            className={`terminal-view-btn${!isStakeMode ? ' active' : ''}`}
           >
             Unstake
           </button>
         </div>
 
-        <div className="p-4 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 p-4">
 
-          {/* Amount input + slider */}
+          {/* Amount input + slider (Uses your updated visual component design) */}
           <AmountInput
             label="RGD"
             value={amount}
@@ -271,13 +271,13 @@ export function StakeMask() {
             balance={`${Number(formatUnits(maxForSlider, 18)).toLocaleString()} RGD`}
           />
 
-          {/* Transaction preview */}
-          <div className="border border-border rounded overflow-hidden font-mono text-xs">
-            <div className="flex justify-between p-2.5 border-b border-border bg-card2">
+          {/* Transaction preview details */}
+          <div className="rounded-lg px-3 py-2.5 bg-card border border-border flex flex-col gap-1.5 font-mono text-xs">
+            <div className="flex justify-between font-mono text-[11px]">
               <span className="text-text2">Action:</span>
               <span className="font-bold text-text uppercase">{isStakeMode ? 'Stake' : 'Unstake'} RGD</span>
             </div>
-            <div className="flex justify-between p-2.5 bg-card2">
+            <div className="flex justify-between font-mono text-[11px]">
               <span className="text-text2">Post-state staked:</span>
               <span className="font-bold" style={{ color: 'var(--color-purple)', fontVariantNumeric: 'tabular-nums' }}>
                 {postStakePool.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RGD
@@ -285,13 +285,14 @@ export function StakeMask() {
             </div>
           </div>
 
-          {/* CTA */}
+          {/* CTA with loading state support */}
           <button
             disabled={isButtonDisabled}
             onClick={handleStartFlow}
-            className={`btn-terminal-action ${isStakeMode ? 'action-buy' : 'action-sell'}`}
+            className={`btn-terminal-action ${isStakeMode ? 'action-buy' : 'action-sell'} gap-2`}
           >
-            {ctaLabel}
+            {isBusy && <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+            <span>{ctaLabel}</span>
           </button>
 
         </div>

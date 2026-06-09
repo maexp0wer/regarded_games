@@ -508,7 +508,7 @@ export function OrderBook({
                     padding: 0,
                     alignItems: 'stretch',
                     cursor: 'default',
-                    borderBottom: isClosestToOne ? '1px solid var(--color-border)' : undefined,
+                    borderBottom: isClosestToOne ? '1px solid var(--color-border2)' : undefined,
                   }}
                 >
                   {displayBids && (

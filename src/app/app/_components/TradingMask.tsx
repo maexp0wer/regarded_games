@@ -17,7 +17,7 @@ const ExchangeAbi = ExchangeAbiJson as Abi;
 import { PercentileCircle } from './PercentileCircle';
 import { GroupedOrder, OrderQueueItem } from './OrderQueueItem';
 import { WalletButton } from './WalletButton';
-import PercentSlider from '@/components/PercentSlider';
+import PercentSlider from '@/app/app/_components/PercentSlider';
 import { sliderPctToAmount } from '@/utils/sliderAmount';
 import { TxModal } from './TxModal';
 
@@ -222,7 +222,7 @@ export function TradingMask({
 
   const makerTargetAmount = isBuy ? buyTargetAmount : sellTargetAmount;
 
-const makerTotalUsdcRaw = useMemo(() => {
+  const makerTotalUsdcRaw = useMemo(() => {
     if (!isMaker || !makerTargetAmount || !price) return 0n;
     try {
       const total = Number(makerTargetAmount) * Number(price);
@@ -462,7 +462,7 @@ const makerTotalUsdcRaw = useMemo(() => {
     return (
       <div className="flex flex-col gap-4 h-full">
         {totalFim > 0 && (
-          <div className="terminal-pane bg-card!">
+          <div className="terminal-pane">
             <div className="flex flex-col">
               <div
                 className="font-mono font-extrabold leading-none text-display-trading tabular-nums"
@@ -484,8 +484,8 @@ const makerTotalUsdcRaw = useMemo(() => {
             </div>
           </div>
         )}
-        <div className="card-app text-center border border-border2">
-          <p className="section-label">Season on Hold</p>
+        <div className="terminal-pane h-full text-center">
+          <p className="section-label">Trading is halted during Settlement</p>
         </div>
       </div>
     );
@@ -532,7 +532,7 @@ const makerTotalUsdcRaw = useMemo(() => {
       )}
 
       {/* ── Trading panel card ── */}
-      <div className="rounded-md bg-card flex flex-col flex-1 min-h-0">
+      <div className="rounded-md bg-card border border-border flex flex-col flex-1 min-h-0">
         
         {/* ── Maker/Taker Selector Bar ── */}
         <div className="terminal-view-selector-bar--full">
@@ -583,34 +583,38 @@ const makerTotalUsdcRaw = useMemo(() => {
         {/* ── Amount input (single side: maker or non-mixed taker) ── */}
         {(!isMixedQueue || isMaker) && (
           <div>
-            <div className={isMaker ? '' : 'flex flex-col min-h-0'}>
-              <div className="bg-card2 border border-border rounded-t px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
-                <span className="mask-label text-right">
-                  {!isMaker && activeMaxForSlider > 0n
-                    ? <>QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(activeMaxForSlider, 18)).toLocaleString()} FIM</span></>
-                    : <>WALLET&nbsp;<span className="text-text font-semibold">{walletBalanceDisplay}</span></>
-                  }
-                </span>
-                <div className="group flex items-center gap-2">
+            <div className={isMaker ? '' : 'flex flex-col min-h-0 gap-5'}>
+              <div className="pt-5 flex flex-col gap-1 shrink-0">
+                <div className="flex justify-between items-center w-full">
+                  <span className="mask-label text-left pl-2">
+                    {!isMaker && activeMaxForSlider > 0n
+                      ? <>QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(activeMaxForSlider, 18)).toLocaleString()} FIM</span></>
+                      : <>WALLET&nbsp;<span className="text-text font-semibold">{walletBalanceDisplay}</span></>
+                    }
+                  </span>
+                  <span className="mask-label text-right pr-9">SIZE</span>
+                </div>
+                <div className="group flex items-center gap-2 bg-card3 border border-border2 rounded p-2">
+                  <span className="text-lg font-mono font-bold text-text2 shrink-0">{isMaker && isBuy ? 'USDC' : 'FIM'}</span>
                   <input
                     type="number"
                     min="0"
                     max={activeMaxForSlider > 0n ? formatUnits(activeMaxForSlider, activeMaxDecimals) : undefined}
                     value={activeTarget}
                     onChange={(e) => handleActiveTargetChange(e.target.value)}
-                    className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners"
+                    className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners text-right"
                     placeholder={isMaker ? '0.00' : 'MAX'}
                   />
                   <div className="flex flex-col gap-0 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button className="btn-stepper" onClick={() => handleActiveTargetChange(String(Math.max(0, (parseFloat(activeTarget || '0') + 1))))}>▲</button>
                     <button className="btn-stepper" onClick={() => handleActiveTargetChange(String(Math.max(0, (parseFloat(activeTarget || '0') - 1))))}>▼</button>
                   </div>
-                  <span className="text-input font-mono font-bold text-text2 shrink-0">{isMaker && isBuy ? 'USDC' : 'FIM'}</span>
                 </div>
                 <PercentSlider value={sliderPct} onChange={handleSliderChange} disabled={isBusy} />
               </div>
               {!isMaker && (
-                <div data-chrome-scroll-guard className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar rounded-b p-2  border border-border border-t-border2 bg-card2 max-h-51 xl:max-h-none">
+                
+                <div data-chrome-scroll-guard className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar rounded-md p-2  border border-border bg-card2 max-h-51 xl:max-h-none">
                   {(hasAsksInQueue ? groupedAskQueue : groupedBidQueue).length === 0 ? (
                     <button
                       onClick={onOpenOrderBook}
@@ -647,22 +651,24 @@ const makerTotalUsdcRaw = useMemo(() => {
 
         {/* ── Maker price input ── */}
         {isMaker && (
-          <div className="bg-card2 border border-border rounded px-3 pt-3 pb-3 flex flex-col gap-1">
-            <span className="mask-label">Price per FIM</span>
-            <div className="group flex items-center gap-2">
+          <div className="bg-card flex flex-col gap-1">
+            <div className="flex justify-end w-full">
+              <span className="mask-label pr-8">PRICE</span>
+            </div>
+            <div className="group flex items-center gap-1 bg-card3 border border-border2 rounded p-2">
+              <span className="text-lg font-mono font-bold text-text2 shrink-0">USDC</span>
               <input
                 type="number"
                 min="0"
                 value={price}
                 onChange={(e) => handlePriceChange(e.target.value)}
-                className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners"
+                className="flex-1 min-w-0  text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners text-right"
                 placeholder="0.00"
               />
               <div className="flex flex-col shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button className="btn-stepper" onClick={() => handlePriceChange(String(Math.max(0, parseFloat((parseFloat(price || '0') + 0.01).toFixed(6)))))}>▲</button>
                 <button className="btn-stepper" onClick={() => handlePriceChange(String(Math.max(0, parseFloat((parseFloat(price || '0') - 0.01).toFixed(6)))))}>▼</button>
               </div>
-              <span className="text-input font-mono font-bold text-text2 shrink-0">USDC</span>
             </div>
           </div>
         )}
@@ -672,27 +678,30 @@ const makerTotalUsdcRaw = useMemo(() => {
             /* Mixed: buy and sell legs side by side — input+queue fused as one component per leg. */
             <div className="grid grid-cols-2 grid-rows-[minmax(0,1fr)] flex-1 min-h-0 gap-3">
               {/* Buy leg */}
-              <div className="flex flex-col min-h-0">
-                <div className="bg-card2 border border-border rounded-t px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
-                  <span className="mask-label text-right">QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(maxAskQueueFim, 18)).toLocaleString()} FIM</span></span>
-                  <div className="group flex items-center gap-2">
+              <div className="flex flex-col min-h-0 gap-5">
+                <div className="pt-5 flex flex-col gap-1 shrink-0">
+                  <div className="flex justify-between items-center w-full">
+                    <span className="mask-label text-left pl-2">QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(maxAskQueueFim, 18)).toLocaleString()} FIM</span></span>
+                    <span className="mask-label text-right pr-9">SIZE</span>
+                  </div>
+                  <div className="group flex items-center gap-2 bg-card3 border border-border2 rounded p-2">
+                    <span className="text-lg font-mono font-bold text-text2 shrink-0">FIM</span>
                     <input
                       type="number" min="0"
                       max={maxAskQueueFim > 0n ? formatUnits(maxAskQueueFim, 18) : undefined}
                       value={buyTargetAmount}
                       onChange={(e) => handleBuyTargetChange(e.target.value)}
-                      className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners"
+                      className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners text-right"
                       placeholder="MAX"
                     />
-                    <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex flex-col gap-0 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button className="btn-stepper" onClick={() => handleBuyTargetChange(String(Math.max(0, parseFloat(buyTargetAmount || '0') + 1)))}>▲</button>
                       <button className="btn-stepper" onClick={() => handleBuyTargetChange(String(Math.max(0, parseFloat(buyTargetAmount || '0') - 1)))}>▼</button>
                     </div>
-                    <span className="text-input font-mono font-bold text-text2 shrink-0">FIM</span>
                   </div>
                   <PercentSlider value={buySliderPct} onChange={handleBuySliderChange} disabled={isBusy} />
                 </div>
-                <div data-chrome-scroll-guard className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar rounded-b p-2 border border-border border-t-border2 bg-card2 max-h-51 xl:max-h-none">
+                <div data-chrome-scroll-guard className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar rounded-md p-2 border border-border bg-card2 max-h-51 xl:max-h-none">
                   {groupedAskQueue.map((group, groupIdx) => {
                     const filledBefore = groupedAskQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
                     return (
@@ -711,27 +720,30 @@ const makerTotalUsdcRaw = useMemo(() => {
               </div>
 
               {/* Sell leg */}
-              <div className="flex flex-col min-h-0">
-                <div className="bg-card2 border border-border rounded-t px-3 pt-3 pb-3 flex flex-col gap-2 shrink-0">
-                  <span className="mask-label text-right">QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(maxBidQueueFim, 18)).toLocaleString()} FIM</span></span>
-                  <div className="group flex items-center gap-2">
+              <div className="flex flex-col min-h-0 gap-5">
+                <div className="pt-5 flex flex-col gap-1 shrink-0">
+                  <div className="flex justify-between items-center w-full">
+                    <span className="mask-label text-left pl-2">QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(maxBidQueueFim, 18)).toLocaleString()} FIM</span></span>
+                    <span className="mask-label text-right pr-9">SIZE</span>
+                  </div>
+                  <div className="group flex items-center gap-2 bg-card3 border border-border2 rounded p-2">
+                    <span className="text-lg font-mono font-bold text-text2 shrink-0">FIM</span>
                     <input
                       type="number" min="0"
                       max={maxBidQueueFim > 0n ? formatUnits(maxBidQueueFim, 18) : undefined}
                       value={sellTargetAmount}
                       onChange={(e) => handleSellTargetChange(e.target.value)}
-                      className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners"
+                      className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners text-right"
                       placeholder="MAX"
                     />
-                    <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex flex-col gap-0 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button className="btn-stepper" onClick={() => handleSellTargetChange(String(Math.max(0, parseFloat(sellTargetAmount || '0') + 1)))}>▲</button>
                       <button className="btn-stepper" onClick={() => handleSellTargetChange(String(Math.max(0, parseFloat(sellTargetAmount || '0') - 1)))}>▼</button>
                     </div>
-                    <span className="text-input font-mono font-bold text-text2 shrink-0">FIM</span>
                   </div>
                   <PercentSlider value={sellSliderPct} onChange={handleSellSliderChange} disabled={isBusy} />
                 </div>
-                <div data-chrome-scroll-guard className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar rounded-b p-2 border border-border border-t-border2 bg-card2 max-h-51 xl:max-h-none">
+                <div data-chrome-scroll-guard className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar rounded-md p-2 border border-border bg-card2 max-h-51 xl:max-h-none">
                   {groupedBidQueue.map((group, groupIdx) => {
                     const filledBefore = groupedBidQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
                     return (
@@ -758,7 +770,7 @@ const makerTotalUsdcRaw = useMemo(() => {
               {/* Mixed: buy/sell breakdown cards side by side; otherwise stacked. */}
               <div className={isMixedQueue ? 'grid grid-cols-2 gap-2' : 'contents'}>
               {legs.buyCostRaw > 0n && (
-                <div className="rounded-lg px-3 py-2.5 flex flex-col gap-1 bg-card border border-border">
+                <div className={`rounded-lg px-3 py-2.5 flex flex-col gap-1 bg-card border border-border ${isMixedQueue ? 'col-start-1' : ''}`}>
                   <div className="flex justify-between font-mono text-xs font-bold tabular-nums pb-1 border-b border-border" style={{ color: 'var(--color-green)' }}>
                     <span>Buy</span>
                     <span>{Number(formatUnits(legsFim.buyFimRaw, 18)).toLocaleString()} FIM</span>
@@ -780,7 +792,7 @@ const makerTotalUsdcRaw = useMemo(() => {
                 </div>
               )}
               {legs.sellProceedsRaw > 0n && (
-                <div className="rounded-lg px-3 py-2.5 flex flex-col gap-1 bg-card border border-border">
+                <div className={`rounded-lg px-3 py-2.5 flex flex-col gap-1 bg-card border border-border ${isMixedQueue ? 'col-start-2' : ''}`}>
                   <div className="flex justify-between font-mono text-xs font-bold tabular-nums pb-1 border-b border-border" style={{ color: 'var(--color-red)' }}>
                     <span>Sell</span>
                     <span>{Number(formatUnits(legsFim.sellFimRaw, 18)).toLocaleString()} FIM</span>

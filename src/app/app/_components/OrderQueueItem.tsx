@@ -46,7 +46,7 @@ export function OrderQueueItem({
       onDragStart={() => onDragStart(groupIdx)}
       onDragOver={(e) => onDragOver(e, groupIdx)}
       onDragEnd={onDragEnd}
-      className={`grid grid-cols-[auto_2fr_2fr_2fr_auto] items-center gap-3 p-[0.6rem] bg-card border border-border rounded-sm mb-[0.4rem] cursor-grab active:cursor-grabbing
+      className={`grid grid-cols-[auto_2fr_2fr_2fr_auto] items-center gap-3 p-[0.6rem] bg-card3 border border-border2 rounded-sm mb-[0.4rem] cursor-grab active:cursor-grabbing
         ${draggedGroupIdx === groupIdx ? 'opacity-40 ring-1 ring-primary/20' : ''}
         ${localFill === 0 ? 'grayscale opacity-40' : ''}
       `}

@@ -6,7 +6,7 @@ import { parseUnits, formatUnits, erc20Abi, isAddress } from 'viem';
 import { useQuery } from '@tanstack/react-query';
 
 import { WalletButton } from './WalletButton';
-import PercentSlider from '@/components/PercentSlider';
+import PercentSlider from '@/app/app/_components/PercentSlider';
 import { sliderPctToAmount } from '@/utils/sliderAmount';
 
 import UniswapV2RouterAbi from '@/deployments/abis/UniswapV2Router.json';

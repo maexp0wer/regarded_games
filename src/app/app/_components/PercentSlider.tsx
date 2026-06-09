@@ -17,7 +17,7 @@ export default function PercentSlider({ value, onChange, disabled = false }: Per
   };
 
   return (
-    <div className={`flex items-center gap-3 select-none w-full ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
+    <div className={`flex items-center gap-3 py-1 select-none w-full ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
       
       {/* ── Slider wrapper with absolute layers ── */}
       <div className="relative flex-1 h-5 flex items-center">
@@ -26,7 +26,7 @@ export default function PercentSlider({ value, onChange, disabled = false }: Per
         <div
           className="absolute inset-x-0 h-1.5 bg-card border border-border rounded-[3px] pointer-events-none z-0"
           style={{
-            background: `linear-gradient(to right, var(--color-purple) ${clamped}%, var(--color-card) ${clamped}%)`
+            background: `linear-gradient(to right, var(--color-purple) ${clamped}%, var(--color-border2) ${clamped}%)`
           }}
         />
 
@@ -51,7 +51,7 @@ export default function PercentSlider({ value, onChange, disabled = false }: Per
       </div>
 
       {/* ── Compact percentage numeric input field ── */}
-      <div className="flex items-center gap-1 shrink-0 bg-card border border-border rounded-[3px] px-2 py-0.5 w-16">
+      <div className="flex items-center gap-1 shrink-0 bg-card3 border border-border2 rounded-[3px] px-2 py-0.5 w-16">
         <input
           type="number"
           min={0}
