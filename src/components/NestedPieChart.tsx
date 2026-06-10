@@ -1,8 +1,10 @@
+// src/components/NestedPieChart.tsx
 "use client";
 
 import React, { useState, useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTheme } from '@/context/ThemeContext';
+import RulebookCard from '@/components/RulebookCard'; 
 
 interface Tier3Child {
   name: string;
@@ -34,9 +36,6 @@ interface Group {
   items: Array<ChartDataItem & { globalIndex: number }>;
 }
 
-// Resolves a CSS variable string (e.g. "var(--color-gold)") to a concrete color
-// by temporarily injecting a hidden element. Required because ECharts canvas
-// rendering cannot evaluate CSS variables natively.
 function resolveColor(cssValue: string): string {
   if (typeof window === 'undefined') return '#888888';
   if (!cssValue.startsWith('var(')) return cssValue;
@@ -46,6 +45,18 @@ function resolveColor(cssValue: string): string {
   const resolved = getComputedStyle(el).backgroundColor;
   document.body.removeChild(el);
   return resolved || '#888888';
+}
+
+function getEChartsGradient(cssVar: string) {
+  if (typeof window === 'undefined') return '#888888';
+  return resolveColor(cssVar);
+}
+
+function getHoverColor(cssVar: string): string {
+  if (typeof cssVar === 'string' && cssVar.startsWith('var(')) {
+    return cssVar.replace(/\)$/, '-hovered)');
+  }
+  return cssVar;
 }
 
 const NestedPieChart: React.FC<NestedPieChartProps> = ({ data }) => {
@@ -76,6 +87,24 @@ const NestedPieChart: React.FC<NestedPieChartProps> = ({ data }) => {
     [groups]
   );
 
+  const borderColor = useMemo(() => {
+    const c1 = resolveColor('var(--color-border)');
+    if (c1 !== '#888888') return c1;
+    const c2 = resolveColor('var(--border)');
+    if (c2 !== '#888888') return c2;
+    return '#3f3f46';
+  }, []);
+
+  const border2Color = useMemo(() => {
+    const c1 = resolveColor('var(--color-border-2)');
+    if (c1 !== '#888888') return c1;
+    const c2 = resolveColor('var(--border-2)');
+    if (c2 !== '#888888') return c2;
+    const c3 = resolveColor('var(--color-border2)');
+    if (c3 !== '#888888') return c3;
+    return '#27272a';
+  }, []);
+
   const activeDisplay = useMemo(() => {
     if (hoveredIndex !== null) {
       const item = data[hoveredIndex];
@@ -89,43 +118,46 @@ const NestedPieChart: React.FC<NestedPieChartProps> = ({ data }) => {
     }
     if (hoveredParent !== null) {
       const pData = data.find(d => d.parentName === hoveredParent);
+      const parentIndex = parentData.findIndex(p => p.name === hoveredParent);
+      const resolvedParentColor = parentIndex === 0 ? borderColor : border2Color;
+
       return {
         name: hoveredParent.trim() || (pData?.parentPercentage === 75 ? 'Community Controlled' : 'Team & Operations'),
         explanation: pData?.parentExplanation,
-        color: pData?.parentColor,
+        color: resolvedParentColor,
         percentage: pData?.parentPercentage,
         subChildren: [] as Tier3Child[],
       };
     }
     return null;
-  }, [hoveredIndex, hoveredParent, data]);
+  }, [hoveredIndex, hoveredParent, data, parentData, borderColor, border2Color]);
 
-  // darkMode in deps so colors re-resolve on theme switch
   const option = useMemo(() => {
     if (typeof window === 'undefined') return {};
 
     const cardColor = resolveColor('var(--color-card)');
     const textColor = resolveColor('var(--color-text)');
-    const isAnyHovered = hoveredIndex !== null || hoveredParent !== null;
+    const goldColor = resolveColor('var(--color-gold)');
 
-    const tier1Items = parentData.map(d => {
-      const isFocused = !isAnyHovered
-        || (hoveredIndex !== null && data[hoveredIndex].parentName === d.name)
-        || (hoveredIndex === null && hoveredParent === d.name);
+    const tier1Items = parentData.map((d, index) => {
+      const sliceColor = index === 0 ? borderColor : border2Color;
+
       return {
         name: d.name,
         value: d.value,
         itemStyle: {
-          color: resolveColor(d.color),
-          opacity: isAnyHovered && !isFocused ? 0.15 : 1,
+          color: sliceColor,
         },
+        emphasis: {
+          scale: false,
+          itemStyle: {
+            color: sliceColor,
+          }
+        }
       };
     });
 
-    const tier2Items = data.map((d, index) => {
-      const isFocused = !isAnyHovered
-        || hoveredIndex === index
-        || (hoveredIndex === null && hoveredParent === d.parentName);
+    const tier2Items = data.map((d) => {
       const words = d.name.split(' ');
       const isLong = d.name.length > 12 && words.length > 1;
       let labelText: string;
@@ -137,16 +169,29 @@ const NestedPieChart: React.FC<NestedPieChartProps> = ({ data }) => {
       } else {
         labelText = `{n|${d.name.toUpperCase()}}\n{p|${d.percentage}%}`;
       }
+
+      const baseColor = getEChartsGradient(d.color);
+      const hoverColor = getEChartsGradient(getHoverColor(d.color));
+
       return {
         name: d.name,
         value: d.percentage,
         label: { formatter: () => labelText },
         itemStyle: {
-          color: resolveColor(d.color),
-          opacity: isAnyHovered && !isFocused ? 0.15 : 1,
+          color: baseColor,
           borderColor: cardColor,
           borderWidth: 6,
+          borderRadius: 8 
         },
+        emphasis: {
+          scale: false,
+          itemStyle: {
+            color: hoverColor,
+            borderColor: cardColor,
+            borderWidth: 6,
+            borderRadius: 8
+          }
+        }
       };
     });
 
@@ -170,7 +215,11 @@ const NestedPieChart: React.FC<NestedPieChartProps> = ({ data }) => {
             },
           },
           labelLine: { show: false },
-          itemStyle: { borderColor: cardColor, borderWidth: 6 },
+          itemStyle: { 
+            borderColor: cardColor, 
+            borderWidth: 6,
+            borderRadius: 4 
+          },
         },
         {
           type: 'pie',
@@ -187,11 +236,52 @@ const NestedPieChart: React.FC<NestedPieChartProps> = ({ data }) => {
             },
           },
           labelLine: { show: false },
+          labelLayout: (params: any) => {
+            const text = params.text || '';
+            if (text.toUpperCase().includes('DAO TREASURY')) {
+              return { dy: 10 };
+            }
+            if (text.toUpperCase().includes('GROWTH')) {
+              return { dx: -3 };
+            }
+            return {};
+          },
         },
+        {
+          type: 'gauge',
+          center: ['50%', '50%'],
+          radius: '96%', 
+          z: 10, 
+          startAngle: 90,
+          endAngle: -270,
+          splitNumber: 12, 
+          axisLine: {
+            show: true,
+            lineStyle: {
+              color: [[1, goldColor]],
+              width: 1,
+              opacity: 0.25
+            }
+          },
+          pointer: { show: false },
+          axisTick: {
+            show: true,
+            lineStyle: { color: cardColor, opacity: 1, width: 1 },
+            length: 5,
+            splitNumber: 3 
+          },
+          splitLine: {
+            show: true,
+            lineStyle: { color: cardColor, opacity: 1, width: 1.5 },
+            length: 12 
+          },
+          axisLabel: { show: false },
+          detail: { show: false },
+          title: { show: false }
+        }
       ],
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, parentData, hoveredIndex, hoveredParent, darkMode]);
+  }, [data, parentData, darkMode, borderColor, border2Color]);
 
   const onEvents = useMemo(() => ({
     mouseover: (params: { seriesIndex: number; name: string }) => {
@@ -211,64 +301,60 @@ const NestedPieChart: React.FC<NestedPieChartProps> = ({ data }) => {
   }), [data]);
 
   return (
-    <div className="flex flex-col gap-4 w-full">
+    <div className="w-full relative py-6">
+      <RulebookCard
+        // All green visual mappings completely replaced with gold/amber configurations
+        themeColor="var(--color-gold)"
+        themeColorRgba="234, 179, 8" 
+        chassisGradient="linear-gradient(135deg, var(--color-bg) 0%, var(--color-card) 100%)"
+        maxWidth="880px" 
+        minHeight="680px"
+        headerTag="System"
+        title="DISTRIBUTION OF POWER" 
+        symbol={<span className="font-sans text-xs">%</span>}
+        footerLeftText="System Mechanics"
+        footerMiddleText='001 / 001'
+        footerRightText="Allocation Map ↗"
+        footerTextColor="rgba(255, 255, 255, 0.65)" 
+        
+        illustrationSlot={
+          <ReactECharts
+            option={option}
+            onEvents={onEvents}
+            style={{ height: '500px', width: '400px' }}
+            notMerge={false}
+            lazyUpdate
+          />
+        }
 
-      {/* 75 / 25 split summary */}
-      <div className="grid grid-cols-2 gap-px bg-border border border-border rounded-xl overflow-hidden">
-        {groups.map((group, gIdx) => {
-          const isCommunity = group.parentPercentage === 75;
-          const isAnyHovered = hoveredIndex !== null || hoveredParent !== null;
-          return (
-            <div
-              key={gIdx}
-              onMouseEnter={() => setHoveredParent(group.parentName)}
-              onMouseLeave={() => setHoveredParent(null)}
-              className="relative bg-card hover:bg-card2 transition-all duration-150 ease-in-out cursor-default p-5 flex flex-col gap-1.5"
-              style={{ opacity: isAnyHovered && hoveredParent !== group.parentName && hoveredIndex === null ? 0.4 : 1 }}
-            >
-              <div
-                className="absolute left-0 top-0 bottom-0 w-1"
-                style={{ backgroundColor: isCommunity ? 'var(--color-gold)' : 'var(--color-text2)' }}
-              />
-              <span className="font-mono text-[10px] font-bold text-text2 uppercase tracking-widest pl-2">
-                {isCommunity ? 'Community Controlled' : 'Team & Operations'}
-              </span>
-              <span
-                className="font-display font-black text-4xl tabular-nums pl-2"
-                style={{ color: isCommunity ? 'var(--color-gold)' : 'var(--color-text)' }}
-              >
-                {group.parentPercentage}%
-              </span>
-              <span className="font-sans text-xs text-text2 pl-2">
-                {isCommunity
-                  ? 'Treasury, Growth & Market Formation'
-                  : 'Operational Reserve & Founding Team'}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+        detailsSlot={
+          <div 
+            className="flex flex-col justify-start flex-grow h-full w-full relative z-10 transition-all duration-300 gap-3"
+            style={{ 
+              borderColor: activeDisplay ? `${activeDisplay.color}50` : 'rgba(234, 179, 8, 0.25)',
+            }}
+            onClick={(e) => e.stopPropagation()} 
+          >
+            {/* Corner Bracket Graphics updating based on theme colors */}
+            {activeDisplay ? (
+              <>
+                <div className="absolute top-0.5 left-0.5 w-2 h-2 border-t border-l pointer-events-none opacity-45 transition-colors duration-300" style={{ borderColor: activeDisplay.color }} />
+                <div className="absolute top-0.5 right-0.5 w-2 h-2 border-t border-r pointer-events-none opacity-45 transition-colors duration-300" style={{ borderColor: activeDisplay.color }} />
+                <div className="absolute bottom-0.5 left-0.5 w-2 h-2 border-b border-l pointer-events-none opacity-45 transition-colors duration-300" style={{ borderColor: activeDisplay.color }} />
+                <div className="absolute bottom-0.5 right-0.5 w-2 h-2 border-b border-r pointer-events-none opacity-45 transition-colors duration-300" style={{ borderColor: activeDisplay.color }} />
+              </>
+            ) : (
+              <>
+                <div className="absolute top-0.5 left-0.5 w-2 h-2 border-t border-l pointer-events-none opacity-45 border-[var(--color-gold)]" />
+                <div className="absolute top-0.5 right-0.5 w-2 h-2 border-t border-r pointer-events-none opacity-45 border-[var(--color-gold)]" />
+                <div className="absolute bottom-0.5 left-0.5 w-2 h-2 border-b border-l pointer-events-none opacity-45 border-[var(--color-gold)]" />
+                <div className="absolute bottom-0.5 right-0.5 w-2 h-2 border-b border-r pointer-events-none opacity-45 border-[var(--color-gold)]" />
+              </>
+            )}
 
-      {/* Main panel */}
-      <div className="flex flex-col w-full bg-card border border-border rounded-xl overflow-hidden shadow-2xl">
-
-        {/* Chart + info panel */}
-        <div className="flex flex-col flex-1 min-w-0 p-5 gap-4">
-          <div className="w-full h-105">
-            <ReactECharts
-              option={option}
-              onEvents={onEvents}
-              style={{ height: '100%', width: '100%' }}
-              notMerge={false}
-              lazyUpdate
-            />
-          </div>
-
-          {/* Info panel */}
-          <div className="rounded-xl border border-border bg-card2 p-4 min-h-18 flex items-start">
-            <div className={`w-full transition-all duration-300 ${activeDisplay ? 'opacity-100 translate-y-0' : 'opacity-60'}`}>
+            <div className="w-full transition-all duration-300 z-10 flex-grow flex flex-col justify-start p-1">
               {activeDisplay ? (
-                <div className="flex flex-col gap-1.5 w-full">
+                <div className="flex flex-col gap-2 w-full">
                   <div className="flex items-baseline justify-between gap-3">
                     <span
                       className="font-display font-black text-xs uppercase tracking-widest"
@@ -285,11 +371,11 @@ const NestedPieChart: React.FC<NestedPieChartProps> = ({ data }) => {
                       </span>
                     )}
                   </div>
-                  <p className="font-sans text-sm text-text2 leading-relaxed">
+                  <p className="font-sans text-xs text-text2 leading-relaxed">
                     {activeDisplay.explanation ?? 'No additional information available.'}
                   </p>
                   {activeDisplay.subChildren && activeDisplay.subChildren.length > 0 && (
-                    <div className="flex flex-col gap-1 mt-1 pt-2 border-t border-border">
+                    <div className="flex flex-col gap-1 mt-1 pt-1.5 border-t border-white/5">
                       {activeDisplay.subChildren.map((sub, sIdx) => (
                         <div key={sIdx} className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1.5">
@@ -297,9 +383,9 @@ const NestedPieChart: React.FC<NestedPieChartProps> = ({ data }) => {
                               className="w-1.5 h-1.5 rounded-full shrink-0"
                               style={{ backgroundColor: sub.color }}
                             />
-                            <span className="font-sans text-[11px] text-text2">{sub.name}</span>
+                            <span className="font-sans text-[10px] text-text2">{sub.name}</span>
                           </div>
-                          <span className="font-mono text-[11px] tabular-nums text-text2">
+                          <span className="font-mono text-[10px] tabular-nums text-text2">
                             {sub.percentage}%
                           </span>
                         </div>
@@ -308,14 +394,42 @@ const NestedPieChart: React.FC<NestedPieChartProps> = ({ data }) => {
                   )}
                 </div>
               ) : (
-                <span className="font-mono text-xs text-text2 uppercase tracking-widest">
-                  Hover any allocation to learn more
-                </span>
+                <div className="flex flex-col gap-4 w-full py-1">
+                  <div className="flex flex-col gap-0.5 w-full text-left">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="font-display font-black text-xs uppercase tracking-widest text-[var(--color-gold)]">
+                        Community Controlled
+                      </span>
+                      <span className="font-mono font-bold text-sm tabular-nums shrink-0 text-[var(--color-gold)]">
+                        75%
+                      </span>
+                    </div>
+                    <p className="font-sans text-[11px] text-text2 leading-relaxed">
+                      DAO Treasury, Ecosystem Incentives & Day-1 Market Stability.
+                    </p>
+                  </div>
+
+                  <div className="border-t border-white/5 w-full" />
+
+                  <div className="flex flex-col gap-0.5 w-full text-left">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="font-display font-black text-xs uppercase tracking-widest text-[var(--color-gold)]">
+                        Team & Operations
+                      </span>
+                      <span className="font-mono font-bold text-sm tabular-nums shrink-0 text-[var(--color-gold)]">
+                        25%
+                      </span>
+                    </div>
+                    <p className="font-sans text-[11px] text-text2 leading-relaxed">
+                      Operational Reserve LLC & Founding Team long-term alignment.
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           </div>
-        </div>
-      </div>
+        }
+      />
     </div>
   );
 };

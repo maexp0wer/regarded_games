@@ -235,10 +235,10 @@ export function TradeFlows({
         const chordColor = groupColor(netFlow >= 0 ? i : j);
 
         root.append('path')
-          .attr('d', ribbon({
-            source: { startAngle: src.start, endAngle: Math.max(src.start + 0.001, src.end), radius: RR },
-            target: { startAngle: tgt.start, endAngle: Math.max(tgt.start + 0.001, tgt.end), radius: RR },
-          }) as unknown as string)
+        .attr('d', ribbon({
+          source: { startAngle: src.start, endAngle: Math.max(src.start + 0.001, src.end), radius: Math.max(0, RR) },
+          target: { startAngle: tgt.start, endAngle: Math.max(tgt.start + 0.001, tgt.end), radius: Math.max(0, RR) },
+        }) as unknown as string)
           .attr('fill', chordColor)
           .attr('fill-opacity', 0.4)
           .attr('stroke', chordColor)

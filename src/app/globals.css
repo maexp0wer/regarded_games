@@ -38,7 +38,9 @@
   --color-red-hover: #B71C1C;    /* Maroon Danger state */
 
   --color-magenta: #B8004F;  /* Deep Crimson-Berry Rose */
+  --color-magenta-hover: #B8004F;
   --color-orange: #D35400;
+  --color-orange-hover: #D35400;
 
   /* ── TYPOGRAPHY ─────────────────────────────────────────────── */
   --font-display: "Exo 2", system-ui, sans-serif;
@@ -392,6 +394,178 @@ html, body {
 /* ================================================================
    DOCS / PROSE TYPOGRAPHY
    ================================================================ */
+
+.btn-primary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.75rem;
+  font-family: var(--font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.875rem;
+  cursor: pointer;
+  
+  /* Dark background-colored text with a light letterpress shadow to look engraved */
+  color: var(--color-bg, #070709);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+  
+  /* Solid metallic gold gradient matching the card chassis */
+  background: linear-gradient(135deg, #c5a059 0%, #f3e5ab 50%, #977636 100%);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 0.5rem;
+  
+  /* Warm golden ambient glow shadow */
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-gold, #977636) 35%, transparent);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 1. Inner Engraved Border (Drawn using your dark background color) */
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 2px; /* Tight 2px inset from the outer border */
+  border: 1px solid color-mix(in srgb, var(--color-bg, #070709) 25%, transparent);
+  border-radius: 0.4rem;
+  pointer-events: none;
+  transition: border-color 0.2s ease;
+}
+
+/* 2. Corner Engraved L-Brackets (Drawn using your dark background color) */
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0; /* Aligned precisely with the literal boundary of the button */
+  border-radius: 0.5rem;
+  pointer-events: none;
+  
+  /* Blends your custom CSS bg color with transparency */
+  --bracket-color: color-mix(in srgb, var(--color-bg, #070709) 45%, transparent);
+  
+  background: 
+    /* Top-Left Bracket */
+    linear-gradient(to right, var(--bracket-color) 8px, transparent 8px) 0 0 / 100% 2px no-repeat,
+    linear-gradient(to bottom, var(--bracket-color) 8px, transparent 8px) 0 0 / 2px 100% no-repeat,
+    /* Top-Right Bracket */
+    linear-gradient(to left, var(--bracket-color) 8px, transparent 8px) 100% 0 / 100% 2px no-repeat,
+    linear-gradient(to bottom, var(--bracket-color) 8px, transparent 8px) 100% 0 / 2px 100% no-repeat,
+    /* Bottom-Left Bracket */
+    linear-gradient(to right, var(--bracket-color) 8px, transparent 8px) 0 100% / 100% 2px no-repeat,
+    linear-gradient(to top, var(--bracket-color) 8px, transparent 8px) 0 100% / 2px 100% no-repeat,
+    /* Bottom-Right Bracket */
+    linear-gradient(to left, var(--bracket-color) 8px, transparent 8px) 100% 100% / 100% 2px no-repeat,
+    linear-gradient(to top, var(--bracket-color) 8px, transparent 8px) 100% 100% / 2px 100% no-repeat;
+}
+
+/* Hover States */
+.btn-primary:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.12) saturate(1.05); /* Enhances gold metallic luster */
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--color-gold-hover, #dfc482) 45%, transparent);
+}
+
+.btn-primary:hover::before {
+  /* Darkens the engraved line on hover for a physically deeper etched look */
+  border-color: color-mix(in srgb, var(--color-bg, #070709) 40%, transparent); 
+}
+
+/* Active Pressed States */
+.btn-primary:active {
+  transform: translateY(1px);
+  filter: brightness(0.95);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-gold, #977636) 25%, transparent);
+}
+
+/* Disabled State */
+
+.btn-secondary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.75rem;
+  font-family: var(--font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.875rem;
+  cursor: pointer;
+  
+  /* Crisp white text with a solid shadow to stand out against the dark body */
+  color: var(--color-white, #ffffff);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  
+  /* Solid card background color */
+  background: var(--color-card, #121216);
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+  border-radius: 0.5rem;
+  
+  /* Deep, heavy shadow to ground the dark button physically */
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 1. Inner Sheen Frame (Drawn in a subtle white highlight) */
+.btn-secondary::before {
+  content: '';
+  position: absolute;
+  inset: 2px; /* Tight 2px inset from the actual outer edge */
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.4rem; /* Rounded proportionally to match the outer curve */
+  pointer-events: none;
+  transition: border-color 0.2s ease;
+}
+
+/* 2. Corner L-Brackets (Positioned exactly on the actual outer border edge) */
+.btn-secondary::after {
+  content: '';
+  position: absolute;
+  inset: 0; /* Aligned precisely with the literal boundary of the button */
+  border-radius: 0.5rem; /* Matches the button's outer border radius */
+  pointer-events: none;
+  background: 
+    /* Top-Left Bracket */
+    linear-gradient(to right, rgba(255, 255, 255, 0.25) 8px, transparent 8px) 0 0 / 100% 2px no-repeat,
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.25) 8px, transparent 8px) 0 0 / 2px 100% no-repeat,
+    /* Top-Right Bracket */
+    linear-gradient(to left, rgba(255, 255, 255, 0.25) 8px, transparent 8px) 100% 0 / 100% 2px no-repeat,
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.25) 8px, transparent 8px) 100% 0 / 2px 100% no-repeat,
+    /* Bottom-Left Bracket */
+    linear-gradient(to right, rgba(255, 255, 255, 0.25) 8px, transparent 8px) 0 100% / 100% 2px no-repeat,
+    linear-gradient(to top, rgba(255, 255, 255, 0.25) 8px, transparent 8px) 0 100% / 2px 100% no-repeat,
+    /* Bottom-Right Bracket */
+    linear-gradient(to left, rgba(255, 255, 255, 0.25) 8px, transparent 8px) 100% 100% / 100% 2px no-repeat,
+    linear-gradient(to top, rgba(255, 255, 255, 0.25) 8px, transparent 8px) 100% 100% / 2px 100% no-repeat;
+}
+
+/* Hover States */
+.btn-secondary:hover {
+  transform: translateY(-2px);
+  background: var(--color-card2, #181820); /* Slightly lighter obsidian shade on hover */
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65);
+}
+
+.btn-secondary:hover::before {
+  border-color: rgba(255, 255, 255, 0.25); /* Brightens inner sheen border on hover */
+}
+
+/* Active Pressed States */
+.btn-secondary:active {
+  transform: translateY(1px);
+  background: var(--color-card3, #0c0c0f); /* Darker shade on active click */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Disabled State */
+.btn-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
 
 
 .btn-game-primary {
