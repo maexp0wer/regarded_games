@@ -21,6 +21,7 @@ interface AuctionChartProps {
   points: AuctionPoint[];
   timeframe: Timeframe;
   onTimeframeChange: (tf: Timeframe) => void;
+  minimal?: boolean;
 }
 
 const TIMEFRAMES: Timeframe[] = ['5m', '1h', '4h', '1d'];
@@ -79,7 +80,7 @@ const poolFormatter = (val: number) => {
   return `$${Math.round(abs)}`;
 };
 
-export function AuctionChart({ points, timeframe, onTimeframeChange }: AuctionChartProps) {
+export function AuctionChart({ points, timeframe, onTimeframeChange, minimal = false }: AuctionChartProps) {
   const { darkMode } = useTheme();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -102,39 +103,50 @@ export function AuctionChart({ points, timeframe, onTimeframeChange }: AuctionCh
   const positionLegendsRef = useRef<() => void>(() => {});
 
   // ── Create the chart once on mount ───────────────────────────────────────
-  useEffect(() => {
+    useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     const c = readColors();
     themeRef.current = c;
 
+    // 3. Configure the canvas according to 'minimal'
     const chart = createChart(el, {
       width: el.clientWidth,
       height: el.clientHeight,
       autoSize: false,
       layout: {
         background: { color: 'transparent' },
-        textColor: c.textColor,
+        textColor: minimal ? 'transparent' : c.textColor, // <-- Conditional color
         fontFamily: 'JetBrains Mono, monospace',
         fontSize: 11,
         attributionLogo: false,
-        panes: { separatorColor: c.grid2Color, separatorHoverColor: c.grid2Color },
+        panes: { 
+          separatorColor: minimal ? 'transparent' : c.grid2Color, // <-- Conditional separator
+          separatorHoverColor: minimal ? 'transparent' : c.grid2Color 
+        },
       },
       grid: {
-        vertLines: { color: c.gridColor },
-        horzLines: { color: hexToRgba(c.gridColor, 0.4), style: LineStyle.Dotted },
+        vertLines: { visible: !minimal, color: c.gridColor }, // <-- Hide if minimal
+        horzLines: { visible: !minimal, color: hexToRgba(c.gridColor, 0.4), style: LineStyle.Dotted },
       },
-      rightPriceScale: { borderColor: c.gridColor },
+      rightPriceScale: { visible: !minimal, borderColor: c.gridColor }, // <-- Hide if minimal
       leftPriceScale: { visible: false },
-      timeScale: { borderColor: c.gridColor, timeVisible: true, secondsVisible: false },
-      crosshair: { mode: CrosshairMode.Normal },
+      timeScale: { 
+        visible: !minimal, // <-- Hide if minimal
+        borderColor: c.gridColor, 
+        timeVisible: true, 
+        secondsVisible: false,
+        barSpacing: minimal ? 3 : undefined // <-- Denser candles if minimal
+      },
+      crosshair: { 
+        mode: CrosshairMode.Normal,
+        vertLine: { visible: !minimal }, // <-- Hide lines if minimal
+        horzLine: { visible: !minimal }
+      },
     });
     chartRef.current = chart;
 
-    // Pane 0 — prize pool as a line filled from the bottom. lineColor + the
-    // gradient fill both derive from --color-text, fading to transparent at the
-    // base so it reads as a filled area rising to the live line.
     const poolSeries = chart.addSeries(AreaSeries, {
       lineColor: c.text1Color,
       lineWidth: 2,
@@ -142,18 +154,16 @@ export function AuctionChart({ points, timeframe, onTimeframeChange }: AuctionCh
       topColor: hexToRgba(c.text1Color, 0.4),
       bottomColor: hexToRgba(c.text1Color, 0.02),
       priceLineVisible: false,
-      lastValueVisible: true,
+      lastValueVisible: !minimal, // <-- Hide final bubble if minimal
       priceFormat: { type: 'custom', minMove: 1, formatter: poolFormatter },
     }, 0);
     poolSeriesRef.current = poolSeries;
 
-    // Pane 1 — FIM minted per bucket (green volume histogram) on the RIGHT scale.
-    // Full-opacity volColor for the axis label chip; bars use 0.75 alpha via per-bar color.
     const mintSeries = chart.addSeries(HistogramSeries, {
       color: c.volColor,
       priceScaleId: VOL_SCALE,
       base: 0,
-      lastValueVisible: true,
+      lastValueVisible: !minimal, // <-- Hide final bubble if minimal
       priceFormat: { type: 'custom', minMove: 1, formatter: volFormatter },
     }, 1);
     mintSeriesRef.current = mintSeries;
@@ -195,6 +205,7 @@ export function AuctionChart({ points, timeframe, onTimeframeChange }: AuctionCh
     positionLegendsRef.current = positionLegends;
 
     const renderLegends = (p: AuctionPoint | null) => {
+      if (minimal) return;
       const colors = themeRef.current;
       if (!colors) return;
       const poolEl = poolLegendRef.current;
@@ -228,20 +239,34 @@ export function AuctionChart({ points, timeframe, onTimeframeChange }: AuctionCh
   }, []);
 
   // ── Push data on point / timeframe change ────────────────────────────────
-  useEffect(() => {
+ useEffect(() => {
     const chart = chartRef.current;
-    const colors = themeRef.current;
+    // Safely declare 'colors' to avoid compilation issues
+    const colors = themeRef.current || readColors(); 
     if (!chart || !colors) return;
 
-    const poolData = points.map((p) => ({
-      time: p.time as UTCTimestamp,
-      value: p.prizePool,
-    }));
-    const mintData = points.map((p) => ({
-      time: p.time as UTCTimestamp,
-      value: p.mintVolume,
-      color: hexToRgba(colors.volColor, 0.75),
-    }));
+    // 1. Map Area Series: Ensure whitespace points ONLY contain the "time" property
+    const poolData = points.map((p) => {
+      if (p.prizePool === undefined) {
+        return { time: p.time as UTCTimestamp }; // Clean whitespace item
+      }
+      return {
+        time: p.time as UTCTimestamp,
+        value: p.prizePool,
+      };
+    });
+
+    // 2. Map Histogram Series: Ensure whitespace points ONLY contain the "time" property
+    const mintData = points.map((p) => {
+      if (p.mintVolume === undefined) {
+        return { time: p.time as UTCTimestamp }; // Clean whitespace item
+      }
+      return {
+        time: p.time as UTCTimestamp,
+        value: p.mintVolume,
+        color: hexToRgba(colors.volColor, 0.75), // Now 'colors' is guaranteed to exist
+      };
+    });
 
     dataMapRef.current = new Map(points.map((p) => [p.time, p]));
     latestPointRef.current = points.length > 0 ? points[points.length - 1] : null;
@@ -300,10 +325,13 @@ export function AuctionChart({ points, timeframe, onTimeframeChange }: AuctionCh
   return (
     <div className="terminal-pane h-full overflow-hidden p-0! flex flex-col">
       {/* Toolbar strip — mirrors TradingChart: timeframe pills left, live dot. */}
-      <div className="flex items-center gap-2 px-2 pt-4 pb-2 border-b border-border">
-        <TimeframeSelector value={timeframe} onChange={onTimeframeChange} />
-        <span className="w-1.5 h-1.5 rounded-full bg-green shadow-[0_0_8px_var(--color-green-35)] animate-pulse" />
-      </div>
+      {!minimal && (
+        <div className="flex items-center gap-2 px-2 pt-4 pb-2 border-b border-border">
+          <TimeframeSelector value={timeframe} onChange={onTimeframeChange} />
+          <span className="w-1.5 h-1.5 rounded-full bg-green shadow-[0_0_8px_var(--color-green-35)] animate-pulse" />
+        </div>
+      )}
+
 
       <div
         ref={containerRef}

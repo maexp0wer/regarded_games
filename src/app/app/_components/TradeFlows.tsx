@@ -12,21 +12,28 @@ function getCSSVar(name: string): string {
 }
 
 interface TradeFlowsProps {
-  trades: SeasonTrade[];
-  timeWindowMs: number;
-  timeframe: Timeframe;
-  selectedRange: { start: number; end: number } | null;
-  onClearSelection: () => void;
-  isLive: boolean;
+  trades?: SeasonTrade[];
+  timeWindowMs?: number;
+  timeframe?: Timeframe;
+  selectedRange?: { start: number; end: number } | null;
+  onClearSelection?: () => void;
+  isLive?: boolean;
+  minimal?: boolean; // Optional prop to hide headers
+  mockChordData?: {  // Optional prop to directly feed live animated segments
+    groups: { isCapitalist: boolean; label: string; playerCount: number }[];
+    matrix: number[][];
+  };
 }
 
 export function TradeFlows({
-  trades,
-  timeWindowMs,
-  timeframe,
-  selectedRange,
-  onClearSelection,
-  isLive,
+  trades = [],
+  timeWindowMs = 3600000,
+  timeframe = '1h',
+  selectedRange = null,
+  onClearSelection = () => {},
+  isLive = false,
+  minimal = false,
+  mockChordData,
 }: TradeFlowsProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -81,19 +88,20 @@ export function TradeFlows({
     return { timeStart: now - timeWindowMs, timeEnd: now };
   }, [selectedRange, timeWindowMs, trades]);
 
-  const chordData = useMemo(
-    () => buildChordData(trades, timeStart, timeEnd),
-    [trades, timeStart, timeEnd]
-  );
+  const chordData = useMemo(() => {
+    if (minimal && mockChordData) return mockChordData;
+    return buildChordData(trades, timeStart, timeEnd);
+  }, [trades, timeStart, timeEnd, minimal, mockChordData]);
 
   const tradeCount = useMemo(() => {
+    if (minimal) return 1; // Always allow minimal preview rendering
     const startSec = timeStart / 1000;
     const endSec = timeEnd / 1000;
     return trades.filter((t) => {
       const ts = Number(BigInt(t.timestamp));
       return ts >= startSec && ts <= endSec;
     }).length;
-  }, [trades, timeStart, timeEnd]);
+  }, [trades, timeStart, timeEnd, minimal]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
@@ -214,10 +222,11 @@ export function TradeFlows({
       .style('color', TXT1_COLOR)
       .style('display', 'none');
 
+    // Draw central ribbons (supports absolute 0s for single datapoint construction)
     for (let i = 0; i < N; i++) {
       for (let j = i; j < N; j++) {
         const bidir = matrix[i][j] + matrix[j][i];
-        if (bidir === 0) continue;
+        if (bidir === 0) continue; // Pure 0s skip ribbon drawing entirely
         const src = subArcs[i][j];
         const tgt = subArcs[j][i];
         if (src.end <= src.start && tgt.end <= tgt.start) continue;
@@ -238,6 +247,7 @@ export function TradeFlows({
       }
     }
 
+    // Outer segments - fully hoverable with native tooltips in both modes
     for (let i = 0; i < N; i++) {
       const g = groups[i];
       const color = groupColor(i);
@@ -264,6 +274,7 @@ export function TradeFlows({
         .on('mouseleave', () => tooltip.style('display', 'none'));
     }
 
+    // Axis labels (100%, 0%) - always drawn in both modes
     const labelR = outerRadius + 10;
     const yTop = -labelR;
     const axisLabels = [
@@ -305,6 +316,15 @@ export function TradeFlows({
     );
   }, [selectedRange, timeframe]);
 
+  // Clean layout context
+  if (minimal) {
+    return (
+      <div ref={containerRef} className="flex items-center justify-center h-full w-full min-w-0 min-h-0 select-none">
+        <svg ref={svgRef} className="block pointer-events-auto" width={size} height={size} />
+      </div>
+    );
+  }
+
   return (
     <div className="terminal-pane h-full" style={{ border: 'none' }}>
       <div className="terminal-pane-header">
@@ -338,7 +358,7 @@ export function TradeFlows({
         </div>
       ) : (
         <div ref={containerRef} className="flex items-center justify-center h-full w-full min-w-0 min-h-0 rounded-lg">
-          <svg ref={svgRef} className="block" width={size} height={size} />
+          <svg ref={svgRef} className="block pointer-events-auto" width={size} height={size} />
         </div>
       )}
     </div>
