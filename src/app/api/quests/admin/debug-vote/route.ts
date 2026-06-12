@@ -32,18 +32,18 @@ export async function GET(req: Request) {
   const pollName = cfg.manifest_poll_name;
 
   // 2) Resolve Discourse user id for this wallet
-  let discourseUser: any = null;
+  let discourseUser: { id: number; username: string; name: string } | null = null;
   let userLookupError: string | null = null;
   try {
     const r = await fetch(`${url}/u/by-external/${addr}.json`, { headers });
     if (!r.ok) userLookupError = `HTTP ${r.status} ${r.statusText}`;
     else discourseUser = (await r.json())?.user ?? null;
-  } catch (e: any) {
-    userLookupError = e?.message ?? String(e);
+  } catch (e: unknown) {
+    userLookupError = e instanceof Error ? e.message : String(e);
   }
 
   // 3) Fetch the post itself so we can see what poll(s) it actually has
-  let postPolls: any = null;
+  let postPolls: unknown = null;
   let postError: string | null = null;
   if (postId) {
     try {
@@ -53,13 +53,13 @@ export async function GET(req: Request) {
         const post = await r.json();
         postPolls = post?.polls ?? null;
       }
-    } catch (e: any) {
-      postError = e?.message ?? String(e);
+    } catch (e: unknown) {
+      postError = e instanceof Error ? e.message : String(e);
     }
   }
 
   // 4) Pull voters.json page 1 raw so we see the actual shape
-  let votersPage1: any = null;
+  let votersPage1: Record<string, unknown> | null = null;
   let votersError: string | null = null;
   if (postId && pollName) {
     try {
@@ -69,8 +69,8 @@ export async function GET(req: Request) {
       );
       if (!r.ok) votersError = `HTTP ${r.status} ${r.statusText}`;
       else votersPage1 = await r.json();
-    } catch (e: any) {
-      votersError = e?.message ?? String(e);
+    } catch (e: unknown) {
+      votersError = e instanceof Error ? e.message : String(e);
     }
   }
 
@@ -80,7 +80,7 @@ export async function GET(req: Request) {
   if (votersPage1 && discourseUser?.id != null) {
     for (const [opt, arr] of Object.entries(votersPage1.voters ?? {})) {
       if (!Array.isArray(arr)) continue;
-      if (arr.some((u: any) => u?.id === discourseUser.id)) {
+      if (arr.some((u: unknown) => (u as { id?: number })?.id === discourseUser!.id)) {
         matched = true;
         matchedOption = opt;
         break;
@@ -100,7 +100,7 @@ export async function GET(req: Request) {
     votersPage1Sample: votersPage1
       ? {
           voters: Object.fromEntries(
-            Object.entries(votersPage1.voters ?? {}).map(([k, v]: any) => [
+            Object.entries(votersPage1.voters ?? {}).map(([k, v]) => [
               k,
               { count: Array.isArray(v) ? v.length : 0, first3: Array.isArray(v) ? v.slice(0, 3) : [] },
             ]),

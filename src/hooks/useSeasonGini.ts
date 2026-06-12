@@ -11,6 +11,7 @@ import { useTenantPonderUrl, useTenantChainId } from '@/context/TenantContext';
 import { useSeasonPlayers } from './useSeasonPlayers';
 import { useSeasonActiveOrders } from './useSeasonActiveOrders';
 import { useSeasonInfo } from './useSeasonInfo';
+import { giniBpsFromBalances } from '@/utils/gini';
 
 // --- Types ---
 export interface SeasonLiveStats {
@@ -25,28 +26,6 @@ export interface SeasonMetadata {
   fimAddress: string;
   exchangeAddress: string;
   auctionAddress: string;
-}
-
-// --- Helper: Gini Math ---
-function calculateGiniBps(balances: number[]): number {
-  if (balances.length === 0) return 0;
-  const sorted = [...balances].sort((a, b) => a - b);
-  const N = sorted.length;
-  let accumulator = 0;
-  let totalBalance = 0;
-
-  for (let i = 0; i < N; i++) {
-    const bal = sorted[i];
-    const rank = i + 1;
-    accumulator += rank * bal;
-    totalBalance += bal;
-  }
-
-  if (totalBalance === 0) return 0;
-  const term1 = (2 * accumulator) / (N * totalBalance);
-  const term2 = (N + 1) / N;
-  const gini = term1 - term2;
-  return Math.max(0, Math.floor(gini * 10000));
 }
 
 // --- Hook 1: Metadata by Slug ---
@@ -124,11 +103,13 @@ export function useSeasonGini(seasonAddress: string | undefined) {
       wealthMap.set(maker, (wealthMap.get(maker) || 0n) + amt);
     });
 
-    // 3. Filter by Threshold & Calculate
-    const balances: number[] = [];
+    // 3. Collect raw-wei balances (exchange excluded). The existential-threshold
+    //    filter and all integer math happen inside giniBpsFromBalances, which
+    //    replays the contract's _calculateReg exactly — no float, no truncation.
+    const balances: bigint[] = [];
     wealthMap.forEach((total, player) => {
-      if (player !== exchangeAddr && total >= threshold) {
-        balances.push(Number(total / 1000000000000000000n));
+      if (player !== exchangeAddr) {
+        balances.push(total);
       }
     });
 
@@ -141,9 +122,13 @@ export function useSeasonGini(seasonAddress: string | undefined) {
       0n
     );
 
+    // playerCount mirrors the contract's effectivePopulation: holders clearing
+    // the existential threshold (the same set Gini is computed over).
+    const playerCount = balances.reduce((n, b) => (b >= threshold ? n + 1 : n), 0);
+
     return {
-      gini: calculateGiniBps(balances),
-      playerCount: balances.length,
+      gini: giniBpsFromBalances(balances, threshold),
+      playerCount,
       prizePool: Number(BigInt(seasonInfo?.prizePool || "0")) / 1_000_000,
       distributablePayout: Number(totalDistributableRaw) / 1_000_000
     };

@@ -17,6 +17,8 @@ import StakingAbi from '@/deployments/abis/Staking.json';
 import AuctionAbi from '@/deployments/abis/Auction.json';
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import { TxModal } from './TxModal';
+import { friendlyRevertReason, isUserRejection, isInsufficientGas } from '@/utils/revertReason';
+import { useCollateral } from '@/hooks/useCollateral';
 
 const DEAD_ADDRESS = '0x0000000000000000000000000000000000000000';
 
@@ -109,6 +111,7 @@ function AuctionMaskInner({
   const [buyAmount, setBuyAmount] = useState('');
   const [status, setStatus] = useState<WorkflowStep>('idle');
   const [txHashes, setTxHashes] = useState<(string | null)[]>([null, null]);
+  const [errorReason, setErrorReason] = useState<string | null>(null);
 
   const stakingAddr = coreAddresses.Staking as `0x${string}`;
   const usdcAddr    = coreAddresses.USDC    as `0x${string}`;
@@ -127,15 +130,23 @@ function AuctionMaskInner({
 
   const isAuctionPhase = currentPhase === 'AUCTION';
 
+  // Collateral headroom drives how much FIM the stake can still back. Reads the
+  // shared rate (rgdLockedPerFim) from the Auction — identical to the Exchange's
+  // — so the auction and trading collateral checks can never disagree (see ADR
+  // 0001; replaces the old hardcoded ×10 ratio).
+  const collateral = useCollateral(seasonAddress, auctionAddress);
+
   // --- Math ---
   const usdcToBuyBigInt   = buyAmount ? parseUnits(buyAmount, 6) : 0n;
   const currentStaked     = (stakedBalances as bigint) ?? 0n;
   const hasStakedAnything = currentStaked > 0n;
   const currentFim              = (fimWallet   as bigint) ?? 0n;
   const currentUsdcInWallet     = (usdcWallet  as bigint) ?? 0n;
-  const totalEligibleFim        = useMemo(() => currentStaked ? currentStaked * 10n : 0n, [currentStaked]);
-  const remainingFimAllowance   = totalEligibleFim > currentFim ? totalEligibleFim - currentFim : 0n;
-  const isMaxedOut              = hasStakedAnything && remainingFimAllowance === 0n;
+  // Remaining FIM the stake can collateralize == headroom converted to FIM.
+  // `maxBuyableFim` already nets out FIM the user holds (headroom = staked −
+  // required, and `required` reflects held FIM), so it IS the remaining allowance.
+  const remainingFimAllowance   = collateral.maxBuyableFim;
+  const isMaxedOut              = hasStakedAnything && collateral.isReady && remainingFimAllowance === 0n;
   const inputAsFim              = usdcToBuyBigInt * 1000000000000n;
   const isOverLimit             = hasStakedAnything && inputAsFim > remainingFimAllowance && remainingFimAllowance > 0n;
 
@@ -155,6 +166,7 @@ function AuctionMaskInner({
   const handleStartFlow = async () => {
     if (!publicClient || !address || !usdcToBuyBigInt) return;
     setTxHashes([null, null]);
+    setErrorReason(null);
     try {
       const liveAllowance = await publicClient.readContract({
         address: usdcAddr, abi: ERC20Abi, functionName: 'allowance', args: [address, auctionAddress as `0x${string}`],
@@ -181,12 +193,17 @@ function AuctionMaskInner({
       queryClient.invalidateQueries({ queryKey: ['auctionHistory', seasonAddress.toLowerCase()] });
 
       setTimeout(() => { setBuyAmount(''); setStatus('idle'); setTxHashes([null, null]); }, 2500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Workflow Error:', err);
-      const isRejection       = err.shortMessage?.includes('rejected') || err.message?.includes('User rejected');
-      const isInsufficientGas = err.message?.includes('insufficient funds') || err.name === 'InsufficientFundsError';
-      setStatus(isRejection ? 'canceled' : isInsufficientGas ? 'no_gas' : 'failed');
-      setTimeout(() => setStatus('idle'), 2000);
+      if (isUserRejection(err)) {
+        setStatus('canceled');
+        setTimeout(() => setStatus('idle'), 2000);
+      } else if (isInsufficientGas(err)) {
+        setStatus('no_gas');
+      } else {
+        setErrorReason(friendlyRevertReason(err));
+        setStatus('failed');
+      }
     }
   };
 
@@ -299,6 +316,7 @@ function AuctionMaskInner({
       txHashes={txHashes}
       title="Buying FIM"
       successTitle="FIM Purchased"
+      errorReason={errorReason}
       steps={[
         {
           label: 'Approve USDC Spending',
@@ -313,7 +331,7 @@ function AuctionMaskInner({
           completeStatuses: ['success'],
         },
       ]}
-      onClose={() => { setBuyAmount(''); setStatus('idle'); setTxHashes([null, null]); }}
+      onClose={() => { setBuyAmount(''); setStatus('idle'); setTxHashes([null, null]); setErrorReason(null); }}
     />
     </>
   );

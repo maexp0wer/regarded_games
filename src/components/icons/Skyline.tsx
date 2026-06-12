@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Skyline = ({ className }) => {
+const Skyline = ({ className }: { className?: string }) => {
   return (
     <svg 
       viewBox="0 0 800 450" 

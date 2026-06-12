@@ -20,7 +20,7 @@ export async function fetchAllPonderItems<T>(
   url: string,
   query: string,
   variables: Record<string, unknown>,
-  getPage: (data: any) => PonderPage<T>
+  getPage: (data: Record<string, PonderPage<T>>) => PonderPage<T>
 ): Promise<T[]> {
   const allItems: T[] = [];
   let cursor: string | null = null;

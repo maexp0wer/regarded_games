@@ -1,7 +1,7 @@
 'use client';
 
 import { useAccount } from 'wagmi';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { useQuests } from '@/hooks/useQuests';
 import { QuestBoard } from './QuestBoard';

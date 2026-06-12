@@ -37,10 +37,10 @@
   --color-red: #D32F2F;          /* Crimson Bear Red */
   --color-red-hover: #B71C1C;    /* Maroon Danger state */
 
-  --color-magenta: #B8004F;  /* Deep Crimson-Berry Rose */
-  --color-magenta-hover: #B8004F;
+  --color-magenta: #B8004F;         /* Deep Crimson-Berry Rose */
+  --color-magenta-hover: #8C003C;   /* Dark Berry Shadow state */
   --color-orange: #D35400;
-  --color-orange-hover: #D35400;
+  --color-orange-hover: #A84300;    /* Deep Ember Shadow state */
 
   /* ── TYPOGRAPHY ─────────────────────────────────────────────── */
   --font-display: "Exo 2", system-ui, sans-serif;
@@ -79,7 +79,9 @@
 
   /* Intermediate Mid-tones to avoid muddy blends */
   --color-magenta: #D81B60;
+  --color-magenta-hover: #F0408A;   /* Luminous Hot Pink state */
   --color-orange: #FF8C00;
+  --color-orange-hover: #FFA833;    /* Bright Warm Amber state */
 }
 
 

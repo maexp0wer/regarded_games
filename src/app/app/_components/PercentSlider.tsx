@@ -11,7 +11,7 @@ export default function PercentSlider({ value, onChange, disabled = false }: Per
 
   // Handles text input changes, clamping the input strictly between 0 and 100
   const handleInputChange = (valStr: string) => {
-    let num = Number(valStr);
+    const num = Number(valStr);
     if (isNaN(num)) return;
     onChange(Math.max(0, Math.min(100, num)));
   };

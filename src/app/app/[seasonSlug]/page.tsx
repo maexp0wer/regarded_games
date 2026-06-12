@@ -81,7 +81,7 @@ export default function SeasonDetailPage() {
       queryClient.invalidateQueries();
     }
     if (currentPhase !== null) prevPhaseRef.current = currentPhase;
-  }, [currentPhase]);
+  }, [currentPhase, queryClient]);
 
   const { M_dynamic, effectiveVictoryPending } = victory;
 

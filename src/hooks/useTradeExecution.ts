@@ -5,8 +5,10 @@ import { useAccount, useWriteContract, useReadContract, usePublicClient } from '
 import { erc20Abi, parseUnits } from 'viem';
 import { useQueryClient } from '@tanstack/react-query';
 import ExchangeAbi from '@/deployments/abis/Exchange.json';
+import type { Abi } from 'abitype';
 import { Order } from '@/hooks/useOrderBook';
 import { useTenantChainId } from '@/context/TenantContext';
+import { friendlyRevertReason, isUserRejection } from '@/utils/revertReason';
 
 export type WorkflowStep = 'idle' | 'approving' | 'mining_approval' | 'executing' | 'mining_execute' | 'success' | 'canceled' | 'failed';
 
@@ -51,6 +53,7 @@ export function useTradeExecution({
 
   const [workflowStatus, setWorkflowStatus] = useState<WorkflowStep>('idle');
   const [txHashes, setTxHashes] = useState<(string | null)[]>([null, null]);
+  const [errorReason, setErrorReason] = useState<string | null>(null);
 
   const { refetch: refetchAllowance } = useReadContract({
     address: spendingToken,
@@ -63,6 +66,7 @@ export function useTradeExecution({
   const handleStartFlow = async () => {
     if (!publicClient || !address) return;
     setTxHashes([null, null]);
+    setErrorReason(null);
     try {
       // Step 1a: USDC (or FIM for non-mixed sell) approval
       const liveAllowance = await publicClient.readContract({
@@ -115,13 +119,13 @@ export function useTradeExecution({
       const txHash = isMaker
         ? await writeContractAsync({
             address: exchangeAddress,
-            abi: ExchangeAbi as any,
+            abi: ExchangeAbi as Abi,
             functionName: 'createOrder',
             args: [isBuy, parseUnits(targetAmount, 18), makerTotalUsdcRaw]
           })
         : await writeContractAsync({
             address: exchangeAddress,
-            abi: ExchangeAbi as any,
+            abi: ExchangeAbi as Abi,
             functionName: 'fillBatch',
             args: [executionPayload.ids, executionPayload.amounts]
           });
@@ -141,9 +145,17 @@ export function useTradeExecution({
         setTxHashes([null, null]);
         queryClient.invalidateQueries();
       }, 2000);
-    } catch (err: any) {
-      setWorkflowStatus(err.shortMessage?.includes("rejected") ? 'canceled' : 'failed');
-      setTimeout(() => { setWorkflowStatus('idle'); setTxHashes([null, null]); }, 2000);
+    } catch (err: unknown) {
+      if (isUserRejection(err)) {
+        setWorkflowStatus('canceled');
+        // Rejections are self-explanatory — auto-dismiss.
+        setTimeout(() => { setWorkflowStatus('idle'); setTxHashes([null, null]); }, 2000);
+      } else {
+        // A real revert: surface the reason and let the user dismiss via the
+        // modal's "Close & Retry" so they actually read it (no auto-reset).
+        setErrorReason(friendlyRevertReason(err));
+        setWorkflowStatus('failed');
+      }
     }
   };
 
@@ -159,5 +171,11 @@ export function useTradeExecution({
 
   const isBusy = workflowStatus !== 'idle' && !['success', 'canceled', 'failed'].includes(workflowStatus);
 
-  return { workflowStatus, txHashes, handleStartFlow, getStatusText, isBusy };
+  const resetWorkflow = () => {
+    setWorkflowStatus('idle');
+    setTxHashes([null, null]);
+    setErrorReason(null);
+  };
+
+  return { workflowStatus, txHashes, handleStartFlow, getStatusText, isBusy, errorReason, resetWorkflow };
 }

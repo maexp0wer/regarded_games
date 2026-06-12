@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useReadContract } from 'wagmi';
 import { Address } from 'viem';
+import type { Abi } from 'abitype';
 
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { useTenantChainId } from '@/context/TenantContext';
@@ -25,6 +26,7 @@ export interface SeasonPhaseState {
   isBootstrap: boolean;
   isAuctionOrBootstrap: boolean;
   isTrading: boolean;
+  isSettling: boolean;
   isPayout: boolean;
 
   tradingStart: number;
@@ -42,7 +44,7 @@ export function useSeasonPhase(seasonAddress: Address | string | undefined): Sea
 
   const { data: phaseRaw, isLoading: isPhaseLoading } = useReadContract({
     address: seasonAddress as Address,
-    abi: GameSeasonAbi as any,
+    abi: GameSeasonAbi as Abi,
     functionName: 'getPhase',
     chainId,
     query: { enabled, refetchInterval: 3000 },
@@ -50,7 +52,7 @@ export function useSeasonPhase(seasonAddress: Address | string | undefined): Sea
 
   const { data: isActiveRaw } = useReadContract({
     address: seasonAddress as Address,
-    abi: GameSeasonAbi as any,
+    abi: GameSeasonAbi as Abi,
     functionName: 'isActive',
     chainId,
     query: { enabled, refetchInterval: 3000 },
@@ -58,7 +60,7 @@ export function useSeasonPhase(seasonAddress: Address | string | undefined): Sea
 
   const { data: tradingStartTimeRaw } = useReadContract({
     address: seasonAddress as Address,
-    abi: GameSeasonAbi as any,
+    abi: GameSeasonAbi as Abi,
     functionName: 'tradingStartTime',
     chainId,
     query: { enabled, refetchInterval: 3000 },
@@ -66,7 +68,7 @@ export function useSeasonPhase(seasonAddress: Address | string | undefined): Sea
 
   const { data: rawConfig, isLoading: isConfigLoading } = useReadContract({
     address: seasonAddress as Address,
-    abi: GameSeasonAbi as any,
+    abi: GameSeasonAbi as Abi,
     functionName: 'getConfig',
     chainId,
     query: { enabled, staleTime: Infinity },
@@ -80,7 +82,7 @@ export function useSeasonPhase(seasonAddress: Address | string | undefined): Sea
 
   const config = useMemo<SeasonConfig | null>(() => {
     if (!rawConfig) return null;
-    const r = rawConfig as any;
+    const r = rawConfig as Record<string | number, unknown>;
     const getVal = (key: string, idx: number) => (r[key] !== undefined ? r[key] : r[idx]);
     return {
       auctionStartTime:    Number(getVal('auctionStartTime', 0)),
@@ -100,6 +102,14 @@ export function useSeasonPhase(seasonAddress: Address | string | undefined): Sea
   const isBootstrap = currentPhase === 'BOOTSTRAP';
   const isAuctionOrBootstrap = isAuction || isBootstrap;
   const isTrading = currentPhase === 'TRADING';
+  // On-chain settlement crank in progress (only true once someone cranks
+  // startSettlement). Deliberately NOT the trading-halt driver: the halt uses
+  // the earlier predictive `effectiveVictoryPending` (useSeasonVictory), which is
+  // the safe choice — the chain already rejects trades on clock expiry before
+  // anyone cranks. Exposed for labels / gating completeness only. See CONTEXT.md
+  // "effectiveVictoryPending vs. SETTLING".
+  const isSettling = currentPhase === 'SETTLING' || currentPhase === 'CALCULATING';
+  // `ENDED` was removed — getPhase() never returns it; PAYOUT is terminal.
   const isPayout  = currentPhase === 'PAYOUT' || currentPhase === 'DISTRIBUTION';
 
   const scheduledTradingStart = (config?.auctionStartTime || 0) + (config?.auctionDuration || 0);
@@ -116,6 +126,7 @@ export function useSeasonPhase(seasonAddress: Address | string | undefined): Sea
     isBootstrap,
     isAuctionOrBootstrap,
     isTrading,
+    isSettling,
     isPayout,
     tradingStart,
     seasonEnd,

@@ -60,8 +60,9 @@ export async function POST(req: Request) {
     const logoutRes = await fetch(`${url}/admin/users/${userId}/log_out`, { method: 'POST', headers });
     if (debug) console.log(`[discourse/session] logout ${username} (#${userId}) -> ${logoutRes.status}`);
     return NextResponse.json({ success: true, loggedOut: logoutRes.ok });
-  } catch (e: any) {
-    console.error('[discourse/session] error:', e?.message);
-    return NextResponse.json({ error: e?.message ?? 'unknown error' }, { status: 500 });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'unknown error';
+    console.error('[discourse/session] error:', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

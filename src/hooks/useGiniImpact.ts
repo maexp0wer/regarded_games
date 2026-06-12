@@ -13,8 +13,6 @@ import { giniBpsFromBalances } from '@/utils/gini';
 
 const GameSeasonAbi = GameSeasonAbiJson as Abi;
 
-const WEI = 1_000_000_000_000_000_000n; // 1e18, whole-FIM scaling used by the live Gini
-
 export interface TradeGiniImpact {
   /** Live Gini over the current population, in BPS (0-10000). */
   currentBps: number;
@@ -86,11 +84,12 @@ export function useGiniImpact(
     const toBps = (w: Map<string, bigint>): number => {
       const balances: bigint[] = [];
       w.forEach((total, player) => {
-        if (player !== exchangeAddr && total >= threshold) {
-          balances.push(total / WEI);
+        if (player !== exchangeAddr) {
+          balances.push(total);
         }
       });
-      return giniBpsFromBalances(balances);
+      // Raw wei + threshold → contract-exact integer Gini (filter happens inside).
+      return giniBpsFromBalances(balances, threshold);
     };
 
     const currentBps = toBps(wealth);

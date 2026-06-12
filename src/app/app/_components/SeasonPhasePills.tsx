@@ -9,7 +9,7 @@ export function SeasonPhasePills({
   className?: string;
 }) {
   const isBootstrap = phase === 'BOOTSTRAP';
-  const isPayout = phase === 'PAYOUT' || phase === 'ENDED' || phase === 'DISTRIBUTION';
+  const isPayout = phase === 'PAYOUT' || phase === 'DISTRIBUTION';
   const isAuction = phase === 'AUCTION';
   const isTrading = phase === 'TRADING';
   const isOnHold = isBootstrap || isVictoryPending;

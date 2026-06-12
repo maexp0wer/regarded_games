@@ -37,7 +37,19 @@ const HISTORY_QUERY = `
   }
 `;
 
-function mapOrder(o: any): MyOrder {
+interface RawOrder {
+  id: string;
+  orderId: string;
+  isBuy: boolean;
+  price: string;
+  remainingAmount: string;
+  initialAmount: string;
+  isCancelled: boolean;
+  timestamp: string;
+  settledAt: string | null | undefined;
+}
+
+function mapOrder(o: RawOrder): MyOrder {
   return {
     id: o.id,
     orderId: BigInt(o.orderId),

@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { useReadContract } from 'wagmi';
 import { Address } from 'viem';
+import type { Abi } from 'abitype';
 
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
@@ -48,7 +49,7 @@ export function useSeasonVictory(seasonAddress: Address | string | undefined): S
 
   const { data: gInitialRaw } = useReadContract({
     address: seasonAddress as Address,
-    abi: GameSeasonAbi as any,
+    abi: GameSeasonAbi as Abi,
     functionName: 'g_initial',
     chainId,
     query: {
@@ -60,7 +61,7 @@ export function useSeasonVictory(seasonAddress: Address | string | undefined): S
 
   const { data: finalProgressBpsRaw } = useReadContract({
     address: seasonAddress as Address,
-    abi: GameSeasonAbi as any,
+    abi: GameSeasonAbi as Abi,
     functionName: 'finalProgressBps',
     chainId,
     query: { enabled: enabled && isPayout, staleTime: Infinity },
@@ -68,7 +69,7 @@ export function useSeasonVictory(seasonAddress: Address | string | undefined): S
 
   const { data: isOligarchyWinRaw } = useReadContract({
     address: seasonAddress as Address,
-    abi: GameSeasonAbi as any,
+    abi: GameSeasonAbi as Abi,
     functionName: 'isOligarchyWin',
     chainId,
     query: { enabled: enabled && isPayout, staleTime: Infinity },

@@ -12,10 +12,12 @@ import { TxModal } from './TxModal';
 // ABIs
 import ERC20AbiRaw from '@/deployments/abis/FakeUSDC.json';
 import StakingAbiRaw from '@/deployments/abis/Staking.json';
+import type { Abi } from 'abitype';
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
+import { friendlyRevertReason, isUserRejection, isInsufficientGas } from '@/utils/revertReason';
 
-const ERC20Abi = ERC20AbiRaw as any;
-const StakingAbi = StakingAbiRaw as any;
+const ERC20Abi = ERC20AbiRaw as Abi;
+const StakingAbi = StakingAbiRaw as Abi;
 
 type WorkflowStep = 'idle' | 'approving' | 'mining_approval' | 'executing' | 'mining_execution' | 'success' | 'canceled' | 'failed' | 'no_gas';
 
@@ -30,19 +32,27 @@ export function StakeMask() {
   const [mode, setMode] = useState<'stake' | 'unstake'>('stake');
   const [status, setStatus] = useState<WorkflowStep>('idle');
   const [txHashes, setTxHashes] = useState<(string | null)[]>([]);
+  const [errorReason, setErrorReason] = useState<string | null>(null);
 
   const stakingAddr = coreAddresses.Staking as `0x${string}`;
   const rgdAddr = coreAddresses.RGD as `0x${string}`;
 
   // --- 1. Contract Reads ---
+  // Locked RGD (requiredRegStake) and the withdrawable amount now change on
+  // trades/bids made elsewhere (collateral is reserved/released on the
+  // Exchange), not just on this page's own stake/unstake. Poll so the dashboard
+  // stays live; the per-action refetch below still gives an instant update.
   const { data: stakedBalances, refetch: refetchStaked } = useReadContract({
     address: stakingAddr, abi: StakingAbi, functionName: 'stakedBalances', args: address ? [address] : undefined, chainId,
+    query: { enabled: !!address, refetchInterval: 5000 },
   });
   const { data: requiredRegStake, refetch: refetchRequired } = useReadContract({
     address: stakingAddr, abi: StakingAbi, functionName: 'requiredRegStake', args: address ? [address] : undefined, chainId,
+    query: { enabled: !!address, refetchInterval: 5000 },
   });
   const { data: walletBalance, refetch: refetchWallet } = useReadContract({
     address: rgdAddr, abi: ERC20Abi, functionName: 'balanceOf', args: address ? [address] : undefined, chainId,
+    query: { enabled: !!address, refetchInterval: 5000 },
   });
   const { refetch: refetchAllowance } = useReadContract({
     address: rgdAddr, abi: ERC20Abi, functionName: 'allowance', args: address ? [address, stakingAddr] : undefined, chainId,
@@ -89,6 +99,7 @@ export function StakeMask() {
   const handleStartFlow = async () => {
     if (!publicClient || !address || !amountBigInt) return;
     setTxHashes([]);
+    setErrorReason(null);
 
     try {
       let approveHash: string | null = null;
@@ -124,18 +135,16 @@ export function StakeMask() {
       setStatus('success');
       resetData();
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Workflow Error:", err);
 
-      const isRejection = err.shortMessage?.includes("rejected") || err.message?.includes("User rejected");
-      const isInsufficientGas = err.message?.includes("insufficient funds") || err.name === 'InsufficientFundsError';
-
-      if (isRejection) {
+      if (isUserRejection(err)) {
         setStatus('canceled');
         setTimeout(() => setStatus('idle'), 2000);
-      } else if (isInsufficientGas) {
+      } else if (isInsufficientGas(err)) {
         setStatus('no_gas');
       } else {
+        setErrorReason(friendlyRevertReason(err));
         setStatus('failed');
       }
     }
@@ -305,6 +314,7 @@ export function StakeMask() {
       txHashes={txHashes}
       title={isStakeMode ? 'Staking RGD' : 'Unstaking RGD'}
       successTitle={isStakeMode ? 'Stake Confirmed' : 'Unstake Confirmed'}
+      errorReason={errorReason}
       steps={[
         ...(isStakeMode ? [{
           label: 'Approve Spending Allowance',
@@ -319,7 +329,7 @@ export function StakeMask() {
           completeStatuses: ['success'],
         },
       ]}
-      onClose={() => { setAmount(''); setStatus('idle'); setTxHashes([]); }}
+      onClose={() => { setAmount(''); setStatus('idle'); setTxHashes([]); setErrorReason(null); }}
     />
     </>
   );

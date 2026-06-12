@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { usePublicClient, useAccount } from 'wagmi';
+import type { Abi } from 'abitype';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTenantChainId, useTenantPonderUrl } from '@/context/TenantContext';
 import { useCommunitySession } from '@/hooks/useCommunitySession';
@@ -75,7 +76,7 @@ async function findActiveSeasonSlug(
   for (const season of seasons) {
     const currentPhase = await publicClient.readContract({
       address: season.address as `0x${string}`,
-      abi: GameSeasonAbi as any,
+      abi: GameSeasonAbi as Abi,
       functionName: 'getPhase',
     });
     const isMatch = phase === 'PAYOUT'
@@ -347,7 +348,6 @@ const DIRECTIVE_ACCENTS = [
 export function QuestBoard({
   mainQuests,
   userTotalPoints,
-  tgeConversionRate = 'Dynamic Vector',
 }: QuestBoardProps) {
   return (
     <div className="flex flex-col gap-8 max-w-250 mx-auto px-4 py-8">

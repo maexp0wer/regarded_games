@@ -359,7 +359,6 @@ export const SeasonLeaderboard: React.FC<SeasonLeaderboardProps> = ({ seasonAddr
     fees:     board.allFees,
   };
 
-  const activeCategoryDef = CATEGORIES.find((c) => c.key === activeCategory)!;
 
   if (board.loading) {
     return (

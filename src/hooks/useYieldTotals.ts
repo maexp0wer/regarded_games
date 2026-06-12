@@ -27,6 +27,7 @@ const QUERY = `
   }
 `;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function useYieldTotals(seasonAddress: string | undefined, _trigger?: unknown) {
   const PONDER_URL = useTenantPonderUrl();
 

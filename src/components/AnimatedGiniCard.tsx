@@ -17,7 +17,15 @@ interface AnimatedGiniCardProps {
   currentGini?: number;
   /** Driven by the parent card's hover state. If not provided, uses internal state. */
   isHovered?: boolean;
-  
+
+  /**
+   * Override for the left (Carlo) faction icon. The landing page injects the
+   * traveling layoutId character here; pass `null` for an empty dock while the
+   * character lives elsewhere. Omit entirely for the default static icon.
+   */
+  leftIcon?: React.ReactNode;
+  /** Override for the right (Regardo) faction icon — same contract as leftIcon. */
+  rightIcon?: React.ReactNode;
 }
 
 export default function AnimatedGiniCard({
@@ -26,6 +34,8 @@ export default function AnimatedGiniCard({
   gInitial = 5000,
   currentGini = 4820,
   isHovered: parentHovered,
+  leftIcon,
+  rightIcon,
 }: AnimatedGiniCardProps) {
   // --- Scale Calculations for the Horizontal Track ---
   const scaleMin = Math.max(0, socTargetBps - 200);
@@ -127,28 +137,37 @@ export default function AnimatedGiniCard({
   return (
     <div
       className="terminal-pane w-full h-full flex flex-col justify-center p-2 pb-6"
-      style={{ border: 'none' }}
+      style={{ border: 'none', backgroundColor: '#0D0B14' }}
       onMouseEnter={() => setIsInternalHovered(true)}
       onMouseLeave={() => setIsInternalHovered(false)}
     >
       {/* Top Header Row */}
       <div className="w-full px-2 pb-4 flex justify-between items-end flex-shrink-0">
 
-        {/* Left Faction Block (Carlo / Marx) */}
-        <div className="w-12 h-14 flex items-start">
-          <Carlo className="w-12 h-auto text-purple" viewBox="0 0 600 800" />
+        {/* Left Faction Block (Carlo / Marx) — the w-12 h-14 box is always present
+            to preserve centering even while the traveling character is elsewhere. */}
+        <div className="w-12 h-14 flex items-end justify-start">
+          {leftIcon === undefined ? (
+            <Carlo className="w-auto h-12" style={{ color: '#9D4EDD' }} viewBox="0 0 579.04352 781.15955" />
+          ) : (
+            leftIcon
+          )}
         </div>
 
         {/* Central Title */}
         <div className="flex flex-col items-center pb-1">
-          <span className="font-display text-[10px] font-bold uppercase tracking-widest text-text2">
+          <span className="font-display text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9E97BD' }}>
             GINI COEFFICIENT
           </span>
         </div>
 
-        {/* Right Faction Block (Regardo) */}
+        {/* Right Faction Block (Regardo) — same dock contract as the left. */}
         <div className="w-12 h-14 flex items-end text-right justify-end">
-          <Regardo className="w-12 h-auto text-gold" viewBox="0 0 600 800" />
+          {rightIcon === undefined ? (
+            <Regardo className="w-auto h-12" style={{ color: '#FFC300' }} viewBox="0 0 491.52783 788.49512" />
+          ) : (
+            rightIcon
+          )}
         </div>
       </div>
 
@@ -159,7 +178,7 @@ export default function AnimatedGiniCard({
         <div 
           className="absolute left-4 right-4 h-2 rounded-full border border-bg" 
           style={{ 
-            background: 'linear-gradient(90deg, var(--color-purple) 0%, var(--color-magenta) 45%, var(--color-orange) 75%, var(--color-gold) 100%)' 
+            background: 'linear-gradient(90deg, #9D4EDD 0%, #D81B60 45%, #FF8C00 75%, #FFC300 100%)' 
           }} 
         />
 
@@ -172,7 +191,7 @@ export default function AnimatedGiniCard({
             return (
               <React.Fragment key={v}>
                 <div
-                  className="absolute bg-text2"
+                  className="absolute"
                   style={{
                     left: `${pct}%`,
                     top: '50%',
@@ -180,12 +199,13 @@ export default function AnimatedGiniCard({
                     width: '1px',
                     height: major ? '12px' : '6px',
                     opacity: major ? 0.3 : 0.15,
+                    backgroundColor: '#9E97BD',
                   }}
                 />
                 {major && (
                   <span
-                    className="absolute font-mono text-[8px] text-text2/40 tracking-tighter"
-                    style={{ left: `${pct}%`, top: '50%', marginTop: '8px', transform: 'translateX(-50%)' }}
+                    className="absolute font-mono text-[8px] tracking-tighter"
+                    style={{ color: 'rgba(158,151,189,0.4)', left: `${pct}%`, top: '50%', marginTop: '8px', transform: 'translateX(-50%)' }}
                   >
                     {formatTick(v)}
                   </span>
@@ -212,22 +232,22 @@ export default function AnimatedGiniCard({
               style={{ 
                 left: socIsLeft ? '0' : NUDGE, 
                 right: socIsLeft ? NUDGE : '0',
-                backgroundColor: 'var(--color-purple)',
-                boxShadow: '0 0 2px var(--color-purple)'
+                backgroundColor: '#9D4EDD',
+                boxShadow: '0 0 2px #9D4EDD'
               }}
             />
             <div
               className="absolute w-px"
-              style={{ [socIsLeft ? 'left' : 'right']: '0', top: '0', bottom: '0', backgroundColor: 'var(--color-purple)' }}
+              style={{ [socIsLeft ? 'left' : 'right']: '0', top: '0', bottom: '0', backgroundColor: '#9D4EDD' }}
             />
             <div
               className="absolute w-px"
-              style={{ [socIsLeft ? 'right' : 'left']: NUDGE, top: '0', bottom: '0', backgroundColor: 'var(--color-purple)' }}
+              style={{ [socIsLeft ? 'right' : 'left']: NUDGE, top: '0', bottom: '0', backgroundColor: '#9D4EDD' }}
             />
             {/* Value in Proletarian purple */}
             <span 
               className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 whitespace-nowrap font-mono text-[9px] font-bold tracking-tight tabular-nums"
-              style={{ color: 'var(--color-purple)' }}
+              style={{ color: '#9D4EDD' }}
             >
               {socBpsAway.toLocaleString()} BPS
             </span>
@@ -249,22 +269,22 @@ export default function AnimatedGiniCard({
               style={{ 
                 left: capIsLeft ? '0' : NUDGE, 
                 right: capIsLeft ? NUDGE : '0',
-                backgroundColor: 'var(--color-gold)',
-                boxShadow: '0 0 2px var(--color-gold)'
+                backgroundColor: '#FFC300',
+                boxShadow: '0 0 2px #FFC300'
               }}
             />
             <div
               className="absolute w-px"
-              style={{ [capIsLeft ? 'left' : 'right']: '0', top: '0', bottom: '0', backgroundColor: 'var(--color-gold)' }}
+              style={{ [capIsLeft ? 'left' : 'right']: '0', top: '0', bottom: '0', backgroundColor: '#FFC300' }}
             />
             <div
               className="absolute w-px"
-              style={{ [capIsLeft ? 'right' : 'left']: NUDGE, top: '0', bottom: '0', backgroundColor: 'var(--color-gold)' }}
+              style={{ [capIsLeft ? 'right' : 'left']: NUDGE, top: '0', bottom: '0', backgroundColor: '#FFC300' }}
             />
             {/* Value in Capitalist gold */}
             <span 
               className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 whitespace-nowrap font-mono text-[9px] font-bold tracking-tight tabular-nums"
-              style={{ color: 'var(--color-gold)' }}
+              style={{ color: '#FFC300' }}
             >
               {capBpsAway.toLocaleString()} BPS
             </span>
@@ -274,8 +294,8 @@ export default function AnimatedGiniCard({
 
           {/* Proletarian target goal indicator */}
           <div className="absolute top-1/2 -translate-y-1/2" style={{ left: `${toScalePct(socTargetBps)}%`, transform: 'translateX(-50%)' }}>
-            <div style={{ width: '4px', height: '1.2rem', backgroundColor: 'var(--color-purple)', border: '1px solid var(--color-bg)' }} />
-            <span className="absolute bottom-full mb-1 z-40 bg-purple text-border font-mono font-black text-[9px] px-1 py-0.5 rounded shadow whitespace-nowrap">
+            <div style={{ width: '4px', height: '1.2rem', backgroundColor: '#9D4EDD', border: '1px solid #0D0B14' }} />
+            <span className="absolute bottom-full mb-1 z-40 font-mono font-black text-[9px] px-1 py-0.5 rounded shadow whitespace-nowrap" style={{ backgroundColor: '#9D4EDD', color: '#251F3D' }}>
               {Math.round(socTargetBps).toLocaleString()}
             </span>
           </div>
@@ -283,15 +303,15 @@ export default function AnimatedGiniCard({
           {/* Start value baseline */}
           {gInitial > 0 && (
             <div className="absolute top-1/2 -translate-y-1/2" style={{ left: `${toScalePct(gInitial)}%`, transform: 'translateX(-50%)' }}>
-              <div style={{ width: '2px', height: '1.2rem', backgroundColor: 'var(--color-text2)', opacity: 0.4 }} />
-              <span className="absolute bottom-full mb-1 font-mono text-[8px] text-text2/50 uppercase whitespace-nowrap">Start</span>
+              <div style={{ width: '2px', height: '1.2rem', backgroundColor: '#9E97BD', opacity: 0.4 }} />
+              <span className="absolute bottom-full mb-1 font-mono text-[8px] uppercase whitespace-nowrap" style={{ color: 'rgba(158,151,189,0.5)' }}>Start</span>
             </div>
           )}
 
           {/* Capitalist target goal indicator */}
           <div className="absolute top-1/2 -translate-y-1/2" style={{ left: `${toScalePct(capTargetBps)}%`, transform: 'translateX(-50%)' }}>
-            <div style={{ width: '4px', height: '1.2rem', backgroundColor: 'var(--color-gold)', border: '1px solid var(--color-bg)' }} />
-            <span className="absolute bottom-full mb-1 z-40 bg-gold text-border font-mono font-black text-[9px] px-1 py-0.5 rounded shadow whitespace-nowrap">
+            <div style={{ width: '4px', height: '1.2rem', backgroundColor: '#FFC300', border: '1px solid #0D0B14' }} />
+            <span className="absolute bottom-full mb-1 z-40 font-mono font-black text-[9px] px-1 py-0.5 rounded shadow whitespace-nowrap" style={{ backgroundColor: '#FFC300', color: '#251F3D' }}>
               {Math.round(capTargetBps).toLocaleString()}
             </span>
           </div>
@@ -302,7 +322,7 @@ export default function AnimatedGiniCard({
             style={{ left: `${toScalePct(animatedGini)}%`, transform: 'translateX(-50%)' }}
           >
             <div className="dial-knob current" style={{ width: '12px', height: '12px' }} />
-            <span className="absolute bottom-full mb-1 z-50 bg-text text-bg font-mono font-black text-[10px] px-1.5 py-0.5 rounded shadow-lg whitespace-nowrap">
+            <span className="absolute bottom-full mb-1 z-50 font-mono font-black text-[10px] px-1.5 py-0.5 rounded shadow-lg whitespace-nowrap" style={{ backgroundColor: '#FFFFFF', color: '#0D0B14' }}>
               {Math.round(animatedGini).toLocaleString()}
             </span>
           </div>

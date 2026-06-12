@@ -43,7 +43,7 @@ export function useMyAuctionMints(
         }),
       });
       const json = await res.json();
-      const items: any[] = json.data?.auctionMintss?.items ?? [];
+      const items: { id: string; fimAmount: string; usdcAmount: string; timestamp: string }[] = json.data?.auctionMintss?.items ?? [];
       return items.map((m): AuctionMint => ({
         id: m.id,
         fimAmount: Number(formatUnits(BigInt(m.fimAmount), 18)),

@@ -1,0 +1,149 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "create",
+    "inputs": [
+      {
+        "name": "usdc",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "treasury",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "staking",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "seasonOwner",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "auctionDuration",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "tradingDuration",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "victoryThresholdBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "baseMultiplierBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "buybackBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "liquidityBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "prizePoolBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "daoBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "existentialThresholdFim",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "rgdWeiLockedPerFim",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "bondAmountUsdc",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "tradeFeeBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "result",
+        "type": "tuple",
+        "internalType": "struct SeasonFactory.Deployed",
+        "components": [
+          {
+            "name": "season",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "auction",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "exchange",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "fim",
+            "type": "address",
+            "internalType": "address"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "exchangeDeployer",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract ExchangeDeployer"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "seasonDeployer",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract GameSeasonDeployer"
+      }
+    ],
+    "stateMutability": "view"
+  }
+]

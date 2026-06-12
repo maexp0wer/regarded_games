@@ -57,8 +57,8 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true, granted: results, errors });
-  } catch (err: any) {
-    console.error('POST /api/quests/admin/grant error:', err?.message ?? err);
+  } catch (err: unknown) {
+    console.error('POST /api/quests/admin/grant error:', err instanceof Error ? err.message : err);
     return NextResponse.json({ error: 'server_error' }, { status: 500 });
   }
 }

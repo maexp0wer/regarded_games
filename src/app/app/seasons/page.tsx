@@ -1,7 +1,6 @@
 'use client';
 
-import { SeasonsList } from '../_components/SeasonsList'; 
-import { useTheme } from '@/context/ThemeContext';
+import { SeasonsList } from '../_components/SeasonsList';
 
 
 

@@ -1,56 +1,58 @@
-export function calculateGini(players: { fimBalance?: string | number | bigint }[]): number {
-  if (!players || players.length === 0) return 0;
-
-  // 1. Convert count to BigInt
-  const count = BigInt(players.length);
-  let totalSupply = 0n;
-  let giniAccumulator = 0n;
-
-  // 2. Loop and accumulate using BigInt
-  players.forEach((player, index) => {
-    // BigInt() handles the strings from GraphQL automatically
-    const balance = BigInt(player.fimBalance || 0);
-    const rank = BigInt(index + 1);
-
-    giniAccumulator += rank * balance;
-    totalSupply += balance;
-  });
-
-  if (totalSupply === 0n) return 0;
-
-  // 3. Formula: (2 * acc * 10000) / (n * supply) - ((n + 1) * 10000) / n
-  const term1 = (2n * giniAccumulator * 10000n) / (count * totalSupply);
-  const term2 = ((count + 1n) * 10000n) / count;
-
-  if (term1 > term2) {
-    return Number(term1 - term2);
-  }
-  return 0;
-}
-
 /**
- * Gini coefficient in BPS (0-10000) over a list of raw balances. Mirrors the
- * live population math in useSeasonGini (sort ascending, mean-absolute-difference
- * form), but operates on a prepared balance list so callers can compute the same
- * metric for both the current state and a hypothetical post-trade state.
+ * Gini coefficient in BPS (0-10000), computed bit-for-bit identically to the
+ * on-chain `GameSeason._calculateReg()` (src/seasonal/GameSeason.sol).
  *
- * Balances are bigint whole-FIM (post threshold filter, exchange excluded).
+ * The contract walks players in balance-ascending order, and for each player
+ * whose balance clears the existential (dust) threshold it does:
+ *
+ *     effectivePopulation++;                       // 1-based rank, dust excluded
+ *     accumulatedSupply += bal;
+ *     regAccumulator    += effectivePopulation * bal;
+ *
+ * then:
+ *
+ *     term1 = (2 * regAccumulator * 10000) / (effectivePopulation * accumulatedSupply);
+ *     term2 = ((effectivePopulation + 1) * 10000) / effectivePopulation;
+ *     g     = term1 > term2 ? term1 - term2 : 0;
+ *     return g > 10000 ? 10000 : g;
+ *
+ * Solidity's integer division truncates at exactly those two `/` sites and
+ * nowhere else. BigInt division truncates identically, so as long as we feed
+ * RAW-WEI balances (never floored to whole FIM, never floats) and replay the
+ * same operations in the same order, the result matches the contract exactly —
+ * no rounding drift, regardless of how many trades produced the distribution.
+ *
+ * Filtering is done HERE, before ranking, so a dust-balance player can never
+ * accidentally consume a rank index (which would desync from the contract).
+ *
+ * @param balances Raw-wei effective FIM balances (exchange already excluded).
+ * @param threshold existentialThresholdFim (raw wei). Balances `< threshold` are
+ *                  dropped, mirroring the contract's `bal >= existentialThresholdFim`.
  */
-export function giniBpsFromBalances(balances: bigint[]): number {
-  const n = balances.length;
-  if (n === 0) return 0;
+export function giniBpsFromBalances(balances: bigint[], threshold: bigint = 0n): number {
+  // Filter first (dust excluded), then sort ascending — both in raw wei.
+  const sorted = balances
+    .filter((b) => b >= threshold)
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 
-  const sorted = [...balances].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-  const count = BigInt(n);
-  let total = 0n;
-  let accumulator = 0n;
-  for (let i = 0; i < n; i++) {
-    accumulator += BigInt(i + 1) * sorted[i];
-    total += sorted[i];
+  const effectivePopulation = BigInt(sorted.length);
+  if (effectivePopulation === 0n) return 0;
+
+  let accumulatedSupply = 0n;
+  let regAccumulator = 0n;
+  let rank = 0n;
+  for (const bal of sorted) {
+    // rank is 1-based among threshold-passing players (contract: ++_effPop first)
+    rank += 1n;
+    regAccumulator += rank * bal;
+    accumulatedSupply += bal;
   }
-  if (total === 0n) return 0;
+  if (accumulatedSupply === 0n) return 0;
 
-  const term1 = (2n * accumulator * 10000n) / (count * total);
-  const term2 = ((count + 1n) * 10000n) / count;
-  return term1 > term2 ? Number(term1 - term2) : 0;
+  const term1 = (2n * regAccumulator * 10000n) / (effectivePopulation * accumulatedSupply);
+  const term2 = ((effectivePopulation + 1n) * 10000n) / effectivePopulation;
+  const g = term1 > term2 ? term1 - term2 : 0n;
+
+  // Contract clamps overshoot so `10000 - g_initial` can never underflow.
+  return Number(g > 10000n ? 10000n : g);
 }

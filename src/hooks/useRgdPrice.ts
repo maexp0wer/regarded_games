@@ -4,8 +4,9 @@ import { useReadContract } from 'wagmi';
 import { parseUnits } from 'viem';
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import UniswapV2RouterAbiRaw from '@/deployments/abis/UniswapV2Router.json';
+import type { Abi } from 'abitype';
 
-const RouterAbi = UniswapV2RouterAbiRaw as any;
+const RouterAbi = UniswapV2RouterAbiRaw as Abi;
 
 // Returns the price of 1 RGD in USDC (human-readable), or undefined when
 // the router doesn't support getAmountsOut (e.g. MockUniswapV2Router on sepolia).

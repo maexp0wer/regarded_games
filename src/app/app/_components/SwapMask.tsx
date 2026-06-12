@@ -14,6 +14,7 @@ import MockUniswapV2RouterAbi from '@/deployments/abis/MockUniswapV2Router.json'
 import { useTenantDeployment, useTenantChainId, useTenantKey } from '@/context/TenantContext';
 import { TxModal } from './TxModal';
 import { extractRevertReason } from '@/utils/txErrors';
+import { isUserRejection, isInsufficientGas } from '@/utils/revertReason';
 
 type WorkflowStep = 'idle' | 'approving' | 'mining_approval' | 'swapping' | 'mining_swap' | 'success' | 'canceled' | 'failed' | 'no_gas';
 type TokenInfo = { address: `0x${string}`; symbol: string; decimals: number };
@@ -143,7 +144,7 @@ export function SwapMask() {
 
   const knownTokens: TokenInfo[] = useMemo(
     () => [USDC_TOKEN, ...(wethToken ? [wethToken] : [])],
-    [wethToken],
+    [USDC_TOKEN, wethToken],
   );
 
   // Derived token in/out
@@ -355,12 +356,12 @@ export function SwapMask() {
       refetchRgd(); refetchOther(); refetchAllowance();
       setTimeout(() => { setAmountIn(''); setStatus('idle'); setTxHashes([null, null]); }, 2500);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Swap error:', err);
-      if (err.shortMessage?.includes('rejected') || err.message?.includes('User rejected')) {
+      if (isUserRejection(err)) {
         setStatus('canceled');
         setTimeout(() => setStatus('idle'), 2000);
-      } else if (err.message?.includes('insufficient funds') || err.name === 'InsufficientFundsError') {
+      } else if (isInsufficientGas(err)) {
         setStatus('no_gas');
       } else {
         setErrorReason(extractRevertReason(err));

@@ -3,32 +3,39 @@ import { seasons, playerSeasonStats, yieldEvents, protocolStats, capitalAuctionP
 import { eq, and } from "ponder";
 import * as schema from "../ponder.schema";
 import { ExchangeAbi } from "../abis/ExchangeAbi";
+import { GameSeasonAbi } from "../abis/GameSeasonAbi";
 import mainnetCore from "../../src/deployments/mainnet/core.json";
 import sepoliaCore from "../../src/deployments/sepolia/core.json";
+// Single source of truth for Gini — the exact integer replay of the contract's
+// _calculateReg(). Shared with the frontend so candle/chart Gini, the live
+// headline Gini, and the on-chain value are byte-for-byte identical.
+import { giniBpsFromBalances } from "../../src/utils/gini";
 
 const TENANT: "mainnet" | "sepolia" =
   (process.env.PONDER_DEPLOYMENT ?? "mainnet").toLowerCase() === "sepolia" ? "sepolia" : "mainnet";
 const _coreDeployment = TENANT === "sepolia" ? sepoliaCore : mainnetCore;
 const ROUTER_ADDRESS_LC = ((_coreDeployment as any).Router as string | undefined)?.toLowerCase();
 
-// Gini coefficient in basis points (0–10 000) from a balance map.
-// Divides by 1e15 before summing to stay within safe Number range.
-function computeGiniBps(bals: Map<string, bigint>): number {
-  const vals = Array.from(bals.values())
-    .map(v => Number(v / 1_000_000_000_000_000n))
-    .filter(v => v > 0)
-    .sort((a, b) => a - b);
-  const n = vals.length;
-  if (n <= 1) return 0;
-  const total = vals.reduce((s, v) => s + v, 0);
-  if (total === 0) return 0;
-  let num = 0;
-  for (let i = 0; i < n; i++) num += i * vals[i];
-  const gini = (2 * num - (n - 1) * total) / (n * total);
-  return Math.round(Math.max(0, Math.min(1, gini)) * 10_000);
-}
-
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+// existentialThresholdFim is immutable per season; cache it to avoid an RPC read
+// on every OrderFilled. Keyed by lowercased season address.
+const _thresholdCache = new Map<string, bigint>();
+async function getExistentialThreshold(
+  client: { readContract: (args: any) => Promise<unknown> },
+  seasonAddress: `0x${string}`,
+): Promise<bigint> {
+  const key = seasonAddress.toLowerCase();
+  const cached = _thresholdCache.get(key);
+  if (cached !== undefined) return cached;
+  const raw = (await client.readContract({
+    address: seasonAddress,
+    abi: GameSeasonAbi,
+    functionName: "existentialThresholdFim",
+  })) as bigint;
+  _thresholdCache.set(key, raw);
+  return raw;
+}
 
 const CANDLE_TIMEFRAMES = [
   { key: "5m",  seconds: 300n },
@@ -354,7 +361,10 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
   const buyerPercentile = Math.round(distancePercentile(buyerEffBal, buyerIsCapitalist));
   const sellerPercentile = Math.round(distancePercentile(sellerEffBal, sellerIsCapitalist));
 
-  const giniBps = computeGiniBps(effectiveBals);
+  // Contract-exact Gini: raw-wei balances + the season's existential threshold,
+  // replayed through the same integer math as GameSeason._calculateReg().
+  const existentialThreshold = await getExistentialThreshold(context.client, seasonAddress as `0x${string}`);
+  const giniBps = giniBpsFromBalances(Array.from(effectiveBals.values()), existentialThreshold);
 
   // 7. Record the Trade History
   await context.db.insert(schema.trades).values({
@@ -657,36 +667,39 @@ ponder.on("GameSeason:StateChanged", async ({ event, context }) => {
 });
 
 if ((process.env.PONDER_DEPLOYMENT ?? "mainnet").toLowerCase() === "sepolia") {
-  ponder.on("FakeUSDCFaucet:Claimed", async ({ event, context }) => {
+  // @ts-expect-error FakeUSDCFaucet is conditionally registered in ponder.config.ts
+  ponder.on("FakeUSDCFaucet:Claimed", async ({ event, context }: any) => {
     await context.db.insert(schema.faucetClaims).values({
-      id: event.args.user.toLowerCase() as `0x${string}`,
-      amount: event.args.amount,
+      id: (event.args.user as string).toLowerCase() as `0x${string}`,
+      amount: event.args.amount as bigint,
       timestamp: event.block.timestamp,
     });
   });
 }
 
 // Staking: track Staked events so the quest board can credit `stake_rgd`.
-ponder.on("Staking:Staked", async ({ event, context }) => {
+// @ts-expect-error Staking is conditionally registered in ponder.config.ts
+ponder.on("Staking:Staked", async ({ event, context }: any) => {
   await context.db.insert(schema.rgdStakes).values({
     id: `${event.transaction.hash}-${event.log.logIndex}`,
-    staker: event.args.user.toLowerCase() as `0x${string}`,
-    amount: event.args.amount,
+    staker: (event.args.user as string).toLowerCase() as `0x${string}`,
+    amount: event.args.amount as bigint,
     timestamp: event.block.timestamp,
   });
 });
 
 // MockUniswapV2Router has no Swap event, so we detect a USDC→RGD swap via
 // an RGD Transfer where the sender is the router. The recipient is the user.
-ponder.on("RgdToken:Transfer", async ({ event, context }) => {
+// @ts-expect-error RgdToken is conditionally registered in ponder.config.ts
+ponder.on("RgdToken:Transfer", async ({ event, context }: any) => {
   if (!ROUTER_ADDRESS_LC) return;
-  if (event.args.from.toLowerCase() !== ROUTER_ADDRESS_LC) return;
-  if (event.args.value === 0n) return;
+  if ((event.args.from as string).toLowerCase() !== ROUTER_ADDRESS_LC) return;
+  if ((event.args.value as bigint) === 0n) return;
 
   await context.db.insert(schema.rgdSwaps).values({
     id: `${event.transaction.hash}-${event.log.logIndex}`,
-    sender: event.args.to.toLowerCase() as `0x${string}`,
-    rgdOut: event.args.value,
+    sender: (event.args.to as string).toLowerCase() as `0x${string}`,
+    rgdOut: event.args.value as bigint,
     timestamp: event.block.timestamp,
   });
 });

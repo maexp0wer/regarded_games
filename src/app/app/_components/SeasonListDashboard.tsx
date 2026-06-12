@@ -9,6 +9,7 @@ import Link from 'next/link';
 // Assets & Hooks
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
+import type { Abi } from 'abitype';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
 import { useSeasonPhase } from '@/hooks/useSeasonPhase';
 import { useSeasonVictory } from '@/hooks/useSeasonVictory';
@@ -45,6 +46,14 @@ const CONTROLLER_ABI = [
     "stateMutability": "view"
   },
 ] as const;
+
+interface SeasonPosition {
+  id: number;
+  season: string;
+  fim: string;
+  phase: string;
+  balance: bigint;
+}
 
 interface AggregatePosition {
   netSize: number;
@@ -103,7 +112,7 @@ export function SeasonListDashboard({ playerAddress }: SeasonListDashboardProps)
             address: controllerAddress, abi: CONTROLLER_ABI, functionName: 'seasons', args: [BigInt(i)],
           });
           const phase = await publicClient.readContract({
-            address: data[0], abi: GameSeasonAbi as any, functionName: 'getPhase'
+            address: data[0], abi: GameSeasonAbi as Abi, functionName: 'getPhase'
           });
           list.push({
             id: i + 1,
@@ -207,7 +216,7 @@ export function SeasonListDashboard({ playerAddress }: SeasonListDashboardProps)
 // ============================================================================
 // ROW WRAPPER
 // ============================================================================
-function SeasonHoldingRow({ pos, playerAddress, onValidation }: any) {
+function SeasonHoldingRow({ pos, playerAddress, onValidation }: { pos: SeasonPosition; playerAddress: string; onValidation: (season: string, isValid: boolean) => void }) {
   const payoutData = usePayout(pos.season, playerAddress as Address);
   const { payout, pnl, realizedPayout, fimBurned, loading: payoutLoading } = payoutData;
 
@@ -234,7 +243,7 @@ function SeasonHoldingRow({ pos, playerAddress, onValidation }: any) {
 // ============================================================================
 // ROW CONTENT
 // ============================================================================
-function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: any) {
+function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: { pos: SeasonPosition; playerAddress: string; payoutData: { payout: number; pnl: number; realizedPayout: number; fimBurned: number } }) {
   const { data: giniData } = useSeasonGini(pos.season);
   const { data: statsMap } = useBatchPlayerPercentiles(pos.season, [playerAddress.toLowerCase()]);
   const playerStats = statsMap?.[playerAddress.toLowerCase()];
@@ -243,12 +252,11 @@ function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: any) {
   const { effectiveVictoryPending, progressPercent, winningSide } = useSeasonVictory(pos.season);
 
   const phase = currentPhase ?? pos.phase;
-  const isEnded = phase === 'ENDED';
   const num = String(pos.id).padStart(2, '0');
 
-  // Fetch position data for all phases except ENDED (PAYOUT still needs it)
-  const activeAddr   = isEnded ? undefined : (pos.season as string);
-  const activePlayer = isEnded ? undefined : playerAddress;
+  // PAYOUT is now terminal (no ENDED phase), so position data is always fetched.
+  const activeAddr   = pos.season as string;
+  const activePlayer = playerAddress;
 
   const { data: openOrders = [] }   = useOpenOrders(activeAddr, activePlayer, 'open');
   const { data: currentPrice = 0 }  = useLastTradePrice(activeAddr);
@@ -256,7 +264,7 @@ function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: any) {
   const { data: auctionMints = [] } = useMyAuctionMints(activeAddr, activePlayer);
 
   // Mirror TradingMask: wallet balance + FIM escrowed in open sell orders
-  const lockedFim    = useMemo(() => openOrders.reduce((a: number, o: any) => o.isBuy ? a : a + o.remainingAmount, 0), [openOrders]);
+  const lockedFim    = useMemo(() => openOrders.reduce((a: number, o) => o.isBuy ? a : a + o.remainingAmount, 0), [openOrders]);
   const availableFim = Number(formatUnits(pos.balance, 18));
   const totalFim     = availableFim + lockedFim;
 
@@ -265,7 +273,6 @@ function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: any) {
   const fimForDisplay = totalFim > 0.0001 ? totalFim : (position?.netSize ?? 0);
   const holdingsLabel = pos.balance > 0n ? 'Holdings' : 'FIM Burned';
 
-  const positionValue = fimForDisplay * currentPrice;
   const pnl           = position ? (currentPrice - position.entryPrice) * fimForDisplay : null;
 
   const { payout, pnl: seasonPnl, realizedPayout } = payoutData;
@@ -298,41 +305,10 @@ function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: any) {
           </span>
         </div>
 
-        {/* Columns 2–4: metrics */}
-        {isEnded ? (
-          // ENDED — compact concluded grid
-          <div className="grid grid-cols-2 gap-4 flex-1 md:px-6">
-            <div className="meta-data-group">
-              <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">{claimLabel}</span>
-              <span className="font-mono text-sm font-bold" style={{ color: canClaim ? 'var(--color-gold)' : 'var(--color-text)', fontVariantNumeric: 'tabular-nums' }}>
-                ${claimableAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                <span className="text-[10px] text-text2 font-normal ml-1">USDC</span>
-              </span>
-            </div>
-            <div className="meta-data-group">
-              <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Prize Pool</span>
-              <span className="font-mono text-sm font-bold text-gold" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                ${(giniData?.prizePool ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                <span className="text-[10px] text-text2 font-normal ml-1">USDC</span>
-              </span>
-            </div>
-            <div className="meta-data-group">
-              <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Season PnL</span>
-              <span className="font-mono text-sm font-bold" style={{ color: seasonPnl > 0 ? 'var(--color-green)' : seasonPnl < 0 ? 'var(--color-red)' : 'var(--color-text2)', fontVariantNumeric: 'tabular-nums' }}>
-                {seasonPnl > 0 ? '+' : seasonPnl < 0 ? '-' : ''}${Math.abs(seasonPnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                <span className="text-[10px] text-text2 font-normal ml-1">USDC</span>
-              </span>
-            </div>
-            {playerStats && (
-              <div className="meta-data-group">
-                <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Your Result</span>
-                <PercentileCircle percentage={playerStats.factionPercentile} isCapitalist={playerStats.isCapitalist} size="sm" />
-              </div>
-            )}
-          </div>
-        ) : (
-          // ACTIVE + PAYOUT — 3 paired columns: (Position/Available or Claimable) | (Standing/PnL) | (Prize Pool/Countdown or Season PnL)
-          <div className="flex-1 flex flex-wrap gap-x-6 gap-y-3 md:px-6">
+        {/* Columns 2–4: metrics — ACTIVE + PAYOUT (PAYOUT is terminal; no ENDED).
+            3 paired columns: (Position/Available or Claimable) | (Standing/PnL)
+            | (Prize Pool/Countdown or Season PnL) */}
+        <div className="flex-1 flex flex-wrap gap-x-6 gap-y-3 md:px-6">
 
             {/* Col 2: Position (top) / Available or Claimable (bottom) */}
             <div className="flex flex-col gap-3 flex-1 min-w-20">
@@ -415,10 +391,9 @@ function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: any) {
             </div>
 
           </div>
-        )}
 
         {/* Column 5: Victory progress rail (active + payout seasons) */}
-        {!isAuctionOrBootstrap && !isEnded && (
+        {!isAuctionOrBootstrap && (
           <div className="w-full md:w-50 flex flex-col gap-1.5 shrink-0">
             <span className="font-mono text-[9px] uppercase text-text2 tracking-wider md:text-right block">
               Victory Progress

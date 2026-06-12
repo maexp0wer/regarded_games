@@ -79,8 +79,8 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('POST /api/faucet/referral error:', error?.message ?? error);
+  } catch (error: unknown) {
+    console.error('POST /api/faucet/referral error:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }

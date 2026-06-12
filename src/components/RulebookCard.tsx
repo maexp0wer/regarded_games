@@ -4,27 +4,49 @@
 import React, { useState } from 'react';
 
 interface RulebookCardProps {
-  themeColor: string;           
-  themeColorHover?: string;     
-  themeColorRgba: string;       
-  chassisGradient: string;      
-  
+  themeColor: string;
+  themeColorHover?: string;
+  themeColorRgba: string;
+  chassisGradient: string;
+
   headerTag: string;
   title: string;
-  symbol: React.ReactNode; 
-  
+  symbol: React.ReactNode;
+
+  /* Printed page number, bottom-right of the page */
+  pageNumber?: string;
+
   footerLeftText: string;
   footerMiddleText: string;
   footerRightText: string;
-  footerTextColor?: string; 
-  
+  footerTextColor?: string;
+
   maxWidth?: string;
+  width?: string;
   minHeight?: string;
 
-  illustrationSlot: React.ReactNode; 
-  detailsSlot: React.ReactNode;      
+  /**
+   * When true, skips the outer black bezel and uses a thin chassis border
+   * with corner bracket details instead of the thick metallic frame.
+   */
+  noBezel?: boolean;
+
+  /**
+   * When true, suppresses the chassis border entirely — use when the card is
+   * embedded inside an outer container that owns the border.
+   */
+  noBorder?: boolean;
+
+  detailsSlot: React.ReactNode;
 }
 
+/**
+ * A single page of the game's instruction manual. Shares the HeroCard chassis
+ * (black bezel, metallic gradient frame, header plate, footer strip) so it
+ * reads as part of the same deck — but the interior is a rulebook page: paper
+ * surface, binding shadow along the spine, page-edge stack on the fore-edge
+ * and a printed page number.
+ */
 export default function RulebookCard({
   themeColor,
   themeColorHover,
@@ -33,121 +55,167 @@ export default function RulebookCard({
   headerTag,
   title,
   symbol,
+  pageNumber,
   footerLeftText,
   footerMiddleText,
   footerRightText,
-  footerTextColor, 
-  maxWidth = '880px',
-  minHeight = '680px',
-  illustrationSlot,
+  footerTextColor,
+  maxWidth = '440px',
+  width,
+  minHeight = '560px',
+  noBezel = false,
+  noBorder = false,
   detailsSlot
 }: RulebookCardProps) {
   const [isCardHovered, setIsCardHovered] = useState(false);
   const highlightColor = themeColorHover || themeColor;
 
+  const innerContent = (
+    <div className="flex flex-col flex-grow justify-between gap-1.5 z-10">
+
+      {/* Header plate — omitted in noBorder mode (parent wrapper owns the header) */}
+      {!noBorder && (
+        <div
+          className="flex justify-between items-center px-3 py-1.5 rounded border shadow-md transition-colors duration-300"
+          style={{
+            backgroundColor: noBezel ? 'var(--color-card2)' : 'rgba(12, 12, 15, 0.6)',
+            borderColor: `rgba(${themeColorRgba}, 0.25)`
+          }}
+        >
+          <div className="flex flex-col">
+            <span className="text-[8px] uppercase font-black tracking-widest font-mono" style={{ color: themeColor }}>
+              {headerTag}
+            </span>
+            <h3 className="text-md font-black tracking-widest leading-tight uppercase text-text">
+              {title}
+            </h3>
+          </div>
+          <div
+            className="w-7 h-7 rounded flex items-center justify-center font-black text-xs border"
+            style={{
+              backgroundColor: noBezel ? 'var(--color-card3)' : 'rgba(25, 25, 30, 0.95)',
+              borderColor: themeColor,
+              color: highlightColor
+            }}
+          >
+            {symbol}
+          </div>
+        </div>
+      )}
+
+      {/* Rulebook page — inset with px-3 chassis padding on sides in noBorder mode */}
+      <div className={`flex flex-col flex-grow ${noBorder ? 'p-3' : ''}`}>
+        <div
+          className="relative flex flex-col flex-grow rounded-sm border overflow-hidden shadow-inner"
+          style={{ backgroundColor: 'var(--color-card)', borderColor: `rgba(${themeColorRgba}, 0.3)` }}
+        >
+          {/* Corner brackets inside the page panel */}
+          <div className="absolute top-1 left-1 w-3 h-3 border-t border-l pointer-events-none z-20" style={{ borderColor: `rgba(${themeColorRgba}, 0.5)` }} />
+          <div className="absolute top-1 right-1 w-3 h-3 border-t border-r pointer-events-none z-20" style={{ borderColor: `rgba(${themeColorRgba}, 0.5)` }} />
+          <div className="absolute bottom-1 left-1 w-3 h-3 border-b border-l pointer-events-none z-20" style={{ borderColor: `rgba(${themeColorRgba}, 0.5)` }} />
+          <div className="absolute bottom-1 right-1 w-3 h-3 border-b border-r pointer-events-none z-20" style={{ borderColor: `rgba(${themeColorRgba}, 0.5)` }} />
+
+          {/* Paper grain */}
+          <div
+            className="absolute inset-0 pointer-events-none opacity-[0.05] mix-blend-overlay"
+            style={{ backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.6) 0px, rgba(255,255,255,0.6) 1px, transparent 1px, transparent 3px)' }}
+          />
+          {/* Page-edge stack on the fore-edge — in noBorder mode the parent
+              page owns the fore-edge, outside this inner panel */}
+          {!noBorder && (
+            <div
+              className="absolute inset-y-1 right-0 w-[5px] pointer-events-none z-10"
+              style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent 0px, transparent 1.5px, rgba(0,0,0,0.22) 1.5px, rgba(0,0,0,0.22) 2.5px)' }}
+            />
+          )}
+
+          <div className="relative z-[5] flex flex-col flex-grow gap-2 p-4 md:p-5">
+            <div className="flex flex-col flex-grow">
+              {detailsSlot}
+            </div>
+
+            {pageNumber && (
+              <div className="flex justify-end">
+                <span className="font-mono text-[9px] tabular-nums text-text2 opacity-70">{pageNumber}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer strip — omitted in noBorder mode (parent wrapper owns the footer) */}
+      {!noBorder && (
+        <div
+          className="flex justify-between items-center px-1 pt-0.5 text-[9px] font-mono rounded opacity-80"
+          style={{ color: footerTextColor || (noBezel ? 'var(--color-text2)' : 'rgba(255, 255, 255, 0.6)') }}
+        >
+          <span>{footerLeftText}</span>
+          <span>{footerMiddleText}</span>
+          <span>{footerRightText}</span>
+        </div>
+      )}
+
+    </div>
+  );
+
+  if (noBezel) {
+    return (
+      <div
+        className="w-full relative group mx-auto flex flex-col select-none"
+        style={{ maxWidth, minHeight, ...(width ? { width } : {}) }}
+        onMouseEnter={() => setIsCardHovered(true)}
+        onMouseLeave={() => setIsCardHovered(false)}
+      >
+        <div
+          className="flex flex-col flex-grow w-full rounded-md relative overflow-hidden transition-all duration-500"
+          style={{
+            border: noBorder ? 'none' : `1px solid ${themeColor}`,
+            backgroundColor: 'var(--color-card)',
+            boxShadow: noBorder ? undefined : (isCardHovered
+              ? `0 0 28px rgba(${themeColorRgba}, 0.35)`
+              : `0 0 14px rgba(${themeColorRgba}, 0.08)`),
+          }}
+        >
+          {innerContent}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div 
-      className="w-full relative group mx-auto transition-all duration-300" 
-      style={{ maxWidth, minHeight }}
+    <div
+      className="w-full relative group mx-auto flex flex-col"
+      style={{ maxWidth, minHeight, ...(width ? { width } : {}) }}
       onMouseEnter={() => setIsCardHovered(true)}
       onMouseLeave={() => setIsCardHovered(false)}
     >
-      {/* Outer black bezel padding set to tight 1px offset */}
-      <div 
-        className="flex flex-col h-full w-full rounded-md p-[1px] relative select-none transition-all duration-500"
-        style={{ 
-          backgroundColor: '#070709', 
-          boxShadow: isCardHovered 
+      {/* Outer black bezel — same stack as HeroCard's front face */}
+      <div
+        className="flex flex-col flex-grow w-full rounded-md p-2.5 relative select-none transition-all duration-500"
+        style={{
+          backgroundColor: '#070709',
+          boxShadow: isCardHovered
             ? `0 0 45px rgba(${themeColorRgba}, 0.45)`
             : `0 0 30px rgba(${themeColorRgba}, 0.12)`
         }}
       >
-        {/* Chassis Gradient frame set to ultra-thin p-[2px] bezel */}
-        <div 
-          className="flex flex-col h-full w-full rounded-md p-[2px] justify-between border relative overflow-visible"
-          style={{ 
+        {/* Metallic chassis frame */}
+        <div
+          className="flex flex-col flex-grow w-full rounded-md p-2 border relative overflow-hidden"
+          style={{
             background: chassisGradient,
-            borderColor: `rgba(${themeColorRgba}, 0.55)`, 
-            boxShadow: 'inset 0 0 12px rgba(0,0,0,0.6), inset 0 0 3px rgba(255,255,255,0.25)', 
+            borderColor: `rgba(${themeColorRgba}, 0.55)`,
+            boxShadow: 'inset 0 0 12px rgba(0,0,0,0.6), inset 0 0 3px rgba(255,255,255,0.25)',
           }}
         >
-          {/* Overlay Grid Scanlines */}
-          <div 
+          {/* Overlay scanlines */}
+          <div
             className="absolute inset-0 pointer-events-none opacity-25 mix-blend-overlay rounded-md"
             style={{ backgroundImage: 'repeating-linear-gradient(45deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px)' }}
           />
-          <div className="absolute inset-[0.5px] border border-black/15 rounded pointer-events-none" />
+          <div className="absolute inset-1 border border-black/15 rounded pointer-events-none" />
 
-          {/* Unified Content with compact gap spacing */}
-          <div className="flex flex-col h-full justify-between gap-1.5 z-10 overflow-visible p-1">
-            
-            {/* Header (Full Width) */}
-            <div 
-              className="flex justify-between items-center px-2.5 py-1 rounded border shadow-md transition-colors duration-300"
-              style={{ backgroundColor: 'rgba(12, 12, 15, 0.6)', borderColor: `rgba(${themeColorRgba}, 0.25)` }}
-            >
-              <div className="flex flex-col">
-                <span className="text-[7.5px] uppercase font-black tracking-widest font-mono" style={{ color: themeColor }}>
-                  {headerTag}
-                </span>
-                <h3 className="text-md font-black tracking-widest leading-tight uppercase text-text">
-                  {title}
-                </h3>
-              </div>
-              <div 
-                className="w-6.5 h-6.5 rounded flex items-center justify-center font-black text-[10px] border"
-                style={{ backgroundColor: 'rgba(25, 25, 30, 0.95)', borderColor: themeColor, color: highlightColor }}
-              >
-                {symbol}
-              </div>
-            </div>
-
-            {/* Tightened Dual-Column Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-1.5 flex-grow items-stretch">
-              
-              {/* Left Column: Graphic Frame */}
-              <div className="md:col-span-6 flex flex-col h-full">
-                <div 
-                  className="w-full h-full min-h-[300px] md:min-h-0 border rounded-sm relative overflow-visible flex items-center justify-center shadow-inner flex-grow"
-                  style={{ backgroundColor: 'var(--color-bg)', borderColor: `rgba(${themeColorRgba}, 0.3)` }}
-                >
-                  <div className="absolute inset-0.5 border border-white/5 pointer-events-none rounded z-30" />
-                  
-                  {/* Decorative Corners */}
-                  <div className="absolute top-0.5 left-0.5 w-2.5 h-2.5 border-t border-l z-30" style={{ borderColor: `rgba(${themeColorRgba}, 0.35)` }} />
-                  <div className="absolute top-0.5 right-0.5 w-2.5 h-2.5 border-t border-r z-30" style={{ borderColor: `rgba(${themeColorRgba}, 0.35)` }} />
-                  <div className="absolute bottom-0.5 left-0.5 w-2.5 h-2.5 border-b border-l z-30" style={{ borderColor: `rgba(${themeColorRgba}, 0.35)` }} />
-                  <div className="absolute bottom-0.5 right-0.5 w-2.5 h-2.5 border-b border-r z-30" style={{ borderColor: `rgba(${themeColorRgba}, 0.35)` }} />
-                  
-                  <div className="absolute inset-0 w-full h-full z-10 p-1">
-                    {illustrationSlot}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column: Technical Details */}
-              <div className="md:col-span-6 flex flex-col h-full">
-                <div 
-                  className="border rounded-md p-3 flex flex-col gap-1 shadow-sm text-left h-full justify-start flex-grow relative overflow-hidden"
-                  style={{ backgroundColor: 'rgba(12, 12, 15, 0.92)', borderColor: `rgba(${themeColorRgba}, 0.25)` }}
-                >
-                  {detailsSlot}
-                </div>
-              </div>
-
-            </div>
-
-            {/* Footer */}
-            <div 
-              className="flex justify-between items-center px-1 text-[8px] font-mono rounded opacity-80 pt-0.5"
-              style={{ color: footerTextColor || 'rgba(255, 255, 255, 0.6)' }}
-            >
-              <span>{footerLeftText}</span>
-              <span>{footerMiddleText}</span>
-              <span>{footerRightText}</span>
-            </div>
-
-          </div>
+          {innerContent}
         </div>
       </div>
     </div>

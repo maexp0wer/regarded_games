@@ -17,8 +17,8 @@ const PONDER_URL = TENANTS.sepolia.ponderUrl;
 async function safe<T>(label: string, fn: () => Promise<T>, fallback: T): Promise<T> {
   try {
     return await fn();
-  } catch (e: any) {
-    console.warn(`[quests] ${label} failed: ${e?.message ?? e}`);
+  } catch (e: unknown) {
+    console.warn(`[quests] ${label} failed: ${e instanceof Error ? e.message : e}`);
     return fallback;
   }
 }
@@ -220,7 +220,7 @@ async function discourseHasVoted(addr: string): Promise<boolean> {
     for (const arr of Object.values(voters)) {
       if (!Array.isArray(arr)) continue;
       totalOnPage += arr.length;
-      if (arr.some((u: any) => u?.id === discourseUserId)) return true;
+      if (arr.some((u: unknown) => (u as { id?: number })?.id === discourseUserId)) return true;
     }
     // If every option returned 0 voters this page, we've exhausted all pages.
     if (totalOnPage === 0) break;
@@ -243,6 +243,7 @@ async function qualifyingReferralCount(addr: string, threshold: number): Promise
   return Number(rows[0]?.count ?? 0);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function checkGalxe(_addr: string, _campaign: string): Promise<boolean> {
   // Galxe API integration is deferred. Always returns false in v1 so the
   // sub-quest is rendered as "Launch" (galxe type) but never auto-completed.
@@ -511,8 +512,8 @@ export async function GET(req: Request) {
         captchaVerified,
       },
     });
-  } catch (err: any) {
-    console.error('GET /api/quests error:', err?.message ?? err);
+  } catch (err: unknown) {
+    console.error('GET /api/quests error:', err instanceof Error ? err.message : err);
     return NextResponse.json({ error: 'server_error' }, { status: 500 });
   }
 }

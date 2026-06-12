@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     if (uniqueAddresses.length === 0) return NextResponse.json({});
 
     const rawThreshold = BigInt(massThreshold);
-    const results: Record<string, any> = {};
+    const results: Record<string, { factionPercentile: number; isCapitalist: boolean; totalInFaction: number; factionRank: number }> = {};
 
     // Parallel execution is efficient here because Postgres handles concurrent reads well
     await Promise.all(uniqueAddresses.map(async (uAddr) => {
@@ -78,8 +78,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json(results);
 
-  } catch (error: any) {
-    console.error("Batch Percentile API Error:", error.message);
+  } catch (error: unknown) {
+    console.error("Batch Percentile API Error:", error instanceof Error ? error.message : error);
     return NextResponse.json(null, { status: 500 });
   }
 }

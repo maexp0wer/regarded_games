@@ -18,11 +18,6 @@ interface TradeFlowsProps {
   selectedRange?: { start: number; end: number } | null;
   onClearSelection?: () => void;
   isLive?: boolean;
-  minimal?: boolean; // Optional prop to hide headers
-  mockChordData?: {  // Optional prop to directly feed live animated segments
-    groups: { isCapitalist: boolean; label: string; playerCount: number }[];
-    matrix: number[][];
-  };
 }
 
 export function TradeFlows({
@@ -32,8 +27,6 @@ export function TradeFlows({
   selectedRange = null,
   onClearSelection = () => {},
   isLive = false,
-  minimal = false,
-  mockChordData,
 }: TradeFlowsProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -89,19 +82,17 @@ export function TradeFlows({
   }, [selectedRange, timeWindowMs, trades]);
 
   const chordData = useMemo(() => {
-    if (minimal && mockChordData) return mockChordData;
     return buildChordData(trades, timeStart, timeEnd);
-  }, [trades, timeStart, timeEnd, minimal, mockChordData]);
+  }, [trades, timeStart, timeEnd]);
 
   const tradeCount = useMemo(() => {
-    if (minimal) return 1; // Always allow minimal preview rendering
     const startSec = timeStart / 1000;
     const endSec = timeEnd / 1000;
     return trades.filter((t) => {
       const ts = Number(BigInt(t.timestamp));
       return ts >= startSec && ts <= endSec;
     }).length;
-  }, [trades, timeStart, timeEnd, minimal]);
+  }, [trades, timeStart, timeEnd]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
@@ -146,13 +137,13 @@ export function TradeFlows({
     const capTotal = totalVol.slice(0, numCap).reduce((s, v) => s + v, 0);
     const socTotal = totalVol.slice(numCap).reduce((s, v) => s + v, 0);
 
-    const innerRadius = size / 2 - 36;
-    const outerRadius = size / 2 - 18;
+    const innerRadius = Math.max(0, size / 2 - 36);
+    const outerRadius = Math.max(0, size / 2 - 18);
 
     const GAP      = 0.5;
     const BAND_PAD = 0.01;
     const HALF_ARC = Math.PI - GAP / 2;
-    const RR = innerRadius - 1;
+    const RR = Math.max(0, innerRadius - 1);
     const MIN_DRAW = 0.02;
     const MIN_SLOT = MIN_DRAW + BAND_PAD;
 
@@ -263,7 +254,7 @@ export function TradeFlows({
         .attr('stroke-width', isEmpty ? 0 : 1);
 
       if (!isEmpty) arc
-        .on('mouseover', (_event: MouseEvent) => {
+        .on('mouseover', () => {
           tooltip.style('display', 'block').html(
             `${g.label}<br/>${g.playerCount} player${g.playerCount !== 1 ? 's' : ''}<br/>${totalVol[i].toFixed(1)} FIM`
           );
@@ -315,15 +306,6 @@ export function TradeFlows({
       end.toLocaleTimeString('en-US', timeFmt)
     );
   }, [selectedRange, timeframe]);
-
-  // Clean layout context
-  if (minimal) {
-    return (
-      <div ref={containerRef} className="flex items-center justify-center h-full w-full min-w-0 min-h-0 select-none">
-        <svg ref={svgRef} className="block pointer-events-auto" width={size} height={size} />
-      </div>
-    );
-  }
 
   return (
     <div className="terminal-pane h-full" style={{ border: 'none' }}>

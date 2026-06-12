@@ -9,6 +9,9 @@ import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
 import { useGiniImpact } from '@/hooks/useGiniImpact';
 import { useTradeExecution, ExecutionPayload } from '@/hooks/useTradeExecution';
+import { useCollateral } from '@/hooks/useCollateral';
+import { netFimToReceive } from '@/utils/collateral';
+import Link from 'next/link';
 import GameSeasonAbiJson from '@/deployments/abis/GameSeason.json';
 import ExchangeAbiJson from '@/deployments/abis/Exchange.json';
 
@@ -146,16 +149,11 @@ export function TradingMask({
     const ids: bigint[] = []; const amounts: bigint[] = [];
     let totalCostUsdcRaw = 0n; let totalFimFilledRaw = 0n;
 
-    const buyLimitRaw = buyTargetAmount ? parseUnits(buyTargetAmount, 18) : maxUint256;
-    let buyRemaining = buyLimitRaw;
-    for (const order of selectedAsks) {
-      if (buyRemaining <= 0n) break;
-      const take = buyRemaining > order.rawAmount ? order.rawAmount : buyRemaining;
-      ids.push(BigInt(order.orderId.toString())); amounts.push(take);
-      totalCostUsdcRaw += (take * order.rawPrice) / order.rawInitialAmount;
-      totalFimFilledRaw += take; buyRemaining -= take;
-    }
-
+    // SELL legs (selling into bids) MUST precede BUY legs (taking asks) in the
+    // ids array. The Exchange checks collateral per-leg in array order: a sell
+    // leg releases the taker's lock immediately, so placing sells first means
+    // those releases land before any buy leg's sufficiency check — making the
+    // effective collateral requirement NET (buy − sell) instead of GROSS.
     const sellLimitRaw = sellTargetAmount ? parseUnits(sellTargetAmount, 18) : maxUint256;
     let sellRemaining = sellLimitRaw;
     for (const order of selectedBids) {
@@ -164,6 +162,16 @@ export function TradingMask({
       ids.push(BigInt(order.orderId.toString())); amounts.push(take);
       totalCostUsdcRaw += (take * order.rawPrice) / order.rawInitialAmount;
       totalFimFilledRaw += take; sellRemaining -= take;
+    }
+
+    const buyLimitRaw = buyTargetAmount ? parseUnits(buyTargetAmount, 18) : maxUint256;
+    let buyRemaining = buyLimitRaw;
+    for (const order of selectedAsks) {
+      if (buyRemaining <= 0n) break;
+      const take = buyRemaining > order.rawAmount ? order.rawAmount : buyRemaining;
+      ids.push(BigInt(order.orderId.toString())); amounts.push(take);
+      totalCostUsdcRaw += (take * order.rawPrice) / order.rawInitialAmount;
+      totalFimFilledRaw += take; buyRemaining -= take;
     }
 
     return { ids, amounts, totalCostRaw: totalCostUsdcRaw, totalFimRaw: totalFimFilledRaw };
@@ -417,7 +425,7 @@ export function TradingMask({
 
   const clearTargets = (v: string) => { setBuyTargetAmount(v); setSellTargetAmount(v); };
 
-  const { workflowStatus, txHashes, handleStartFlow, isBusy } = useTradeExecution({
+  const { workflowStatus, txHashes, handleStartFlow, isBusy, errorReason, resetWorkflow } = useTradeExecution({
     isMaker, isBuy: directionIsBuy, targetAmount: makerTargetAmount, makerTotalUsdcRaw, executionPayload,
     spendingToken: spendingToken as `0x${string}`, spendingSymbol,
     exchangeAddress: exchangeAddress as `0x${string}`,
@@ -427,12 +435,33 @@ export function TradingMask({
     sellFimAmountNeeded: legsFim.sellFimRaw,
   });
 
+  // ── Collateral pre-check ──
+  // Any action that commits the wallet to acquiring FIM needs staked-RGD
+  // headroom: a maker placing a bid (reserves collateral now), or a taker
+  // receiving FIM. For a mixed taker fill the requirement is NET (buy − sell),
+  // because the executionPayload places sell legs first (releases land before
+  // the buy-leg check). Asks and pure sells commit no FIM → no check.
+  const collateral = useCollateral(seasonAddress, exchangeAddress);
+  const fimToCommit = useMemo(() => {
+    if (isMaker) return isBuy ? parseUnits(makerTargetAmount || '0', 18) : 0n;
+    return netFimToReceive(legsFim.buyFimRaw, legsFim.sellFimRaw);
+  }, [isMaker, isBuy, makerTargetAmount, legsFim.buyFimRaw, legsFim.sellFimRaw]);
+  const collateralGate = useMemo(
+    () => collateral.checkBuy(fimToCommit),
+    [collateral, fimToCommit],
+  );
+  // Only gate once reads have resolved and there's actually FIM to commit;
+  // otherwise the revert remains the fallback (handled in useTradeExecution).
+  const isUnderCollateralized =
+    fimToCommit > 0n && collateral.isReady && !collateralGate.ok;
+
   const isButtonDisabled = isBusy || workflowStatus === 'success'
     || (isMaker ? makerTotalUsdcRaw === 0n : (selectedOrders.length === 0 || executionPayload.totalCostRaw === 0n))
-    || isSelfFill;
+    || isSelfFill
+    || isUnderCollateralized;
 
   const userMakers = useMemo(() => (address ? [address.toLowerCase()] : []), [address]);
-  const { data: userStatsMap, isFetched: userStatsFetched } = useBatchPlayerPercentiles(seasonAddress, userMakers, exchangeAddress);
+  const { data: userStatsMap } = useBatchPlayerPercentiles(seasonAddress, userMakers, exchangeAddress);
   const userStats = address ? userStatsMap?.[address.toLowerCase()] : undefined;
 
   const isQueueLocked = !isMaker && selectedOrders.length > 0;
@@ -865,6 +894,23 @@ export function TradingMask({
             </div>
           )}
 
+          {isUnderCollateralized && !isSelfFill && (
+            <Link
+              href="/stake"
+              className="rounded-lg px-4 py-3 flex flex-col gap-1 surface-pink-warn transition-colors hover:brightness-110"
+            >
+              <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-red">
+                Stake more RGD to unlock
+              </span>
+              <span className="font-mono text-[11px] text-text2 tabular-nums">
+                {isMaker ? 'Placing' : 'Buying'} {Number(formatUnits(fimToCommit, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} FIM needs{' '}
+                {Number(formatUnits(collateralGate.needed, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} RGD.
+                You have {Number(formatUnits(collateralGate.headroom, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} free —
+                stake {Number(formatUnits(collateralGate.shortfall, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} more.
+              </span>
+            </Link>
+          )}
+
           <button
             disabled={isButtonDisabled}
             onClick={handleStartFlow}
@@ -885,6 +931,7 @@ export function TradingMask({
         txHashes={txHashes}
         title="Execute Transaction"
         successTitle="Trade Confirmed"
+        errorReason={errorReason}
         steps={[
           {
             label: 'Approve Spending Allowance',
@@ -899,7 +946,7 @@ export function TradingMask({
             completeStatuses: ['success'],
           },
         ]}
-        onClose={() => clearTargets('')}
+        onClose={() => { clearTargets(''); resetWorkflow(); }}
       />
 
     </div>

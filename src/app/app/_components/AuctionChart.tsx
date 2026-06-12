@@ -21,7 +21,6 @@ interface AuctionChartProps {
   points: AuctionPoint[];
   timeframe: Timeframe;
   onTimeframeChange: (tf: Timeframe) => void;
-  minimal?: boolean;
 }
 
 const TIMEFRAMES: Timeframe[] = ['5m', '1h', '4h', '1d'];
@@ -80,7 +79,7 @@ const poolFormatter = (val: number) => {
   return `$${Math.round(abs)}`;
 };
 
-export function AuctionChart({ points, timeframe, onTimeframeChange, minimal = false }: AuctionChartProps) {
+export function AuctionChart({ points, timeframe, onTimeframeChange }: AuctionChartProps) {
   const { darkMode } = useTheme();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -110,39 +109,34 @@ export function AuctionChart({ points, timeframe, onTimeframeChange, minimal = f
     const c = readColors();
     themeRef.current = c;
 
-    // 3. Configure the canvas according to 'minimal'
     const chart = createChart(el, {
       width: el.clientWidth,
       height: el.clientHeight,
       autoSize: false,
       layout: {
         background: { color: 'transparent' },
-        textColor: minimal ? 'transparent' : c.textColor, // <-- Conditional color
+        textColor: c.textColor,
         fontFamily: 'JetBrains Mono, monospace',
         fontSize: 11,
         attributionLogo: false,
-        panes: { 
-          separatorColor: minimal ? 'transparent' : c.grid2Color, // <-- Conditional separator
-          separatorHoverColor: minimal ? 'transparent' : c.grid2Color 
+        panes: {
+          separatorColor: c.grid2Color,
+          separatorHoverColor: c.grid2Color,
         },
       },
       grid: {
-        vertLines: { visible: !minimal, color: c.gridColor }, // <-- Hide if minimal
-        horzLines: { visible: !minimal, color: hexToRgba(c.gridColor, 0.4), style: LineStyle.Dotted },
+        vertLines: { color: c.gridColor },
+        horzLines: { color: hexToRgba(c.gridColor, 0.4), style: LineStyle.Dotted },
       },
-      rightPriceScale: { visible: !minimal, borderColor: c.gridColor }, // <-- Hide if minimal
+      rightPriceScale: { borderColor: c.gridColor },
       leftPriceScale: { visible: false },
-      timeScale: { 
-        visible: !minimal, // <-- Hide if minimal
-        borderColor: c.gridColor, 
-        timeVisible: true, 
+      timeScale: {
+        borderColor: c.gridColor,
+        timeVisible: true,
         secondsVisible: false,
-        barSpacing: minimal ? 3 : undefined // <-- Denser candles if minimal
       },
-      crosshair: { 
+      crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { visible: !minimal }, // <-- Hide lines if minimal
-        horzLine: { visible: !minimal }
       },
     });
     chartRef.current = chart;
@@ -154,7 +148,6 @@ export function AuctionChart({ points, timeframe, onTimeframeChange, minimal = f
       topColor: hexToRgba(c.text1Color, 0.4),
       bottomColor: hexToRgba(c.text1Color, 0.02),
       priceLineVisible: false,
-      lastValueVisible: !minimal, // <-- Hide final bubble if minimal
       priceFormat: { type: 'custom', minMove: 1, formatter: poolFormatter },
     }, 0);
     poolSeriesRef.current = poolSeries;
@@ -163,7 +156,6 @@ export function AuctionChart({ points, timeframe, onTimeframeChange, minimal = f
       color: c.volColor,
       priceScaleId: VOL_SCALE,
       base: 0,
-      lastValueVisible: !minimal, // <-- Hide final bubble if minimal
       priceFormat: { type: 'custom', minMove: 1, formatter: volFormatter },
     }, 1);
     mintSeriesRef.current = mintSeries;
@@ -205,7 +197,6 @@ export function AuctionChart({ points, timeframe, onTimeframeChange, minimal = f
     positionLegendsRef.current = positionLegends;
 
     const renderLegends = (p: AuctionPoint | null) => {
-      if (minimal) return;
       const colors = themeRef.current;
       if (!colors) return;
       const poolEl = poolLegendRef.current;
@@ -325,13 +316,10 @@ export function AuctionChart({ points, timeframe, onTimeframeChange, minimal = f
   return (
     <div className="terminal-pane h-full overflow-hidden p-0! flex flex-col">
       {/* Toolbar strip — mirrors TradingChart: timeframe pills left, live dot. */}
-      {!minimal && (
-        <div className="flex items-center gap-2 px-2 pt-4 pb-2 border-b border-border">
-          <TimeframeSelector value={timeframe} onChange={onTimeframeChange} />
-          <span className="w-1.5 h-1.5 rounded-full bg-green shadow-[0_0_8px_var(--color-green-35)] animate-pulse" />
-        </div>
-      )}
-
+      <div className="flex items-center gap-2 px-2 pt-4 pb-2 border-b border-border">
+        <TimeframeSelector value={timeframe} onChange={onTimeframeChange} />
+        <span className="w-1.5 h-1.5 rounded-full bg-green shadow-[0_0_8px_var(--color-green-35)] animate-pulse" />
+      </div>
 
       <div
         ref={containerRef}

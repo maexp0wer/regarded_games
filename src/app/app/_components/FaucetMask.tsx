@@ -9,6 +9,7 @@ import { TxModal } from './TxModal';
 import { WalletButton } from './WalletButton';
 import { FakeUSDCFaucetABI } from '@/lib/contracts';
 import { useTenant, useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
+import { isUserRejection, isInsufficientGas, friendlyRevertReason } from '@/utils/revertReason';
 
 type Status = 'idle' | 'executing' | 'mining' | 'success' | 'failed' | 'canceled' | 'no_gas';
 
@@ -89,7 +90,7 @@ export function FaucetMask({ initialReferrer }: { initialReferrer?: string } = {
       });
 
       if (logs.length > 0) {
-        setClaimedAmount((logs[0] as any).args.amount as bigint);
+        setClaimedAmount(((logs[0] as unknown as { args: { amount: bigint } }).args.amount));
       }
 
       setStatus('success');
@@ -110,18 +111,15 @@ export function FaucetMask({ initialReferrer }: { initialReferrer?: string } = {
           .catch((e) => console.error('Referral POST network error:', e));
       }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Faucet claim error:', err);
-      const isRejection = err.shortMessage?.includes('rejected') || err.message?.includes('User rejected');
-      const isInsufficientGas = err.message?.includes('insufficient funds') || err.name === 'InsufficientFundsError';
-
-      if (isRejection) {
+      if (isUserRejection(err)) {
         setStatus('canceled');
         setTimeout(() => setStatus('idle'), 2000);
-      } else if (isInsufficientGas) {
+      } else if (isInsufficientGas(err)) {
         setStatus('no_gas');
       } else {
-        setErrorReason(err.shortMessage || err.message || null);
+        setErrorReason(friendlyRevertReason(err));
         setStatus('failed');
       }
     }

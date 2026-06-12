@@ -8,6 +8,7 @@ import Link from 'next/link';
 
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
+import type { Abi } from 'abitype';
 import { usePayout } from '@/hooks/usePayout';
 import { useDiscourseAlerts, type PendingPoll, type ReplyGroup } from '@/hooks/useDiscourseAlerts';
 import { forumLoginUrl } from '@/utils/discourseForum';
@@ -126,7 +127,7 @@ function AlertItem({
 
 // ─── Claimable Payout (Gold) ──────────────────────────────────────────────────
 
-function ClaimableCard({ season, playerAddress }: { season: any; playerAddress: string }) {
+function ClaimableCard({ season, playerAddress }: { season: { id: number; season: string }; playerAddress: string }) {
   const { payout, pnl, loading } = usePayout(season.season, playerAddress as Address);
 
   if (loading || payout <= 0) return null;
@@ -311,8 +312,8 @@ export function Alerts({ playerAddress }: { playerAddress: string }) {
       for (let i = 0; i < 30; i++) {
         try {
           const data = await publicClient.readContract({ address: controllerAddress, abi: CONTROLLER_ABI, functionName: 'seasons', args: [BigInt(i)] });
-          const phase = await publicClient.readContract({ address: data[0], abi: GameSeasonAbi as any, functionName: 'getPhase' });
-          if (phase === 'PAYOUT' || phase === 'ENDED') list.push({ id: i + 1, season: data[0], phase: phase as string });
+          const phase = await publicClient.readContract({ address: data[0], abi: GameSeasonAbi as Abi, functionName: 'getPhase' });
+          if (phase === 'PAYOUT') list.push({ id: i + 1, season: data[0], phase: phase as string });
         } catch { break; }
       }
       return list;

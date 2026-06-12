@@ -13,6 +13,7 @@ import CapitalAuctionAbi from '@/deployments/abis/CapitalAuction.json';
 import { useTenantDeployment, useTenantChainId, useTenantPonderUrl } from '@/context/TenantContext';
 import { TxModal } from './TxModal';
 import { extractRevertReason } from '@/utils/txErrors';
+import { isUserRejection, isInsufficientGas } from '@/utils/revertReason';
 
 type DepositStatus = 'idle' | 'approving' | 'mining_approval' | 'depositing' | 'mining_deposit' | 'success' | 'canceled' | 'failed' | 'no_gas';
 type ClaimStatus   = 'idle' | 'claiming' | 'mining_claim' | 'success' | 'canceled' | 'failed';
@@ -77,11 +78,7 @@ export function IcoMask() {
     chainId,
     query: { refetchInterval: 5000 },
   });
-  const { data: vestingContractRaw } = useReadContract({
-    address: capitalAuctionAddr, abi: CapitalAuctionAbi, functionName: 'vestingContract',
-    chainId,
-    query: { refetchInterval: 30000 },
-  });
+
   const { data: saleBpsRaw } = useReadContract({
     address: capitalAuctionAddr, abi: CapitalAuctionAbi, functionName: 'SALE_BPS',
     chainId,
@@ -118,7 +115,6 @@ export function IcoMask() {
   const isRgdSet        = rgdAddress !== ZERO_ADDR;
   const auctionEnd      = (auctionEndRaw      as bigint  | undefined) ?? 0n;
   const finalized       = (finalizedRaw       as boolean | undefined) ?? false;
-  const vestingContract = (vestingContractRaw as string  | undefined) ?? '';
   const saleBps         = (saleBpsRaw         as bigint  | undefined) ?? 0n;
   const lpBps           = (lpBpsRaw           as bigint  | undefined) ?? 0n;
   const totalUsdc       = (totalUsdcRaw       as bigint  | undefined) ?? 0n;
@@ -181,7 +177,7 @@ export function IcoMask() {
   const auctionPoolSupplyNum = Number(formatUnits(auctionPoolSupply, 18));
   const userDepositNum      = Number(formatUnits(userDeposit, 6));
   const usdcBalNum          = Number(formatUnits(usdcBalance, 6));
-  const userRgdNum          = Number(formatUnits(userRgdShare, 18));
+
 
   const displayUserDeposit  = hasClaimed ? claimedDeposit  : userDeposit;
   const displayUserRgdShare = hasClaimed ? claimedRgdShare : userRgdShare;
@@ -248,12 +244,12 @@ export function IcoMask() {
       setDepositStatus('success');
       refetchTotalUsdc(); refetchUserDeposit(); refetchUsdcBalance();
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Deposit error:', err);
-      if (err.shortMessage?.includes('rejected') || err.message?.includes('User rejected')) {
+      if (isUserRejection(err)) {
         setDepositStatus('canceled');
         setTimeout(() => setDepositStatus('idle'), 2000);
-      } else if (err.message?.includes('insufficient funds') || err.name === 'InsufficientFundsError') {
+      } else if (isInsufficientGas(err)) {
         setDepositStatus('no_gas');
       } else {
         setErrorReason(extractRevertReason(err));
@@ -279,9 +275,9 @@ export function IcoMask() {
       setClaimStatus('success');
       refetchUserDeposit();
       refetchParticipant();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Claim error:', err);
-      if (err.shortMessage?.includes('rejected') || err.message?.includes('User rejected')) {
+      if (isUserRejection(err)) {
         setClaimStatus('canceled');
         setTimeout(() => setClaimStatus('idle'), 2000);
       } else {

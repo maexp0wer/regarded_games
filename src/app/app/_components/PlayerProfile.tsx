@@ -1,17 +1,19 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import { useAccount, useReadContract, useSignMessage } from 'wagmi';
 import { formatUnits } from 'viem';
 
 import ERC20AbiRaw from '@/deployments/abis/FakeUSDC.json';
 import StakingAbiRaw from '@/deployments/abis/Staking.json';
+import type { Abi } from 'abitype';
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import { useLifetimeStats } from '@/hooks/useLifetimeStats';
 import { useRgdPrice } from '@/hooks/useRgdPrice';
 
-const ERC20Abi = ERC20AbiRaw as any;
-const StakingAbi = StakingAbiRaw as any;
+const ERC20Abi = ERC20AbiRaw as Abi;
+const StakingAbi = StakingAbiRaw as Abi;
 
 interface PlayerProfileProps {
   profileAddress: `0x${string}`;
@@ -29,12 +31,14 @@ export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   const displayImageUrl = useMemo(() => {
     if (profile.imageUrl?.trim()) return profile.imageUrl;
     const seed = profile.name?.trim() || profileAddress;
     return `https://api.dicebear.com/9.x/bottts/svg?seed=${encodeURIComponent(seed)}`;
   }, [profile.imageUrl, profile.name, profileAddress]);
+  useEffect(() => { setAvatarError(false); }, [displayImageUrl]);
 
   const stakingAddr = coreAddresses.Staking as `0x${string}`;
   const rgdAddr     = coreAddresses.RGD    as `0x${string}`;
@@ -82,8 +86,8 @@ export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
       });
       if (res.ok) setIsEditing(false);
       else alert(`Failed: ${await res.text()}`);
-    } catch (err: any) {
-      alert(`Error: ${err.message || 'Failed to save'}`);
+    } catch (err: unknown) {
+      alert(`Error: ${err instanceof Error ? err.message : 'Failed to save'}`);
     } finally {
       setIsSaving(false);
     }
@@ -124,11 +128,13 @@ export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
             className="relative shrink-0 overflow-hidden shadow-[0_0_16px_var(--color-gold-35)]"
             style={{ width: 64, height: 64, borderRadius: '50%', border: '2px solid var(--color-gold)' }}
           >
-            <img
-              src={displayImageUrl}
+            <Image
+              src={avatarError ? `https://api.dicebear.com/9.x/bottts/svg?seed=${profileAddress}` : displayImageUrl}
               alt="Player Avatar"
-              className="w-full h-full object-cover"
-              onError={(e) => { (e.target as HTMLImageElement).src = `https://api.dicebear.com/9.x/bottts/svg?seed=${profileAddress}`; }}
+              fill
+              unoptimized
+              className="object-cover"
+              onError={() => setAvatarError(true)}
             />
             <div
               className="absolute inset-x-0 h-px pointer-events-none"

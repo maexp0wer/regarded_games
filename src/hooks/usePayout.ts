@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useReadContracts, useReadContract } from 'wagmi';
+import { useReadContracts } from 'wagmi';
 import { formatUnits } from 'viem';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { useTenantChainId } from '@/context/TenantContext';

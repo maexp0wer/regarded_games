@@ -10,6 +10,7 @@ import { useSeasonPhase } from '@/hooks/useSeasonPhase';
 import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 import Link from 'next/link';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
+import type { Abi } from 'abitype';
 import { SeasonPhasePills } from './SeasonPhasePills';
 import { CountdownTicker } from './CountdownTicker';
 
@@ -29,7 +30,7 @@ const GAME_CONTROLLER_SEASONS_ABI = [
   },
 ] as const;
 
-const GAME_SEASON_FULL_ABI = GameSeasonAbi as any;
+const GAME_SEASON_FULL_ABI = GameSeasonAbi as Abi;
 
 // --- Types ---
 type SeasonRegistry = {
@@ -205,7 +206,7 @@ export function SeasonsList() {
   );
 
   const display = [...(seasonsData || [])].reverse();
-  const filtered = display.filter(s => showAll ? true : (s.phase !== 'PAYOUT' && s.phase !== 'ENDED'));
+  const filtered = display.filter(s => showAll ? true : s.phase !== 'PAYOUT');
 
   return (
     <div className="w-full flex flex-col gap-6">

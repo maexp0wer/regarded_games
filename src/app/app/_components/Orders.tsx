@@ -4,12 +4,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useWriteContract, usePublicClient, useReadContract } from 'wagmi';
 import { formatUnits, erc20Abi } from 'viem';
 import ExchangeAbi from '@/deployments/abis/Exchange.json';
+import type { Abi } from 'abitype';
 import { useOpenOrders, MyOrder } from '@/hooks/useOpenOrders';
 import { useMyAuctionMints, AuctionMint } from '@/hooks/useMyAuctionMints';
 import { useMyTrades, MyTrade } from '@/hooks/useMyTrades';
 import { useTenantChainId } from '@/context/TenantContext';
 import { useLastTradePrice } from '@/hooks/useLastTradePrice';
 import { usePayout } from '@/hooks/usePayout';
+import { isUserRejection } from '@/utils/revertReason';
 
 interface OrdersProps {
   seasonAddress: string;
@@ -67,7 +69,7 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress, fimAddress
       setCancelStatus('executing');
       const hash = await writeContractAsync({
         address: exchangeAddress as `0x${string}`,
-        abi: ExchangeAbi as any,
+        abi: ExchangeAbi as Abi,
         functionName: 'cancelOrder',
         args: [contractOrderId],
       });
@@ -77,9 +79,8 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress, fimAddress
       refetchOpen();
       refetchFilled();
       refetchCancelled();
-    } catch (err: any) {
-      const isRejection = err.shortMessage?.includes('rejected') || err.message?.includes('User rejected');
-      if (isRejection) {
+    } catch (err: unknown) {
+      if (isUserRejection(err)) {
         setCancelStatus('canceled');
         setTimeout(() => setCancelStatus('idle'), 2000);
       } else {

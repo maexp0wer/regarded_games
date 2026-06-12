@@ -141,7 +141,7 @@ export default function HeroCard({
                     <span className="text-[8px] uppercase font-black tracking-widest font-mono" style={{ color: themeColor }}>
                       {headerTag}
                     </span>
-                    <h3 className={`${titleSize} font-black tracking-widest leading-tight uppercase text-text`}>
+                    <h3 className={`${titleSize} font-black tracking-widest leading-tight uppercase text-white`}>
                       {title}
                     </h3>
                   </div>
@@ -156,7 +156,7 @@ export default function HeroCard({
                 {/* 2. Character / Graphic Frame */}
                 <div 
                   className={`w-full ${imageHeight} border rounded-sm relative overflow-visible flex items-center justify-center shadow-inner`}
-                  style={{ backgroundColor: 'var(--color-bg)', borderColor: `rgba(${themeColorRgba}, 0.3)` }}
+                  style={{ backgroundColor: '#0D0B14', borderColor: `rgba(${themeColorRgba}, 0.3)` }}
                 >
                   {backgroundSlot && (
                     <div className="absolute inset-0 z-0 rounded-md overflow-hidden">
@@ -170,8 +170,16 @@ export default function HeroCard({
                   <div className="absolute top-1 right-1 w-3 h-3 border-t border-r z-30" style={{ borderColor: `rgba(${themeColorRgba}, 0.35)` }} />
                   <div className="absolute bottom-1 left-1 w-3 h-3 border-b border-l z-30" style={{ borderColor: `rgba(${themeColorRgba}, 0.35)` }} />
                   <div className="absolute bottom-1 right-1 w-3 h-3 border-b border-r z-30" style={{ borderColor: `rgba(${themeColorRgba}, 0.35)` }} />
-                  
-                  {illustrationSlot}
+
+                  {/* Backface-culled wrapper: keeps the illustration/icon flipping WITH the front face.
+                      backface-visibility is per-element (not inherited), so the icon layer needs its own
+                      flag to be hidden once the card rotates past 90deg. */}
+                  <div
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transformStyle: 'preserve-3d' }}
+                  >
+                    {illustrationSlot}
+                  </div>
                 </div>
 
                 {/* 3. Class/Type Box */}
@@ -180,16 +188,16 @@ export default function HeroCard({
                 ) : (
                   <div 
                     className="border rounded-md p-2.5 flex flex-col gap-1.5 shadow-sm text-left flex-grow justify-start"
-                    style={{ backgroundColor: 'rgba(12, 12, 15, 0.92)', borderColor: `rgba(${themeColorRgba}, 0.25)` }}
+                    style={{ backgroundColor: 'var(--color-bg)', borderColor: `rgba(${themeColorRgba}, 0.25)` }}
                   >
                     <div className="flex justify-between items-center w-full">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-text font-mono">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-white font-mono">
                         {classTitle}
                       </span>
                       <span className="text-[10px]" style={{ color: highlightColor }}>{classSymbol}</span>
                     </div>
                     {classDesc && (
-                      <p className="text-[10px] leading-relaxed italic border-t border-border pt-1" style={{ fontFamily: 'var(--font-sans)', color: 'var(--color-text2)' }}>
+                      <p className="text-[10px] leading-relaxed italic border-t pt-1" style={{ borderColor: '#251F3D', fontFamily: 'var(--font-sans)', color: '#9E97BD' }}>
                         "{classDesc}"
                       </p>
                     )}
@@ -201,7 +209,7 @@ export default function HeroCard({
                           <span className="font-bold text-[10px] uppercase tracking-wider mr-1" style={{ fontFamily: 'var(--font-display)', color: highlightColor }}>
                             {ability.name}:
                           </span>
-                          <span className="text-[10px] leading-relaxed" style={{ fontFamily: 'var(--font-sans)', color: 'var(--color-text2)' }}>
+                          <span className="text-[10px] leading-relaxed" style={{ fontFamily: 'var(--font-sans)', color: '#9E97BD' }}>
                             {ability.desc}
                           </span>
                         </div>
@@ -237,7 +245,7 @@ export default function HeroCard({
         {/* ================= BACK SIDE ================= */}
         <div
           className={`absolute inset-0 w-full h-full ${!isFlipped ? 'pointer-events-none' : ''}`}
-          style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: "rotateY(180deg)", transformStyle: 'preserve-3d' }}
+          style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: "rotateY(180deg)" }}
         >
           <div 
             className="flex flex-col h-full w-full rounded-md p-2.5 relative select-none transition-all duration-500"
@@ -265,11 +273,11 @@ export default function HeroCard({
 
               <div 
                 className="w-full grow rounded-sm border p-6 relative flex flex-col items-center justify-between overflow-hidden shadow-inner z-10"
-                style={{ backgroundColor: 'var(--color-card2)', borderColor: 'var(--color-border)' }}
+                style={{ backgroundColor: '#1F1A30', borderColor: '#251F3D' }}
               >
                 {/* Background Cross Lines with outer spacing */}
-                <div className="absolute inset-y-3 left-1/2 -translate-x-1/2 w-0.5 opacity-30 pointer-events-none" style={{ backgroundColor: 'var(--color-text2)' }} />
-                <div className="absolute top-1/2 -translate-y-1/2 inset-x-3 h-0.5 opacity-30 pointer-events-none" style={{ backgroundColor: 'var(--color-text2)' }} />
+                <div className="absolute inset-y-3 left-1/2 -translate-x-1/2 w-0.5 opacity-30 pointer-events-none" style={{ backgroundColor: '#9E97BD' }} />
+                <div className="absolute top-1/2 -translate-y-1/2 inset-x-3 h-0.5 opacity-30 pointer-events-none" style={{ backgroundColor: '#9E97BD' }} />
                 {/* Corners: Updated to rounded-sm to match the container's border radius */}
                 <div className="absolute top-1 left-1 w-8 h-8 border-t-4 border-l-4 pointer-events-none rounded-tl-sm" style={{ borderColor: themeColor }} />
                 <div className="absolute top-1 right-1 w-8 h-8 border-t-4 border-r-4 pointer-events-none rounded-tr-sm" style={{ borderColor: themeColor }} />
@@ -281,10 +289,10 @@ export default function HeroCard({
                   className="flex flex-col items-center justify-center text-[10px] tracking-[0.3em] font-bold uppercase select-none z-10 text-center px-4 py-1.5"
                   style={{ 
                     fontFamily: 'var(--font-mono)', 
-                    backgroundColor: 'var(--color-card2)' 
+                    backgroundColor: '#1F1A30' 
                   }}
                 >
-                  <div className="opacity-60 flex flex-col items-center gap-1" style={{ color: 'var(--color-text2)' }}>
+                  <div className="opacity-60 flex flex-col items-center gap-1" style={{ color: '#9E97BD' }}>
                     <span>REGARDED</span>
                     <span>GAMES</span>
                   </div>
@@ -296,17 +304,17 @@ export default function HeroCard({
   <div className="absolute w-40 h-40 rounded-full blur-xl opacity-20 pointer-events-none animate-pulse" style={{ background: themeColor }} />
   
   {/* Masking wrapper: masks the background lines to create a gap (adjust p-2.5 to increase or decrease the gap) */}
-  <div className="p-2.5 rounded-full" style={{ backgroundColor: 'var(--color-card2)' }}>
+  <div className="p-2.5 rounded-full" style={{ backgroundColor: '#1F1A30' }}>
     
     <div className="p-[3px] rounded-full shadow-lg" style={{ background: `linear-gradient(135deg, ${themeColor} 0%, rgba(${themeColorRgba}, 0.2) 100%)` }}>
-      <div className="w-32 h-32 rounded-full flex items-center justify-center border-4 relative overflow-hidden" style={{ backgroundColor: 'var(--color-card3)', borderColor: 'var(--color-border2)' }}>
-        <div className="absolute w-28 h-28 rounded-full border border-dashed opacity-25" style={{ borderColor: 'var(--color-text2)' }} />
+      <div className="w-32 h-32 rounded-full flex items-center justify-center border-4 relative overflow-hidden" style={{ backgroundColor: '#2B2544', borderColor: '#4C3F7A' }}>
+        <div className="absolute w-28 h-28 rounded-full border border-dashed opacity-25" style={{ borderColor: '#9E97BD' }} />
         
         <a 
           href={backInfoLink} 
           onClick={(e) => e.stopPropagation()} 
           className="w-16 h-16 rounded-full flex items-center justify-center border-2 z-10 hover:scale-110 active:scale-95 transition-all duration-300 shadow-md"
-          style={{ backgroundColor: 'var(--color-card)', borderColor: themeColor, color: highlightColor }}
+          style={{ backgroundColor: '#161322', borderColor: themeColor, color: highlightColor }}
         >
           <span className="text-3xl font-serif italic font-extrabold select-none">i</span>
         </a>
@@ -321,10 +329,10 @@ export default function HeroCard({
                   className="flex flex-col items-center justify-center text-[10px] tracking-[0.3em] font-bold uppercase select-none z-10 text-center px-4 py-1.5"
                   style={{ 
                     fontFamily: 'var(--font-mono)', 
-                    backgroundColor: 'var(--color-card2)' 
+                    backgroundColor: '#1F1A30' 
                   }}
                 >
-                  <div className="opacity-60 flex flex-col items-center gap-1" style={{ color: 'var(--color-text2)' }}>
+                  <div className="opacity-60 flex flex-col items-center gap-1" style={{ color: '#9E97BD' }}>
                     <span>CLASS WARFARE</span>
                     <span>THE GAME</span>
                   </div>

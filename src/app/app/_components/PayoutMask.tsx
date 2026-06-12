@@ -3,12 +3,14 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
+import type { Abi } from 'abitype';
 import { usePayout } from '@/hooks/usePayout';
 import { useOpenOrders } from '@/hooks/useOpenOrders';
 import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 import { useTenantChainId } from '@/context/TenantContext';
 import { TxModal } from './TxModal';
 import { WalletButton } from './WalletButton';
+import { isUserRejection, isInsufficientGas } from '@/utils/revertReason';
 
 type TxStatus = 'idle' | 'executing' | 'mining' | 'success' | 'canceled' | 'failed' | 'no_gas';
 
@@ -68,7 +70,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
       setStatus('executing');
       const hash = await writeContractAsync({
         address: seasonAddress as `0x${string}`,
-        abi: GameSeasonAbi as any,
+        abi: GameSeasonAbi as Abi,
         functionName: 'claimPayout',
         args: [],
       });
@@ -76,13 +78,11 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
       setStatus('mining');
       await publicClient.waitForTransactionReceipt({ hash: hash as `0x${string}` });
       setStatus('success');
-    } catch (err: any) {
-      const isRejection = err.shortMessage?.includes('rejected') || err.message?.includes('User rejected');
-      const isInsufficientGas = err.message?.includes('insufficient funds') || err.name === 'InsufficientFundsError';
-      if (isRejection) {
+    } catch (err: unknown) {
+      if (isUserRejection(err)) {
         setStatus('canceled');
         setTimeout(() => setStatus('idle'), 2000);
-      } else if (isInsufficientGas) {
+      } else if (isInsufficientGas(err)) {
         setStatus('no_gas');
       } else {
         setStatus('failed');
