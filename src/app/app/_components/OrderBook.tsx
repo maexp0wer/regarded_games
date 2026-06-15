@@ -13,13 +13,14 @@ interface OrderBookProps {
   onSelectOrder: (o: Order) => void;
   onRemoveOrder?: (id: string) => void;
   selectedOrderIds?: string[];
+  isOnHold?: boolean;
 }
 
 type AggregatedOrder = Order & { subOrders: Order[] };
 
 
 export function OrderBook({
-  seasonAddress, isMaker, userAddress, onSelectOrder, onRemoveOrder, selectedOrderIds = [],
+  seasonAddress, isMaker, userAddress, onSelectOrder, onRemoveOrder, selectedOrderIds = [], isOnHold = false,
 }: OrderBookProps) {
   const { data } = useOrderBook(seasonAddress);
 
@@ -123,15 +124,18 @@ export function OrderBook({
     [priceRows],
   );
 
-  const closestRowKey = useMemo(() => {
+  // Rows are sorted descending by price, so the $1.00 boundary sits between the
+  // last row priced ≥ $1 and the first row priced < $1. The divider is drawn on
+  // the bottom of that last ≥ $1 row, landing exactly on the boundary.
+  const boundaryRowKey = useMemo(() => {
     if (priceRows.length === 0) return null;
-    let closestKey = priceRows[0].uniqueKey;
-    let minDistance = Math.abs(parseFloat(priceRows[0].price) - 1.0);
-    for (let i = 1; i < priceRows.length; i++) {
-      const distance = Math.abs(parseFloat(priceRows[i].price) - 1.0);
-      if (distance < minDistance) { minDistance = distance; closestKey = priceRows[i].uniqueKey; }
+    let lastAboveKey: string | null = null;
+    for (const row of priceRows) {
+      if (parseFloat(row.price) >= 1.0) lastAboveKey = row.uniqueKey;
+      else break;
     }
-    return closestKey;
+    // If every row is below $1, anchor the divider above the first row instead.
+    return lastAboveKey ?? priceRows[0].uniqueKey;
   }, [priceRows]);
 
   useEffect(() => {
@@ -152,7 +156,14 @@ export function OrderBook({
       const targetRect = target.getBoundingClientRect();
       container.scrollTop += (targetRect.top - containerRect.top) - (containerRect.height / 2) + (targetRect.height / 2);
     }
-  }, [closestRowKey]);
+  }, [boundaryRowKey]);
+
+  // Whether the boundary row sits at/above $1 (divider goes on its bottom) or the
+  // book is entirely below $1 (divider goes on the first row's top instead).
+  const boundaryAtTop = useMemo(
+    () => priceRows.length > 0 && parseFloat(priceRows[0].price) < 1.0,
+    [priceRows],
+  );
 
   // Reset range inputs when the faction filter is disabled
   useEffect(() => {
@@ -165,7 +176,7 @@ export function OrderBook({
   const isOwnOrder = (order: AggregatedOrder) =>
     !!userAddress && order.maker.toLowerCase() === userAddress.toLowerCase();
   const isClickable = (order: AggregatedOrder | undefined): order is AggregatedOrder =>
-    !isMaker && !!order && !isOwnOrder(order);
+    !isMaker && !!order && !isOwnOrder(order) && !isOnHold;
   const handleOrderClick = (order: AggregatedOrder) => {
     const anySelected = order.subOrders.some(sub => selectedOrderIds.includes(sub.id));
     if (anySelected && onRemoveOrder) {
@@ -496,19 +507,20 @@ export function OrderBook({
             priceRows.map((row) => {
               const askSelected = row.ask?.subOrders.some(o => selectedOrderIds.includes(o.id)) ?? false;
               const bidSelected = row.bid?.subOrders.some(o => selectedOrderIds.includes(o.id)) ?? false;
-              const isClosestToOne = row.uniqueKey === closestRowKey;
+              const isBoundaryRow = row.uniqueKey === boundaryRowKey;
 
               return (
                 <div
                   key={row.uniqueKey}
-                  ref={isClosestToOne ? targetRowRef : undefined}
+                  ref={isBoundaryRow ? targetRowRef : undefined}
                   className="relative ledger-row ledger-row-passive items-stretch group"
                   style={{
                     gridTemplateColumns: showBoth ? 'repeat(6, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
                     padding: 0,
                     alignItems: 'stretch',
                     cursor: 'default',
-                    borderBottom: isClosestToOne ? '1px solid var(--color-border2)' : undefined,
+                    borderBottom: isBoundaryRow && !boundaryAtTop ? '1px solid var(--color-border2)' : undefined,
+                    borderTop: isBoundaryRow && boundaryAtTop ? '1px solid var(--color-border2)' : undefined,
                   }}
                 >
                   {displayBids && (

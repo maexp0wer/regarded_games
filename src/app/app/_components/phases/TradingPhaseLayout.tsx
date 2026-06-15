@@ -188,6 +188,7 @@ export function TradingPhaseLayout({
       maskMode={detached ? 'detached' : 'bundled'}
       maskWide={maskWide}
       tradingMask={mask}
+      isOnHold={effectiveVictoryPending}
     />
   );
 

@@ -232,7 +232,9 @@ ponder.on("Exchange:OrderCreated", async ({ event, context }) => {
     id: uniqueId,                 // <--- NEW: The Primary Key String
     orderId: id,                  // The contract's numeric ID
     seasonAddress: seasonAddress,
-    maker: owner,
+    // Lowercase to match every other address column (and the lowercased query
+    // filters); event args arrive EIP-55 checksummed.
+    maker: owner.toLowerCase() as `0x${string}`,
     isBuy: isBuy,
     price: usdcPrice,
     initialAmount: fimAmount,
@@ -274,6 +276,17 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
   const order = await context.db.find(schema.orders, { id: uniqueId });
   if (!order) return;
 
+  // 3b. Resolve the TRUE buyer/seller. The OrderFilled event always emits
+  // (buyer=msg.sender=taker, seller=order.owner=maker) regardless of side — the
+  // arg names are really (taker, maker), NOT economic roles. When the resting
+  // order is a BUY, the taker is selling and the maker is buying, so the event's
+  // buyer/seller are swapped. Use order.isBuy (the reliable signal) to correct it.
+  // Everything downstream (balances, percentiles, the trade row) keys off these.
+  const taker = buyer;        // event 'buyer' arg = msg.sender = taker
+  const maker = seller;       // event 'seller' arg = order.owner = maker
+  const trueBuyer = order.isBuy ? maker : taker;
+  const trueSeller = order.isBuy ? taker : maker;
+
   // 4. Calculate new remaining amount (Critical step)
   const newRemaining = order.remainingAmount - fimAmount;
 
@@ -286,8 +299,8 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
 
   // 6. Snapshot pre-trade balances (the FIM burn handler hasn't fired yet in this block's log order)
   const [buyerStats, sellerStats] = await Promise.all([
-    context.db.find(schema.playerSeasonStats, { seasonAddress, playerAddress: buyer }),
-    context.db.find(schema.playerSeasonStats, { seasonAddress, playerAddress: seller }),
+    context.db.find(schema.playerSeasonStats, { seasonAddress, playerAddress: trueBuyer }),
+    context.db.find(schema.playerSeasonStats, { seasonAddress, playerAddress: trueSeller }),
   ]);
   const buyerBalance = buyerStats ? buyerStats.fimBalance + buyerStats.fimBurned : 0n;
   const sellerBalance = sellerStats ? sellerStats.fimBalance + sellerStats.fimBurned : 0n;
@@ -354,8 +367,8 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
     }
   }
 
-  const buyerEffBal = effectiveBals.get(buyer.toLowerCase()) ?? buyerBalance;
-  const sellerEffBal = effectiveBals.get(seller.toLowerCase()) ?? sellerBalance;
+  const buyerEffBal = effectiveBals.get(trueBuyer.toLowerCase()) ?? buyerBalance;
+  const sellerEffBal = effectiveBals.get(trueSeller.toLowerCase()) ?? sellerBalance;
   const buyerIsCapitalist = buyerEffBal > massThreshold;
   const sellerIsCapitalist = sellerEffBal > massThreshold;
   const buyerPercentile = Math.round(distancePercentile(buyerEffBal, buyerIsCapitalist));
@@ -366,12 +379,21 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
   const existentialThreshold = await getExistentialThreshold(context.client, seasonAddress as `0x${string}`);
   const giniBps = giniBpsFromBalances(Array.from(effectiveBals.values()), existentialThreshold);
 
+  // 6c. Buyer-pays trading fee for THIS fill (fee = usdcPrice × tradeFeeBps / 10_000).
+  // Computed here so it can be stamped on the trade row below; reused at step 9b.
+  const feeBps = await context.client.readContract({
+    address: event.log.address,
+    abi: ExchangeAbi,
+    functionName: 'tradeFeeBps',
+  });
+  const feePaid = (usdcPrice * feeBps) / 10_000n;
+
   // 7. Record the Trade History
   await context.db.insert(schema.trades).values({
     id: `${event.transaction.hash}-${event.log.logIndex}`,
     seasonAddress: seasonAddress,
-    buyer: buyer,
-    seller: seller,
+    buyer: trueBuyer,
+    seller: trueSeller,
     fimAmount: fimAmount,
     usdcAmount: usdcPrice,
     timestamp: event.block.timestamp,
@@ -383,6 +405,8 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
     buyerIsCapitalist,
     sellerIsCapitalist,
     giniBps,
+    taker,
+    feePaid,
   });
 
   // 8. Upsert pre-computed candle buckets for all timeframes
@@ -434,23 +458,32 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
     );
   }
 
-  // 9. Credit buyer fimBalance (placed after trade/candle recording to preserve pre-fill Gini semantics)
+  // 9. Credit buyer fimBalance (placed after trade/candle recording to preserve pre-fill Gini semantics).
+  // The FIM always ends up with the true buyer (maker on a buy order, taker on a sell order).
   await context.db
     .insert(schema.playerSeasonStats)
-    .values({ seasonAddress, playerAddress: buyer.toLowerCase() as `0x${string}`, fimBalance: fimAmount, netContribution: 0n })
+    .values({ seasonAddress, playerAddress: trueBuyer.toLowerCase() as `0x${string}`, fimBalance: fimAmount, netContribution: 0n })
     .onConflictDoUpdate((row) => ({ fimBalance: row.fimBalance + fimAmount }));
 
-  // 9b. Accumulate trading fees paid by the buyer (fee = usdcPrice × tradeFeeBps / 10_000)
-  const feeBps = await context.client.readContract({
-    address: event.log.address,
-    abi: ExchangeAbi,
-    functionName: 'tradeFeeBps',
-  });
-  const feePaid = (usdcPrice * feeBps) / 10_000n;
+  // 9a. Debit the seller's FIM. On a SELL order the maker-seller was already
+  // debited at placement (OrderCreated locks the FIM), so only the BUY-order case
+  // needs it here: the taker is the seller and sends their own (un-pre-debited)
+  // FIM to the maker. Without this the taker-seller's balance never drops, which
+  // skews balances / Gini / thresholds over time.
+  if (order.isBuy) {
+    await context.db
+      .insert(schema.playerSeasonStats)
+      .values({ seasonAddress, playerAddress: trueSeller.toLowerCase() as `0x${string}`, fimBalance: -fimAmount, netContribution: 0n })
+      .onConflictDoUpdate((row) => ({ fimBalance: row.fimBalance - fimAmount }));
+  }
+
+  // 9b. Accumulate trading fees, always paid by the TAKER (msg.sender) regardless
+  // of side — the maker never pays a fee (Exchange.sol:145 / :157). feePaid is
+  // computed at step 6c and also stamped on the trade row for per-trade display.
   if (feePaid > 0n) {
     await context.db
       .insert(schema.playerSeasonStats)
-      .values({ seasonAddress, playerAddress: buyer.toLowerCase() as `0x${string}`, fimBalance: 0n, netContribution: 0n, totalFeesPaid: feePaid })
+      .values({ seasonAddress, playerAddress: taker.toLowerCase() as `0x${string}`, fimBalance: 0n, netContribution: 0n, totalFeesPaid: feePaid })
       .onConflictDoUpdate((row) => ({ totalFeesPaid: row.totalFeesPaid + feePaid }));
   }
 
@@ -552,12 +585,15 @@ ponder.on("GameSeason:PlayerSeasonStatsFinalized", async ({ event, context }) =>
       // Provide all fields you want to set for this event
       fimBalance: fimBalances,
       netContribution: netContributions, // Ensure you handle int256 -> BigInt here!
-      totalPotentialPayout: totalPotentialPayoutUSDC, 
+      totalPotentialPayout: totalPotentialPayoutUSDC,
       realizedPayout: 0n, // Explicitly set or re-set claimed to 0 if this is the only insert
+      finalized: true,
     })
     .onConflictDoUpdate(() => ({
       totalPotentialPayout: totalPotentialPayoutUSDC,
+      netContribution: netContributions,
       fimBalance: fimBalances,
+      finalized: true,
     }));
 });
 

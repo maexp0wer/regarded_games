@@ -14,12 +14,18 @@ export function SeasonPhasePills({
   const isTrading = phase === 'TRADING';
   const isOnHold = isBootstrap || isVictoryPending;
 
+  // Solid pill: the per-phase accent fills the background, text drops to the
+  // page canvas color so it reads against the saturated fill.
+  const pill = 'font-mono text-[10px] px-2 py-0.5 rounded text-[var(--color-bg)] uppercase tracking-wider font-bold';
+  const pillStyle = (accent: string) => ({
+    backgroundColor: accent,
+  } as const);
+
   if (isOnHold) {
     const reason = isBootstrap ? 'Bootstrapping' : 'Settlement';
     return (
       <div className={className}>
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--color-red-35)] bg-[var(--color-red-15)] font-mono text-[11px] font-semibold text-red tracking-[0.08em] uppercase shadow-sm">
-          <span className="w-1.5 h-1.5 bg-red shadow-[0_0_8px_var(--color-red-35)] shrink-0" />
+        <span className={pill} style={pillStyle('var(--color-red)')}>
           On Hold: {reason}
         </span>
       </div>
@@ -29,8 +35,7 @@ export function SeasonPhasePills({
   if (isPayout) {
     return (
       <div className={className}>
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--color-purple)] bg-[var(--color-purple-15)] font-mono text-[11px] font-semibold text-purple tracking-[0.08em] uppercase shadow-sm">
-          <span className="w-1.5 h-1.5 rounded-full bg-purple shadow-[0_0_8px_var(--color-purple)] shrink-0" />
+        <span className={pill} style={pillStyle('var(--color-purple)')}>
           Payout
         </span>
       </div>
@@ -40,8 +45,7 @@ export function SeasonPhasePills({
   if (isAuction) {
     return (
       <div className={className}>
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--color-gold-35)] bg-[var(--color-gold-15)] font-mono text-[11px] font-semibold text-gold tracking-[0.08em] uppercase shadow-sm">
-          <span className="w-1.5 h-1.5 rounded-full bg-gold shadow-[0_0_8px_var(--color-gold-35)] shrink-0" />
+        <span className={pill} style={pillStyle('var(--color-gold)')}>
           Auction
         </span>
       </div>
@@ -51,9 +55,8 @@ export function SeasonPhasePills({
   if (isTrading) {
     return (
       <div className={className}>
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--color-green-35)] bg-[var(--color-green-15)] font-mono text-[11px] font-semibold text-green tracking-[0.08em] uppercase shadow-sm">
-          <span className="w-1.5 h-1.5 rounded-full bg-green shadow-[0_0_8px_var(--color-green-35)] animate-pulse shrink-0" />
-          Trading
+        <span className={pill} style={pillStyle('var(--color-green)')}>
+          LIVE
         </span>
       </div>
     );
@@ -63,8 +66,7 @@ export function SeasonPhasePills({
   const label = phase.charAt(0) + phase.slice(1).toLowerCase();
   return (
     <div className={className}>
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--color-border2)] bg-[var(--color-card2)] font-mono text-[11px] font-semibold text-[var(--color-text-muted)] tracking-[0.08em] uppercase shadow-sm">
-        <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-text-muted)] shrink-0" />
+      <span className={pill} style={pillStyle('var(--color-text2)')}>
         {label}
       </span>
     </div>

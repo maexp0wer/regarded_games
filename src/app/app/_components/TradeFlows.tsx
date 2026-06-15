@@ -108,6 +108,9 @@ export function TradeFlows({
     const BG2_COLOR     = getCSSVar('--color-card2')   || '#1b1814';
     const TXT_COLOR     = getCSSVar('--color-text2')   || '#8a8378';
     const TXT1_COLOR    = getCSSVar('--color-text')    || '#f4ede0';
+    const BORDER2_COLOR = getCSSVar('--color-border2') || '#4C3F7A';
+    const IN_COLOR      = getCSSVar('--color-green')   || '#00F5A0';
+    const OUT_COLOR     = getCSSVar('--color-red')     || '#FF4D6D';
 
     const { groups, matrix } = chordData;
     const N = groups.length;
@@ -128,11 +131,19 @@ export function TradeFlows({
     const numCap = groups.filter(g => g.isCapitalist).length;
     const numSoc = N - numCap;
 
-    const totalVol = Array.from({ length: N }, (_, i) => {
+    // Tokens flow seller → buyer (matrix[seller][buyer]). For a group i:
+    //   OUT = FIM it sold out (row sum), IN = FIM it bought in (column sum).
+    const outVol = Array.from({ length: N }, (_, i) => {
       let v = 0;
-      for (let j = 0; j < N; j++) v += matrix[i][j] + matrix[j][i];
+      for (let j = 0; j < N; j++) v += matrix[i][j];
       return v;
     });
+    const inVol = Array.from({ length: N }, (_, i) => {
+      let v = 0;
+      for (let j = 0; j < N; j++) v += matrix[j][i];
+      return v;
+    });
+    const totalVol = Array.from({ length: N }, (_, i) => inVol[i] + outVol[i]);
 
     const capTotal = totalVol.slice(0, numCap).reduce((s, v) => s + v, 0);
     const socTotal = totalVol.slice(numCap).reduce((s, v) => s + v, 0);
@@ -209,7 +220,7 @@ export function TradeFlows({
     if (!tooltipRef.current) return;
     const tooltip = tooltipRef.current
       .style('background', BG2_COLOR)
-      .style('border', `1px solid ${TXT_COLOR}`)
+      .style('border', `1px solid ${BORDER2_COLOR}`)
       .style('color', TXT1_COLOR)
       .style('display', 'none');
 
@@ -256,7 +267,9 @@ export function TradeFlows({
       if (!isEmpty) arc
         .on('mouseover', () => {
           tooltip.style('display', 'block').html(
-            `${g.label}<br/>${g.playerCount} player${g.playerCount !== 1 ? 's' : ''}<br/>${totalVol[i].toFixed(1)} FIM`
+            `${g.label}<br/>${g.playerCount} player${g.playerCount !== 1 ? 's' : ''}` +
+            `<br/><span style="color:${IN_COLOR}">IN</span> ${inVol[i].toFixed(1)} FIM` +
+            `<br/><span style="color:${OUT_COLOR}">OUT</span> ${outVol[i].toFixed(1)} FIM`
           );
         })
         .on('mousemove', (event: MouseEvent) => {
@@ -308,7 +321,7 @@ export function TradeFlows({
   }, [selectedRange, timeframe]);
 
   return (
-    <div className="terminal-pane h-full" style={{ border: 'none' }}>
+    <div className="terminal-pane terminal-pane--flush h-full">
       <div className="terminal-pane-header">
         <span className="terminal-pane-title">Capital Flow</span>
         <div className="flex items-center gap-2">

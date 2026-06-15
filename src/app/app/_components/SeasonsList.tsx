@@ -85,55 +85,60 @@ function SeasonCard({ season }: { season: SeasonRegistry }) {
     <Link href={`/${slug}`} className="block group">
       <div className="season-ledger-row">
 
-        {/* Column 1: Identity */}
-        <div className="flex items-center gap-4 min-w-50">
-          <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-display-season shrink-0">
-            S<em className="not-italic font-medium" style={{ color: 'var(--color-text2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
-          </p>
-          <div className="meta-data-group">
+        {/* Identity — shrink-0, sits inline with metric cells */}
+        <div className="flex flex-col gap-1.5 shrink-0">
+          <div className="flex items-center gap-3">
+            <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-display-season shrink-0">
+              S<em className="not-italic font-medium text-text2 tabular-nums">{num}</em>
+            </p>
             <SeasonPhasePills
               phase={currentPhase}
               isVictoryPending={effectiveVictoryPending}
               className="flex items-center gap-2"
             />
-            <span className="font-mono text-[11px] text-text2">
-              {tradingStart ? formatDateShort(tradingStart) : '—'} — {seasonEnd ? formatDateShort(seasonEnd) : '—'}
-            </span>
           </div>
+          <span className="font-mono text-[11px] text-text2 whitespace-nowrap">
+            {tradingStart ? formatDateShort(tradingStart) : '—'} — {seasonEnd ? formatDateShort(seasonEnd) : '—'}
+          </span>
         </div>
 
-        {/* Column 2: Metrics */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 flex-1 md:px-6">
-          <div className="meta-data-group">
-            <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Prize Pool</span>
-            <span className="font-mono text-sm font-bold text-gold" style={{ fontVariantNumeric: 'tabular-nums' }}>
-              ${(giniData?.prizePool ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              <span className="text-[10px] text-text2 font-normal ml-1">USDC</span>
-            </span>
-          </div>
-          <div className="meta-data-group">
-            <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Players</span>
-            <span className="font-mono text-sm font-bold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-              {(giniData?.playerCount ?? 0).toLocaleString()}
-            </span>
-          </div>
-          <div className="meta-data-group">
-            <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Multiplier</span>
-            <span className="font-mono text-sm font-bold text-green" style={{ fontVariantNumeric: 'tabular-nums' }}>
-              {multiplier}×
-            </span>
-          </div>
-          {showTimeStat && (
-            <CountdownTicker targetTimestamp={countdownTarget} label={statusLabel} />
-          )}
+        {/* Divider */}
+        <div className="w-px self-stretch bg-border shrink-0" />
+
+        {/* Prize Pool */}
+        <div className="meta-data-group shrink-0">
+          <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Prize Pool</span>
+          <span className="font-mono text-sm font-bold text-gold tabular-nums">
+            ${(giniData?.prizePool ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <span className="text-[10px] text-text2 font-normal ml-1">USDC</span>
+          </span>
         </div>
 
-        {/* Column 3: Victory progress rail */}
+        {/* Players */}
+        <div className="meta-data-group shrink-0">
+          <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Players</span>
+          <span className="font-mono text-sm font-bold text-text tabular-nums">
+            {(giniData?.playerCount ?? 0).toLocaleString()}
+          </span>
+        </div>
+
+        {/* Multiplier */}
+        <div className="meta-data-group shrink-0">
+          <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Multiplier</span>
+          <span className="font-mono text-sm font-bold text-green tabular-nums">
+            {multiplier}×
+          </span>
+        </div>
+
+        {/* Countdown */}
+        {showTimeStat && (
+          <CountdownTicker targetTimestamp={countdownTarget} label={statusLabel} inline />
+        )}
+
+        {/* Victory progress rail — grows to fill remaining space */}
         {!(isAuction || isBootstrap) && (
-          <div className="w-full md:w-50 flex flex-col gap-1.5 shrink-0">
-            <span className="font-mono text-[9px] uppercase text-text2 tracking-wider md:text-right block">
-              Victory Progress
-            </span>
+          <div className="flex flex-col gap-1.5 flex-1 min-w-32">
+            <span className="font-mono text-[9px] uppercase text-text2 tracking-wider">Victory Progress</span>
             <div className="progress-rail-container">
               <div
                 className="progress-rail-fill"

@@ -174,7 +174,7 @@ export function GiniCard({
   // inset riser rather than overshooting to the connector's raw edge.
 
   return (
-    <div className="terminal-pane h-full overflow-hidden" style={{ border: 'none' }}>
+    <div className="terminal-pane terminal-pane--flush h-full overflow-hidden">
       {/* Header mirrors Capital Flow: title left, period info on the right. The
           delta is the Gini change across the relevant bar — the selected candle, or
           the latest one when live. Live reads "±BPS LAST {tf}" with a pulse dot;

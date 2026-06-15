@@ -41,6 +41,8 @@ const VOL_SCALE = 'right';
 // each pane legend to its pane's top.
 const PANE_SEPARATOR_PX = 1;
 
+const BAR_SPACING_PX = 20;
+
 interface ChartColors {
   gridColor: string;
   grid2Color: string;
@@ -134,6 +136,9 @@ export function AuctionChart({ points, timeframe, onTimeframeChange }: AuctionCh
         borderColor: c.gridColor,
         timeVisible: true,
         secondsVisible: false,
+        barSpacing: BAR_SPACING_PX,
+        fixLeftEdge: false,
+        rightOffset: 0,
       },
       crosshair: {
         mode: CrosshairMode.Normal,
@@ -267,7 +272,8 @@ export function AuctionChart({ points, timeframe, onTimeframeChange }: AuctionCh
 
     // Frame the data once; never on the 5s refetch, which would yank the viewport.
     if (!didFitRef.current && points.length > 0) {
-      chart.timeScale().fitContent();
+      chart.timeScale().applyOptions({ barSpacing: BAR_SPACING_PX });
+      chart.timeScale().scrollToRealTime();
       didFitRef.current = true;
     }
     renderLegendsRef.current(latestPointRef.current);
@@ -314,9 +320,9 @@ export function AuctionChart({ points, timeframe, onTimeframeChange }: AuctionCh
   }, []);
 
   return (
-    <div className="terminal-pane h-full overflow-hidden p-0! flex flex-col">
+    <div className="terminal-pane terminal-pane--flush h-full overflow-hidden p-0! flex flex-col">
       {/* Toolbar strip — mirrors TradingChart: timeframe pills left, live dot. */}
-      <div className="flex items-center gap-2 px-2 pt-4 pb-2 border-b border-border">
+      <div className="flex items-center gap-2 pl-5 pr-2 pt-4 pb-2 border-b border-border">
         <TimeframeSelector value={timeframe} onChange={onTimeframeChange} />
         <span className="w-1.5 h-1.5 rounded-full bg-green shadow-[0_0_8px_var(--color-green-35)] animate-pulse" />
       </div>
@@ -324,7 +330,7 @@ export function AuctionChart({ points, timeframe, onTimeframeChange }: AuctionCh
       <div
         ref={containerRef}
         data-chrome-scroll-guard="always"
-        className="relative w-full flex-1 min-h-0 pl-3"
+        className="relative w-full flex-1 min-h-0"
       >
         {/* Per-pane legend overlays; `top` set imperatively to each pane's top. */}
         <div ref={poolLegendRef} className="absolute left-5 z-20 pointer-events-none font-mono text-[11px] leading-snug whitespace-nowrap tabular-nums" />

@@ -65,7 +65,7 @@ export default function HeroCard({
   maxWidth = '400px',
   height = '580px',
   imageHeight = 'h-[48%]',
-  titleSize = 'text-lg',
+  titleSize = 'text-2xl',
   onMouseEnter,
   onMouseLeave,
   actionButtonSlot,
@@ -107,17 +107,17 @@ export default function HeroCard({
           style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transformStyle: 'preserve-3d' }}
         >
           <div 
-            className="flex flex-col h-full w-full rounded-md p-2.5 relative select-none transition-all duration-500"
-            style={{ 
-              backgroundColor: '#070709', 
+            className="flex flex-col h-full w-full rounded-md p-3 relative select-none transition-all duration-500"
+            style={{
+              backgroundColor: '#070709',
               border: '0px solid #101014',
-              boxShadow: isCardHovered 
+              boxShadow: isCardHovered
                 ? `0 0 40px rgba(${themeColorRgba}, 0.5)`
                 : `0 0 40px rgba(${themeColorRgba}, 0.15)`
             }}
           >
-            <div 
-              className="flex flex-col h-full w-full rounded-md p-2 justify-between border relative overflow-visible"
+            <div
+              className="flex flex-col h-full w-full rounded-md p-2.5 justify-between border relative overflow-visible"
               style={{ 
                 background: chassisGradient,
                 borderColor: `rgba(${themeColorRgba}, 0.55)`, 
@@ -130,23 +130,23 @@ export default function HeroCard({
               />
               <div className="absolute inset-1 border border-black/15 rounded pointer-events-none" />
 
-              <div className="flex flex-col h-full justify-between space-y-1.5 z-10 overflow-visible">
+              <div className="flex flex-col h-full justify-between space-y-2 z-10 overflow-visible">
                 
                 {/* 1. Header */}
                 <div 
-                  className="flex justify-between items-center px-3 py-1.5 rounded border shadow-md transition-colors duration-300"
+                  className="flex justify-between items-center px-4 py-2 rounded border shadow-md transition-colors duration-300"
                   style={{ backgroundColor: 'rgba(12, 12, 15, 0.6)', borderColor: `rgba(${themeColorRgba}, 0.25)` }}
                 >
                   <div className="flex flex-col">
-                    <span className="text-[8px] uppercase font-black tracking-widest font-mono" style={{ color: themeColor }}>
+                    <span className="text-[10px] uppercase font-black tracking-widest font-mono" style={{ color: themeColor }}>
                       {headerTag}
                     </span>
                     <h3 className={`${titleSize} font-black tracking-widest leading-tight uppercase text-white`}>
                       {title}
                     </h3>
                   </div>
-                  <div 
-                    className="w-7 h-7 rounded flex items-center justify-center font-black text-xs border"
+                  <div
+                    className="w-9 h-9 rounded flex items-center justify-center font-black text-[15px] border"
                     style={{ backgroundColor: 'rgba(25, 25, 30, 0.95)', borderColor: themeColor, color: highlightColor }}
                   >
                     {symbol}
@@ -187,29 +187,29 @@ export default function HeroCard({
                   bottomBoxSlot
                 ) : (
                   <div 
-                    className="border rounded-md p-2.5 flex flex-col gap-1.5 shadow-sm text-left flex-grow justify-start"
+                    className="border rounded-md p-3 flex flex-col gap-2 shadow-sm text-left flex-grow justify-start"
                     style={{ backgroundColor: 'var(--color-bg)', borderColor: `rgba(${themeColorRgba}, 0.25)` }}
                   >
                     <div className="flex justify-between items-center w-full">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-white font-mono">
+                      <span className="text-[14px] font-semibold uppercase tracking-wider text-white font-mono">
                         {classTitle}
                       </span>
-                      <span className="text-[10px]" style={{ color: highlightColor }}>{classSymbol}</span>
+                      <span className="text-[13px]" style={{ color: highlightColor }}>{classSymbol}</span>
                     </div>
                     {classDesc && (
-                      <p className="text-[10px] leading-relaxed italic border-t pt-1" style={{ borderColor: '#251F3D', fontFamily: 'var(--font-sans)', color: '#9E97BD' }}>
+                      <p className="text-[13px] leading-relaxed italic border-t pt-1.5" style={{ borderColor: '#251F3D', fontFamily: 'var(--font-sans)', color: '#9E97BD' }}>
                         "{classDesc}"
                       </p>
                     )}
                   
                     {/* Abilities */}
-                    <div className="space-y-1 text-left overflow-y-auto pr-1 mt-1">
+                    <div className="space-y-1.5 text-left overflow-y-auto pr-1.5 mt-1.5">
                       {abilities.map((ability, index) => (
                         <div key={index}>
-                          <span className="font-bold text-[10px] uppercase tracking-wider mr-1" style={{ fontFamily: 'var(--font-display)', color: highlightColor }}>
+                          <span className="font-bold text-[13px] uppercase tracking-wider mr-1" style={{ fontFamily: 'var(--font-display)', color: highlightColor }}>
                             {ability.name}:
                           </span>
-                          <span className="text-[10px] leading-relaxed" style={{ fontFamily: 'var(--font-sans)', color: '#9E97BD' }}>
+                          <span className="text-[13px] leading-relaxed" style={{ fontFamily: 'var(--font-sans)', color: '#9E97BD' }}>
                             {ability.desc}
                           </span>
                         </div>
@@ -218,7 +218,7 @@ export default function HeroCard({
 
                     {actionButtonSlot && (
                       <div 
-                        className="mt-auto pt-2 w-full z-20" 
+                        className="mt-auto pt-2.5 w-full z-20"
                         onClick={(e) => e.stopPropagation()} 
                       >
                         {actionButtonSlot}
@@ -229,7 +229,7 @@ export default function HeroCard({
 
                 {/* 4. Footer */}
                 <div 
-                  className="flex justify-between items-center px-1 text-[9px] font-mono rounded opacity-80 pt-0.5"
+                  className="flex justify-between items-center px-1.5 text-[11px] font-mono rounded opacity-80 pt-1"
                   style={{ color: footerTextColor || 'rgba(255, 255, 255, 0.6)' }}
                 >
                   <span>{footerLeftText}</span>
@@ -248,17 +248,17 @@ export default function HeroCard({
           style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: "rotateY(180deg)" }}
         >
           <div 
-            className="flex flex-col h-full w-full rounded-md p-2.5 relative select-none transition-all duration-500"
-            style={{ 
-              backgroundColor: '#070709', 
+            className="flex flex-col h-full w-full rounded-md p-3 relative select-none transition-all duration-500"
+            style={{
+              backgroundColor: '#070709',
               border: '0px solid #101014',
-              boxShadow: isCardHovered 
-                ? `0 0 40px rgba(${themeColorRgba}, 0.5)`   
+              boxShadow: isCardHovered
+                ? `0 0 40px rgba(${themeColorRgba}, 0.5)`
                 : `0 0 40px rgba(${themeColorRgba}, 0.15)`
             }}
           >
-            <div 
-              className="flex flex-col h-full w-full rounded-md p-2 justify-between border relative overflow-hidden"
+            <div
+              className="flex flex-col h-full w-full rounded-md p-2.5 justify-between border relative overflow-hidden"
               style={{ 
                 background: chassisGradient,
                 borderColor: `rgba(${themeColorRgba}, 0.55)`, 
@@ -272,7 +272,7 @@ export default function HeroCard({
               <div className="absolute inset-1 border border-black/15 rounded pointer-events-none" />
 
               <div 
-                className="w-full grow rounded-sm border p-6 relative flex flex-col items-center justify-between overflow-hidden shadow-inner z-10"
+                className="w-full grow rounded-sm border p-7 relative flex flex-col items-center justify-between overflow-hidden shadow-inner z-10"
                 style={{ backgroundColor: '#1F1A30', borderColor: '#251F3D' }}
               >
                 {/* Background Cross Lines with outer spacing */}
@@ -286,13 +286,13 @@ export default function HeroCard({
 
                 {/* Top Text: REGARDED GAMES (split across lines and masks the vertical line) */}
                 <div 
-                  className="flex flex-col items-center justify-center text-[10px] tracking-[0.3em] font-bold uppercase select-none z-10 text-center px-4 py-1.5"
+                  className="flex flex-col items-center justify-center text-[13px] tracking-[0.3em] font-bold uppercase select-none z-10 text-center px-5 py-2"
                   style={{ 
                     fontFamily: 'var(--font-mono)', 
                     backgroundColor: '#1F1A30' 
                   }}
                 >
-                  <div className="opacity-60 flex flex-col items-center gap-1" style={{ color: '#9E97BD' }}>
+                  <div className="opacity-60 flex flex-col items-center gap-1.5" style={{ color: '#9E97BD' }}>
                     <span>REGARDED</span>
                     <span>GAMES</span>
                   </div>
@@ -304,7 +304,7 @@ export default function HeroCard({
   <div className="absolute w-40 h-40 rounded-full blur-xl opacity-20 pointer-events-none animate-pulse" style={{ background: themeColor }} />
   
   {/* Masking wrapper: masks the background lines to create a gap (adjust p-2.5 to increase or decrease the gap) */}
-  <div className="p-2.5 rounded-full" style={{ backgroundColor: '#1F1A30' }}>
+  <div className="p-3 rounded-full" style={{ backgroundColor: '#1F1A30' }}>
     
     <div className="p-[3px] rounded-full shadow-lg" style={{ background: `linear-gradient(135deg, ${themeColor} 0%, rgba(${themeColorRgba}, 0.2) 100%)` }}>
       <div className="w-32 h-32 rounded-full flex items-center justify-center border-4 relative overflow-hidden" style={{ backgroundColor: '#2B2544', borderColor: '#4C3F7A' }}>
@@ -326,13 +326,13 @@ export default function HeroCard({
                 
                 {/* Bottom Text: CLASS WARFARE THE GAME (split across lines and masks the vertical line) */}
                 <div 
-                  className="flex flex-col items-center justify-center text-[10px] tracking-[0.3em] font-bold uppercase select-none z-10 text-center px-4 py-1.5"
+                  className="flex flex-col items-center justify-center text-[13px] tracking-[0.3em] font-bold uppercase select-none z-10 text-center px-5 py-2"
                   style={{ 
                     fontFamily: 'var(--font-mono)', 
                     backgroundColor: '#1F1A30' 
                   }}
                 >
-                  <div className="opacity-60 flex flex-col items-center gap-1" style={{ color: '#9E97BD' }}>
+                  <div className="opacity-60 flex flex-col items-center gap-1.5" style={{ color: '#9E97BD' }}>
                     <span>CLASS WARFARE</span>
                     <span>THE GAME</span>
                   </div>

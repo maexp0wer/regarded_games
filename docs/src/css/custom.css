@@ -85,7 +85,7 @@
 
   /* ── Infima sidebar ────────────────────────────────────────────── */
   --ifm-menu-color:                   var(--color-text2);
-  --ifm-menu-color-active:            var(--color-purple);
+  --ifm-menu-color-active:            var(--color-text);
   --ifm-menu-color-background-active: var(--color-card2);
   --ifm-menu-color-background-hover:  var(--color-card2);
 
@@ -95,8 +95,8 @@
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.05);
 
   /* ── Infima links ──────────────────────────────────────────────── */
-  --ifm-link-color:       var(--color-purple);
-  --ifm-link-hover-color: var(--color-purple-hover);
+  --ifm-link-color:       var(--color-text);
+  --ifm-link-hover-color: var(--color-text);
 
   /* ── Infima typography ─────────────────────────────────────────── */
   --ifm-font-family-base:      'Space Grotesk', system-ui, sans-serif;
@@ -152,15 +152,15 @@
   --ifm-footer-background-color: var(--color-bg);
 
   --ifm-menu-color:                   var(--color-text2);
-  --ifm-menu-color-active:            var(--color-purple);
+  --ifm-menu-color-active:            var(--color-text);
   --ifm-menu-color-background-active: var(--color-card2);
   --ifm-menu-color-background-hover:  var(--color-card2);
 
   --ifm-code-background:                 var(--color-card2);
   --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.06);
 
-  --ifm-link-color:       var(--color-purple);
-  --ifm-link-hover-color: var(--color-purple-hover);
+  --ifm-link-color:       var(--color-text);
+  --ifm-link-hover-color: var(--color-text);
 }
 
 /* ── BASE ───────────────────────────────────────────────────────── */
@@ -189,27 +189,13 @@ body {
   z-index:            100;
 }
 
-.navbar::after {
-  content:    '';
-  position:   absolute;
-  left:       0;
-  right:      0;
-  bottom:     0;
-  height:     1px;
-  background: var(--sunset);
-  opacity:    0.4;
-}
-
 .navbar__title {
   font-family:    'Exo 2', system-ui, sans-serif;
   font-weight:    900;
   font-size:      1.1rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  background:     var(--sunset);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color:          var(--color-text);
 }
 
 .navbar__link {
@@ -221,7 +207,7 @@ body {
 
 .navbar__link:hover,
 .navbar__link--active {
-  color: var(--color-purple) !important;
+  color: var(--color-text) !important;
 }
 
 /* ── SIDEBAR ────────────────────────────────────────────────────── */
@@ -238,14 +224,14 @@ body {
 }
 
 .menu__link--active:not(.menu__link--sublist) {
-  color:            var(--color-purple) !important;
+  color:            var(--color-text) !important;
   font-weight:      600;
-  border-left:      2px solid var(--color-purple);
+  border-left:      2px solid var(--color-border2);
   padding-left:     10px;
 }
 
 .menu__list-item-collapsible .menu__link--active {
-  color: var(--color-purple) !important;
+  color: var(--color-text) !important;
 }
 
 .menu__caret::before {
@@ -273,12 +259,17 @@ body {
 }
 
 /* ── HEADINGS ───────────────────────────────────────────────────── */
+/* Match the app: Exo 2 display for titles, neutral text by default.
+   The sunset gradient is reserved for the page h1 (the one sanctioned
+   hero accent); h2–h4 stay on neutral text/text2 tokens. */
 h1, h2, h3, h4, h5, h6 {
   font-family:     'Exo 2', system-ui, sans-serif;
   letter-spacing:  -0.01em;
   line-height:     1.25;
 }
 
+/* Page title — the single sanctioned hero accent (see paradigm: sunset
+   is reserved for hero numbers/headings, not body chrome). */
 .markdown h1 {
   font-weight:   900;
   font-size:     2rem;
@@ -300,11 +291,13 @@ h1, h2, h3, h4, h5, h6 {
   padding-bottom: 0.4rem;
 }
 
+/* Mono `//` section marker — terminal glyph iconography, neutral-muted
+   rather than a faction color so it reads as syntax, not an accent. */
 .markdown h2::before {
   content:       '//';
   font-family:   'JetBrains Mono', monospace;
   font-size:     0.85em;
-  color:         var(--color-purple);
+  color:         var(--color-text2);
   margin-right:  0.5rem;
   font-weight:   400;
 }
@@ -315,13 +308,14 @@ h1, h2, h3, h4, h5, h6 {
   color:       var(--color-text);
 }
 
+/* h4 follows .h4-app: mono, micro, uppercase, muted — a section label. */
 .markdown h4 {
   font-weight:    600;
-  font-family:    'Space Grotesk', system-ui, sans-serif;
+  font-family:    'JetBrains Mono', monospace;
   color:          var(--color-text2);
   text-transform: uppercase;
-  font-size:      0.8rem;
-  letter-spacing: 0.1em;
+  font-size:      0.78rem;
+  letter-spacing: 0.08em;
 }
 
 /* ── PROSE ──────────────────────────────────────────────────────── */
@@ -349,9 +343,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .markdown blockquote {
-  border-left:   3px solid;
-  border-image:  var(--sunset) 1;
-  background:    var(--sunset-15);
+  border:        1px solid var(--color-border);
+  border-left:   3px solid var(--color-border2);
+  background:    var(--color-card2);
   border-radius: 0 8px 8px 0;
   padding:       14px 20px;
   color:         var(--color-text2);
@@ -366,18 +360,19 @@ h1, h2, h3, h4, h5, h6 {
 .markdown hr {
   border: none;
   height: 1px;
-  background: var(--sunset);
-  opacity: 0.25;
+  background: var(--color-border);
 }
 
 .markdown li::marker {
-  color: var(--color-purple);
+  color: var(--color-text2);
 }
 
 /* ── CODE ───────────────────────────────────────────────────────── */
+/* Inline code reads as a mono field on a card3 well — neutral text, not
+   a gold accent (gold is reserved as an occasional faction highlight). */
 .markdown :not(pre) > code {
-  background:    var(--color-card2);
-  color:         var(--color-gold);
+  background:    var(--color-card3);
+  color:         var(--color-text);
   border:        1px solid var(--color-border);
   border-radius: 4px;
   padding:       1px 6px;
@@ -385,6 +380,7 @@ h1, h2, h3, h4, h5, h6 {
   font-weight:   500;
 }
 
+/* Code blocks are flat terminal panes — no top gradient strip, no glow. */
 .markdown pre {
   background:    var(--color-card) !important;
   border:        1px solid var(--color-border);
@@ -393,20 +389,24 @@ h1, h2, h3, h4, h5, h6 {
   overflow:      hidden;
 }
 
-.markdown pre::before {
-  content:    '';
-  position:   absolute;
-  top:        0;
-  left:       0;
-  right:      0;
-  height:     2px;
-  background: var(--sunset);
-}
-
 .markdown pre code {
   color:       inherit;
   font-size:   0.875rem;
   line-height: 1.7;
+}
+
+/* Code block with a title renders the title bar as a terminal-pane header:
+   flat card2 strip, mono micro-label, solid border underneath. */
+.markdown .theme-code-block .codeBlockTitle_node_modules-\@docusaurus-theme-classic-lib-theme-CodeBlock-Container-styles-module,
+.markdown div[class*='codeBlockTitle'] {
+  background:      var(--color-card2) !important;
+  border-bottom:   1px solid var(--color-border) !important;
+  font-family:     'JetBrains Mono', monospace !important;
+  font-size:       0.68rem !important;
+  font-weight:     700 !important;
+  letter-spacing:  0.08em !important;
+  text-transform:  uppercase !important;
+  color:           var(--color-text2) !important;
 }
 
 /* ── TABLES ─────────────────────────────────────────────────────── */
@@ -451,14 +451,36 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .markdown tr:hover td {
-  background: color-mix(in srgb, var(--color-purple-15) 40%, transparent);
+  background: var(--color-card2);
 }
 
-/* ── ADMONITIONS ────────────────────────────────────────────────── */
-.alert {
-  border-radius: 10px;
-  border-width:  0;
-  border-left:   3px solid currentColor;
+/* ── ADMONITIONS (terminal-pane Detail Cards) ───────────────────── */
+/* Flat card surface + a solid left accent bar (sanctioned solid color,
+   no glow). The admonition type color lives only in the bar and the
+   header label; the body stays on neutral text. */
+.theme-admonition {
+  background:     var(--color-card) !important;
+  border:         1px solid var(--color-border) !important;
+  border-left:    3px solid currentColor !important;
+  border-radius:  10px !important;
+  box-shadow:     none !important;
+}
+
+.theme-admonition .admonitionHeading_node_modules-\@docusaurus-theme-classic-lib-theme-Admonition-Layout-styles-module,
+.theme-admonition [class*='admonitionHeading'] {
+  font-family:     'JetBrains Mono', monospace !important;
+  font-size:       0.68rem !important;
+  font-weight:     700 !important;
+  letter-spacing:  0.1em !important;
+  text-transform:  uppercase !important;
+}
+
+.theme-admonition [class*='admonitionContent'] {
+  color: var(--color-text2);
+}
+
+.theme-admonition [class*='admonitionContent'] strong {
+  color: var(--color-text);
 }
 
 /* ── PAGINATION ─────────────────────────────────────────────────── */
@@ -469,35 +491,22 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .pagination-nav__link:hover {
-  border-color: var(--color-purple);
-  background:   var(--color-purple-15);
-  color:        var(--color-purple);
+  border-color: var(--color-border2);
+  background:   var(--color-card2);
+  color:        var(--color-text);
 }
 
 /* ── BREADCRUMBS ────────────────────────────────────────────────── */
 .breadcrumbs__item--active .breadcrumbs__link {
-  color:       var(--color-purple);
+  color:       var(--color-text);
   font-weight: 600;
   background:  none;
 }
 
 /* ── FOOTER ─────────────────────────────────────────────────────── */
 .footer {
-  border-top:   1px solid var(--color-bg);
+  border-top:   1px solid var(--color-border);
   padding:      2.5rem 0;
-  position:     relative;
-  overflow:     hidden;
-}
-
-.footer::before {
-  content:    '';
-  position:   absolute;
-  top:        0;
-  left:       0;
-  right:      0;
-  height:     1px;
-  background: var(--sunset);
-  opacity:    0.5;
 }
 
 .footer__copyright {
@@ -516,8 +525,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .DocSearch-Button:hover {
-  border-color: var(--color-purple) !important;
-  box-shadow:   0 0 0 2px var(--color-purple-15) !important;
+  border-color: var(--color-border2) !important;
+  background:   var(--color-card3) !important;
+  box-shadow:   none !important;
 }
 
 /* ── SCROLLBAR ──────────────────────────────────────────────────── */
@@ -550,4 +560,135 @@ h1, h2, h3, h4, h5, h6 {
 .token.doctype,
 .token.cdata {
   color: var(--color-text2) !important;
+}
+
+/* ================================================================
+   DESIGN-PARADIGM ARCHETYPES
+   Verbatim class vocabulary from the Regarded Games blueprint, so MDX
+   content speaks the same language as the app. Flat surfaces, no glow.
+   ================================================================ */
+
+/* ── Detail Card / terminal-pane ────────────────────────────────── */
+.terminal-pane {
+  background:     var(--color-card);
+  border:         1px solid var(--color-border);
+  border-radius:  10px;
+  padding:        16px 18px;
+}
+
+.terminal-pane-header {
+  display:        flex;
+  align-items:    center;
+  justify-content: space-between;
+  border-bottom:  1px solid var(--color-border);
+  padding-bottom: 10px;
+  margin-bottom:  14px;
+}
+
+.terminal-pane-title {
+  font-family:     'JetBrains Mono', monospace;
+  font-size:       0.68rem;
+  font-weight:     700;
+  letter-spacing:  0.1em;
+  text-transform:  uppercase;
+  color:           var(--color-text2);
+}
+
+/* ── kv-row — key/value fact line inside a Detail Card ──────────── */
+.kv-row {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  gap:             1rem;
+}
+
+.kv-row > span:first-child {
+  font-family: 'JetBrains Mono', monospace;
+  font-size:   0.7rem;
+  color:       var(--color-text2);
+}
+
+.kv-row code,
+.kv-row > span:last-child {
+  font-family:          'JetBrains Mono', monospace;
+  font-size:            0.7rem;
+  font-variant-numeric: tabular-nums;
+  color:                var(--color-text);
+}
+
+.kv-row code {
+  background:    var(--color-card3);
+  border:        1px solid var(--color-border);
+  border-radius: 4px;
+  padding:       1px 8px;
+  user-select:   all;
+}
+
+/* ── section-label — mono micro heading with a gold dot ─────────── */
+.section-label {
+  display:         inline-flex;
+  align-items:     center;
+  gap:             0.45rem;
+  font-family:     'JetBrains Mono', monospace;
+  font-size:       0.65rem;
+  font-weight:     900;
+  letter-spacing:  0.1em;
+  text-transform:  uppercase;
+  color:           var(--color-text2);
+}
+
+.section-label::before {
+  content:       '';
+  width:         6px;
+  height:        6px;
+  border-radius: 50%;
+  background:    var(--color-gold);
+}
+
+/* ── pill — rounded status tag (mono, uppercase) ────────────────── */
+.pill {
+  display:         inline-flex;
+  align-items:     center;
+  gap:             0.35rem;
+  font-family:     'JetBrains Mono', monospace;
+  font-size:       0.66rem;
+  font-weight:     700;
+  letter-spacing:  0.06em;
+  text-transform:  uppercase;
+  padding:         3px 10px;
+  border-radius:   999px;
+  border:          1px solid var(--color-border2);
+  color:           var(--color-text2);
+  background:      var(--color-card2);
+}
+
+/* Faction-tinted pill variants — occasional accents, not the baseline. */
+.pill.pill-purple {
+  color:        var(--color-purple);
+  border-color: var(--color-purple-35);
+  background:   var(--color-purple-15);
+}
+
+.pill.pill-gold {
+  color:        var(--color-gold-hover);
+  border-color: var(--color-gold-35);
+  background:   var(--color-gold-15);
+}
+
+[data-theme='dark'] .pill.pill-gold {
+  color: var(--color-gold);
+}
+
+/* ── faction-card grid — for side-by-side faction Detail Cards ──── */
+.faction-grid {
+  display:               grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap:                   1rem;
+  margin:                1.25rem 0;
+}
+
+@media (max-width: 768px) {
+  .faction-grid {
+    grid-template-columns: 1fr;
+  }
 }

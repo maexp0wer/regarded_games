@@ -162,7 +162,7 @@ export function buildChordData(
     const bandIndex = isCapitalist ? (NUM_BANDS - 1 - i) : (i - NUM_BANDS);
     const pctLow = Math.round(bandIndex * STEP);
     const pctHigh = Math.round(pctLow + STEP);
-    const label = isCapitalist ? `Cap ${pctLow}–${pctHigh}%` : `Soc ${pctLow}–${pctHigh}%`;
+    const label = isCapitalist ? `Capitalists ${pctLow}–${pctHigh}%` : `Proletarians ${pctLow}–${pctHigh}%`;
     return { index: i, isCapitalist, bandIndex, label, playerCount: playerSets[i].size };
   });
 

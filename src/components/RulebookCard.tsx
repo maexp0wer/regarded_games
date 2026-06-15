@@ -103,8 +103,9 @@ export default function RulebookCard({
         </div>
       )}
 
-      {/* Rulebook page — inset with px-3 chassis padding on sides in noBorder mode */}
-      <div className={`flex flex-col flex-grow ${noBorder ? 'p-3' : ''}`}>
+      {/* Rulebook page — in noBorder mode the parent page owns the inset, so the
+          gold panel hugs this wrapper and matches the PageFace inner panel */}
+      <div className="flex flex-col flex-grow">
         <div
           className="relative flex flex-col flex-grow rounded-sm border overflow-hidden shadow-inner"
           style={{ backgroundColor: 'var(--color-card)', borderColor: `rgba(${themeColorRgba}, 0.3)` }}
@@ -129,7 +130,7 @@ export default function RulebookCard({
             />
           )}
 
-          <div className="relative z-[5] flex flex-col flex-grow gap-2 p-4 md:p-5">
+          <div className="relative z-[5] flex flex-col flex-grow gap-2 p-5 md:p-6">
             <div className="flex flex-col flex-grow">
               {detailsSlot}
             </div>
@@ -161,7 +162,7 @@ export default function RulebookCard({
   if (noBezel) {
     return (
       <div
-        className="w-full relative group mx-auto flex flex-col select-none"
+        className="w-full relative group mx-auto flex flex-col flex-grow select-none"
         style={{ maxWidth, minHeight, ...(width ? { width } : {}) }}
         onMouseEnter={() => setIsCardHovered(true)}
         onMouseLeave={() => setIsCardHovered(false)}

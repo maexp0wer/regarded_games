@@ -16,16 +16,18 @@ export default function DashboardIndexPage() {
   }, [isConnected, address, router]);
 
   return (
-    <div className="w-full py-16 flex flex-col items-center gap-4 text-center">
-      <h2 className="font-display font-extrabold text-2xl text-text">
-        Connect your wallet
-      </h2>
-      <p className="section-label opacity-60">
-        Connect to view your dashboard.
-      </p>
-      <div className="mt-2">
-        <WalletButton />
+    <main className="w-full animate-in fade-in duration-700">
+      <div className="terminal-pane connect-gate w-full max-w-2xl mx-auto">
+        <div className="terminal-pane-header">
+          <span className="terminal-pane-title">Dashboard</span>
+        </div>
+        <div className="connect-gate-body">
+          <span className="font-sans text-sm text-text2 mb-4">
+            Connect your wallet to view your dashboard
+          </span>
+          <WalletButton />
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

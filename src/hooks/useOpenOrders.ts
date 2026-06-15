@@ -18,6 +18,7 @@ export interface MyOrder {
   isCancelled: boolean;
   timestamp: number;
   settledAt?: number;
+  feePaid: number;
 }
 
 // History (active: false) orders are NOT held by the shared active-orders
@@ -31,7 +32,7 @@ const HISTORY_QUERY = `
       limit: 50
     ) {
       items {
-        id orderId isBuy price initialAmount remainingAmount isCancelled timestamp settledAt
+        id orderId isBuy price initialAmount remainingAmount isCancelled timestamp settledAt feePaid
       }
     }
   }
@@ -47,6 +48,7 @@ interface RawOrder {
   isCancelled: boolean;
   timestamp: string;
   settledAt: string | null | undefined;
+  feePaid?: string | null;
 }
 
 function mapOrder(o: RawOrder): MyOrder {
@@ -60,6 +62,7 @@ function mapOrder(o: RawOrder): MyOrder {
     isCancelled: o.isCancelled,
     timestamp: Number(o.timestamp),
     settledAt: o.settledAt ? Number(o.settledAt) : undefined,
+    feePaid: o.feePaid ? Number(formatUnits(BigInt(o.feePaid), 6)) : 0,
   };
 }
 

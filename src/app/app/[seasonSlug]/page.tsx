@@ -85,6 +85,15 @@ export default function SeasonDetailPage() {
 
   const { M_dynamic, effectiveVictoryPending } = victory;
 
+  // Clear the order queue when settlement begins so stale orders don't linger
+  // behind the "Trading is halted" banner.
+  useEffect(() => {
+    if (effectiveVictoryPending) {
+      setSelectedAsks([]);
+      setSelectedBids([]);
+    }
+  }, [effectiveVictoryPending]);
+
   const { data: percentilesMap } = useBatchPlayerPercentiles(
     seasonAddress,
     userAddress ? [userAddress] : [],

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Space_Grotesk, JetBrains_Mono, Exo_2 } from 'next/font/google';
+import { Space_Grotesk, JetBrains_Mono, Exo_2, Orbitron } from 'next/font/google';
 import { headers } from 'next/headers';
 import { cookieToInitialState } from 'wagmi';
 import { config } from '@/config/wagmi';
@@ -8,6 +8,13 @@ import { TENANTS, type TenantKey } from '@/config/tenants';
 
 import './globals.css';
 import '@rainbow-me/rainbowkit/styles.css';
+
+const orbitron = Orbitron({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800', '900'],
+  variable: '--font-orbitron',
+  display: 'swap',
+});
 
 const exo2 = Exo_2({
   subsets: ['latin'],
@@ -63,7 +70,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${exo2.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
+      <body className={`${orbitron.variable} ${exo2.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
         <script dangerouslySetInnerHTML={{ __html: blockingThemeScript }} />
 
         <Providers initialState={initialState} initialChainId={initialChainId}>

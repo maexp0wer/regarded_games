@@ -84,7 +84,12 @@ export function LendingDistributionCard({ seasonAddress, config }: LendingDistri
                     </span>
                   </span>
                   <span className="font-mono text-[12px] font-semibold" style={{ color: fill, fontVariantNumeric: 'tabular-nums' }}>
-                    {hasAmount ? `$${formatUSDC(item.amt)}` : `${item.value / 100}%`}
+                    {hasAmount ? (
+                      <>
+                        {`$${formatUSDC(item.amt)}`}
+                        <span className="text-text2 font-normal ml-1">{`(${item.value / 100}%)`}</span>
+                      </>
+                    ) : `${item.value / 100}%`}
                   </span>
                 </div>
               );

@@ -46,6 +46,7 @@ function HomepageHero() {
   return (
     <header className={styles.hero}>
       <div className={styles.heroInner}>
+        <span className={styles.heroEyebrow}>Documentation</span>
         <h1 className={styles.heroTitle}>{siteConfig.title}</h1>
         <p className={styles.heroSubtitle}>
           Perfect-information economic warfare with real-money stakes on Base.

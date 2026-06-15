@@ -170,21 +170,21 @@ export function SeasonListDashboard({ playerAddress }: SeasonListDashboardProps)
   );
 
   return (
-    <div className="w-full flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+    <div className="w-full flex flex-col gap-6 animate-in fade-in duration-700">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <h2 className="font-display font-extrabold text-[28px] tracking-[-0.02em] text-text">
+          <h2 className="h2-app">
             {showPayout ? 'All Seasons' : 'Active Seasons'}
           </h2>
           {displayedCount > 0 && (
-            <span className="section-label px-2 py-1 bg-card2 rounded-md hidden sm:block">
+            <span className="pill px-2 py-1 bg-card2 text-text2 text-[10px] hidden sm:inline-block">
               {displayedCount} Positions
             </span>
           )}
         </div>
         <button
           onClick={() => { setShowPayout(v => !v); setValidPositions({}); }}
-          className="btn-game-secondary px-4 py-2 text-[11px]"
+          className="btn-game-secondary px-4 py-2 text-[11px] shrink-0"
         >
           {showPayout ? 'Active Seasons' : 'All Seasons'}
         </button>
@@ -192,10 +192,7 @@ export function SeasonListDashboard({ playerAddress }: SeasonListDashboardProps)
 
       <div className="flex flex-col gap-4">
         {activePositions.length === 0 || (!isSyncing && displayedCount === 0 && Object.keys(validPositions).length > 0) ? (
-          <div
-            className="card-app text-center py-16"
-            style={{ borderColor: 'var(--color-border)' }}
-          >
+          <div className="terminal-pane text-center py-16">
             <p className="section-label opacity-40">{showPayout ? 'No positions found' : 'No active positions found'}</p>
           </div>
         ) : (
@@ -288,11 +285,11 @@ function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: { pos: Seas
     <Link href={`/season_${pos.id}`} className="block group">
       <div className="season-ledger-row">
 
-        {/* Column 1: Season # + Phase (top) / Dates (bottom) */}
-        <div className="flex flex-col gap-1.5 shrink-0 min-w-40">
+        {/* Identity — shrink-0 so it never collapses; sits inline with metric cells */}
+        <div className="flex flex-col gap-1.5 shrink-0">
           <div className="flex items-center gap-3">
             <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-display-season shrink-0">
-              S<em className="not-italic font-medium" style={{ color: 'var(--color-text2)', fontVariantNumeric: 'tabular-nums' }}>{num}</em>
+              S<em className="not-italic font-medium text-text2 tabular-nums">{num}</em>
             </p>
             <SeasonPhasePills
               phase={phase}
@@ -300,104 +297,88 @@ function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: { pos: Seas
               className="flex items-center gap-2"
             />
           </div>
-          <span className="font-mono text-[11px] text-text2">
+          <span className="font-mono text-[11px] text-text2 whitespace-nowrap">
             {tradingStart ? formatDateShort(tradingStart) : '—'} — {seasonEnd ? formatDateShort(seasonEnd) : '—'}
           </span>
         </div>
 
-        {/* Columns 2–4: metrics — ACTIVE + PAYOUT (PAYOUT is terminal; no ENDED).
-            3 paired columns: (Position/Available or Claimable) | (Standing/PnL)
-            | (Prize Pool/Countdown or Season PnL) */}
-        <div className="flex-1 flex flex-wrap gap-x-6 gap-y-3 md:px-6">
+        {/* Divider */}
+        <div className="w-px self-stretch bg-border shrink-0" />
 
-            {/* Col 2: Position (top) / Available or Claimable (bottom) */}
-            <div className="flex flex-col gap-3 flex-1 min-w-20">
-              <div className="meta-data-group">
-                <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">{isPayout ? holdingsLabel : 'Position'}</span>
-                <span className="font-mono text-sm font-bold text-gold" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                  {(isPayout ? fimForDisplay : totalFim).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                  <span className="text-[10px] text-text2 font-normal ml-1">FIM</span>
-                </span>
-              </div>
-              <div className="meta-data-group">
-                {isPayout ? (
-                  <>
-                    <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">{claimLabel}</span>
-                    <span className="font-mono text-sm font-bold" style={{ color: canClaim ? 'var(--color-gold)' : 'var(--color-text)', fontVariantNumeric: 'tabular-nums' }}>
-                      ${claimableAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      <span className="text-[10px] text-text2 font-normal ml-1">USDC</span>
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Available</span>
-                    <span className="font-mono text-sm font-bold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                      {availableFim.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                      <span className="text-[10px] text-text2 font-normal ml-1">FIM</span>
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
+        {/* Prize Pool */}
+        <div className="meta-data-group shrink-0">
+          <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Prize Pool</span>
+          <span className="font-mono text-sm font-bold text-text tabular-nums">
+            ${(giniData?.prizePool ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <span className="text-[10px] text-text2 font-normal ml-1">USDC</span>
+          </span>
+        </div>
 
-            {/* Col 3: Standing (top) / PnL (bottom) */}
-            <div className="flex flex-col gap-3 flex-1 min-w-20">
-              <div className="meta-data-group">
-                <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">{isPayout ? 'Your Result' : 'Standing'}</span>
-                {playerStats ? (
-                  <PercentileCircle percentage={playerStats.factionPercentile} isCapitalist={playerStats.isCapitalist} size="sm" />
-                ) : (
-                  <span className="font-mono text-sm text-text2">—</span>
-                )}
-              </div>
-              {isPayout ? (
-                <div className="meta-data-group">
-                  <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Season PnL</span>
-                  <span className="font-mono text-sm font-bold" style={{ color: seasonPnl > 0 ? 'var(--color-green)' : seasonPnl < 0 ? 'var(--color-red)' : 'var(--color-text2)', fontVariantNumeric: 'tabular-nums' }}>
-                    {seasonPnl > 0 ? '+' : seasonPnl < 0 ? '-' : ''}${Math.abs(seasonPnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    <span className="text-[10px] text-text2 font-normal ml-1">USDC</span>
-                  </span>
-                </div>
-              ) : (
-                <div className="meta-data-group">
-                  <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">PnL</span>
-                  <span className="font-mono text-sm font-bold" style={{ color: pnl !== null ? (pnl >= 0 ? 'var(--color-green)' : 'var(--color-red)') : 'var(--color-text2)', fontVariantNumeric: 'tabular-nums' }}>
-                    {pnl !== null ? `${pnl >= 0 ? '+' : ''}$${pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
-                    {pnl !== null && <span className="text-[10px] text-text2 font-normal ml-1">USDC</span>}
-                  </span>
-                </div>
-              )}
-            </div>
+        {/* Players */}
+        <div className="meta-data-group shrink-0">
+          <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Players</span>
+          <span className="font-mono text-sm font-bold text-text tabular-nums">
+            {giniData?.playerCount ?? '—'}
+          </span>
+        </div>
 
-            {/* Col 4: Prize Pool (top) / Countdown or Season PnL (bottom) */}
-            <div className="flex flex-col gap-3 flex-1 min-w-20">
-              <div className="meta-data-group">
-                <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Prize Pool</span>
-                <span className="font-mono text-sm font-bold text-gold" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                  ${(giniData?.prizePool ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  <span className="text-[10px] text-text2 font-normal ml-1">USDC</span>
-                </span>
-              </div>
-              <div>
-                {isPayout ? (
-                  <div className="meta-data-group">
-                    <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Status</span>
-                    <span className="font-mono text-sm font-bold text-text2">Season Concluded</span>
-                  </div>
-                ) : (
-                  showTimeStat && <CountdownTicker targetTimestamp={countdownTarget} label={statusLabel} />
-                )}
-              </div>
-            </div>
+        {/* Position / FIM Burned */}
+        <div className="meta-data-group shrink-0">
+          <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">{isPayout ? holdingsLabel : 'Position'}</span>
+          <span className="font-mono text-sm font-bold text-text tabular-nums">
+            {(isPayout ? fimForDisplay : totalFim).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            <span className="text-[10px] text-text2 font-normal ml-1">FIM</span>
+          </span>
+        </div>
 
-          </div>
+        {/* PnL / Claimable */}
+        <div className="meta-data-group shrink-0">
+          {isPayout ? (
+            <>
+              <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">{claimLabel}</span>
+              <span className={`font-mono text-sm font-bold tabular-nums ${canClaim ? 'text-green' : 'text-text'}`}>
+                ${claimableAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className="text-[10px] text-text2 font-normal ml-1">USDC</span>
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">PnL</span>
+              <span className={`font-mono text-sm font-bold tabular-nums ${pnl !== null ? (pnl >= 0 ? 'text-green' : 'text-red') : 'text-text2'}`}>
+                {pnl !== null ? `${pnl >= 0 ? '+' : ''}$${pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                {pnl !== null && <span className="text-[10px] text-text2 font-normal ml-1">USDC</span>}
+              </span>
+            </>
+          )}
+        </div>
 
-        {/* Column 5: Victory progress rail (active + payout seasons) */}
-        {!isAuctionOrBootstrap && (
-          <div className="w-full md:w-50 flex flex-col gap-1.5 shrink-0">
-            <span className="font-mono text-[9px] uppercase text-text2 tracking-wider md:text-right block">
-              Victory Progress
+        {/* Standing / Your Result */}
+        <div className="meta-data-group shrink-0">
+          <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">{isPayout ? 'Your Result' : 'Standing'}</span>
+          {playerStats ? (
+            <PercentileCircle percentage={playerStats.factionPercentile} isCapitalist={playerStats.isCapitalist} size="sm" />
+          ) : (
+            <span className="font-mono text-sm text-text2">—</span>
+          )}
+        </div>
+
+        {/* Countdown / Season PnL */}
+        {isPayout ? (
+          <div className="meta-data-group shrink-0">
+            <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Season PnL</span>
+            <span className={`font-mono text-sm font-bold tabular-nums ${seasonPnl > 0 ? 'text-green' : seasonPnl < 0 ? 'text-red' : 'text-text2'}`}>
+              {seasonPnl > 0 ? '+' : seasonPnl < 0 ? '-' : ''}${Math.abs(seasonPnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span className="text-[10px] text-text2 font-normal ml-1">USDC</span>
             </span>
+          </div>
+        ) : showTimeStat ? (
+          <CountdownTicker targetTimestamp={countdownTarget} label={statusLabel} inline />
+        ) : null}
+
+        {/* Victory progress rail — grows to fill remaining space */}
+        {!isAuctionOrBootstrap && (
+          <div className="flex flex-col gap-1.5 flex-1 min-w-32">
+            <span className="font-mono text-[9px] uppercase text-text2 tracking-wider">Victory Progress</span>
             <div className="progress-rail-container">
               <div
                 className="progress-rail-fill"

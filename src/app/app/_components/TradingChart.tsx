@@ -18,11 +18,16 @@ import { useTheme } from '@/context/ThemeContext';
 
 export type Timeframe = '5m' | '1h' | '4h' | '1d';
 
+// Which stacked pane a click landed in, so callers can route the interaction
+// (volume → Capital Flow, gini → Gini, price → no panel). Mirrors the pane order
+// price : gini : volume set up in the mount effect.
+export type ChartPane = 'price' | 'gini' | 'volume';
+
 interface TradingChartProps {
   candles: CandleData[];
   timeframe: Timeframe;
   onTimeframeChange: (tf: Timeframe) => void;
-  onCandleClick: (range: { start: number; end: number } | null) => void;
+  onCandleClick: (range: { start: number; end: number } | null, pane: ChartPane | null) => void;
   selectedRange: { start: number; end: number } | null;
   capTargetBps: number;
   socTargetBps: number;
@@ -50,9 +55,18 @@ function hexToRgba(hex: string, alpha: number): string {
 const VOL_SCALE = 'right';
 const GINI_SCALE = 'right';
 
+// Pane order as added in the mount effect: 0 price, 1 gini, 2 volume. Used to map
+// a click's paneIndex back to a semantic pane for the caller.
+const PANE_BY_INDEX: Record<number, ChartPane> = { 0: 'price', 1: 'gini', 2: 'volume' };
+
 // Height of the separator the library draws between stacked panes, used to offset
 // each pane legend to its pane's top.
 const PANE_SEPARATOR_PX = 1;
+
+// Every candle is drawn at a fixed on-screen width (px between bar centers),
+// regardless of how many bars or how wide the pane is. We pin the time scale to
+// this instead of fitContent(), which would stretch/squash bars to fill the view.
+const BAR_SPACING_PX = 20;
 
 interface ChartColors {
   gridColor: string;
@@ -178,7 +192,15 @@ export function TradingChart({
       },
       rightPriceScale: { borderColor: c.gridColor },
       leftPriceScale: { visible: false },
-      timeScale: { borderColor: c.gridColor, timeVisible: true, secondsVisible: false },
+      timeScale: {
+        borderColor: c.gridColor,
+        timeVisible: true,
+        secondsVisible: false,
+        // Fixed bar width; don't let the library rescale bars to fit the pane.
+        barSpacing: BAR_SPACING_PX,
+        fixLeftEdge: false,
+        rightOffset: 0,
+      },
       crosshair: { mode: CrosshairMode.Normal },
     });
     chartRef.current = chart;
@@ -284,15 +306,18 @@ export function TradingChart({
 
     // Click a candle -> select its period; empty space -> clear. param.time is the
     // candle's series time in seconds, == candle.time, so start === candle.time*1000.
+    // param.paneIndex tells us which stacked pane was hit (0 price, 1 gini, 2 volume)
+    // so the caller can route the click to the matching panel.
     const handleClick = (param: MouseEventParams) => {
       const onClick = onCandleClickRef.current;
       const t = param.time as number | undefined;
       if (t == null || !dataMapRef.current.has(t)) {
-        onClick(null);
+        onClick(null, null);
         return;
       }
+      const pane = PANE_BY_INDEX[param.paneIndex ?? -1] ?? null;
       const start = t * 1000;
-      onClick({ start, end: start + TIMEFRAME_MS[timeframeRef.current] });
+      onClick({ start, end: start + TIMEFRAME_MS[timeframeRef.current] }, pane);
     };
     chart.subscribeClick(handleClick);
 
@@ -374,8 +399,11 @@ export function TradingChart({
     giniSeriesRef.current?.setData(giniData);
 
     // Frame the data once; never on the 5s refetch, which would yank the viewport.
+    // We keep the fixed BAR_SPACING_PX (no fitContent, which would rescale bars to
+    // fill the pane) and just scroll to the latest candle on the right edge.
     if (!didFitRef.current && candles.length > 0) {
-      chart.timeScale().fitContent();
+      chart.timeScale().applyOptions({ barSpacing: BAR_SPACING_PX });
+      chart.timeScale().scrollToRealTime();
       didFitRef.current = true;
     }
     repositionBandRef.current();
@@ -504,7 +532,7 @@ export function TradingChart({
       {/* TradingView-style toolbar strip: timeframe pills top-left, live dot.
           The instrument title lives in the price-pane legend, so it isn't repeated
           here. Thin and borderless so it reads as chart chrome, not a header. */}
-      <div className="flex items-center gap-2 px-2 pt-4 pb-2 border-b border-border">
+      <div className="flex items-center gap-2 pl-5 pr-2 pt-4 pb-2 border-b border-border">
         <TimeframeSelector value={timeframe} onChange={onTimeframeChange} />
         <span className="w-1.5 h-1.5 rounded-full bg-green shadow-[0_0_8px_var(--color-green-35)] animate-pulse" />
       </div>
@@ -519,7 +547,7 @@ export function TradingChart({
       <div
         ref={containerRef}
         data-chrome-scroll-guard="always"
-        className="relative w-full flex-1 min-h-0 pl-3"
+        className="relative w-full flex-1 min-h-0"
       >
         {/* Selection band: a translucent vertical highlight over the clicked
             candle, positioned imperatively against the time scale. */}

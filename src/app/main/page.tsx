@@ -10,7 +10,7 @@ import Regardo from '@/components/icons/Regardo.svg';
 import Carlo from '@/components/icons/Carlo.svg';
 import FIM1 from '@/components/icons/FIM1.svg';
 import { useDocNavigation } from '@/hooks/useDocNavigation';
-import NestedPieChart from '@/components/NestedPieChart';
+import Rulebook from '@/components/Rulebook';
 import CyclingSubheading from '@/components/CyclingSubheading';
 import AnimatedAuctionChart from '@/components/AnimatedAuctionChart';
 import AnimatedTradeFlows from '@/components/AnimatedTradeFlows';
@@ -19,67 +19,6 @@ import AnimatedGiniCard from '@/components/AnimatedGiniCard';
 import CardDeck from '@/components/CardDeck';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 
-const tableData = [
-  {
-    parentName: " ",
-    parentPercentage: 75,
-    parentColor: "var(--color-card3)",
-    parentExplanation: "75% of the initial $RGD supply is directly controlled by you, the DAO members.",
-    name: "DAO Treasury Reserve",
-    percentage: 40,
-    color: "var(--color-green)",
-    explanation: "Long-Term Capital. Controlled entirely by governance for future growth, acquisitions, or diversification. Subject to a 5-year linear unlock.",
-    subChildren: []
-  },
-  {
-    parentName: " ",
-    parentPercentage: 75,
-    parentColor: "var(--color-card3)",
-    name: "Growth & Ecosystem",
-    percentage: 20,
-    color: "var(--color-magenta)",
-    explanation: "Funds Active Incentives and marketing. Released based on DAO-approved milestones.",
-    subChildren: [
-      { name: "Merkl Rewards", percentage: 5, color: "var(--color-magenta-70)" },
-      { name: "User Acquisition", percentage: 15, color: "var(--color-magenta)" }
-    ]
-  },
-  {
-    parentName: " ",
-    parentPercentage: 75,
-    parentColor: "var(--color-card3)",
-    name: "Market Formation",
-    percentage: 15,
-    color: "var(--color-orange)",
-    explanation: "Distributed to early community participants and used to provide initial exchange liquidity to ensure Day 1 market stability.",
-    subChildren: [
-      { name: "Genesis Program", percentage: 3, color: "var(--color-orange-35)" },
-      { name: "Capital Auction", percentage: 6, color: "var(--color-orange-70)" },
-      { name: "Liquidity Pool", percentage: 6, color: "var(--color-orange)" },
-    ]
-  },
-  {
-    parentName: "  ",
-    parentPercentage: 25,
-    parentColor: "var(--color-card3)",
-    parentExplanation: "only 25% of the initial $RGD supply is not directly controlled by you, but distributed to the non-profit DAO LLC and vested among the founding Team for longterm alignment.",
-    name: "Team",
-    percentage: 15,
-    color: "var(--color-gold)",
-    explanation: "Incentivizes the founding team. Subject to a 4-year vesting schedule with a 12-month cliff.",
-    subChildren: []
-  },
-  {
-    parentName: "  ",
-    parentPercentage: 25,
-    parentColor: "var(--color-card3)",
-    name: "Operational Reserve",
-    percentage: 10,
-    color: "var(--color-purple)",
-    explanation: "Allocated to the non-profit Regarded DAO LLC to cover real-world costs (legal compliance, audits, hosting). Managed via multi-sig with strict spending rules.",
-    subChildren: []
-  },
-];
 
 /* Section scroll-stops in page order. `cards` > 1 marks sections that collapse
    into a one-card-at-a-time deck below lg; the wheel/touch handler deals through
@@ -352,7 +291,7 @@ function CardThrow({
 /* On-card icon metrics — the always-mounted sizer divs reproduce these boxes
    so overlay flights can measure launch and landing spots while the real
    icons are unmounted. */
-const CARD_ICON_H = 200;
+const CARD_ICON_H = 250;
 const GINI_ICON_H = 48; // h-12 docks on the Gini card
 const REGARDO_ASPECT = 491.52783 / 788.49512;
 const CARLO_ASPECT = 579.04352 / 781.15955;
@@ -759,6 +698,8 @@ export default function Home() {
     <HeroCard
       isFlipped={regardoFlipped}
       onFlip={() => setRegardoFlipped(!regardoFlipped)}
+      maxWidth="425px"
+      height="675px"
       themeColor="var(--color-gold)"
       themeColorHover="var(--color-gold-hover)"
       themeColorRgba="212, 175, 55"
@@ -841,6 +782,8 @@ export default function Home() {
     <HeroCard
       isFlipped={carloFlipped}
       onFlip={() => setCarloFlipped(!carloFlipped)}
+      maxWidth="425px"
+      height="675px"
       themeColor="var(--color-purple)"
       themeColorRgba="171, 71, 188"
       chassisGradient="linear-gradient(135deg, #2e0854 0%, #7b1fa2 25%, #3f0c70 50%, #ba68c8 75%, #220341 100%)"
@@ -924,15 +867,15 @@ export default function Home() {
       themeColor="var(--color-magenta)"
       themeColorRgba="184, 0, 111"
       chassisGradient="linear-gradient(135deg, #4a002d 0%, #8b0054 25%, #4a002d 50%, #b8006f 75%, #2d001b 100%)"
-      maxWidth="340px"
-      height="540px"
-      titleSize="text-base"
+      maxWidth="425px"
+      height="675px"
+      titleSize="text-xl"
       headerTag="Phase"
       title="ENTER THE ARENA"
       symbol="01"
       classTitle="Phase: Auction"
       classSymbol="✦"
-      classDesc="The initial capital formation event."
+      classDesc="The initial prize pool formation event."
       abilities={[
         { name: "Seed the Prize Pool", desc: "Buy Fake Internet Money ($FIM) with $USDC." }
       ]}
@@ -960,9 +903,9 @@ export default function Home() {
       themeColor="var(--color-magenta)"
       themeColorRgba="184, 0, 111"
       chassisGradient="linear-gradient(135deg, #4a002d 0%, #8b0054 25%, #4a002d 50%, #b8006f 75%, #2d001b 100%)"
-      maxWidth="340px"
-      height="540px"
-      titleSize="text-base"
+      maxWidth="425px"
+      height="675px"
+      titleSize="text-xl"
       headerTag="Phase"
       title="OUTPLAY THE MARKET"
       symbol="02"
@@ -970,7 +913,7 @@ export default function Home() {
       classSymbol="✦"
       classDesc="A gated and fair marketplace for $FIM/$USDC."
       abilities={[
-        { name: "Trade", desc: "Trade $FIM/$USDC with other players." },
+        { name: "Trade", desc: "Exchange $FIM and $USDC with other players." },
         { name: "Outplay", desc: "Coordinate with your faction to influence wealth distribution. Who you trade with is more important than the price." }
       ]}
       footerLeftText="Phase 02 Guide"
@@ -997,9 +940,9 @@ export default function Home() {
       themeColor="var(--color-magenta)"
       themeColorRgba="184, 0, 111"
       chassisGradient="linear-gradient(135deg, #4a002d 0%, #8b0054 25%, #4a002d 50%, #b8006f 75%, #2d001b 100%)"
-      maxWidth="340px"
-      height="540px"
-      titleSize="text-base"
+      maxWidth="425px"
+      height="675px"
+      titleSize="text-xl"
       headerTag="Phase"
       title="ENFORCE YOUR IDEOLOGY"
       symbol="03"
@@ -1007,7 +950,7 @@ export default function Home() {
       classSymbol="✦"
       classDesc="The final prize pool distribution."
       abilities={[
-        { name: "TAKEOVER", desc: "Drive the game economies' wealth distribution in favor of your faction." },
+        { name: "TAKEOVER", desc: "Shift the game economies' wealth distribution in favor of your faction." },
         { name: "Dictate", desc: "Set the payout rules: Bailout or Wealth Tax" }
       ]}
       footerLeftText="Phase 03 Guide"
@@ -1055,9 +998,9 @@ export default function Home() {
       themeColor="var(--color-orange)"
       themeColorRgba="249, 115, 22"
       chassisGradient="linear-gradient(135deg, #5c2400 0%, #b34a00 25%, #5c2400 50%, #e65c00 75%, #2e1200 100%)"
-      maxWidth="340px"
-      height="540px"
-      titleSize="text-base"
+      maxWidth="425px"
+      height="675px"
+      titleSize="text-xl"
       headerTag="Governance"
       title="JOIN THE DAO"
       symbol={<span className="font-sans text-xs">⚖</span>}
@@ -1091,9 +1034,9 @@ export default function Home() {
       themeColor="var(--color-orange)"
       themeColorRgba="249, 115, 22"
       chassisGradient="linear-gradient(135deg, #5c2400 0%, #b34a00 25%, #5c2400 50%, #e65c00 75%, #2e1200 100%)"
-      maxWidth="340px"
-      height="540px"
-      titleSize="text-base"
+      maxWidth="425px"
+      height="675px"
+      titleSize="text-xl"
       headerTag="Governance"
       title="CAPTURE VALUE"
       symbol={<span className="font-sans text-xs">$</span>}
@@ -1125,9 +1068,9 @@ export default function Home() {
       themeColor="var(--color-orange)"
       themeColorRgba="249, 115, 22"
       chassisGradient="linear-gradient(135deg, #5c2400 0%, #b34a00 25%, #5c2400 50%, #e65c00 75%, #2e1200 100%)"
-      maxWidth="340px"
-      height="540px"
-      titleSize="text-base"
+      maxWidth="425px"
+      height="675px"
+      titleSize="text-xl"
       headerTag="Governance"
       title="REDEFINE MARKETS"
       symbol={<span className="font-sans text-xs">∞</span>}
@@ -1160,9 +1103,9 @@ export default function Home() {
       themeColor="var(--color-sunset, #ff5e62)"
       themeColorRgba="255, 94, 98"
       chassisGradient="linear-gradient(135deg, #4a1525 0%, #b83b5e 25%, #6a1b37 50%, #f08a5d 75%, #2a0815 100%)"
-      maxWidth="340px"
-      height="540px"
-      titleSize="text-base"
+      maxWidth="425px"
+      height="675px"
+      titleSize="text-xl"
       headerTag="Launch"
       title="CAPITAL AUCTION"
       symbol="$"
@@ -1204,9 +1147,9 @@ export default function Home() {
       themeColor="var(--color-sunset, #ff5e62)"
       themeColorRgba="255, 94, 98"
       chassisGradient="linear-gradient(135deg, #4a1525 0%, #b83b5e 25%, #6a1b37 50%, #f08a5d 75%, #2a0815 100%)"
-      maxWidth="340px"
-      height="540px"
-      titleSize="text-base"
+      maxWidth="425px"
+      height="675px"
+      titleSize="text-xl"
       headerTag="Earn"
       title="TESTNET QUESTS"
       symbol="⚒"
@@ -1370,8 +1313,8 @@ export default function Home() {
                 initial={false}
                 animate={{ opacity: heroCardsActive ? 1 : 0 }}
                 transition={{ duration: 0.5, delay: heroCardsActive ? 0.2 : 0 }}
-                className="h2-app mb-16 text-center relative z-20 text-[2.5rem] font-bold"
-                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)' }}
+                className="h2-app mb-16 text-center text-[2.5rem] font-bold"
+                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)', position: 'relative', zIndex: 0 }}
               >
                 Choose Your Hero
               </motion.h2>
@@ -1379,23 +1322,25 @@ export default function Home() {
               {/* Entered from the header, which has no outgoing cards to clear —
                   so the throw fires immediately (enterDelay 0) and the header
                   ghost icons fly down to land with it. */}
-              {belowLg ? (
-                <CardThrow active={heroCardsActive} dir={throwDir} cardMaxWidth="400px" enterDelay={0}>
-                  <CardDeck activeIndex={cardIndices['sectionHero'] ?? 0} height="580px" maxWidth="400px">
-                    {regardoCard}
-                    {carloCard}
-                  </CardDeck>
-                </CardThrow>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-12 lg:gap-16 justify-items-center relative w-full max-w-5xl mx-auto">
-                  <div className="relative w-full max-w-[400px]">
-                    <CardThrow active={heroCardsActive} dir={throwDir} index={0} total={2} spacing={540} cardMaxWidth="400px" enterDelay={0}>{regardoCard}</CardThrow>
+              <div style={{ position: 'relative', zIndex: 10 }}>
+                {belowLg ? (
+                  <CardThrow active={heroCardsActive} dir={throwDir} cardMaxWidth="425px" enterDelay={0}>
+                    <CardDeck activeIndex={cardIndices['sectionHero'] ?? 0} height="675px" maxWidth="425px">
+                      {regardoCard}
+                      {carloCard}
+                    </CardDeck>
+                  </CardThrow>
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-8 justify-items-center relative w-full max-w-5xl mx-auto">
+                    <div className="relative w-full max-w-106.25">
+                      <CardThrow active={heroCardsActive} dir={throwDir} index={0} total={2} spacing={562} cardMaxWidth="425px" enterDelay={0}>{regardoCard}</CardThrow>
+                    </div>
+                    <div className="relative w-full max-w-106.25">
+                      <CardThrow active={heroCardsActive} dir={throwDir} index={1} total={2} spacing={562} cardMaxWidth="425px" enterDelay={0}>{carloCard}</CardThrow>
+                    </div>
                   </div>
-                  <div className="relative w-full max-w-[400px]">
-                    <CardThrow active={heroCardsActive} dir={throwDir} index={1} total={2} spacing={540} cardMaxWidth="400px" enterDelay={0}>{carloCard}</CardThrow>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </section>
 
             {/* Play the Game (Action Cards Section) */}
@@ -1409,28 +1354,30 @@ export default function Home() {
                 animate={{ opacity: playActive ? 1 : 0 }}
                 transition={{ duration: 0.5, delay: playActive ? 0.2 : 0 }}
                 className="h2-app mb-16 text-center text-[2.5rem] font-bold"
-                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)' }}
+                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)', position: 'relative', zIndex: 0 }}
               >
                 Play the Game
               </motion.h2>
 
-              {belowLg ? (
-                <CardThrow active={playActive} dir={throwDir} cardMaxWidth="340px">
-                  <CardDeck activeIndex={cardIndices['sectionPlay'] ?? 0} height="540px" maxWidth="340px">
-                    {playCard1}
-                    {playCard2}
-                    {playCard3}
-                  </CardDeck>
-                </CardThrow>
-              ) : (
-                <div className="grid md:grid-cols-3 gap-8 justify-items-center relative w-full max-w-6xl mx-auto">
-                  <CardThrow active={playActive} dir={throwDir} index={0} total={3} spacing={395} cardMaxWidth="340px" className="w-full">{playCard1}</CardThrow>
-                  <CardThrow active={playActive} dir={throwDir} index={1} total={3} spacing={395} cardMaxWidth="340px" className="w-full">{playCard2}</CardThrow>
-                  <div className="relative w-full max-w-[340px]">
-                    <CardThrow active={playActive} dir={throwDir} index={2} total={3} spacing={395} cardMaxWidth="340px">{playCard3}</CardThrow>
+              <div style={{ position: 'relative', zIndex: 10 }}>
+                {belowLg ? (
+                  <CardThrow active={playActive} dir={throwDir} cardMaxWidth="425px">
+                    <CardDeck activeIndex={cardIndices['sectionPlay'] ?? 0} height="675px" maxWidth="425px">
+                      {playCard1}
+                      {playCard2}
+                      {playCard3}
+                    </CardDeck>
+                  </CardThrow>
+                ) : (
+                  <div className="grid md:grid-cols-3 gap-8 justify-items-center relative w-full max-w-337.5 mx-auto">
+                    <CardThrow active={playActive} dir={throwDir} index={0} total={3} spacing={494} cardMaxWidth="425px" className="w-full">{playCard1}</CardThrow>
+                    <CardThrow active={playActive} dir={throwDir} index={1} total={3} spacing={494} cardMaxWidth="425px" className="w-full">{playCard2}</CardThrow>
+                    <div className="relative w-full max-w-106.25">
+                      <CardThrow active={playActive} dir={throwDir} index={2} total={3} spacing={494} cardMaxWidth="425px">{playCard3}</CardThrow>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </section>
 
             {/* Own the Project */}
@@ -1444,45 +1391,70 @@ export default function Home() {
                 animate={{ opacity: ownActive ? 1 : 0 }}
                 transition={{ duration: 0.5, delay: ownActive ? 0.2 : 0 }}
                 className="h2-app mb-16 text-center text-[2.5rem] font-bold"
-                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)' }}
+                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)', position: 'relative', zIndex: 0 }}
               >
                 Own the Project
               </motion.h2>
 
-              {belowLg ? (
-                <CardThrow active={ownActive} dir={throwDir} cardMaxWidth="340px">
-                  <CardDeck activeIndex={cardIndices['sectionOwnMarket'] ?? 0} height="540px" maxWidth="340px">
-                    {ownCard1}
-                    {ownCard2}
-                    {ownCard3}
-                  </CardDeck>
-                </CardThrow>
-              ) : (
-                <div className="grid md:grid-cols-3 gap-8 justify-items-center relative w-full max-w-6xl mx-auto">
-                  <CardThrow active={ownActive} dir={throwDir} index={0} total={3} spacing={395} cardMaxWidth="340px" className="w-full">{ownCard1}</CardThrow>
-                  <CardThrow active={ownActive} dir={throwDir} index={1} total={3} spacing={395} cardMaxWidth="340px" className="w-full">{ownCard2}</CardThrow>
-                  <CardThrow active={ownActive} dir={throwDir} index={2} total={3} spacing={395} cardMaxWidth="340px" className="w-full">{ownCard3}</CardThrow>
-                </div>
-              )}
+              <div style={{ position: 'relative', zIndex: 10 }}>
+                {belowLg ? (
+                  <CardThrow active={ownActive} dir={throwDir} cardMaxWidth="425px">
+                    <CardDeck activeIndex={cardIndices['sectionOwnMarket'] ?? 0} height="675px" maxWidth="425px">
+                      {ownCard1}
+                      {ownCard2}
+                      {ownCard3}
+                    </CardDeck>
+                  </CardThrow>
+                ) : (
+                  <div className="grid md:grid-cols-3 gap-8 justify-items-center relative w-full max-w-337.5 mx-auto">
+                    <CardThrow active={ownActive} dir={throwDir} index={0} total={3} spacing={494} cardMaxWidth="425px" className="w-full">{ownCard1}</CardThrow>
+                    <CardThrow active={ownActive} dir={throwDir} index={1} total={3} spacing={494} cardMaxWidth="425px" className="w-full">{ownCard2}</CardThrow>
+                    <CardThrow active={ownActive} dir={throwDir} index={2} total={3} spacing={494} cardMaxWidth="425px" className="w-full">{ownCard3}</CardThrow>
+                  </div>
+                )}
+              </div>
             </section>
 
             {/* Distribution of Power + Campaign Sequence — one scroll stop;
                 a tick inside it flips the rulebook page instead of leaving. */}
             <section
               id="sectionDistribution"
-              className="absolute inset-0 py-8 px-4 flex flex-col justify-center w-full"
+              className="absolute inset-0 py-16 px-4 flex flex-col justify-center w-full"
               style={{ zIndex: distributionActive ? 10 : 0, pointerEvents: distributionActive ? 'auto' : 'none' }}
             >
+              {/* Two headers stacked in the same slot — cross-fade on page flip.
+                  Identical classes to all other section h2s so position matches. */}
+              <div className="relative mb-16">
+                <motion.h2
+                  initial={false}
+                  animate={{ opacity: distributionActive && (cardIndices['sectionDistribution'] ?? 0) === 0 ? 1 : 0 }}
+                  transition={{ duration: 0.5, delay: distributionActive && (cardIndices['sectionDistribution'] ?? 0) === 0 ? 0.2 : 0 }}
+                  className="h2-app text-center text-2xl lg:text-[2.5rem] font-bold"
+                  style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)' }}
+                >
+                  Distribution of Power
+                </motion.h2>
+                <motion.h2
+                  initial={false}
+                  animate={{ opacity: distributionActive && (cardIndices['sectionDistribution'] ?? 0) === 1 ? 1 : 0 }}
+                  transition={{ duration: 0.5, delay: distributionActive && (cardIndices['sectionDistribution'] ?? 0) === 1 ? 0.2 : 0 }}
+                  className="h2-app text-center text-2xl lg:text-[2.5rem] font-bold absolute inset-0"
+                  style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)' }}
+                >
+                  Campaign Sequence
+                </motion.h2>
+              </div>
               <motion.div
                 initial={false}
                 animate={{ opacity: distributionActive ? 1 : 0 }}
                 transition={{ duration: 0.5, delay: distributionActive ? 0.2 : 0 }}
-                className="flex flex-col gap-10 w-full max-w-7xl mx-auto"
+                className="w-full max-w-7xl mx-auto"
+                style={{ height: '675px' }}
               >
-                <NestedPieChart
-                  data={tableData}
+                <Rulebook
                   active={distributionActive}
                   page={cardIndices['sectionDistribution'] ?? 0}
+                  dir={throwDir}
                 />
               </motion.div>
             </section>
@@ -1498,24 +1470,26 @@ export default function Home() {
                 animate={{ opacity: stakeActive ? 1 : 0 }}
                 transition={{ duration: 0.5, delay: stakeActive ? 0.2 : 0 }}
                 className="h2-app text-center mb-16 text-[2.5rem] font-bold"
-                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)' }}
+                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)', position: 'relative', zIndex: 0 }}
               >
                 Secure Your Stake
               </motion.h2>
 
-              {belowLg ? (
-                <CardThrow active={stakeActive} dir={throwDir} cardMaxWidth="340px">
-                  <CardDeck activeIndex={cardIndices['sectionSecureYourStake'] ?? 0} height="540px" maxWidth="340px">
-                    {stakeCard1}
-                    {stakeCard2}
-                  </CardDeck>
-                </CardThrow>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-12 justify-items-center max-w-4xl mx-auto w-full">
-                  <CardThrow active={stakeActive} dir={throwDir} index={0} total={2} spacing={470} cardMaxWidth="340px" className="w-full">{stakeCard1}</CardThrow>
-                  <CardThrow active={stakeActive} dir={throwDir} index={1} total={2} spacing={470} cardMaxWidth="340px" className="w-full">{stakeCard2}</CardThrow>
-                </div>
-              )}
+              <div style={{ position: 'relative', zIndex: 10 }}>
+                {belowLg ? (
+                  <CardThrow active={stakeActive} dir={throwDir} cardMaxWidth="425px">
+                    <CardDeck activeIndex={cardIndices['sectionSecureYourStake'] ?? 0} height="675px" maxWidth="425px">
+                      {stakeCard1}
+                      {stakeCard2}
+                    </CardDeck>
+                  </CardThrow>
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-12 justify-items-center max-w-5xl mx-auto w-full">
+                    <CardThrow active={stakeActive} dir={throwDir} index={0} total={2} spacing={588} cardMaxWidth="425px" className="w-full">{stakeCard1}</CardThrow>
+                    <CardThrow active={stakeActive} dir={throwDir} index={1} total={2} spacing={588} cardMaxWidth="425px" className="w-full">{stakeCard2}</CardThrow>
+                  </div>
+                )}
+              </div>
             </section>
 
           </div>

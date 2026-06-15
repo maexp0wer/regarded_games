@@ -41,7 +41,6 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress, fimAddress
   const [cancelStatus, setCancelStatus] = useState<CancelStatus>('idle');
 
   const { data: openOrders = [], refetch: refetchOpen } = useOpenOrders(seasonAddress, userAddress, 'open');
-  const { data: filledOrders = [], refetch: refetchFilled } = useOpenOrders(seasonAddress, userAddress, 'filled');
   const { data: cancelledOrders = [], refetch: refetchCancelled } = useOpenOrders(seasonAddress, userAddress, 'cancelled');
   const { data: auctionMints = [] } = useMyAuctionMints(seasonAddress, userAddress);
   const { data: myTrades = [] } = useMyTrades(seasonAddress, userAddress);
@@ -77,7 +76,6 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress, fimAddress
       await publicClient.waitForTransactionReceipt({ hash });
       setCancelStatus('success');
       refetchOpen();
-      refetchFilled();
       refetchCancelled();
     } catch (err: unknown) {
       if (isUserRejection(err)) {
@@ -130,7 +128,8 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress, fimAddress
         )}
         {activeTab === 'history' && (
           <TradeHistoryView
-            orders={[...filledOrders, ...cancelledOrders]}
+            trades={myTrades}
+            cancelledOrders={cancelledOrders}
             auctionMints={auctionMints}
           />
         )}
@@ -383,7 +382,7 @@ function PositionView({ trades, auctionMints, currentPrice, totalFim, contributi
             <div className="text-right">PNL</div>
             <div className="text-right">Contribution</div>
           </div>
-          {totalFim < 0.0001 ? (
+          {trades.length === 0 && auctionMints.length === 0 && totalFim < 0.0001 ? (
             <div className="flex items-center justify-center py-6">
               <p className="section-label opacity-30">No position</p>
             </div>
@@ -444,26 +443,27 @@ function PositionRow({ totalFim, entryPrice, currentPrice, contribution }: Posit
 
 // ── Trade History ──────────────────────────────────────────────────────────────
 
-const HIST_COL = '1.8fr 1fr 1fr 1fr 1.2fr';
+const HIST_COL = '1.8fr 1fr 1fr 1fr 1.2fr 1fr';
 
 type HistoryEntry =
+  | { kind: 'trade'; data: MyTrade }
   | { kind: 'order'; data: MyOrder }
   | { kind: 'auction'; data: AuctionMint };
 
 interface TradeHistoryViewProps {
-  orders: MyOrder[];
+  // Every fill the user took part in (maker OR taker) — one row per trade.
+  trades: MyTrade[];
+  // Cancelled orders never traded, so they aren't in `trades`; shown separately.
+  cancelledOrders: MyOrder[];
   auctionMints: AuctionMint[];
 }
 
-function TradeHistoryView({ orders, auctionMints }: TradeHistoryViewProps) {
+function TradeHistoryView({ trades, cancelledOrders, auctionMints }: TradeHistoryViewProps) {
   const entries: HistoryEntry[] = [
-    ...orders.map((o): HistoryEntry => ({ kind: 'order', data: o })),
+    ...trades.map((t): HistoryEntry => ({ kind: 'trade', data: t })),
+    ...cancelledOrders.map((o): HistoryEntry => ({ kind: 'order', data: o })),
     ...auctionMints.map((m): HistoryEntry => ({ kind: 'auction', data: m })),
-  ].sort((a, b) => {
-    const ta = a.kind === 'order' ? a.data.timestamp : a.data.timestamp;
-    const tb = b.kind === 'order' ? b.data.timestamp : b.data.timestamp;
-    return tb - ta;
-  });
+  ].sort((a, b) => b.data.timestamp - a.data.timestamp);
 
   return (
     <div className="p-2 bg-card">
@@ -475,6 +475,7 @@ function TradeHistoryView({ orders, auctionMints }: TradeHistoryViewProps) {
             <div className="text-right">Price</div>
             <div className="text-right">Size</div>
             <div className="text-right">Trade Value</div>
+            <div className="text-right">Fees</div>
           </div>
           {entries.length === 0 ? (
             <div className="flex items-center justify-center py-6">
@@ -482,7 +483,9 @@ function TradeHistoryView({ orders, auctionMints }: TradeHistoryViewProps) {
             </div>
           ) : (
             entries.map((entry) =>
-              entry.kind === 'order' ? (
+              entry.kind === 'trade' ? (
+                <TradeHistoryTradeRow key={entry.data.id} trade={entry.data} />
+              ) : entry.kind === 'order' ? (
                 <TradeHistoryOrderRow key={entry.data.id} order={entry.data} />
               ) : (
                 <TradeHistoryAuctionRow key={entry.data.id} mint={entry.data} />
@@ -495,15 +498,21 @@ function TradeHistoryView({ orders, auctionMints }: TradeHistoryViewProps) {
   );
 }
 
-function TradeHistoryOrderRow({ order }: { order: MyOrder }) {
-  const { isBuy, price, initialAmount, timestamp, isCancelled } = order;
+// A fill (maker or taker). One row per trade the user took part in.
+function TradeHistoryTradeRow({ trade }: { trade: MyTrade }) {
+  const { isBuy, fimAmount, usdcAmount, timestamp, feePaid } = trade;
 
   const displayTime = formatDateTime(timestamp);
-  const baseDirection = isBuy ? 'Buy' : 'Sell';
-  const direction = isCancelled ? `${baseDirection} - Cancelled` : baseDirection;
-  const pricePerFim = initialAmount > 0 ? (price / initialAmount).toFixed(4) : '0';
-  const displaySize = Math.round(initialAmount).toLocaleString();
-  const displayValue = `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const direction = isBuy ? 'Buy' : 'Sell';
+  const pricePerFim = fimAmount > 0 ? (usdcAmount / fimAmount).toFixed(4) : '0';
+  const displaySize = Math.round(fimAmount).toLocaleString();
+  const displayValue = `$${usdcAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  // The taker pays the fee; useMyTrades zeroes feePaid for the maker side, so a
+  // fee shows whenever the user was the taker, whether they bought or sold.
+  const paidFee = feePaid > 0;
+  const displayFee = paidFee
+    ? `$${feePaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : '—';
 
   return (
     <div className="ledger-row items-center" style={{ gridTemplateColumns: HIST_COL }}>
@@ -511,12 +520,38 @@ function TradeHistoryOrderRow({ order }: { order: MyOrder }) {
 
       <span
         className="ledger-cell-secondary"
-        style={{ color: isCancelled ? 'var(--color-text2)' : isBuy ? 'var(--color-green)' : 'var(--color-red)' }}
+        style={{ color: isBuy ? 'var(--color-green)' : 'var(--color-red)' }}
       >{direction}</span>
 
       <span className="ledger-cell-metric">${pricePerFim}</span>
       <span className="ledger-cell-metric">{displaySize}</span>
       <span className="ledger-cell-metric">{displayValue}</span>
+      <span className="ledger-cell-metric" style={!paidFee ? { color: 'var(--color-text2)' } : undefined}>{displayFee}</span>
+    </div>
+  );
+}
+
+// Cancelled order. Never traded, so no fee and the size shown is the original
+// order size. Price is per-FIM (MyOrder.price is already per-FIM, matching OpenOrderRow).
+function TradeHistoryOrderRow({ order }: { order: MyOrder }) {
+  const { isBuy, price, initialAmount, timestamp } = order;
+
+  const displayTime = formatDateTime(timestamp);
+  const direction = `${isBuy ? 'Buy' : 'Sell'} - Cancelled`;
+  const pricePerFim = price.toFixed(4);
+  const displaySize = Math.round(initialAmount).toLocaleString();
+  const displayValue = `$${(price * initialAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  return (
+    <div className="ledger-row items-center" style={{ gridTemplateColumns: HIST_COL }}>
+      <span className="ledger-cell-secondary">{displayTime}</span>
+
+      <span className="ledger-cell-secondary" style={{ color: 'var(--color-text2)' }}>{direction}</span>
+
+      <span className="ledger-cell-metric">${pricePerFim}</span>
+      <span className="ledger-cell-metric">{displaySize}</span>
+      <span className="ledger-cell-metric">{displayValue}</span>
+      <span className="ledger-cell-metric" style={{ color: 'var(--color-text2)' }}>—</span>
     </div>
   );
 }
@@ -544,6 +579,8 @@ function TradeHistoryAuctionRow({ mint }: { mint: AuctionMint }) {
       <span className="ledger-cell-metric">${pricePerFim}</span>
       <span className="ledger-cell-metric">{displaySize}</span>
       <span className="ledger-cell-metric">{displayValue}</span>
+      {/* Auction mints aren't trades — no trading fee applies. */}
+      <span className="ledger-cell-metric" style={{ color: 'var(--color-text2)' }}>—</span>
     </div>
   );
 }

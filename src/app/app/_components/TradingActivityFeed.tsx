@@ -45,8 +45,8 @@ export function TradingActivityFeed({ seasonAddress, className }: { seasonAddres
     new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 
   return (
-    <div className={`flex flex-col p-0 bg-card rounded-lg ${className ?? 'max-h-130'}`}>
-      <div className="bg-card flex flex-col flex-1 min-h-0 overflow-hidden border-border2">
+    <div className={`flex flex-col p-0 bg-card ${className ?? 'max-h-130'}`}>
+      <div className="bg-card flex flex-col flex-1 min-h-0 overflow-hidden">
         <div
           ref={scrollRef}
           data-chrome-scroll-guard
@@ -71,8 +71,13 @@ export function TradingActivityFeed({ seasonAddress, className }: { seasonAddres
             </div>
           ) : (
             pageItems.map((trade) => {
-              const sellerKnown = trade.sellerBalance !== '0';
-              const buyerKnown  = trade.buyerBalance  !== '0';
+              // A seller always had FIM to sell; a buyer always spent USDC. Neither is
+              // ever truly anonymous. A balance of '0' just means the player previously
+              // sold everything → 0 FIM = 100 % Socialist (percentile 100, not capitalist).
+              const sellerPercentile = trade.sellerBalance !== '0' ? trade.sellerPercentile : 100;
+              const sellerIsCapitalist = trade.sellerBalance !== '0' ? trade.sellerIsCapitalist : false;
+              const buyerPercentile = trade.buyerBalance !== '0' ? trade.buyerPercentile : 100;
+              const buyerIsCapitalist = trade.buyerBalance !== '0' ? trade.buyerIsCapitalist : false;
 
               return (
                 <div
@@ -85,17 +90,9 @@ export function TradingActivityFeed({ seasonAddress, className }: { seasonAddres
                   </span>
 
                   <div className="flex items-center gap-1 ledger-cell-primary">
-                    {sellerKnown ? (
-                      <PercentileCircle percentage={trade.sellerPercentile} isCapitalist={trade.sellerIsCapitalist} size="xxs" />
-                    ) : (
-                      <span className="font-mono text-[10px] text-text2 opacity-30">anon</span>
-                    )}
+                    <PercentileCircle percentage={sellerPercentile} isCapitalist={sellerIsCapitalist} size="xxs" />
                     <span className="font-mono text-[12px] text-text2 pl-1">➜</span>
-                    {buyerKnown ? (
-                      <PercentileCircle percentage={trade.buyerPercentile} isCapitalist={trade.buyerIsCapitalist} size="xxs" />
-                    ) : (
-                      <span className="font-mono text-[10px] text-text2 opacity-30">anon</span>
-                    )}
+                    <PercentileCircle percentage={buyerPercentile} isCapitalist={buyerIsCapitalist} size="xxs" />
                   </div>
 
                   <span className="ledger-cell-metric text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>

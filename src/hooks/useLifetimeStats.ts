@@ -7,21 +7,18 @@ import { useTenantPonderUrl } from '@/context/TenantContext';
 
 interface PlayerStatRow {
   seasonAddress: string;
-  totalPotentialPayout: string;
+  realizedPayout: string;
   netContribution: string;
-}
-
-interface SeasonPlayerRow {
-  playerAddress: string;
-  totalPotentialPayout: string;
-  netContribution: string;
+  finalized: boolean;
 }
 
 export interface LifetimeStatsData {
   lifetimePnl: number;
-  bestGlobalRank: number;
-  bestTotalPlayers: number;
-  bestRelativePercent: number;
+  lifetimeVolume: number;
+  seasonsPlayed: number;
+  /** Seasons the player claimed their payout for (lowercased addresses). The
+   *  Career card fans out usePlayerRank over these to surface the best rank. */
+  claimedSeasons: string[];
   loading: boolean;
   error: string | null;
 }
@@ -29,20 +26,15 @@ export interface LifetimeStatsData {
 const PLAYER_QUERY = `
   query GetPlayerStats($addr: String!, $after: String, $limit: Int!) {
     playerSeasonStatss(where: { playerAddress_contains: $addr }, after: $after, limit: $limit) {
-      items { seasonAddress totalPotentialPayout netContribution }
+      items { seasonAddress realizedPayout netContribution finalized }
       pageInfo { endCursor hasNextPage }
     }
   }
 `;
 
-const SEASON_QUERY = `
-  query GetSeasonStats($season: String!, $after: String, $limit: Int!) {
-    playerSeasonStatss(where: { seasonAddress_contains: $season }, after: $after, limit: $limit) {
-      items { playerAddress totalPotentialPayout netContribution }
-      pageInfo { endCursor hasNextPage }
-    }
-  }
-`;
+const safeBigInt = (v: string | undefined): bigint => {
+  try { return BigInt(v || '0'); } catch { return 0n; }
+};
 
 export function useLifetimeStats(playerAddress: string | undefined): LifetimeStatsData {
   const PONDER_URL = useTenantPonderUrl();
@@ -50,74 +42,45 @@ export function useLifetimeStats(playerAddress: string | undefined): LifetimeSta
   const { data, isLoading, isError } = useQuery({
     queryKey: ['lifetimeStats', playerAddress, PONDER_URL],
     queryFn: async () => {
-      const addr = playerAddress!.toLowerCase();
-
       const playerStats = await fetchAllPonderItems<PlayerStatRow>(
-        PONDER_URL, PLAYER_QUERY, { addr },
+        PONDER_URL, PLAYER_QUERY, { addr: playerAddress!.toLowerCase() },
         (d) => d.playerSeasonStatss
       );
 
-      if (playerStats.length === 0) return null;
+      // A season counts toward lifetime stats once the player's row is finalized
+      // on-chain — including seasons that settled at a $0 payout (a loss).
+      // In-progress rows (trading/auction activity only) are excluded.
+      const finalizedStats = playerStats.filter(s => s.finalized);
 
-      // Only count finalized seasons (totalPotentialPayout is set by PlayerSeasonStatsFinalized
-      // on-chain event; it stays 0 during auction/trading phase).
-      const finalizedStats = playerStats.filter(s => {
-        try { return BigInt(s.totalPotentialPayout || '0') > 0n; } catch { return false; }
-      });
-
-      const lifetimePnlRaw = finalizedStats.reduce((sum, s) => {
-        try {
-          return sum + BigInt(s.totalPotentialPayout || '0') - BigInt(s.netContribution || '0');
-        } catch { return sum; }
-      }, 0n);
-
-      const uniqueSeasons = [...new Set(finalizedStats.map(s => s.seasonAddress))];
-
-      const allSeasonPlayers = await Promise.all(
-        uniqueSeasons.map(season =>
-          fetchAllPonderItems<SeasonPlayerRow>(
-            PONDER_URL, SEASON_QUERY, { season: season.toLowerCase() },
-            (d) => d.playerSeasonStatss
-          )
-        )
+      // Lifetime PnL, realized-only: claiming is voluntary, so only count payout the
+      // player has actually withdrawn (realizedPayout). A finalized-but-unclaimed
+      // season contributes −netContribution until the player claims.
+      const lifetimePnlRaw = finalizedStats.reduce(
+        (sum, s) => sum + (safeBigInt(s.realizedPayout) - safeBigInt(s.netContribution)),
+        0n,
       );
 
-      let bestGlobalRank = -1;
-      let bestTotalPlayers = 0;
+      // Lifetime Trade Volume mirrors Season Stats' "Trade Volume" — the player's
+      // net contribution (USDC) — aggregated across every finalized season.
+      const lifetimeVolumeRaw = finalizedStats.reduce(
+        (sum, s) => sum + safeBigInt(s.netContribution), 0n,
+      );
 
-      for (const seasonPlayers of allSeasonPlayers) {
-        const base = seasonPlayers
-          .filter(s => {
-            try {
-              return BigInt(s.netContribution || '0') > 0n && BigInt(s.totalPotentialPayout || '0') > 0n;
-            } catch { return false; }
-          })
-          .map(s => ({
-            addr: s.playerAddress.toLowerCase(),
-            pnl: Number(BigInt(s.totalPotentialPayout || '0') - BigInt(s.netContribution || '0')),
-          }))
-          .sort((a, b) => b.pnl - a.pnl);
+      const uniqueSeasons = [...new Set(finalizedStats.map(s => s.seasonAddress.toLowerCase()))];
 
-        const idx = base.findIndex(p => p.addr === addr);
-        if (idx === -1) continue;
-        const rank = idx + 1;
-        const total = base.length;
-        if (bestGlobalRank === -1 || rank < bestGlobalRank) {
-          bestGlobalRank = rank;
-          bestTotalPlayers = total;
-        }
-      }
-
-      const bestRelativePercent =
-        bestGlobalRank > 0 && bestTotalPlayers > 1
-          ? (1 - (bestGlobalRank - 1) / (bestTotalPlayers - 1)) * 100
-          : bestGlobalRank === 1 ? 100 : 0;
+      // Seasons the player actually claimed (realizedPayout > 0). Ranks are only
+      // surfaced for these — see the Career card's per-season usePlayerRank fan-out.
+      const claimedSeasons = [...new Set(
+        finalizedStats
+          .filter(s => safeBigInt(s.realizedPayout) > 0n)
+          .map(s => s.seasonAddress.toLowerCase()),
+      )];
 
       return {
         lifetimePnlRaw,
-        bestGlobalRank,
-        bestTotalPlayers,
-        bestRelativePercent,
+        lifetimeVolumeRaw,
+        seasonsPlayed: uniqueSeasons.length,
+        claimedSeasons,
       };
     },
     enabled: !!playerAddress,
@@ -125,14 +88,14 @@ export function useLifetimeStats(playerAddress: string | undefined): LifetimeSta
   });
 
   if (isLoading || !data) {
-    return { lifetimePnl: 0, bestGlobalRank: -1, bestTotalPlayers: 0, bestRelativePercent: 0, loading: isLoading, error: isError ? 'Failed to load lifetime stats' : null };
+    return { lifetimePnl: 0, lifetimeVolume: 0, seasonsPlayed: 0, claimedSeasons: [], loading: isLoading, error: isError ? 'Failed to load lifetime stats' : null };
   }
 
   return {
     lifetimePnl: Number(formatUnits(data.lifetimePnlRaw, 6)),
-    bestGlobalRank: data.bestGlobalRank,
-    bestTotalPlayers: data.bestTotalPlayers,
-    bestRelativePercent: data.bestRelativePercent,
+    lifetimeVolume: Number(formatUnits(data.lifetimeVolumeRaw, 6)),
+    seasonsPlayed: data.seasonsPlayed,
+    claimedSeasons: data.claimedSeasons,
     loading: false,
     error: null,
   };

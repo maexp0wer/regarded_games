@@ -19,6 +19,8 @@ export interface SeasonTrade {
   buyerIsCapitalist: boolean;
   sellerIsCapitalist: boolean;
   giniBps: number;
+  taker: string;
+  feePaid: string;
 }
 
 const QUERY = `
@@ -34,7 +36,7 @@ const QUERY = `
         id buyer seller fimAmount usdcAmount timestamp txHash
         buyerBalance sellerBalance
         buyerPercentile sellerPercentile buyerIsCapitalist sellerIsCapitalist
-        giniBps
+        giniBps taker feePaid
       }
       pageInfo { endCursor hasNextPage }
     }

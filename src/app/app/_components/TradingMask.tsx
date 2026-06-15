@@ -7,6 +7,7 @@ import { Order } from '@/hooks/useOrderBook';
 import { useOpenOrders } from '@/hooks/useOpenOrders';
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
+import { useButtonHold } from '@/hooks/useButtonHold';
 import { useGiniImpact } from '@/hooks/useGiniImpact';
 import { useTradeExecution, ExecutionPayload } from '@/hooks/useTradeExecution';
 import { useCollateral } from '@/hooks/useCollateral';
@@ -22,6 +23,7 @@ import { GroupedOrder, OrderQueueItem } from './OrderQueueItem';
 import { WalletButton } from './WalletButton';
 import PercentSlider from '@/app/app/_components/PercentSlider';
 import { sliderPctToAmount } from '@/utils/sliderAmount';
+import { clampDecimals } from '@/utils/clampDecimals';
 import { TxModal } from './TxModal';
 
 interface TradingMaskProps {
@@ -238,6 +240,25 @@ export function TradingMask({
     } catch { return 0n; }
   }, [isMaker, makerTargetAmount, price]);
 
+  // FIM quantity of the maker order (the amount field is FIM in both directions).
+  const makerFimRaw = useMemo(() => {
+    if (!isMaker || !makerTargetAmount) return 0n;
+    try { return parseUnits(makerTargetAmount, 18); } catch { return 0n; }
+  }, [isMaker, makerTargetAmount]);
+
+  // Contribution delta for a maker order, same sign convention as the taker:
+  // USDC paid minus FIM received at 1:1 par (FIM 18-dec aligned to USDC 6-dec by
+  // /1e12). A buy above par donates (positive); a sell above par extracts
+  // (negative). Gini impact is intentionally omitted — an unfilled resting order
+  // has no measurable effect on the live distribution.
+  const makerContributionRaw = useMemo(() => {
+    if (!isMaker) return 0n;
+    const par = makerFimRaw / 10n ** 12n;
+    return isBuy ? makerTotalUsdcRaw - par : par - makerTotalUsdcRaw;
+  }, [isMaker, isBuy, makerTotalUsdcRaw, makerFimRaw]);
+
+  const showMakerBreakdown = isMaker && makerFimRaw > 0n && makerTotalUsdcRaw > 0n;
+
   // Taker buy fills route price→maker AND fee→Exchange, so the USDC allowance
   // must cover price + fee (rounded up) or the fill reverts. Sell fills spend
   // FIM (allowance unaffected) and the fee is netted out of USDC received.
@@ -298,10 +319,21 @@ export function TradingMask({
 
   // For the single active input (non-mixed taker or maker)
   const activeTarget = directionIsBuy ? buyTargetAmount : sellTargetAmount;
+  // The maker amount field is denominated in FIM in both directions. A maker buy
+  // is capped by how much FIM the USDC balance can afford at the chosen price; a
+  // maker sell is capped by the FIM balance directly.
+  const makerBuyMaxFim = useMemo(() => {
+    const p = Number(price);
+    if (!usdcBalance || !p || p <= 0) return 0n;
+    try {
+      const affordable = Number(formatUnits(usdcBalance, 6)) / p;
+      return parseUnits(affordable.toFixed(18), 18);
+    } catch { return 0n; }
+  }, [usdcBalance, price]);
   const activeMaxForSlider = isMaker
-    ? (isBuy ? (usdcBalance || 0n) : (fimBalance || 0n))
+    ? (isBuy ? makerBuyMaxFim : (fimBalance || 0n))
     : (directionIsBuy ? maxAskQueueFim : maxBidQueueFim);
-  const activeMaxDecimals = isMaker ? (isBuy ? 6 : 18) : 18;
+  const activeMaxDecimals = 18;
 
   const sliderPct = useMemo(() => {
     if (!activeTarget || activeMaxForSlider === 0n) return 0;
@@ -337,7 +369,8 @@ export function TradingMask({
   const handleSellSliderChange = (pct: number) =>
     setSellTargetAmount(sliderPctToAmount(pct, Number(formatUnits(maxBidQueueFim, 18))));
 
-  const handleBuyTargetChange = (val: string) => {
+  const handleBuyTargetChange = (raw: string) => {
+    const val = clampDecimals(raw, 18); // FIM size
     if (val !== '' && Number(val) < 0) return;
     if (!isMaker && maxAskQueueFim > 0n && val !== '') {
       try {
@@ -350,8 +383,17 @@ export function TradingMask({
     setBuyTargetAmount(val);
   };
 
-  const handleSellTargetChange = (val: string) => {
+  const handleSellTargetChange = (raw: string) => {
+    const val = clampDecimals(raw, 18); // FIM size
     if (val !== '' && Number(val) < 0) return;
+    if (isMaker && fimBalance !== undefined && val !== '') {
+      try {
+        if (parseUnits(val, 18) > fimBalance) {
+          setSellTargetAmount(formatUnits(fimBalance, 18));
+          return;
+        }
+      } catch { /* invalid parse, fall through */ }
+    }
     if (!isMaker && maxBidQueueFim > 0n && val !== '') {
       try {
         if (parseUnits(val, 18) > maxBidQueueFim) {
@@ -365,10 +407,28 @@ export function TradingMask({
 
   const handleActiveTargetChange = directionIsBuy ? handleBuyTargetChange : handleSellTargetChange;
 
-  const handlePriceChange = (val: string) => {
+  const handlePriceChange = (raw: string) => {
+    const val = clampDecimals(raw, 6); // USDC price
     if (val !== '' && Number(val) < 0) return;
     setPrice(val);
   };
+
+  // Press-and-hold stepping for the ▲/▼ steppers (matches OrderBook filter inputs).
+  // Each `dir` is +1/-1; the closures re-read current values on every render so
+  // hold-repeat stays in sync. `mult` accelerates a sustained hold (×10 after 20
+  // increments). Price steps by 0.01, FIM amounts by 1.
+  const activeTargetHold = useButtonHold((mult, dir: 1 | -1) =>
+    handleActiveTargetChange(String(Math.max(0, parseFloat(activeTarget || '0') + dir * mult))),
+  );
+  const priceHold = useButtonHold((mult, dir: 1 | -1) =>
+    handlePriceChange(String(Math.max(0, parseFloat((parseFloat(price || '0') + dir * 0.01 * mult).toFixed(6))))),
+  );
+  const buyTargetHold = useButtonHold((mult, dir: 1 | -1) =>
+    handleBuyTargetChange(String(Math.max(0, parseFloat(buyTargetAmount || '0') + dir * mult))),
+  );
+  const sellTargetHold = useButtonHold((mult, dir: 1 | -1) =>
+    handleSellTargetChange(String(Math.max(0, parseFloat(sellTargetAmount || '0') + dir * mult))),
+  );
 
   const handleSideSwitch = (newIsBuy: boolean) => {
     setIsBuy(newIsBuy);
@@ -376,10 +436,10 @@ export function TradingMask({
     const target = newIsBuy ? buyTargetAmount : sellTargetAmount;
     const setTarget = newIsBuy ? setBuyTargetAmount : setSellTargetAmount;
     if (!target) return;
-    const newMax = newIsBuy ? (usdcBalance || 0n) : (fimBalance || 0n);
-    const newDecimals = newIsBuy ? 6 : 18;
+    // Both sides denominate the amount in FIM; cap against the FIM-affordable max.
+    const newMax = newIsBuy ? makerBuyMaxFim : (fimBalance || 0n);
     try {
-      if (parseUnits(target, newDecimals) > newMax) setTarget(formatUnits(newMax, newDecimals));
+      if (parseUnits(target, 18) > newMax) setTarget(formatUnits(newMax, 18));
     } catch {
       setTarget('');
     }
@@ -492,7 +552,7 @@ export function TradingMask({
       <div className="flex flex-col gap-4 h-full">
         {totalFim > 0 && (
           <div className="terminal-pane">
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-3">
               <div
                 className="font-mono font-extrabold leading-none text-display-trading tabular-nums"
                 style={{ color: fimColor, textShadow: `0 0 40px ${fimGlow}` }}
@@ -501,20 +561,25 @@ export function TradingMask({
                 <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
               </div>
               {lockedFim > 0 && (
-                <span className="font-mono text-text2 text-xs mt-1.5 tabular-nums">
+                <span className="font-mono text-text2 text-xs tabular-nums">
                   ({availableFim.toLocaleString()} available)
                 </span>
               )}
               {belowThreshold && (
-                <span className="font-mono text-[10px] font-bold uppercase tracking-widest mt-1.5 leading-snug" style={{ color: 'var(--color-red)' }}>
-                  Below existential threshold
-                </span>
+                <div className="rounded-lg px-4 py-3 text-center" style={{ background: 'var(--color-red-15)', border: '1px solid var(--color-red)' }}>
+                  <p className="section-label" style={{ color: 'var(--color-red)' }}>Below Existential Threshold</p>
+                </div>
               )}
             </div>
           </div>
         )}
-        <div className="terminal-pane h-full text-center">
-          <p className="section-label">Trading is halted during Settlement</p>
+        <div className="terminal-pane bg-card! flex flex-col gap-0 flex-1 min-h-0">
+          <div className="terminal-pane-header">
+            <span className="terminal-pane-title">Trading</span>
+          </div>
+          <div className="rounded-lg px-4 py-3 text-center" style={{ background: 'var(--color-red-15)', border: '1px solid var(--color-red)' }}>
+            <p className="section-label" style={{ color: 'var(--color-red)' }}>Trading is halted during Settlement</p>
+          </div>
         </div>
       </div>
     );
@@ -529,31 +594,33 @@ export function TradingMask({
           <div className="terminal-pane-header">
             <span className="terminal-pane-title">Balance</span>
           </div>
-          <div className="flex items-center justify-between">
-            {totalFim > 0 && (
-              <div className="flex flex-col min-w-0">
-                <div
-                  className="font-mono font-bold leading-none text-display-trading tabular-nums"
-                  style={{ color: fimColor, textShadow: `0 0 40px ${fimGlow}` }}
-                >
-                  {totalFim.toLocaleString()}
-                  <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              {totalFim > 0 && (
+                <div className="flex flex-col min-w-0">
+                  <div
+                    className="font-mono font-bold leading-none text-display-trading tabular-nums"
+                    style={{ color: fimColor, textShadow: `0 0 40px ${fimGlow}` }}
+                  >
+                    {totalFim.toLocaleString()}
+                    <span className="font-mono font-medium text-text2 ml-2 text-currency-label">FIM</span>
+                  </div>
+                  {lockedFim > 0 && (
+                    <span className="font-mono text-text2 text-xs mt-1.5 tabular-nums">
+                      ({availableFim.toLocaleString()} available)
+                    </span>
+                  )}
                 </div>
-                {lockedFim > 0 && (
-                  <span className="font-mono text-text2 text-xs mt-1.5 tabular-nums">
-                    ({availableFim.toLocaleString()} available)
-                  </span>
-                )}
-                {belowThreshold && (
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest mt-1.5 leading-snug" style={{ color: 'var(--color-red)' }}>
-                    Below existential threshold
-                  </span>
-                )}
-              </div>
-            )}
-            {userStats && (
-              <div className="flex flex-col items-end min-w-0 ml-auto shrink-0">
-                <PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="lg" />
+              )}
+              {userStats && (
+                <div className="flex flex-col items-end min-w-0 ml-auto shrink-0">
+                  <PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="lg" />
+                </div>
+              )}
+            </div>
+            {belowThreshold && (
+              <div className="rounded-lg px-4 py-3 text-center" style={{ background: 'var(--color-red-15)', border: '1px solid var(--color-red)' }}>
+                <p className="section-label" style={{ color: 'var(--color-red)' }}>Below Existential Threshold</p>
               </div>
             )}
           </div>
@@ -624,7 +691,7 @@ export function TradingMask({
                   <span className="mask-label text-right pr-9">SIZE</span>
                 </div>
                 <div className="group flex items-center gap-2 bg-card3 border border-border2 rounded p-2">
-                  <span className="text-lg font-mono font-bold text-text2 shrink-0">{isMaker && isBuy ? 'USDC' : 'FIM'}</span>
+                  <span className="text-lg font-mono font-bold text-text2 shrink-0">FIM</span>
                   <input
                     type="number"
                     min="0"
@@ -635,8 +702,8 @@ export function TradingMask({
                     placeholder={isMaker ? '0.00' : 'MAX'}
                   />
                   <div className="flex flex-col gap-0 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="btn-stepper" onClick={() => handleActiveTargetChange(String(Math.max(0, (parseFloat(activeTarget || '0') + 1))))}>▲</button>
-                    <button className="btn-stepper" onClick={() => handleActiveTargetChange(String(Math.max(0, (parseFloat(activeTarget || '0') - 1))))}>▼</button>
+                    <button type="button" tabIndex={-1} className="btn-stepper select-none" {...activeTargetHold.bind(1)}>▲</button>
+                    <button type="button" tabIndex={-1} className="btn-stepper select-none" {...activeTargetHold.bind(-1)}>▼</button>
                   </div>
                 </div>
                 <PercentSlider value={sliderPct} onChange={handleSliderChange} disabled={isBusy} />
@@ -695,8 +762,8 @@ export function TradingMask({
                 placeholder="0.00"
               />
               <div className="flex flex-col shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button className="btn-stepper" onClick={() => handlePriceChange(String(Math.max(0, parseFloat((parseFloat(price || '0') + 0.01).toFixed(6)))))}>▲</button>
-                <button className="btn-stepper" onClick={() => handlePriceChange(String(Math.max(0, parseFloat((parseFloat(price || '0') - 0.01).toFixed(6)))))}>▼</button>
+                <button type="button" tabIndex={-1} className="btn-stepper select-none" {...priceHold.bind(1)}>▲</button>
+                <button type="button" tabIndex={-1} className="btn-stepper select-none" {...priceHold.bind(-1)}>▼</button>
               </div>
             </div>
           </div>
@@ -724,8 +791,8 @@ export function TradingMask({
                       placeholder="MAX"
                     />
                     <div className="flex flex-col gap-0 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="btn-stepper" onClick={() => handleBuyTargetChange(String(Math.max(0, parseFloat(buyTargetAmount || '0') + 1)))}>▲</button>
-                      <button className="btn-stepper" onClick={() => handleBuyTargetChange(String(Math.max(0, parseFloat(buyTargetAmount || '0') - 1)))}>▼</button>
+                      <button type="button" tabIndex={-1} className="btn-stepper select-none" {...buyTargetHold.bind(1)}>▲</button>
+                      <button type="button" tabIndex={-1} className="btn-stepper select-none" {...buyTargetHold.bind(-1)}>▼</button>
                     </div>
                   </div>
                   <PercentSlider value={buySliderPct} onChange={handleBuySliderChange} disabled={isBusy} />
@@ -766,8 +833,8 @@ export function TradingMask({
                       placeholder="MAX"
                     />
                     <div className="flex flex-col gap-0 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="btn-stepper" onClick={() => handleSellTargetChange(String(Math.max(0, parseFloat(sellTargetAmount || '0') + 1)))}>▲</button>
-                      <button className="btn-stepper" onClick={() => handleSellTargetChange(String(Math.max(0, parseFloat(sellTargetAmount || '0') - 1)))}>▼</button>
+                      <button type="button" tabIndex={-1} className="btn-stepper select-none" {...sellTargetHold.bind(1)}>▲</button>
+                      <button type="button" tabIndex={-1} className="btn-stepper select-none" {...sellTargetHold.bind(-1)}>▼</button>
                     </div>
                   </div>
                   <PercentSlider value={sellSliderPct} onChange={handleSellSliderChange} disabled={isBusy} />
@@ -794,94 +861,136 @@ export function TradingMask({
 
         {/* ── Summary + CTA ── */}
         <div className={`flex flex-col gap-4 ${isMixedQueue ? 'lg:mt-0 lg:pt-4 lg:overflow-y-auto lg:overscroll-contain lg:custom-scrollbar' : 'mt-auto pt-4'}`}>
+          {/* Maker position breakdown — mirrors the taker leg card, minus fee and
+              Gini impact (a resting order has no measurable distribution effect). */}
+          {showMakerBreakdown && (
+            <div className="flex flex-col gap-2">
+              <div className="rounded-lg flex flex-col bg-card border border-border overflow-hidden">
+                <div className="flex justify-between font-mono text-xs font-bold tabular-nums px-3 py-2.5 border-b border-border" style={{ color: isBuy ? 'var(--color-green)' : 'var(--color-red)' }}>
+                  <span>{isBuy ? 'Buy' : 'Sell'}</span>
+                  <span>{Number(formatUnits(makerFimRaw, 18)).toLocaleString()} FIM</span>
+                </div>
+                <div className="flex flex-col gap-1 px-3 py-2.5">
+                  <div className="flex justify-between font-mono text-[11px] text-text2">
+                    <span>Price</span>
+                    <span className="tabular-nums">${Number(price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</span>
+                  </div>
+                  <div className="flex justify-between font-mono text-[11px] text-text2">
+                    <span>Value</span>
+                    <span className="tabular-nums">${formatDynamicUsdc(makerTotalUsdcRaw)}</span>
+                  </div>
+                </div>
+                <div className="flex justify-between font-mono text-xs font-bold text-text px-3 py-2.5 border-t border-border">
+                  <span>{isBuy ? 'You pay' : 'You receive'}</span>
+                  <span className="tabular-nums">${formatDynamicUsdc(makerTotalUsdcRaw)}</span>
+                </div>
+              </div>
+              <div className="rounded-lg bg-card border border-border overflow-hidden flex flex-col">
+                <div className="flex flex-col gap-1.5 px-3 py-2.5">
+                  <div className="flex justify-between font-mono text-[11px]">
+                    <span style={{ color: 'var(--color-text2)' }}>Net Contribution</span>
+                    <span className="tabular-nums font-bold" style={{ color: makerContributionRaw > 0n ? 'var(--color-green)' : makerContributionRaw < 0n ? 'var(--color-red)' : 'var(--color-text2)' }}>
+                      {makerContributionRaw > 0n ? '+' : makerContributionRaw < 0n ? '-' : ''}${formatDynamicUsdc(makerContributionRaw >= 0n ? makerContributionRaw : -makerContributionRaw)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {showTakerFee && (
             <div className="flex flex-col gap-2">
               {/* Mixed: buy/sell breakdown cards side by side; otherwise stacked. */}
               <div className={isMixedQueue ? 'grid grid-cols-2 gap-2' : 'contents'}>
               {legs.buyCostRaw > 0n && (
-                <div className={`rounded-lg px-3 py-2.5 flex flex-col gap-1 bg-card border border-border ${isMixedQueue ? 'col-start-1' : ''}`}>
-                  <div className="flex justify-between font-mono text-xs font-bold tabular-nums pb-1 border-b border-border" style={{ color: 'var(--color-green)' }}>
+                <div className={`rounded-lg flex flex-col bg-card border border-border overflow-hidden ${isMixedQueue ? 'col-start-1' : ''}`}>
+                  <div className="flex justify-between font-mono text-xs font-bold tabular-nums px-3 py-2.5 border-b border-border" style={{ color: 'var(--color-green)' }}>
                     <span>Buy</span>
                     <span>{Number(formatUnits(legsFim.buyFimRaw, 18)).toLocaleString()} FIM</span>
                   </div>
-                  <div className="flex justify-between font-mono text-[11px] text-text2">
-                    <span>Base</span>
-                    <span className="tabular-nums">${formatDynamicUsdc(legs.buyCostRaw)}</span>
-                  </div>
-                  {tradeFeeBps > 0n && (
+                  <div className="flex flex-col gap-1 px-3 py-2.5">
                     <div className="flex justify-between font-mono text-[11px] text-text2">
-                      <span>Fee ({feePct}%)</span>
-                      <span className="tabular-nums">+${formatDynamicUsdc(takerBuyFeeRaw)}</span>
+                      <span>Base</span>
+                      <span className="tabular-nums">${formatDynamicUsdc(legs.buyCostRaw)}</span>
                     </div>
-                  )}
-                  <div className="flex justify-between font-mono text-xs font-bold text-text pt-1 border-t border-border">
+                    {tradeFeeBps > 0n && (
+                      <div className="flex justify-between font-mono text-[11px] text-text2">
+                        <span>Fee ({feePct}%)</span>
+                        <span className="tabular-nums">+${formatDynamicUsdc(takerBuyFeeRaw)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex justify-between font-mono text-xs font-bold text-text px-3 py-2.5 border-t border-border">
                     <span>You pay</span>
                     <span className="tabular-nums">${formatDynamicUsdc(legs.buyCostRaw + takerBuyFeeRaw)}</span>
                   </div>
                 </div>
               )}
               {legs.sellProceedsRaw > 0n && (
-                <div className={`rounded-lg px-3 py-2.5 flex flex-col gap-1 bg-card border border-border ${isMixedQueue ? 'col-start-2' : ''}`}>
-                  <div className="flex justify-between font-mono text-xs font-bold tabular-nums pb-1 border-b border-border" style={{ color: 'var(--color-red)' }}>
+                <div className={`rounded-lg flex flex-col bg-card border border-border overflow-hidden ${isMixedQueue ? 'col-start-2' : ''}`}>
+                  <div className="flex justify-between font-mono text-xs font-bold tabular-nums px-3 py-2.5 border-b border-border" style={{ color: 'var(--color-red)' }}>
                     <span>Sell</span>
                     <span>{Number(formatUnits(legsFim.sellFimRaw, 18)).toLocaleString()} FIM</span>
                   </div>
-                  <div className="flex justify-between font-mono text-[11px] text-text2">
-                    <span>Base</span>
-                    <span className="tabular-nums">${formatDynamicUsdc(legs.sellProceedsRaw)}</span>
-                  </div>
-                  {tradeFeeBps > 0n && (
+                  <div className="flex flex-col gap-1 px-3 py-2.5">
                     <div className="flex justify-between font-mono text-[11px] text-text2">
-                      <span>Fee ({feePct}%)</span>
-                      <span className="tabular-nums">-${formatDynamicUsdc(takerSellFeeRaw)}</span>
+                      <span>Base</span>
+                      <span className="tabular-nums">${formatDynamicUsdc(legs.sellProceedsRaw)}</span>
                     </div>
-                  )}
-                  <div className="flex justify-between font-mono text-xs font-bold text-text pt-1 border-t border-border">
+                    {tradeFeeBps > 0n && (
+                      <div className="flex justify-between font-mono text-[11px] text-text2">
+                        <span>Fee ({feePct}%)</span>
+                        <span className="tabular-nums">-${formatDynamicUsdc(takerSellFeeRaw)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex justify-between font-mono text-xs font-bold text-text px-3 py-2.5 border-t border-border">
                     <span>You receive</span>
                     <span className="tabular-nums">${formatDynamicUsdc(legs.sellProceedsRaw - takerSellFeeRaw)}</span>
                   </div>
                 </div>
               )}
               </div>
-              <div className="rounded-lg px-3 py-2.5 bg-card border border-border flex flex-col gap-1.5">
+              <div className="rounded-lg bg-card border border-border overflow-hidden flex flex-col">
                 {isMixedQueue && (() => {
                   const netFimRaw = legsFim.buyFimRaw - legsFim.sellFimRaw;
                   const netFim = Number(formatUnits(netFimRaw >= 0n ? netFimRaw : -netFimRaw, 18));
                   return (
                     <>
-                      <div className="flex justify-between font-mono text-xs font-black">
-                        <span style={{ color: 'var(--color-text)' }}>Net USDC</span>
-                        <span className="tabular-nums" style={{ color: takerNetRaw > 0n ? 'var(--color-green)' : takerNetRaw < 0n ? 'var(--color-red)' : 'var(--color-text2)' }}>
-                          {takerNetRaw > 0n ? '+' : takerNetRaw < 0n ? '-' : ''}{takerNetRaw !== 0n && '$'}{formatDynamicUsdc(takerNetRaw >= 0n ? takerNetRaw : -takerNetRaw)}
-                        </span>
+                      <div className="flex flex-col gap-1.5 px-3 py-2.5">
+                        <div className="flex justify-between font-mono text-xs font-black">
+                          <span style={{ color: 'var(--color-text)' }}>Net USDC</span>
+                          <span className="tabular-nums" style={{ color: takerNetRaw > 0n ? 'var(--color-green)' : takerNetRaw < 0n ? 'var(--color-red)' : 'var(--color-text2)' }}>
+                            {takerNetRaw > 0n ? '+' : takerNetRaw < 0n ? '-' : ''}{takerNetRaw !== 0n && '$'}{formatDynamicUsdc(takerNetRaw >= 0n ? takerNetRaw : -takerNetRaw)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between font-mono text-xs font-black">
+                          <span style={{ color: 'var(--color-text)' }}>Net FIM</span>
+                          <span className="tabular-nums" style={{ color: netFimRaw > 0n ? 'var(--color-green)' : netFimRaw < 0n ? 'var(--color-red)' : 'var(--color-text2)' }}>
+                            {netFimRaw > 0n ? '+' : netFimRaw < 0n ? '-' : ''}{netFim.toLocaleString(undefined, { maximumFractionDigits: 4 })} FIM
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex justify-between font-mono text-xs font-black">
-                        <span style={{ color: 'var(--color-text)' }}>Net FIM</span>
-                        <span className="tabular-nums" style={{ color: netFimRaw > 0n ? 'var(--color-green)' : netFimRaw < 0n ? 'var(--color-red)' : 'var(--color-text2)' }}>
-                          {netFimRaw > 0n ? '+' : netFimRaw < 0n ? '-' : ''}{netFim.toLocaleString(undefined, { maximumFractionDigits: 4 })} FIM
-                        </span>
-                      </div>
-                      <div className="border-t border-border mt-0.5 pt-1.5" />
+                      <div className="border-t border-border" />
                     </>
                   );
                 })()}
-                <div className="flex justify-between font-mono text-[11px]">
-                  <span style={{ color: 'var(--color-text2)' }}>Contribution</span>
-                  <span className="tabular-nums font-bold" style={{ color: contributionDeltaRaw > 0n ? 'var(--color-green)' : contributionDeltaRaw < 0n ? 'var(--color-red)' : 'var(--color-text2)' }}>
-                    {contributionDeltaRaw > 0n ? '+' : contributionDeltaRaw < 0n ? '-' : ''}${formatDynamicUsdc(contributionDeltaRaw >= 0n ? contributionDeltaRaw : -contributionDeltaRaw)}
-                  </span>
-                </div>
-                {/* Gini impact in BPS, colored by faction direction: a fill that
-                    widens inequality (+) leans Bourgeoisie → gold; one that
-                    narrows it (−) leans Proletariat → purple. */}
-                {giniImpact && (
+                <div className="flex flex-col gap-1.5 px-3 py-2.5">
                   <div className="flex justify-between font-mono text-[11px]">
-                    <span style={{ color: 'var(--color-text2)' }}>Gini Impact</span>
-                    <span className="tabular-nums font-bold" style={{ color: giniImpact.deltaBps > 0 ? 'var(--color-gold)' : giniImpact.deltaBps < 0 ? 'var(--color-purple)' : 'var(--color-text2)' }}>
-                      {giniImpact.deltaBps > 0 ? '+' : giniImpact.deltaBps < 0 ? '−' : ''}{Math.abs(giniImpact.deltaBps)} bps
+                    <span style={{ color: 'var(--color-text2)' }}>Contribution</span>
+                    <span className="tabular-nums font-bold" style={{ color: contributionDeltaRaw > 0n ? 'var(--color-green)' : contributionDeltaRaw < 0n ? 'var(--color-red)' : 'var(--color-text2)' }}>
+                      {contributionDeltaRaw > 0n ? '+' : contributionDeltaRaw < 0n ? '-' : ''}${formatDynamicUsdc(contributionDeltaRaw >= 0n ? contributionDeltaRaw : -contributionDeltaRaw)}
                     </span>
                   </div>
-                )}
+                  {giniImpact && (
+                    <div className="flex justify-between font-mono text-[11px]">
+                      <span style={{ color: 'var(--color-text2)' }}>Gini Impact</span>
+                      <span className="tabular-nums font-bold" style={{ color: giniImpact.deltaBps > 0 ? 'var(--color-gold)' : giniImpact.deltaBps < 0 ? 'var(--color-purple)' : 'var(--color-text2)' }}>
+                        {giniImpact.deltaBps > 0 ? '+' : giniImpact.deltaBps < 0 ? '−' : ''}{Math.abs(giniImpact.deltaBps)} bps
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}

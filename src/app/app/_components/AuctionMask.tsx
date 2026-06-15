@@ -269,8 +269,8 @@ function AuctionMaskInner({
             <p className="font-mono text-[10px] uppercase font-bold tracking-widest" style={{ color: 'var(--color-red)' }}>Phase data unavailable</p>
           </div>
         ) : !isAuctionPhase ? (
-          <div className="rounded-lg px-4 py-3 text-center" style={{ background: 'var(--color-card2)', border: '1px solid var(--color-border)' }}>
-            <p className="section-label">Season on Hold</p>
+          <div className="rounded-lg px-4 py-3 text-center" style={{ background: 'var(--color-red-15)', border: '1px solid var(--color-red)' }}>
+            <p className="section-label" style={{ color: 'var(--color-red)' }}>Season on Hold</p>
           </div>
         ) : (
           <>
@@ -278,6 +278,7 @@ function AuctionMaskInner({
             <div className={`transition-opacity ${widgetDisabled ? 'opacity-40 pointer-events-none' : ''}`}>
               <AmountInput
                 label="USDC"
+                decimals={6}
                 value={buyAmount}
                 onChange={setBuyAmount}
                 sliderValue={sliderPct}

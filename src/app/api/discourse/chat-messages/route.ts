@@ -40,15 +40,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    // Post AS the verified wallet. No auto-join fallback: channel access must come
-    // from faction-group membership (sync-faction / create-player). A 404 here means
-    // the user isn't a member of this faction's channel — which is correct denial.
+    // Post AS the verified wallet. `Accept: application/json` is REQUIRED — the chat
+    // message-create route (`POST /chat/:id`) only matches when the request negotiates
+    // JSON; without it Discourse content-negotiates to HTML, the route falls through to
+    // the Ember SPA catch-all, and returns an HTML 404 (surfaced as "Failed to send").
+    // Channel access still comes from faction-group membership (sync-faction /
+    // create-player); a 404 WITH the Accept header means the user isn't a member.
     const res = await fetch(`${DISCOURSE_URL}/chat/${channelId}`, {
       method: 'POST',
       headers: {
         'Api-Key': API_KEY,
         'Api-Username': wallet,
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: JSON.stringify({ message }),
     });

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useAccount, useReadContract, useWriteContract, usePublicClient } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 
@@ -187,69 +188,57 @@ export function StakeMask() {
     <>
     <div className="grid grid-cols-1 gap-6 w-full md:grid-cols-[4fr_3fr]">
 
-      {/* LEFT: Balance Registry + Info */}
+      {/* LEFT: Position detail */}
       <div className="flex flex-col gap-4">
 
-        {/* Three-state balance cards */}
-        <div className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-3">
-
-          <div className="terminal-pane">
-            <div className="terminal-pane-title mb-1">Liquid Wallet</div>
-            <div className="font-mono text-xl font-bold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-              {fmtRgd(currentWallet)}
-            </div>
-            <span className="font-mono text-[10px] text-text2 uppercase">RGD Available</span>
+        {/* Position breakdown — Detail Card */}
+        <div className="terminal-pane h-full">
+          <div className="terminal-pane-header">
+            <span className="terminal-pane-title">Position Breakdown</span>
           </div>
-
-          <div className="terminal-pane">
-            <div className="terminal-pane-title mb-1">Active Staked</div>
-            <div className="font-mono text-xl font-bold" style={{ color: 'var(--color-green)', fontVariantNumeric: 'tabular-nums' }}>
-              {fmtRgd(withdrawable)}
+          <div className="flex flex-col gap-3">
+            <div className="kv-row">
+              <span className="font-mono text-[11px] text-text2">Total RGD</span>
+              <span className="font-mono text-[13px] font-semibold text-text tabular-nums">
+                {fmtRgd(currentWallet)}<span className="text-text2 font-normal ml-1">RGD</span>
+              </span>
             </div>
-            <span className="font-mono text-[10px] text-text2 uppercase">RGD Withdrawable</span>
-          </div>
-
-          <div className="terminal-pane border border-dashed border-border2 [background:linear-gradient(135deg,var(--color-card2)_0%,var(--color-purple-15)_100%)]">
-            <div className="terminal-pane-title mb-1">Vault Locked</div>
-            <div className="font-mono text-xl font-bold" style={{ color: 'var(--color-gold)', fontVariantNumeric: 'tabular-nums' }}>
-              {fmtRgd(currentLocked)}
+            <div className="kv-row">
+              <span className="font-mono text-[11px] text-text2">Total Staked (incl. locked)</span>
+              <span className="font-mono text-[13px] font-semibold text-text tabular-nums">
+                {fmtRgd(currentStaked)}<span className="text-text2 font-normal ml-1">RGD</span>
+              </span>
             </div>
-            <span className="font-mono text-[10px] text-text2 uppercase">RGD Locked</span>
-          </div>
-
-        </div>
-
-        {/* Summary breakdown */}
-        <div className="terminal-pane">
-          <div className="terminal-pane-title mb-2">Position Breakdown</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-xs text-text2">
-            <div className="border-r border-border pr-2">
-              <p className="mb-1">Total staked (incl. locked):</p>
-              <p className="text-sm font-bold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {fmtRgd(currentStaked)} <span className="text-[10px] font-normal text-text2">RGD</span>
-              </p>
+            <div className="kv-row">
+              <span className="font-mono text-[11px] text-text2">Withdrawable Stake</span>
+              <span className="font-mono text-[13px] font-semibold text-green tabular-nums">
+                {fmtRgd(withdrawable)}<span className="text-text2 font-normal ml-1">free</span>
+              </span>
             </div>
-            <div className="pl-0 sm:pl-2">
-              <p className="mb-1">Withdrawable stake:</p>
-              <p className="text-sm font-bold" style={{ color: 'var(--color-green)', fontVariantNumeric: 'tabular-nums' }}>
-                {fmtRgd(withdrawable)} <span className="text-[10px] font-normal text-text2">RGD free</span>
-              </p>
+            <div className="kv-row">
+              <span className="font-mono text-[11px] text-text2">Vault Locked</span>
+              <span className="font-mono text-[13px] font-semibold text-text tabular-nums">
+                {fmtRgd(currentLocked)}<span className="text-text2 font-normal ml-1">RGD</span>
+              </span>
             </div>
           </div>
         </div>
 
         {/* Protocol disclosure */}
-        <div className="bg-card3 border border-border rounded p-3 font-display text-xs text-text2 leading-relaxed">
-          <span className="font-bold text-text uppercase font-mono text-[10px] block mb-1">Protocol Liquidity Rule</span>
-          Standard staked tokens can be withdrawn instantly. Tokens locked by an active seasons FIM purchase can be withdrawn once the season ends.
+        <div className="bg-card3 border border-border rounded-lg flex flex-col gap-1.5 p-3">
+          <span className="section-label">Protocol Liquidity Rule</span>
+          <p className="font-sans text-xs text-text2 leading-relaxed">
+            Standard staked tokens can be withdrawn instantly. Tokens locked by an active
+            season&rsquo;s FIM purchase can be withdrawn once the season ends.
+          </p>
         </div>
 
       </div>
 
-      {/* RIGHT: Interactive Execution Panel */}
-      <div className="rounded-md bg-card flex flex-col self-start w-full min-h-0">
+      {/* RIGHT: Execution Mask */}
+      <div className="terminal-pane bg-card! flex flex-col gap-0 self-start w-full min-h-0 p-0!">
 
-        {/* Stake / Unstake Selector Bar */}
+        {/* Stake / Unstake selector bar */}
         <div className="terminal-view-selector-bar--full">
           <button
             disabled={isBusy}
@@ -267,42 +256,57 @@ export function StakeMask() {
           </button>
         </div>
 
-        <div className="flex flex-col gap-4 p-4">
+        <div className="flex flex-col flex-1 min-h-0 gap-4 p-4">
 
-          {/* Amount input + slider (Uses your updated visual component design) */}
+          {/* Amount input + slider */}
           <AmountInput
             label="RGD"
+            decimals={18}
             value={amount}
             onChange={setAmount}
             sliderValue={sliderPct}
             onSliderChange={handleSliderChange}
             disabled={showModal}
             balance={`${Number(formatUnits(maxForSlider, 18)).toLocaleString()} RGD`}
+            max={Number(formatUnits(maxForSlider, 18))}
           />
 
-          {/* Transaction preview details */}
-          <div className="rounded-lg px-3 py-2.5 bg-card border border-border flex flex-col gap-1.5 font-mono text-xs">
-            <div className="flex justify-between font-mono text-[11px]">
-              <span className="text-text2">Action:</span>
-              <span className="font-bold text-text uppercase">{isStakeMode ? 'Stake' : 'Unstake'} RGD</span>
+          {/* Transaction preview — order-summary style (matches TradingMask) */}
+          <div className="rounded-lg flex flex-col bg-card border border-border overflow-hidden">
+            <div
+              className="flex justify-between font-mono text-xs font-bold tabular-nums px-3 py-2.5 border-b border-border"
+              style={{ color: isStakeMode ? 'var(--color-green)' : 'var(--color-red)' }}
+            >
+              <span>{isStakeMode ? 'Stake' : 'Unstake'}</span>
+              <span>
+                {Number(amount || '0').toLocaleString(undefined, { maximumFractionDigits: 2 })} RGD
+              </span>
             </div>
-            <div className="flex justify-between font-mono text-[11px]">
-              <span className="text-text2">Post-state staked:</span>
-              <span className="font-bold" style={{ color: 'var(--color-purple)', fontVariantNumeric: 'tabular-nums' }}>
+            <div className="flex justify-between font-mono text-xs font-bold text-text px-3 py-2.5">
+              <span>Post-state Staked</span>
+              <span className="tabular-nums">
                 {postStakePool.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RGD
               </span>
             </div>
           </div>
 
-          {/* CTA with loading state support */}
-          <button
-            disabled={isButtonDisabled}
-            onClick={handleStartFlow}
-            className={`btn-terminal-action ${isStakeMode ? 'action-buy' : 'action-sell'} gap-2`}
-          >
-            {isBusy && <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}
-            <span>{ctaLabel}</span>
-          </button>
+          {/* CTA pinned to the bottom of the mask */}
+          <div className="mt-auto pt-3 flex flex-col gap-3">
+            {isStakeMode && currentWallet === 0n ? (
+              <Link href="/app/swap" className="btn-game-primary text-center">
+                Buy RGD
+              </Link>
+            ) : (
+              <button
+                disabled={isButtonDisabled}
+                onClick={handleStartFlow}
+                className={`btn-terminal-action ${isStakeMode ? 'action-buy' : 'action-sell'} gap-2`}
+              >
+                {isBusy && <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+                <span>{ctaLabel}</span>
+              </button>
+            )}
+          </div>
 
         </div>
       </div>

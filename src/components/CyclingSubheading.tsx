@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const words = [
-  'insider knowledge',
-  'market manipulation',
-  'centralization',
-  'front running',
-  'dark pools',
-  'wash trading',
-  'payment for order flow',
+const entries: [string, number][] = [
+  ['insider knowledge',       3500],
+  ['market manipulation',     3500],
+  ['centralization',          1200],
+  ['front running',           1000],
+  ['dark pools',               800],
+  ['wash trading',             700],
+  ['payment for order flow',   600],
 ];
+
+const words    = entries.map(([w]) => w);
+const durations = entries.map(([, d]) => d);
 
 // Automatically find the longest word to set the container width
 const longestWord = words.reduce((a, b) => (a.length > b.length ? a : b));
@@ -18,11 +21,11 @@ export default function CyclingSubheading() {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    const timer = setInterval(() => {
+    const timer = setTimeout(() => {
       setIndex((prev) => (prev + 1) % words.length);
-    }, 2500);
-    return () => clearInterval(timer);
-  }, []);
+    }, durations[index]);
+    return () => clearTimeout(timer);
+  }, [index]);
 
   return (
     <span className="flex flex-col items-center text-center">

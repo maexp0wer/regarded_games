@@ -94,7 +94,7 @@ export function FimDistributionChart({ seasonAddress, exchangeAddress }: FimDist
   const hoveredBar = hoveredBucket !== null ? bars[hoveredBucket] : null;
 
   return (
-    <div className="terminal-pane h-full overflow-hidden flex flex-col">
+    <div className="terminal-pane terminal-pane--flush h-full overflow-hidden flex flex-col">
       <div className="terminal-pane-header">
         <span className="terminal-pane-title">FIM DISTRIBUTION</span>
         <span className="w-1.5 h-1.5 rounded-full bg-[--color-green] animate-pulse" />

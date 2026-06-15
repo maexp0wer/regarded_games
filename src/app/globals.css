@@ -44,7 +44,7 @@
 
   /* ── TYPOGRAPHY ─────────────────────────────────────────────── */
   --font-display: "Exo 2", system-ui, sans-serif;
-  --font-sans:    "Space Grotesk",       system-ui, sans-serif;
+  --font-sans:    "Orbitron",       system-ui, sans-serif;
   --font-mono:    "JetBrains Mono",      ui-monospace, monospace;
 }
 
@@ -213,13 +213,15 @@ html, body {
 .h2-app { font-family: var(--font-display);
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.08em; 
-  font-size: 28px;}
+  letter-spacing: 0.08em;
+  font-size: 22px;
+  color: var(--color-text);}
 .h3-app { font-family: var(--font-display);
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.05em; 
-  font-size: 18px;}
+  letter-spacing: 0.05em;
+  font-size: 18px;
+  color: var(--color-text);}
 .h4-app { font-family: var(--font-mono); font-size: 9px;  font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text2); }
 
 /* GiniDisplay panel — unified label typography
@@ -244,6 +246,7 @@ html, body {
   gap: 6px;
   padding: 5px 10px;
   border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
@@ -632,7 +635,7 @@ html, body {
   /* Inherits structural layout definitions beautifully */
   color: var(--color-text);
   background-color: var(--color-card2); 
-  border: 1px solid var(--color-border2);
+  border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   cursor: pointer;
   
@@ -642,9 +645,8 @@ html, body {
 }
 
 .btn-game-secondary:hover {
-  background-color: var(--color-card3); 
-  border-color: var(--color-purple);    /* Fires up the regional focus glow */
-  box-shadow: 0 0 12px var(--color-purple-15);
+  background-color: var(--color-card3);
+  border-color: var(--color-border2);
 }
 
 .btn-game-secondary:active {
@@ -1101,6 +1103,13 @@ html, body {
   position: relative;
 }
 
+/* Borderless variant — for panels embedded inside an already-bordered container
+   (e.g. TradingPanelMenu / AuctionPanelMenu cells) that supply their own border. */
+.terminal-pane--flush {
+  border: none;
+  border-radius: 0;
+}
+
 /* Static pane sub-header block */
 .terminal-pane-header {
   display: flex;
@@ -1351,26 +1360,19 @@ html, body {
 /* Main row container featuring layout transitions between states */
 .season-ledger-row {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
   padding: 1.25rem;
   background-color: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
-  transition: all 0.2s ease-in-out;
+  transition: border-color 0.2s ease-in-out, background-color 0.2s ease-in-out;
 }
 
-.season-ledger-row:hover {
-  border-color: var(--color-purple);
+a:hover .season-ledger-row {
   background-color: var(--color-card2);
-}
-
-@media (min-width: 768px) {
-  .season-ledger-row {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
+  border-color: var(--color-border2);
 }
 
 
@@ -1405,7 +1407,7 @@ html, body {
   align-items: center;
   justify-content: center;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--color-text);
   text-shadow: none;

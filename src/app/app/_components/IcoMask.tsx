@@ -473,6 +473,7 @@ export function IcoMask() {
                   <>
                     <AmountInput
                       label="USDC"
+                      decimals={6}
                       value={depositAmount}
                       onChange={setDepositAmount}
                       sliderValue={sliderPct}

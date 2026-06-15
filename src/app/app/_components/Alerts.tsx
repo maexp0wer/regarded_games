@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { usePublicClient, useAccount } from 'wagmi';
+import { usePublicClient, useAccount, useWriteContract } from 'wagmi';
 import { Address } from 'viem';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -10,8 +10,11 @@ import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import type { Abi } from 'abitype';
 import { usePayout } from '@/hooks/usePayout';
+import { useOpenOrders } from '@/hooks/useOpenOrders';
 import { useDiscourseAlerts, type PendingPoll, type ReplyGroup } from '@/hooks/useDiscourseAlerts';
 import { forumLoginUrl } from '@/utils/discourseForum';
+import { isUserRejection, isInsufficientGas } from '@/utils/revertReason';
+import { TxModal } from './TxModal';
 
 const CONTROLLER_ABI = [{
   type: 'function', name: 'seasons',
@@ -95,31 +98,19 @@ function PollCountdown({ targetTimestamp }: { targetTimestamp: number | null }) 
 
 function AlertItem({
   accentVar,
-  hoverBorderVar,
   children,
 }: {
-  accentVar: string;        // CSS var name e.g. '--color-gold'
-  hoverBorderVar: string;   // CSS var name for hover border e.g. '--color-gold-35'
+  accentVar: string;
   children: React.ReactNode;
 }) {
-  const [hovered, setHovered] = useState(false);
-
   return (
     <div
-      className="relative flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-lg bg-card2 border border-border transition-all group overflow-hidden pl-5"
-      style={hovered ? { borderColor: `var(${hoverBorderVar})` } : undefined}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      className="relative flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 w-full overflow-hidden border-l-4 transition-colors group bg-[color-mix(in_srgb,var(--alert-accent)_15%,transparent)] hover:bg-[color-mix(in_srgb,var(--alert-accent)_22%,transparent)]"
+      style={{
+        borderLeftColor: `var(${accentVar})`,
+        ['--alert-accent' as string]: `var(${accentVar})`,
+      }}
     >
-      {/* Signature left edge bar */}
-      <div
-        className="absolute left-0 top-0 bottom-0 transition-all"
-        style={{
-          width: hovered ? '6px' : '4px',
-          background: `var(${accentVar})`,
-          boxShadow: `0 0 8px var(${hoverBorderVar})`,
-        }}
-      />
       {children}
     </div>
   );
@@ -127,60 +118,159 @@ function AlertItem({
 
 // ─── Claimable Payout (Gold) ──────────────────────────────────────────────────
 
-function ClaimableCard({ season, playerAddress }: { season: { id: number; season: string }; playerAddress: string }) {
-  const { payout, pnl, loading } = usePayout(season.season, playerAddress as Address);
+type ClaimStatus = 'idle' | 'executing' | 'mining' | 'success' | 'canceled' | 'failed' | 'no_gas';
 
-  if (loading || payout <= 0) return null;
+function ClaimableCard({
+  season,
+  playerAddress,
+  onClaimableChange,
+}: {
+  season: { id: number; season: string };
+  playerAddress: string;
+  onClaimableChange: (seasonAddress: string, claimable: boolean) => void;
+}) {
+  const chainId = useTenantChainId();
+  const publicClient = usePublicClient({ chainId });
+  const { writeContractAsync } = useWriteContract();
+
+  const { payout, pnl, hasClaimed: hasClaimedChain, loading, refetch } = usePayout(season.season, playerAddress as Address);
+
+  // Open sell orders escrow FIM; claimPayout() reverts until they're cancelled
+  // or settled — mirror PayoutMask and block the claim with an explanation.
+  const { data: openOrders = [] } = useOpenOrders(season.season, playerAddress, 'open');
+  const hasSellOrders = openOrders.some((o) => !o.isBuy);
+
+  const [status, setStatus] = useState<ClaimStatus>('idle');
+  const [txHash, setTxHash] = useState<string | null>(null);
+
+  // Optimistically claimed the instant the tx confirms, so the card retires
+  // immediately rather than waiting for the next on-chain read.
+  const hasClaimed = hasClaimedChain || status === 'success';
+
+  // Already-claimed seasons must not surface as "Claimable". Note `payout` is
+  // still positive after a claim — usePayout swaps in the realized amount for
+  // display — so `hasClaimed` is the authoritative gate, not the amount.
+  const isClaimable = !loading && !hasClaimed && payout > 0;
+
+  // Report this season's claimable state up so the parent's count / pill /
+  // whole-pane visibility match what actually renders (not the raw PAYOUT scan).
+  useEffect(() => {
+    onClaimableChange(season.season, isClaimable);
+    return () => onClaimableChange(season.season, false);
+  }, [season.season, isClaimable, onClaimableChange]);
+
+  useEffect(() => {
+    if (status === 'success') refetch();
+  }, [status, refetch]);
+
+  const isBusy = status === 'executing' || status === 'mining';
+
+  // Same on-chain claim as the payout page — claimPayout() on the season contract.
+  const handleClaim = async (e: React.MouseEvent) => {
+    // The card body is a Link to the season page; keep the button from navigating.
+    e.preventDefault();
+    e.stopPropagation();
+    if (!publicClient || hasSellOrders || isBusy || status !== 'idle') return;
+    setTxHash(null);
+
+    try {
+      setStatus('executing');
+      const hash = await writeContractAsync({
+        address: season.season as `0x${string}`,
+        abi: GameSeasonAbi as Abi,
+        functionName: 'claimPayout',
+        args: [],
+      });
+      setTxHash(hash);
+      setStatus('mining');
+      await publicClient.waitForTransactionReceipt({ hash: hash as `0x${string}` });
+      setStatus('success');
+    } catch (err: unknown) {
+      if (isUserRejection(err)) {
+        setStatus('canceled');
+        setTimeout(() => setStatus('idle'), 2000);
+      } else if (isInsufficientGas(err)) {
+        setStatus('no_gas');
+      } else {
+        setStatus('failed');
+      }
+    }
+  };
+
+  const handleCloseModal = () => {
+    setStatus('idle');
+    setTxHash(null);
+  };
+
+  if (!isClaimable) return null;
 
   const pnlPositive = pnl >= 0;
 
   return (
-    <Link href={`/season_${season.id}`} className="block">
-      <AlertItem accentVar="--color-gold" hoverBorderVar="--color-gold-35">
-        {/* Info */}
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="font-display text-sm font-bold text-text uppercase tracking-tight">
-              Season {String(season.id).padStart(2, '0')}
-            </span>
-            <span
-              className="font-mono text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider border"
-              style={{
-                background: 'var(--color-gold-15)',
-                color: 'var(--color-gold)',
-                borderColor: 'var(--color-gold-35)',
-              }}
-            >
-              Claim Ready
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-sans text-xs text-text2">
-            <span>
-              Season PNL:{' '}
-              <strong
-                className="font-mono font-bold"
-                style={{ color: pnlPositive ? 'var(--color-green)' : 'var(--color-red)', fontVariantNumeric: 'tabular-nums' }}
+    <>
+      <Link href={`/season_${season.id}`} className="block">
+        <AlertItem accentVar="--color-gold">
+          <div className="flex flex-col gap-2 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="h4-app text-gold">
+                Season {String(season.id).padStart(2, '0')}
+              </span>
+              <span
+                className="font-mono text-[10px] bg-gold border-0 px-2 py-0.5 rounded text-card2 uppercase tracking-wider"
               >
-                {pnlPositive ? '+ ' : '- '}$
-                {Math.abs(pnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </strong>
-            </span>
-            <span className="hidden sm:inline text-border2">|</span>
-            <span>
-              Claimable:{' '}
-              <strong className="font-mono font-bold text-gold" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {payout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC
-              </strong>
-            </span>
+                Claim Ready
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-sans text-xs text-text2">
+              <span>
+                Season PNL:{' '}
+                <strong className={`font-mono font-bold tabular-nums ${pnlPositive ? 'text-green' : 'text-red'}`}>
+                  {pnlPositive ? '+' : ''} ${Math.abs(pnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </strong>
+              </span>
+              <span className="hidden sm:inline text-border2">•</span>
+              <span>
+                Claimable:{' '}
+                <strong className="font-mono font-bold text-gold tabular-nums">
+                  {payout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC
+                </strong>
+              </span>
+            </div>
+            {hasSellOrders && (
+              <span className="font-mono text-[10px] text-red uppercase tracking-wider">
+                Cancel open sell orders before claiming
+              </span>
+            )}
           </div>
-        </div>
 
-        {/* CTA */}
-        <span className="btn-game-primary text-xs font-black tracking-wider uppercase py-2 px-4 h-fit shrink-0">
-          Claim Payout
-        </span>
-      </AlertItem>
-    </Link>
+          <button
+            type="button"
+            onClick={handleClaim}
+            disabled={hasSellOrders || isBusy}
+            className={`btn-game-primary text-xs font-black tracking-wider uppercase py-2 px-4 h-fit shrink-0 ${hasSellOrders || isBusy ? 'opacity-60 cursor-not-allowed!' : ''}`}
+          >
+            {isBusy ? 'Confirming…' : 'Claim'}
+          </button>
+        </AlertItem>
+      </Link>
+
+      <TxModal
+        status={status}
+        txHashes={[txHash]}
+        title="Claiming Payout"
+        successTitle="Payout Claimed"
+        successMessage="Your USDC has been sent to your wallet."
+        steps={[
+          {
+            label: 'Claim Payout',
+            description: 'Sign the payout withdrawal transaction',
+            activeStatuses: ['executing', 'mining'],
+            completeStatuses: ['success'],
+          },
+        ]}
+        onClose={handleCloseModal}
+      />
+    </>
   );
 }
 
@@ -191,20 +281,14 @@ function PollAlertRow({ poll }: { poll: PendingPoll }) {
 
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" className="block">
-      <AlertItem accentVar="--color-purple" hoverBorderVar="--color-purple-35">
-        {/* Info */}
-        <div className="flex flex-col gap-1.5">
+      <AlertItem accentVar="--color-purple">
+        <div className="flex flex-col gap-2 flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-display text-sm font-bold text-text uppercase tracking-tight truncate max-w-xs" title={poll.title}>
+            <span className="h4-app text-purple truncate max-w-xs" title={poll.title}>
               {poll.title}
             </span>
             <span
-              className="font-mono text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider border shrink-0"
-              style={{
-                background: 'var(--color-purple-15)',
-                color: 'var(--color-purple)',
-                borderColor: 'var(--color-purple-35)',
-              }}
+              className="font-mono text-[10px] bg-purple border-0 px-2 py-0.5 rounded text-card2 uppercase tracking-wider shrink-0"
             >
               Active Proposal
             </span>
@@ -214,12 +298,9 @@ function PollAlertRow({ poll }: { poll: PendingPoll }) {
           </p>
         </div>
 
-        {/* Countdown + CTA */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 shrink-0">
           <PollCountdown targetTimestamp={poll.pollCloseAt} />
-          <span
-            className="btn-game-secondary text-xs font-bold tracking-wider uppercase py-2 px-4 h-fit"
-          >
+          <span className="btn-game-secondary text-xs font-bold tracking-wider uppercase py-2 px-4 h-fit">
             Cast Vote
           </span>
         </div>
@@ -252,9 +333,8 @@ function ReplyAlertCard({
 
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" className="block" onClick={handleClick}>
-      <AlertItem accentVar="--color-border2" hoverBorderVar="--color-border2">
-        {/* Info */}
-        <div className="flex flex-col gap-1 max-w-md min-w-0">
+      <AlertItem accentVar="--color-text2">
+        <div className="flex flex-col gap-2 max-w-md min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             {reply.replyCount === 1 ? (
               <>
@@ -268,7 +348,7 @@ function ReplyAlertCard({
                 <strong className="font-mono font-bold text-text">{reply.replyCount}</strong> replies in
               </span>
             )}
-            <span className="font-display text-xs font-bold text-text uppercase truncate max-w-40" title={reply.topicTitle}>
+            <span className="h4-app truncate max-w-40" title={reply.topicTitle}>
               {reply.topicTitle}
             </span>
           </div>
@@ -284,9 +364,8 @@ function ReplyAlertCard({
           </span>
         </div>
 
-        {/* CTA */}
         <span className="btn-game-secondary text-xs font-bold tracking-wider uppercase py-2 px-4 h-fit shrink-0">
-          View Reply
+          View
         </span>
       </AlertItem>
     </a>
@@ -333,58 +412,51 @@ export function Alerts({ playerAddress }: { playerAddress: string }) {
     );
   }
 
+  // The PAYOUT-phase scan only tells us which seasons *could* be claimable.
+  // Whether a season is actually claimable (unclaimed + owed) is decided per
+  // season inside ClaimableCard via usePayout. Each card reports its result
+  // here so the count / pill / whole-pane visibility match what renders.
+  const [claimableMap, setClaimableMap] = useState<Record<string, boolean>>({});
+  const handleClaimableChange = React.useCallback((seasonAddress: string, claimable: boolean) => {
+    setClaimableMap((prev) =>
+      prev[seasonAddress] === claimable ? prev : { ...prev, [seasonAddress]: claimable },
+    );
+  }, []);
+
   const payouts = concludedSeasons ?? [];
   const polls = discourseAlerts?.pendingPolls ?? [];
   const replies = discourseAlerts?.replies ?? [];
-  const totalCount = payouts.length + polls.length + replies.length;
 
-  if (!isOwner || totalCount === 0) return null;
+  const claimableCount = payouts.reduce((n, s) => n + (claimableMap[s.season] ? 1 : 0), 0);
+  const totalCount = claimableCount + polls.length + replies.length;
+
+  if (!isOwner) return null;
+
+  // The ClaimableCards must stay mounted whenever there are scanned PAYOUT
+  // seasons — their usePayout hooks are what populate claimableMap. When the
+  // visible pane is hidden (nothing actually pending), keep the probes mounted
+  // off-screen so they can report in and flip the pane on if one is claimable.
+  const probes = payouts.map((s) => (
+    <ClaimableCard
+      key={s.season}
+      season={s}
+      playerAddress={playerAddress}
+      onClaimableChange={handleClaimableChange}
+    />
+  ));
+
+  if (totalCount === 0) {
+    return <div className="hidden">{probes}</div>;
+  }
 
   return (
-    <div className="relative w-full flex flex-col gap-3 p-5 rounded-xl bg-card border border-border shadow-xl overflow-hidden isolate">
+    <div className="flex flex-col gap-px w-full rounded-md overflow-hidden">
+      {probes}
 
-      {/* Ambient glow */}
-      <div
-        className="absolute top-0 left-0 w-32 h-32 blur-2xl rounded-full -z-10 pointer-events-none -translate-x-1/2 -translate-y-1/2"
-        style={{ background: 'var(--color-red-15)' }}
-      />
-
-      {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-border">
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span
-              className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red opacity-75"
-              style={{ boxShadow: '0 0 8px var(--color-red-35)' }}
-            />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-red" />
-          </span>
-          <span className="font-mono text-[10px] font-bold text-text2 uppercase tracking-widest pl-1">
-            Active Alerts
-          </span>
-        </div>
-        <span
-          className="font-mono text-[10px] font-bold text-red px-2 py-0.5 rounded-full border"
-          style={{
-            background: 'var(--color-red-15)',
-            borderColor: 'var(--color-red-35)',
-          }}
-        >
-          {totalCount} Pending
-        </span>
-      </div>
-
-      {/* Claimable payouts */}
-      {payouts.map((s) => (
-        <ClaimableCard key={s.season} season={s} playerAddress={playerAddress} />
-      ))}
-
-      {/* Governance polls */}
       {polls.map((poll) => (
         <PollAlertRow key={`${poll.topicId}-${poll.pollName}`} poll={poll} />
       ))}
 
-      {/* Replies */}
       {replies.map((reply) => (
         <ReplyAlertCard
           key={reply.originalPostId}
@@ -393,7 +465,6 @@ export function Alerts({ playerAddress }: { playerAddress: string }) {
           onDismiss={() => dismissReply(reply.originalPostId)}
         />
       ))}
-
     </div>
   );
 }

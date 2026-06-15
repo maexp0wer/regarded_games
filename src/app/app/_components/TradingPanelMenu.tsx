@@ -7,12 +7,13 @@ import { OrderBook } from './OrderBook';
 import { TradeFlows } from './TradeFlows';
 import { FactionChat } from './FactionChat';
 import { TradingActivityFeed } from './TradingActivityFeed';
-import { TradingChart, Timeframe } from './TradingChart';
+import { TradingChart, Timeframe, ChartPane } from './TradingChart';
 import { Orders } from './Orders';
 import { GiniCard } from './GiniCard';
+import { FimDistributionChart } from './FimDistributionChart';
 import { CandleData } from '@/utils/chartData';
 
-type PanelId = 'chart-orders' | 'orderbook' | 'trades' | 'gini' | 'chord' | 'chat';
+type PanelId = 'chart-orders' | 'orderbook' | 'trades' | 'gini' | 'chord' | 'fim-dist' | 'chat';
 
 const BUTTONS: { id: PanelId; label: string }[] = [
   { id: 'chart-orders', label: 'Chart' },
@@ -20,10 +21,11 @@ const BUTTONS: { id: PanelId; label: string }[] = [
   { id: 'trades',       label: 'Trades' },
   { id: 'gini',         label: 'Gini Score' },
   { id: 'chord',        label: 'Capital Flow' },
+  { id: 'fim-dist',     label: 'Distribution' },
   { id: 'chat',         label: 'Chat' },
 ];
 
-const PRIORITY: PanelId[] = ['chart-orders', 'orderbook', 'trades', 'gini', 'chord', 'chat'];
+const PRIORITY: PanelId[] = ['chart-orders', 'orderbook', 'trades', 'gini', 'chord', 'fim-dist', 'chat'];
 
 const chunk = <T,>(arr: T[], size: number): T[][] =>
   Array.from({ length: Math.ceil(arr.length / size) }, (_, i) => arr.slice(i * size, i * size + size));
@@ -65,30 +67,33 @@ export interface TradingPanelMenuProps {
   // Mixed taker trade: the mask shows buy/sell queues side by side and claims a
   // second column from the panel in the bundled grid (xl/2xl).
   maskWide?: boolean;
+  isOnHold?: boolean;
 }
 
+// SSR renders without a window, so first paint is always narrow; the lazy
+// initializers below re-read the real breakpoints on the client's first render
+// so panelWide is correct before any effect runs.
+const matchesXl = () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1280px)').matches;
+const matches2xl = () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1536px)').matches;
+
 export function TradingPanelMenu(props: TradingPanelMenuProps) {
-  const [open, setOpen] = useState<Set<PanelId>>(new Set());
-  const [isXl, setIsXl] = useState(false);
-  const [is2xl, setIs2xl] = useState(false);
-  const didInit = useRef(false);
+  const [isXl, setIsXl] = useState(matchesXl);
+  const [is2xl, setIs2xl] = useState(matches2xl);
+  // Open the orderbook beside the chart from xl up; chart only below. Seeded
+  // lazily (not in an effect) so the collapse effect never sees a transient
+  // narrow state that would strip the orderbook before it paints.
+  const [open, setOpen] = useState<Set<PanelId>>(() =>
+    matchesXl()
+      ? new Set<PanelId>(['chart-orders', 'orderbook'])
+      : new Set<PanelId>(['chart-orders'])
+  );
   const tabBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const xl = window.matchMedia('(min-width: 1280px)');
     const xxl = window.matchMedia('(min-width: 1536px)');
-    const matches = xl.matches;
-    setIsXl(matches);
+    setIsXl(xl.matches);
     setIs2xl(xxl.matches);
-
-    if (!didInit.current) {
-      didInit.current = true;
-      setOpen(
-        matches
-          ? new Set<PanelId>(['chart-orders', 'orderbook'])
-          : new Set<PanelId>(['chart-orders'])
-      );
-    }
 
     const xlH = (e: MediaQueryListEvent) => setIsXl(e.matches);
     const xxlH = (e: MediaQueryListEvent) => setIs2xl(e.matches);
@@ -130,7 +135,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
     }
   }, [panelWide]);
 
-  // Wide: chart open → max 2 non-chart panels (3 total); chart closed → max 4 non-chart panels
+  // Wide: chart open → max 2 non-chart panels at xl, 4 at 2xl; chart closed → max 4
   const NON_CHART = PRIORITY.filter(p => p !== 'chart-orders');
 
   const trimNonChart = (next: Set<PanelId>, limit: number) => {
@@ -159,10 +164,10 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
         return next;
       }
       if (id === 'chart-orders') {
-        // opening chart reduces non-chart limit from 4 → 2
-        trimNonChart(next, 2);
+        // opening chart reduces non-chart limit: 4 at 2xl, 2 at xl
+        trimNonChart(next, is2xl ? 4 : 2);
       } else {
-        const limit = next.has('chart-orders') ? 2 : 4;
+        const limit = next.has('chart-orders') ? (is2xl ? 4 : 2) : 4;
         trimNonChart(next, limit - 1);
       }
       next.add(id);
@@ -170,29 +175,40 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
     });
   };
 
-  const openChord = () => {
+  // Open a non-chart panel without closing the chart (wide) / stepping it aside
+  // (narrow). Shared by the chord tab button and the chart-click routing below.
+  const openPanel = (id: Exclude<PanelId, 'chart-orders'>) => {
     setOpen(prev => {
-      if (prev.has('chord')) return prev;
+      if (prev.has(id)) return prev;
       const next = new Set(prev);
       if (!panelWide) {
-        // Narrow: chord joins the stacked non-chart pair; chart steps aside.
+        // Narrow: the panel joins the stacked non-chart pair; chart steps aside.
         next.delete('chart-orders');
         trimNonChart(next, 1);
-        next.add('chord');
+        next.add(id);
         return next;
       }
-      const limit = next.has('chart-orders') ? 2 : 4;
+      const limit = next.has('chart-orders') ? (is2xl ? 4 : 2) : 4;
       trimNonChart(next, limit - 1);
-      next.add('chord');
+      next.add(id);
       return next;
     });
   };
 
-  const handleCandleClick = (range: { start: number; end: number } | null) => {
+  const openChord = () => openPanel('chord');
+
+  const handleCandleClick = (
+    range: { start: number; end: number } | null,
+    pane: ChartPane | null,
+  ) => {
     props.onCandleClick(range);
-    // When wide the chord opens beside the chart; when narrow it would displace
-    // the chart you just clicked, so don't auto-open there.
-    if (range && panelWide) openChord();
+    // Route by which pane was clicked: volume bars → Capital Flow, gini bars →
+    // Gini Score, price bars → no panel. When wide the panel opens beside the
+    // chart; when narrow it would displace the chart you just clicked, so don't
+    // auto-open there.
+    if (!range || !panelWide) return;
+    if (pane === 'volume') openPanel('chord');
+    else if (pane === 'gini') openPanel('gini');
   };
 
   const renderPanel = (id: PanelId) => {
@@ -233,6 +249,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
             onSelectOrder={props.onSelectOrder}
             onRemoveOrder={props.onRemoveOrder}
             selectedOrderIds={props.selectedOrderIds}
+            isOnHold={props.isOnHold}
           />
         );
       case 'gini':
@@ -255,6 +272,13 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
             selectedRange={props.selectedRange}
             onClearSelection={props.onClearSelection}
             isLive={props.isLive}
+          />
+        );
+      case 'fim-dist':
+        return (
+          <FimDistributionChart
+            seasonAddress={props.seasonAddress}
+            exchangeAddress={props.exchangeAddress}
           />
         );
       case 'chat':
@@ -283,7 +307,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
           next.add('orderbook');
           return next;
         }
-        const limit = next.has('chart-orders') ? 2 : 4;
+        const limit = next.has('chart-orders') ? (is2xl ? 4 : 2) : 4;
         trimNonChart(next, limit - 1);
         next.add('orderbook');
         return next;
@@ -348,13 +372,41 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
               )}
               {otherPanels.length > 0 && (
                 panelWide && chartOpen ? (
-                  /* Chart visible: others stack vertically in a fixed-width column */
-                  <div className="shrink-0 flex flex-col border-t xl:border-t-0 xl:border-l border-border xl:w-100">
-                    {otherPanels.map((id, i) => (
-                      <div key={id} className={`flex-1 min-h-0 overflow-hidden${i > 0 ? ' border-t border-border' : ''}`}>
-                        {renderPanel(id)}
+                  /* Chart visible: side column beside the chart.
+                     xl      : single column, panels stacked (up to 2).
+                     2xl, 3p : highest-priority gets its own left column; bottom 2 share the right column.
+                     2xl, 4p : 2×2 grid. */
+                  <div className={`shrink-0 flex border-t xl:border-t-0 xl:border-l border-border xl:w-[calc(100%/3)] 2xl:w-[calc(100%/4)]${is2xl && otherPanels.length >= 3 ? ' 2xl:w-[calc(100%/2)]!' : ''}`}>
+                    {is2xl && otherPanels.length >= 3 ? (
+                      /* 2-column sub-grid */
+                      <>
+                        {/* Left sub-column: top item (3p) or top 2 items (4p) */}
+                        <div className="flex-1 min-w-0 flex flex-col border-r border-border">
+                          {otherPanels.slice(0, otherPanels.length === 3 ? 1 : 2).map((id, i) => (
+                            <div key={id} className={`flex-1 min-h-0 overflow-hidden${i > 0 ? ' border-t border-border' : ''}`}>
+                              {renderPanel(id)}
+                            </div>
+                          ))}
+                        </div>
+                        {/* Right sub-column: bottom 2 items */}
+                        <div className="flex-1 min-w-0 flex flex-col">
+                          {otherPanels.slice(otherPanels.length === 3 ? 1 : 2).map((id, i) => (
+                            <div key={id} className={`flex-1 min-h-0 overflow-hidden${i > 0 ? ' border-t border-border' : ''}`}>
+                              {renderPanel(id)}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      /* Single column (xl, or 2xl with ≤2 panels) */
+                      <div className="flex-1 flex flex-col">
+                        {otherPanels.map((id, i) => (
+                          <div key={id} className={`flex-1 min-h-0 overflow-hidden${i > 0 ? ' border-t border-border' : ''}`}>
+                            {renderPanel(id)}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
                 ) : (
                   /* No chart: wide packs rows of 2 (2×2); narrow stacks one per

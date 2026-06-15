@@ -146,7 +146,7 @@ export function SeasonBand({ seasonAddress, seasonName, className = '' }: Season
   const footerClass =
     footerMode === 'warning'
       ? 'text-[var(--color-red)] animate-pulse'
-      : 'text-[var(--color-gold)] font-bold';
+      : 'text-[var(--color-text)] font-bold';
 
   const prizePool      = giniData?.prizePool   ?? 0;
   const playerCount    = giniData?.playerCount ?? 0;
@@ -230,7 +230,7 @@ export function SeasonBand({ seasonAddress, seasonName, className = '' }: Season
               {footerMode === 'countdown' ? (
                 <SeasonCountdown targetTimestamp={countdownTarget} label={countdownLabel} />
               ) : (
-                <span className={`font-mono text-[11px] uppercase tracking-wider ${footerClass}`}>
+                <span className={`font-mono font-bold text-[11px] uppercase tracking-wider ${footerClass}`}>
                   {footerMessage}
                 </span>
               )}

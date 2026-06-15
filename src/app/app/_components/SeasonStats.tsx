@@ -15,11 +15,11 @@ interface SeasonStatsProps {
 export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAddress, exchangeAddress }) => {
   const {
     rank, totalPlayers,
-    efficiencyPercent,
+    efficiencyRank, efficiencyPercent,
     userNetContribution, growthPercent,
-    volumeTopPercent,
-    feesTopPercent, userTotalFees,
-    contributionTopPercent, userContribution,
+    volumeRank, volumeTopPercent,
+    feesRank, feesTopPercent, userTotalFees,
+    contributionRank, contributionTopPercent, userContribution,
     loading: rankLoading,
   } = usePlayerRank(seasonAddress, userAddress);
 
@@ -36,6 +36,12 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
   const absoluteTopPercent = totalPlayers > 1 ? ((rank - 1) / (totalPlayers - 1)) * 100 : 0;
   const relativeTopPercent = efficiencyPercent;
   const barFill = (topPct: number) => `${Math.max(0, 100 - topPct)}%`;
+  // Header center label: ordinal rank within the field, e.g. "#3 / 47".
+  const rankLabel = (r: number) => `#${r} / ${totalPlayers}`;
+  // Overlay text inside the bar: relocated "TOP X%" with the sub-1% shortcut.
+  const topPctLabel = (topPct: number) => `TOP ${topPct < 1 ? '<1' : topPct.toFixed(2)}%`;
+  // Faint dark shadow keeps the relocated label legible over bright fills.
+  const overlayShadow = '0 1px 2px rgba(0,0,0,0.6)';
 
   let pointerPos = 50;
   let factionPercentile = 0;
@@ -107,7 +113,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
           <div className="terminal-pane border-none!  p-2.5 gap-2">
             <div className="flex items-baseline font-mono text-xs uppercase tracking-wide">
               <span className="font-bold text-text2">Absolute P&amp;L</span>
-              <span className="flex-1 text-center font-bold text-text">TOP {absoluteTopPercent < 1 ? '<1' : absoluteTopPercent.toFixed(2)}%</span>
+              <span className="flex-1 text-center font-bold text-text">{rankLabel(rank)}</span>
               <span className="font-black" style={{ color: pnlColor }}>
                 {pnlSign}${Math.abs(seasonPnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
@@ -119,13 +125,14 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
                 background: 'var(--color-green-70)',
                 transition: 'width 0.5s ease-out',
               }} />
+              <span className="progress-rail-overlay-text" style={{ textShadow: overlayShadow }}>{topPctLabel(absoluteTopPercent)}</span>
             </div>
           </div>
 
           <div className="terminal-pane border-none! p-2.5 gap-2">
             <div className="flex items-baseline font-mono text-xs uppercase tracking-wide">
               <span className="font-bold text-text2">Relative P&amp;L</span>
-              <span className="flex-1 text-center font-bold text-text">TOP {relativeTopPercent < 1 ? '<1' : relativeTopPercent.toFixed(2)}%</span>
+              <span className="flex-1 text-center font-bold text-text">{rankLabel(efficiencyRank)}</span>
               <span className="font-black text-purple">
                 {growthSign}{displayGrowthPercent.toFixed(2)}%
               </span>
@@ -137,6 +144,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
                 background: 'var(--color-purple-70)',
                 transition: 'width 0.5s ease-out',
               }} />
+              <span className="progress-rail-overlay-text" style={{ textShadow: overlayShadow }}>{topPctLabel(relativeTopPercent)}</span>
             </div>
           </div>
         </div>
@@ -146,7 +154,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
           <div className="terminal-pane border-none! p-2.5 gap-2">
             <div className="flex items-baseline font-mono text-xs uppercase tracking-wide">
               <span className="font-bold text-text2">Trade Volume</span>
-              <span className="flex-1 text-center font-bold text-text">TOP {volumeTopPercent < 1 ? '<1' : volumeTopPercent.toFixed(2)}%</span>
+              <span className="flex-1 text-center font-bold text-text">{rankLabel(volumeRank)}</span>
               <span className="font-black" style={{ color: 'var(--color-gold)' }}>
                 {userNetContribution >= 0 ? '+' : ''}$
                 {userNetContribution.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -159,13 +167,14 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
                 background: 'var(--color-gold-70)',
                 transition: 'width 0.5s ease-out',
               }} />
+              <span className="progress-rail-overlay-text" style={{ textShadow: overlayShadow }}>{topPctLabel(volumeTopPercent)}</span>
             </div>
           </div>
 
           <div className="terminal-pane border-none! p-2.5 gap-2">
             <div className="flex items-baseline font-mono text-xs uppercase tracking-wide">
               <span className="font-bold text-text2">Trading Fees</span>
-              <span className="flex-1 text-center font-bold text-text">TOP {feesTopPercent < 1 ? '<1' : feesTopPercent.toFixed(2)}%</span>
+              <span className="flex-1 text-center font-bold text-text">{rankLabel(feesRank)}</span>
               <span className="font-black" style={{ color: 'var(--color-red)' }}>
                 ${userTotalFees.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
@@ -177,6 +186,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
                 background: 'var(--color-red-70)',
                 transition: 'width 0.5s ease-out',
               }} />
+              <span className="progress-rail-overlay-text" style={{ textShadow: overlayShadow }}>{topPctLabel(feesTopPercent)}</span>
             </div>
           </div>
         </div>
@@ -187,6 +197,9 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
           // Capitalists win: lowest contribution score wins → invert the percentile
           // Proletarians win: highest contribution score wins → use as-is (0 = top)
           const virtueTopPercent = capsWin ? 100 - contributionTopPercent : contributionTopPercent;
+          // Mirror the rank with the percentile: caps win on the lowest contribution
+          // score, so invert the contribution ordinal to match the inverted percentile.
+          const virtueRank = capsWin ? totalPlayers - contributionRank + 1 : contributionRank;
           const label = capsWin ? 'Best Extraction' : 'Best Contribution';
           const accentColor = capsWin ? 'var(--color-gold)' : 'var(--color-purple)';
           const barColor = capsWin ? 'var(--color-gold-70)' : 'var(--color-purple-70)';
@@ -194,7 +207,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
             <div className="terminal-pane border-none! p-2.5 gap-2 lg:col-span-2 2xl:col-span-1">
               <div className="flex items-baseline font-mono text-xs uppercase tracking-wide">
                 <span className="font-bold text-text2">{label}</span>
-                <span className="flex-1 text-center font-bold text-text">TOP {virtueTopPercent < 1 ? '<1' : virtueTopPercent.toFixed(2)}%</span>
+                <span className="flex-1 text-center font-bold text-text">{rankLabel(virtueRank)}</span>
                 <span className="font-black" style={{ color: accentColor }}>
                   {userContribution >= 0 ? '+' : ''}$
                   {userContribution.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -207,6 +220,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
                   background: barColor,
                   transition: 'width 0.5s ease-out',
                 }} />
+                <span className="progress-rail-overlay-text" style={{ textShadow: overlayShadow }}>{topPctLabel(virtueTopPercent)}</span>
               </div>
             </div>
           );

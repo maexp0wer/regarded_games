@@ -1,5 +1,7 @@
 'use client';
 
+import { useButtonHold } from '@/hooks/useButtonHold';
+import { clampDecimals } from '@/utils/clampDecimals';
 import PercentSlider from '../app/app/_components/PercentSlider';
 
 export default function AmountInput({
@@ -11,6 +13,8 @@ export default function AmountInput({
   balance,
   disabled,
   placeholder = '0.00',
+  decimals = 18,
+  max,
 }: {
   label: string;
   value: string;
@@ -20,7 +24,26 @@ export default function AmountInput({
   balance?: string;
   disabled?: boolean;
   placeholder?: string;
+  // Max fractional digits allowed, matching the token's on-chain precision
+  // (USDC 6, FIM/RGD 18). Inputs are truncated to this on change.
+  decimals?: number;
+  max?: number;
 }) {
+  const handleChange = (next: string) => {
+    const clamped = clampDecimals(next, decimals);
+    if (max !== undefined && parseFloat(clamped) > max) {
+      onChange(String(max));
+    } else {
+      onChange(clamped);
+    }
+  };
+
+  // ▲/▼ step amount by ±1, clamped at 0; multiplier accelerates a sustained hold
+  const { bind } = useButtonHold((mult, dir: 1 | -1) => {
+    const next = Math.max(0, parseFloat(value || '0') + dir * mult);
+    handleChange(String(max !== undefined ? Math.min(next, max) : next));
+  });
+
   return (
     <div className="pt-5 flex flex-col gap-1 shrink-0">
       <div className="flex justify-between items-center w-full">
@@ -39,23 +62,27 @@ export default function AmountInput({
         <input
           type="number"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => handleChange(e.target.value)}
           placeholder={placeholder}
           disabled={disabled}
           className="flex-1 min-w-0 bg-transparent text-input font-mono text-text outline-none placeholder:text-text2/40 tabular-nums no-spinners text-right"
         />
         <div className="flex flex-col gap-0 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button 
-            className="btn-stepper" 
-            disabled={disabled} 
-            onClick={() => onChange(String(Math.max(0, parseFloat(value || '0') + 1)))}
+          <button
+            type="button"
+            tabIndex={-1}
+            className="btn-stepper select-none"
+            disabled={disabled}
+            {...bind(1)}
           >
             ▲
           </button>
-          <button 
-            className="btn-stepper" 
-            disabled={disabled} 
-            onClick={() => onChange(String(Math.max(0, parseFloat(value || '0') - 1)))}
+          <button
+            type="button"
+            tabIndex={-1}
+            className="btn-stepper select-none"
+            disabled={disabled}
+            {...bind(-1)}
           >
             ▼
           </button>

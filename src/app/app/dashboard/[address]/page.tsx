@@ -23,14 +23,10 @@ export default async function UserDashboardPage({
   }
 
   return (
-    <div className="w-full">
-      <main className="py-8 w-full">
-        <div className="flex flex-col gap-8">
-          <Alerts playerAddress={address} />
-          <PlayerProfile profileAddress={address as `0x${string}`} />
-          <SeasonListDashboard playerAddress={address} />
-        </div>
-      </main>
-    </div>
+    <main className="w-full flex flex-col gap-8 animate-in fade-in duration-700">
+      <Alerts playerAddress={address} />
+      <PlayerProfile profileAddress={address as `0x${string}`} />
+      <SeasonListDashboard playerAddress={address} />
+    </main>
   );
 }

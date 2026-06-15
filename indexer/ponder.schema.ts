@@ -19,6 +19,10 @@ export const playerSeasonStats = onchainTable("player_season_stats", (t) => ({
   realizedPayout: t.bigint().default(0n).notNull(),
   totalPotentialPayout: t.bigint().default(0n).notNull(),
   totalFeesPaid: t.bigint().default(0n).notNull(),
+  // Set true once PlayerSeasonStatsFinalized fires for this row. Distinguishes a
+  // settled season (counts toward lifetime PnL, even at a $0 payout) from an
+  // in-progress one where the row only exists from trading/auction activity.
+  finalized: t.boolean().default(false).notNull(),
 }), (table) => ({
   pk: primaryKey({ columns: [table.seasonAddress, table.playerAddress] }),
 }));
@@ -47,6 +51,10 @@ export const orders = onchainTable("orders", (t) => ({
   isCancelled: t.boolean().notNull().default(false),
   timestamp: t.bigint().notNull(),
   settledAt: t.bigint(),
+  // Trading fees paid on this order, accumulated across fills (USDC, 6 decimals).
+  // Matches the contract's buyer-pays model: buy orders accrue fee per fill,
+  // sell orders stay 0.
+  feePaid: t.bigint().notNull().default(0n),
 }));
 
 export const trades = onchainTable("trades", (t) => ({
@@ -65,6 +73,11 @@ export const trades = onchainTable("trades", (t) => ({
   buyerIsCapitalist: t.boolean().notNull().default(false),
   sellerIsCapitalist: t.boolean().notNull().default(false),
   giniBps: t.integer().notNull().default(0),
+  // The taker (msg.sender) for this fill — the side that pays the fee, regardless
+  // of buy/sell. Lets the frontend show fees to whoever actually paid them.
+  taker: t.hex().notNull().default('0x0000000000000000000000000000000000000000'),
+  // Trading fee for this fill (USDC, 6 decimals), always paid by the taker.
+  feePaid: t.bigint().notNull().default(0n),
 }));
 
 export const yieldEvents = onchainTable("yield_events", (t) => ({
