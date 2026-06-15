@@ -47,6 +47,29 @@ export async function POST(req: Request) {
 
     if (process.env.APP_DEBUG) console.log(`[discover-channel] Found channel:`, activeChannel?.id || 'null');
 
+    // Ensure the wallet is a *channel member* (a follow), not just in the category
+    // group. Posting (`POST /chat/:id`) 404s for a non-member even when the channel
+    // is visible/readable — the channel's `auto_join_users` only fires on certain
+    // events and is unreliable for a freshly-provisioned or just-switched wallet,
+    // which is what produced "Failed to send message" right after a wallet switch.
+    // Joining as the wallet is idempotent (returns the existing membership).
+    if (activeChannel) {
+      const join = await fetch(
+        `${process.env.NEXT_PUBLIC_DISCOURSE_URL}/chat/api/channels/${activeChannel.id}/memberships/me`,
+        {
+          method: 'POST',
+          headers: {
+            'Api-Key': process.env.DISCOURSE_API_KEY!,
+            'Api-Username': wallet,
+            'Accept': 'application/json',
+          },
+        },
+      );
+      if (process.env.APP_DEBUG && !join.ok) {
+        console.warn(`[discover-channel] channel join failed (${join.status}) for ${wallet} on ${activeChannel.id}`);
+      }
+    }
+
     return NextResponse.json({ channelId: activeChannel?.id || null });
   } catch {
     return NextResponse.json({ error: "Failed to discover channel" }, { status: 500 });

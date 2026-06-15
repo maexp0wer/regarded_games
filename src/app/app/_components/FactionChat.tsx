@@ -10,7 +10,7 @@ interface DiscourseMessage {
   id: number;
   message: string;
   created_at: string;
-  user: { username: string; name: string };
+  user: { username: string; name: string; avatar_template?: string };
 }
 
 interface FactionChatProps {
@@ -30,6 +30,46 @@ function shortAddr(addr: string) {
   return addr;
 }
 
+const DISCOURSE_URL = process.env.NEXT_PUBLIC_DISCOURSE_URL ?? '';
+
+function avatarUrl(template: string | undefined, username: string, size = 40): string {
+  if (template) {
+    const resolved = template.startsWith('/')
+      ? `${DISCOURSE_URL}${template}`
+      : template;
+    return resolved.replace('{size}', String(size));
+  }
+  return `https://api.dicebear.com/9.x/bottts/svg?seed=${encodeURIComponent(username)}`;
+}
+
+function ChatMessage({ msg, isOwn, address, isCapitalist }: { msg: DiscourseMessage; isOwn: boolean; address: string; isCapitalist: boolean }) {
+  const factionColor = isCapitalist ? 'gold' : 'purple';
+  const [errored, setErrored] = useState(false);
+  const src = errored
+    ? `https://api.dicebear.com/9.x/bottts/svg?seed=${encodeURIComponent(msg.user.username)}`
+    : avatarUrl(msg.user.avatar_template, msg.user.username, 40);
+
+  return (
+    <div className={`flex w-full ${isOwn ? 'justify-end' : 'justify-start'}`}>
+      <div className={`flex min-w-0 items-stretch max-w-[85%] rounded border ${isOwn ? 'flex-row-reverse border-border bg-card3' : 'flex-row border-border bg-card2'}`}>
+        <img
+          src={src}
+          alt={msg.user.username}
+          onError={() => setErrored(true)}
+          className="shrink-0 w-8 h-8 object-cover m-1 rounded-sm self-center"
+        />
+        <div className="flex flex-col gap-0.5 px-2 pt-1.5 pb-1 min-w-0">
+          <div className={`flex items-center justify-between gap-3 text-[10px] font-mono font-bold uppercase tracking-widest ${isOwn ? `text-${factionColor}` : 'text-text2'}`}>
+            <span>{isOwn ? 'YOU' : shortAddr(msg.user.username)}</span>
+            <span className="opacity-50 text-[9px] font-normal">{formatTime(msg.created_at)}</span>
+          </div>
+          <div className="text-[0.75rem] leading-relaxed text-text wrap-anywhere">{msg.message}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = false, showBoard = false, onToggleBoard }: FactionChatProps) {
   const { address } = useAccount();
   const { signedIn } = useCommunitySession();
@@ -45,11 +85,13 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
   const messageListRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
   const isAtBottom = useRef(true);
   const tabCache = useRef<Partial<Record<'faction' | 'general', { channelId: number | null; messages: DiscourseMessage[] }>>>({});
   const activeAddressRef = useRef<string | undefined>(undefined);
 
   const factionLabel = isCapitalist ? 'BOURGEOISIE' : 'PROLETARIAT';
+  const factionColor = isCapitalist ? 'gold' : 'purple';
 
   // Discover channel + fetch initial messages in one shot to avoid intermediate empty states.
   // When the wallet address changes (switch or disconnect), flush the tab cache so the new
@@ -88,19 +130,22 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
       try {
         const seasonId = Number(seasonSlug.replace(/[^0-9]/g, '')) - 1;
 
-        // Register the user in Discourse and discover the channel concurrently
-        const [chanRes] = await Promise.all([
-          fetch('/api/discourse/discover-channel', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ seasonSlug, isCapitalist, isGeneral: tab === 'general' }),
-          }),
-          fetch('/api/discourse/create-player', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ walletAddress: address, seasonId }),
-          }),
-        ]);
+        // Register the user FIRST, then discover the channel. create-player adds the
+        // wallet to the faction group; the channel is only visible (and joinable) once
+        // that membership exists. Running them concurrently raced the group-add and, on
+        // a fresh or just-switched wallet, discover-channel saw no channel — or saw it
+        // but couldn't join — yielding "Failed to send message" after a wallet switch.
+        await fetch('/api/discourse/create-player', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ walletAddress: address, seasonId }),
+        });
+
+        const chanRes = await fetch('/api/discourse/discover-channel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ seasonSlug, isCapitalist, isGeneral: tab === 'general' }),
+        });
 
         const chanData = await chanRes.json();
         const newChannelId: number | null = chanData.channelId ?? null;
@@ -172,6 +217,17 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
     el.scrollTop = el.scrollHeight;
   }, [messages]);
 
+  // Track overflow so the scrollbar only appears when content exceeds the pane
+  useEffect(() => {
+    const el = messageListRef.current;
+    if (!el) return;
+    const update = () => setIsOverflowing(el.scrollHeight > el.clientHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
+
   async function sendMessage() {
     if (!input.trim() || !channelId || !address || sending) return;
     setSending(true);
@@ -233,17 +289,14 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
   }
 
   return (
-    <div className={`flex flex-col h-full w-full terminal-pane overflow-hidden ${auctionMode ? 'bg-card border border-border' : 'bg-card'}`} ref={panelRef}>
-      {/* Header — only shown in auction mode; trading phase uses the selector bar instead */}
-      {auctionMode && (
-        <div className="terminal-pane-header mx-5">
+    <div ref={panelRef} className="flex flex-col h-full w-full overflow-hidden rounded-lg bg-card">
+      {/* Header (auction) or tab selector (trading) */}
+      {auctionMode ? (
+        <div className="terminal-pane-header">
           <span className="terminal-pane-title">Chat</span>
         </div>
-      )}
-
-      {/* Tab selector — doubles as the header in trading phase */}
-      {!auctionMode && (
-        <div className="terminal-view-selector-bar terminal-view-selector-bar--chat">
+      ) : (
+        <div className="terminal-view-selector-bar--full shrink-0">
           <button
             onClick={() => switchTab('faction')}
             className={`terminal-view-btn${tab === 'faction' ? ' active' : ''}`}
@@ -254,12 +307,12 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
             onClick={() => switchTab('general')}
             className={`terminal-view-btn${tab === 'general' ? ' active' : ''}`}
           >
-            All Players
+            ALL PLAYERS
           </button>
         </div>
       )}
 
-      {/* Board slot — small screens only, replaces chat when showBoard */}
+      {/* Board slot — small screens only */}
       {!auctionMode && showBoard && (
         <div className="flex-1 min-h-0 overflow-hidden lg:hidden">
           <FactionDiscussionBoard
@@ -271,76 +324,75 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
         </div>
       )}
 
-      {/* Message stream */}
+      {/* Message stream — flex-1 to push footer down */}
       <div
         ref={messageListRef}
         onScroll={onMessageScroll}
-        className={`flex-1 overflow-y-auto p-4 flex flex-col gap-3 custom-scrollbar ${!auctionMode && showBoard ? 'hidden lg:flex' : ''}`}
+        data-chrome-scroll-guard
+        className={`flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain p-4 flex flex-col gap-3 ${!auctionMode && showBoard ? 'hidden lg:flex' : ''} ${isOverflowing ? '[scrollbar-width:thin] [scrollbar-color:transparent_transparent] hover:[scrollbar-color:var(--color-text2)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-[10px] [&::-webkit-scrollbar-thumb]:transition-colors [&::-webkit-scrollbar-thumb]:duration-200 [&:hover::-webkit-scrollbar-thumb]:bg-text2' : ''}`}
       >
         {!address ? (
-          <div className="flex flex-col items-center gap-3 mt-8">
-            <span className="terminal-pane-title text-center" style={{ color: 'var(--color-text2)' }}>Connect your wallet to participate</span>
+          <div className="m-auto flex flex-col items-center gap-3 text-center">
+            <span className="text-text2 text-sm">Connect your wallet to participate</span>
           </div>
         ) : !signedIn ? (
-          <CommunitySignInGate feature="the faction chat" />
+          <div className="m-auto">
+            <CommunitySignInGate feature="faction chat" />
+          </div>
         ) : discovering && messages.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 mt-8">
-            <span className="terminal-pane-title animate-pulse">Connecting…</span>
+          <div className="m-auto flex flex-col items-center gap-2">
+            <span className="text-text2 text-sm animate-pulse">Reading Ledger…</span>
           </div>
         ) : !channelId && !discovering ? (
-          <div className="flex flex-col items-center gap-3 mt-8">
-            <span className="terminal-pane-title" style={{ color: 'var(--color-red)' }}>Offline</span>
+          <div className="m-auto flex flex-col items-center gap-3">
+            <span className="text-red text-sm">Channel offline</span>
             <button className="btn-game-secondary" onClick={refresh}>Refresh</button>
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 mt-8">
-            <span className="terminal-pane-title">No Chat messages yet</span>
+          <div className="m-auto">
+            <span className="text-text2 text-sm">No messages yet</span>
           </div>
         ) : (
           messages.map((msg) => {
             const isOwn = address && msg.user.username.toLowerCase() === address.toLowerCase();
             return (
-              <div key={msg.id} className={`flex flex-col max-w-[85%] py-[0.6rem] px-[0.85rem] rounded-md font-display text-[0.85rem] leading-[1.4] ${isOwn ? 'self-end bg-[color-mix(in_srgb,var(--color-purple)_10%,transparent)] border border-[color-mix(in_srgb,var(--color-purple)_40%,transparent)] text-text shadow-[inset_3px_0_0_0_var(--color-gold)]' : 'self-start bg-card2 border border-border text-text'}`}>
-                <div className={`flex items-center justify-between gap-4 font-mono text-[0.7rem] font-bold uppercase tracking-[0.03em] mb-1 ${isOwn ? 'text-gold' : 'text-text2'}`}>
-                  <span>{isOwn ? 'YOU' : shortAddr(msg.user.username)}</span>
-                  <span className="opacity-60 font-normal">{formatTime(msg.created_at)}</span>
-                </div>
-                <div>{msg.message}</div>
-              </div>
+              <ChatMessage
+                key={msg.id}
+                msg={msg}
+                isOwn={isOwn}
+                address={address}
+                isCapitalist={isCapitalist}
+              />
             );
           })
         )}
       </div>
 
-      {/* Send error */}
-      {sendError && (
-        <p
-          className={`shrink-0 font-mono text-[10px] px-3 py-1 ${!auctionMode && showBoard ? 'hidden lg:block' : ''}`}
-          style={{ color: 'var(--color-red)' }}
-        >
-          {sendError}
-        </p>
-      )}
-
-      {/* Input deck */}
+      {/* Error and input footer */}
       {channelId && address && signedIn && (
-        <div className={`comms-input-deck p-3 ${!auctionMode && showBoard ? 'hidden lg:block' : ''}`}>
+        <div className={`shrink-0 flex flex-col gap-2 border-t border-border px-3 py-3 ${!auctionMode && showBoard ? 'hidden lg:flex' : 'flex'}`}>
+          {sendError && (
+            <p className="font-mono text-[10px] text-red">
+              {sendError}
+            </p>
+          )}
           <div className="flex items-end gap-2">
             <textarea
               ref={textareaRef}
               rows={1}
-              className="inline-flex w-full py-[0.35rem] px-3 font-mono text-xs font-bold text-text bg-transparent border border-border rounded-sm outline-none transition-all duration-150 ease-in-out hover:not-focus:border-border2 hover:not-focus:bg-card2 focus:border-[color-mix(in_srgb,var(--color-purple)_40%,transparent)] focus:bg-[color-mix(in_srgb,var(--color-purple)_4%,transparent)] focus:shadow-[inset_2px_0_0_0_var(--color-purple)] placeholder:text-text2 placeholder:opacity-50 placeholder:uppercase placeholder:tracking-[0.02em] flex-1 min-w-0 resize-none overflow-y-hidden custom-scrollbar leading-relaxed"
-              style={{ maxHeight: '8rem' }}
+              className="flex-1 min-w-0 resize-none overflow-y-hidden custom-scrollbar px-3 py-2 font-mono text-xs border border-border rounded outline-none transition-all duration-150 text-text placeholder:text-text2 placeholder:opacity-50 hover:border-border2 focus:border-border2"
+              style={{ maxHeight: '8rem', backgroundColor: 'var(--color-card3)' }}
               placeholder={!discourseReady ? 'Connecting…' : 'Chat…'}
               value={input}
               onChange={onInputChange}
               onKeyDown={onKeyDown}
-              disabled={!address || !discourseReady || sending}
+              disabled={!discourseReady || sending}
             />
             <button
-              className="shrink-0 inline-flex items-center justify-center py-[0.35rem] px-3 text-xs leading-relaxed font-bold text-text bg-card2 border border-border2 rounded-lg shadow-[0_2px_4px_rgba(0,0,0,0.05)] transition-all duration-200 ease-in-out hover:bg-card3 hover:border-purple hover:shadow-[0_0_12px_var(--color-purple-15)] disabled:opacity-30"
+              className="shrink-0 inline-flex items-center justify-center px-3 py-2 font-mono text-xs font-bold bg-card3 border border-border rounded text-text transition-all duration-200 hover:border-border2 disabled:opacity-50"
               onClick={sendMessageAndReset}
-              disabled={!input.trim() || !address || !discourseReady || sending}
+              disabled={!input.trim() || !discourseReady || sending}
+              style={{ backgroundColor: 'var(--color-card3)' }}
             >
               {sending ? '…' : '↵'}
             </button>
