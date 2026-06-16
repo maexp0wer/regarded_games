@@ -46,17 +46,17 @@ export function OrderQueueItem({
       onDragStart={() => onDragStart(groupIdx)}
       onDragOver={(e) => onDragOver(e, groupIdx)}
       onDragEnd={onDragEnd}
-      className={`grid grid-cols-[auto_2fr_2fr_2fr_auto] items-center gap-3 p-[0.6rem] bg-card3 border border-border2 rounded-sm mb-[0.4rem] cursor-grab active:cursor-grabbing
+      className={`@container grid grid-cols-[auto_2fr_2fr_2fr_auto] items-center gap-x-3 gap-y-1.5 p-[0.6rem] bg-card3 border border-border2 rounded-sm mb-[0.4rem] cursor-grab active:cursor-grabbing
         ${draggedGroupIdx === groupIdx ? 'opacity-40 ring-1 ring-primary/20' : ''}
         ${localFill === 0 ? 'grayscale opacity-40' : ''}
       `}
     >
-      {/* Col 1: Drag Handle */}
-      <div className="flex flex-col gap-0.5 cursor-grab px-1 [&>span]:w-3 [&>span]:h-0.5 [&>span]:bg-border2 [&>span]:rounded-[1px]">
+      {/* Col 1: Drag Handle — spans both rows only when narrow, so it stays centered across the full item height */}
+      <div className="flex flex-col gap-0.5 cursor-grab px-1 row-start-1 row-span-2 @[16rem]:row-span-1 [&>span]:w-3 [&>span]:h-0.5 [&>span]:bg-border2 [&>span]:rounded-[1px]">
         <span /><span /><span />
       </div>
 
-      {/* Col 2: Price + Maker rank */}
+      {/* Col 2: Maker rank */}
       <div className="flex flex-col gap-1.5">
         {stats ? (
           <PercentileCircle percentage={stats.factionPercentile} isCapitalist={stats.isCapitalist} size="xxs" />
@@ -65,25 +65,27 @@ export function OrderQueueItem({
         )}
       </div>
 
-      {/* Col 2: Maker rank */}
+      {/* Col 3: Price */}
       <div className="flex flex-col gap-1.5">
         <span className={`text-[11px] font-mono font-bold ${group.isBuy ? 'text-green' : 'text-red'}`}>
           ${parseFloat(group.unitPrice).toFixed(4)}
         </span>
       </div>
 
-      {/* Col 3: Fill amounts */}
-      <div className="flex flex-col justify-center">
+      {/* Col 4: Fill amounts — drops to its own row below the rank/price when the item is narrow */}
+      <div className="flex flex-col justify-center min-w-0 row-start-2 col-start-2 col-span-3 @[16rem]:row-start-1 @[16rem]:col-start-4 @[16rem]:col-span-1">
         <span className="text-[11px] font-mono font-bold text-text tabular-nums">
           {localFill.toLocaleString()}
-          <span className="text-text2/60"> / {group.amount.toLocaleString()}</span>
+          {localFill !== group.amount && (
+            <span className="text-text2/60"> / {group.amount.toLocaleString()}</span>
+          )}
         </span>
       </div>
 
-      {/* Col 4: Shift controls + remove */}
-      <div className="flex items-center gap-1">
+      {/* Col 5: Shift controls + remove — spans both rows only when narrow, so it stays centered across the full item height */}
+      <div className="flex items-center justify-center gap-1 col-start-5 row-start-1 row-span-2 @[16rem]:row-span-1">
         {groupCount > 1 && (
-          <div className="flex flex-col">
+          <div className="flex flex-col items-center">
             <button
               onClick={() => onMoveGroup(groupIdx, -1)}
               disabled={groupIdx === 0}

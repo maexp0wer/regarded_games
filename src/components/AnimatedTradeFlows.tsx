@@ -21,7 +21,12 @@ const SOC_COLOR     = '#9D4EDD';
 const MAGENTA_COLOR = '#D81B60';
 const ORANGE_COLOR  = '#FF8C00';
 const BG_COLOR      = '#161322';
+const BG3_COLOR     = '#221d33';
 const TXT_COLOR     = '#9E97BD';
+const TXT1_COLOR    = '#EDE7FB';
+const BORDER2_COLOR = '#4C3F7A';
+const IN_COLOR      = '#00F5A0';
+const OUT_COLOR     = '#FF4D6D';
 
 /** Unbiased Fisher-Yates shuffle (returns a new array). */
 function shuffle<T>(arr: T[]): T[] {
@@ -51,6 +56,27 @@ const generateBase20Matrix = (): number[][] => {
 };
 
 const BASE_FLOW_MATRIX_20 = generateBase20Matrix();
+
+// Stable per-pair directional split. The pair's *total* bidirectional weight
+// stays symmetric (so chord ribbons still connect their two actual groups), but
+// it's divided unevenly between the two directions: SPLIT[r][c] is r→c's share
+// of the pair total, SPLIT[c][r] = 1 - that. This gives each group distinct
+// IN (column sum) vs OUT (row sum) volumes instead of forcing IN === OUT.
+const DIR_SPLIT_20: number[][] = (() => {
+  const split: number[][] = Array.from({ length: 20 }, () => new Array(20).fill(0.5));
+  for (let r = 0; r < 20; r++) {
+    for (let c = r + 1; c < 20; c++) {
+      const s = 0.25 + Math.random() * 0.5; // 25%–75% to avoid degenerate one-way flow
+      split[r][c] = s;
+      split[c][r] = 1 - s;
+    }
+  }
+  return split;
+})();
+
+// Simulated player counts per group (one per 20-group band). Static so the
+// tooltip doesn't flicker as the web animates.
+const PLAYER_COUNTS_20: number[] = Array.from({ length: 20 }, () => 1 + Math.floor(Math.random() * 12));
 
 const getTopConnections = (matrix: number[][]) => {
   const capitalists: { r: number; c: number; target: number }[] = [];
@@ -105,21 +131,38 @@ const buildChordMatrix = (
   for (let i = 0; i < drawnCount && i < queue.length; i++) {
     const { r, c, target } = queue[i];
     const breathing = 1 + Math.sin(t / 8 + r * c) * 0.03;
-    const val = Math.floor(target * breathing);
-    empty[r][c] = val;
-    empty[c][r] = val;
+    const val = target * breathing;
+    // Split the pair total into the two directions (sum stays === val, so the
+    // ribbon geometry that reads matrix[r][c] + matrix[c][r] is unaffected).
+    empty[r][c] = Math.floor(val * DIR_SPLIT_20[r][c]);
+    empty[c][r] = Math.floor(val * DIR_SPLIT_20[c][r]);
   }
   if (drawnCount < queue.length && partial > 0) {
     const { r, c } = queue[drawnCount];
-    empty[r][c] = partial;
-    empty[c][r] = partial;
+    empty[r][c] = Math.floor(partial * DIR_SPLIT_20[r][c]);
+    empty[c][r] = Math.floor(partial * DIR_SPLIT_20[c][r]);
   }
   return empty;
 };
 
+// Per-group geometry + volumes the hover handler reads to resolve which arc the
+// cursor is over. Kept in a ref so the persistent SVG listener (which survives
+// the 55ms redraws) always sees the latest frame's data.
+interface HoverGeometry {
+  arcAngles: { start: number; end: number }[];
+  inVol: number[];
+  outVol: number[];
+  playerCount: number[];
+  numCap: number;
+  innerRadius: number;
+  outerRadius: number;
+}
+
 export default function AnimatedTradeFlows({ isHovered }: { isHovered: boolean }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<d3.Selection<HTMLDivElement, unknown, HTMLElement, unknown> | null>(null);
+  const geometryRef = useRef<HoverGeometry | null>(null);
   const [size, setSize] = useState(250);
 
   const [matrix, setMatrix] = useState<number[][]>(() => BASE_FLOW_MATRIX_20.map(row => row.map(() => 0)));
@@ -140,6 +183,97 @@ export default function AnimatedTradeFlows({ isHovered }: { isHovered: boolean }
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // ── Tooltip element (body-level so it isn't clipped by the card) ───────────
+  useEffect(() => {
+    const t = d3.select('body').append('div')
+      .style('position', 'fixed')
+      .style('pointer-events', 'none')
+      .style('font-family', 'JetBrains Mono, monospace')
+      .style('font-size', '11px')
+      .style('padding', '0')
+      .style('border-radius', '4px')
+      .style('background', BG3_COLOR)
+      .style('border', `1px solid ${BORDER2_COLOR}`)
+      .style('color', TXT1_COLOR)
+      .style('display', 'none')
+      .style('z-index', '9999');
+    tooltipRef.current = t;
+    return () => { t.remove(); tooltipRef.current = null; };
+  }, []);
+
+  // ── Persistent hover listener. The arcs are torn down and rebuilt every 55ms
+  // while the card animates, so per-path mouseover handlers would be destroyed
+  // under a stationary cursor and never re-fire. Instead resolve the hovered arc
+  // from the pointer's angle/radius against the latest geometry ref. ──────────
+  useEffect(() => {
+    const svgEl = svgRef.current;
+    if (!svgEl) return;
+
+    const resolve = (event: MouseEvent): number | null => {
+      const geo = geometryRef.current;
+      if (!geo) return null;
+      const rect = svgEl.getBoundingClientRect();
+      // Map client coords into the centered viewBox space.
+      const scale = size / rect.width;
+      const dx = (event.clientX - rect.left) * scale - size / 2;
+      const dy = (event.clientY - rect.top) * scale - size / 2;
+      const r = Math.hypot(dx, dy);
+      if (r < geo.innerRadius || r > geo.outerRadius) return null;
+      // d3 arc angles are measured clockwise from 12 o'clock.
+      let angle = Math.atan2(dx, -dy);
+      if (angle < 0) angle += 2 * Math.PI;
+      for (let i = 0; i < geo.arcAngles.length; i++) {
+        const a = geo.arcAngles[i];
+        if (angle >= a.start && angle <= a.end) {
+          return geo.inVol[i] + geo.outVol[i] > 0 ? i : null;
+        }
+      }
+      return null;
+    };
+
+    const onMove = (event: MouseEvent) => {
+      const tooltip = tooltipRef.current;
+      const geo = geometryRef.current;
+      if (!tooltip || !geo) return;
+      const i = resolve(event);
+      if (i === null) { tooltip.style('display', 'none'); return; }
+
+      const isCapitalist = i < geo.numCap;
+      // Match production (chartData.ts): capitalist arcs run top→bottom so their
+      // band index is reversed; socialists run bottom→top, index as-is.
+      const bandIndex = isCapitalist ? geo.numCap - 1 - i : i - geo.numCap;
+      const factionName = isCapitalist ? 'Capitalists' : 'Proletarians';
+      const factionPct  = `${bandIndex * 10}–${(bandIndex + 1) * 10}%`;
+      const players = geo.playerCount[i];
+      const net = geo.inVol[i] - geo.outVol[i];
+      const netColor = net >= 0 ? IN_COLOR : OUT_COLOR;
+      const netSign  = net >= 0 ? '+' : '-';
+      const divider  = `<div style="border-top:1px solid ${BORDER2_COLOR};margin:4px 0;"></div>`;
+      tooltip
+        .style('display', 'block')
+        .style('left', `${event.clientX + 12}px`)
+        .style('top', `${event.clientY - 28}px`)
+        .html(
+          `<div style="padding:6px 10px 0">${players} ${factionName}</div>` +
+          `<div style="padding:0 10px 0;color:${TXT_COLOR}">${factionPct}</div>` +
+          divider +
+          `<div style="padding:0 10px"><span style="color:${IN_COLOR}">IN</span> ${geo.inVol[i].toFixed(1)} FIM</div>` +
+          `<div style="padding:0 10px"><span style="color:${OUT_COLOR}">OUT</span> ${geo.outVol[i].toFixed(1)} FIM</div>` +
+          divider +
+          `<div style="padding:0 10px 6px"><span style="color:${netColor}">${netSign}${Math.abs(net).toFixed(1)} FIM</span></div>`
+        );
+    };
+
+    const onLeave = () => tooltipRef.current?.style('display', 'none');
+
+    svgEl.addEventListener('mousemove', onMove);
+    svgEl.addEventListener('mouseleave', onLeave);
+    return () => {
+      svgEl.removeEventListener('mousemove', onMove);
+      svgEl.removeEventListener('mouseleave', onLeave);
+    };
+  }, [size]);
 
   // ── Intro (once): a curated transaction order + a sparse starting web ─────
   useEffect(() => {
@@ -212,11 +346,13 @@ export default function AnimatedTradeFlows({ isHovered }: { isHovered: boolean }
     const numCap = groups.filter(g => g.isCapitalist).length;
     const numSoc = N - numCap;
 
-    const totalVol = Array.from({ length: N }, (_, i) => {
-      let v = 0;
-      for (let j = 0; j < N; j++) v += matrix[i][j] + matrix[j][i];
-      return v;
+    const outVol = Array.from({ length: N }, (_, i) => {
+      let v = 0; for (let j = 0; j < N; j++) v += matrix[i][j]; return v;
     });
+    const inVol = Array.from({ length: N }, (_, i) => {
+      let v = 0; for (let j = 0; j < N; j++) v += matrix[j][i]; return v;
+    });
+    const totalVol = Array.from({ length: N }, (_, i) => inVol[i] + outVol[i]);
 
     const capTotal = totalVol.slice(0, numCap).reduce((s, v) => s + v, 0);
     const socTotal = totalVol.slice(numCap).reduce((s, v) => s + v, 0);
@@ -260,6 +396,9 @@ export default function AnimatedTradeFlows({ isHovered }: { isHovered: boolean }
     const capArcs = computeArcs(totalVol.slice(0, numCap), capTotal, numCap, GAP / 2);
     const socArcs = computeArcs(totalVol.slice(numCap), socTotal, numSoc, Math.PI);
     const arcAngles = [...capArcs, ...socArcs];
+
+    // Expose this frame's geometry to the persistent hover handler.
+    geometryRef.current = { arcAngles, inVol, outVol, playerCount: PLAYER_COUNTS_20, numCap, innerRadius, outerRadius };
 
     const subArcs: { start: number; end: number }[][] = Array.from({ length: N }, (_, i) => {
       const arcs: { start: number; end: number }[] = new Array(N);
@@ -349,7 +488,7 @@ export default function AnimatedTradeFlows({ isHovered }: { isHovered: boolean }
   return (
     <div className="w-full h-full p-1 flex items-center justify-center">
       <div ref={containerRef} className="flex items-center justify-center h-full w-full min-w-0 min-h-0 select-none">
-        <svg ref={svgRef} className="block pointer-events-none" width={size} height={size} />
+        <svg ref={svgRef} className="block pointer-events-auto" width={size} height={size} />
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useWriteContract, usePublicClient, useReadContract } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 import { formatUnits, erc20Abi } from 'viem';
 import ExchangeAbi from '@/deployments/abis/Exchange.json';
 import type { Abi } from 'abitype';
@@ -26,6 +27,21 @@ function formatDateTime(ts: number): string {
   const d = new Date(ts * 1000);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+// Timestamp cell. Renders date and time as two nowrap parts separated by a normal
+// space, so the cell stays on one line when there's room but breaks between date
+// and clock (never mid-value) when the column is squeezed — keeps the row from
+// spilling out of the container instead of overflowing left.
+function TimeCell({ ts }: { ts: number }) {
+  const formatted = formatDateTime(ts);
+  const [date, time] = formatted.split(' ');
+  return (
+    <span className="ledger-cell-secondary">
+      <span className="whitespace-nowrap">{date}</span>{' '}
+      <span className="whitespace-nowrap">{time}</span>
+    </span>
+  );
 }
 
 const TABS: { key: TabType; label: string }[] = [
@@ -61,6 +77,7 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress, fimAddress
 
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient({ chainId });
+  const queryClient = useQueryClient();
 
   const handleCancel = async (contractOrderId: bigint) => {
     if (!publicClient) return;
@@ -75,8 +92,16 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress, fimAddress
       setCancelStatus('mining');
       await publicClient.waitForTransactionReceipt({ hash });
       setCancelStatus('success');
+      // Cancel unlocks the order's escrowed FIM back to the wallet. The order
+      // refetch drops it from `lockedFim` instantly, but the on-chain balanceOf
+      // read is a separate wagmi query — without invalidating it too, the wallet
+      // portion stays stale for up to its 5s refetchInterval and the unlocked
+      // FIM appears to vanish (looking exactly like the order filled). Mirror the
+      // trade path (useTradeExecution) and invalidate everything so the wallet
+      // balance and the locked total refresh on the same tick.
       refetchOpen();
       refetchCancelled();
+      queryClient.invalidateQueries();
     } catch (err: unknown) {
       if (isUserRejection(err)) {
         setCancelStatus('canceled');
@@ -228,7 +253,9 @@ function ScrollViewport({ children }: { children: React.ReactNode }) {
 
 // ── Open Orders ────────────────────────────────────────────────────────────────
 
-const OPEN_COL = '1.6fr 0.7fr 0.9fr 1fr 1fr 1fr 1fr 72px';
+// Time column is shrinkable (minmax) so its timestamp can wrap date-over-clock
+// when the row would otherwise spill out; the rest stay sized to their content.
+const OPEN_COL = 'minmax(min-content, max-content) repeat(5, max-content) max-content';
 
 interface OpenOrdersViewProps {
   orders: MyOrder[];
@@ -238,28 +265,32 @@ interface OpenOrdersViewProps {
 
 function OpenOrdersView({ orders, isPending, onCancel }: OpenOrdersViewProps) {
   return (
-    <div className="p-2 bg-card">
+    <div className="p-0 bg-card">
       <div className="bg-card overflow-hidden">
         <ScrollViewport>
-          <div className="ledger-header sticky top-0 z-10" style={{ gridTemplateColumns: OPEN_COL }}>
-            <div>Time</div>
-            <div>Direction</div>
-            <div className="text-right">Size</div>
-            <div className="text-right">Original Size</div>
-            <div className="text-right">Order Value</div>
-            <div className="text-right">Price</div>
-            <div />
-            <div />
-          </div>
-          {orders.length === 0 ? (
-            <div className="flex items-center justify-center py-6">
-              <p className="section-label opacity-30">No open orders</p>
+          <div className="ledger-grid" style={{ gridTemplateColumns: OPEN_COL }}>
+            <div className="ledger-header sticky top-0 z-10">
+              <div>Time</div>
+              <div>Direction</div>
+              <div className="text-right">Size</div>
+              <div className="text-right">
+                <span className="label-full">Original Size</span>
+                <span className="label-short">Original S.</span>
+              </div>
+              <div className="text-right">Value</div>
+              <div className="text-right">Price</div>
+              <div />
             </div>
-          ) : (
-            orders.map((order) => (
-              <OpenOrderRow key={order.id} order={order} isPending={isPending} onCancel={onCancel} />
-            ))
-          )}
+            {orders.length === 0 ? (
+              <div className="flex items-center justify-center py-6" style={{ gridColumn: '1 / -1' }}>
+                <p className="section-label opacity-30">No open orders</p>
+              </div>
+            ) : (
+              orders.map((order) => (
+                <OpenOrderRow key={order.id} order={order} isPending={isPending} onCancel={onCancel} />
+              ))
+            )}
+          </div>
         </ScrollViewport>
       </div>
     </div>
@@ -274,8 +305,6 @@ interface OpenOrderRowProps {
 
 function OpenOrderRow({ order, isPending, onCancel }: OpenOrderRowProps) {
   const { isBuy, price, initialAmount, remainingAmount, timestamp } = order;
-
-  const displayTime = formatDateTime(timestamp);
   const direction = isBuy ? 'Buy' : 'Sell';
   const size = Math.round(remainingAmount).toLocaleString();
   const originalSize = Math.round(initialAmount).toLocaleString();
@@ -283,8 +312,8 @@ function OpenOrderRow({ order, isPending, onCancel }: OpenOrderRowProps) {
   const pricePerFim = `$${price.toFixed(4)}`;
 
   return (
-    <div className="ledger-row items-center" style={{ gridTemplateColumns: OPEN_COL }}>
-      <span className="ledger-cell-secondary">{displayTime}</span>
+    <div className="ledger-row items-center">
+      <TimeCell ts={timestamp} />
 
       <span
         className="ledger-cell-secondary"
@@ -296,25 +325,23 @@ function OpenOrderRow({ order, isPending, onCancel }: OpenOrderRowProps) {
       <span className="ledger-cell-metric">{orderValue}</span>
       <span className="ledger-cell-metric">{pricePerFim}</span>
 
-      <div />
-
       <div className="flex justify-end pr-2">
         <button
           onClick={() => onCancel(order.orderId)}
           disabled={isPending}
           className="font-mono text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded transition-all disabled:opacity-40"
           style={{
-            background: 'var(--color-card)',
+            background: 'var(--color-card3)',
             color: 'var(--color-text2)',
-            border: '1px solid var(--color-border)',
+            border: '1px solid var(--color-border2)',
           }}
           onMouseEnter={(e) => {
             (e.currentTarget as HTMLElement).style.color = 'var(--color-red)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-red-35)';
+            (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-red)';
           }}
           onMouseLeave={(e) => {
             (e.currentTarget as HTMLElement).style.color = 'var(--color-text2)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-border)';
+            (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-border2)';
           }}
         >
           {isPending ? '…' : 'CANCEL'}
@@ -326,7 +353,7 @@ function OpenOrderRow({ order, isPending, onCancel }: OpenOrderRowProps) {
 
 // ── Position ───────────────────────────────────────────────────────────────────
 
-const POS_COL = '1fr 1.2fr 1fr 1fr 1fr 1.2fr';
+const POS_COL = 'repeat(6, max-content)';
 
 interface AggregatePosition {
   netSize: number;
@@ -371,24 +398,26 @@ function PositionView({ trades, auctionMints, currentPrice, totalFim, contributi
   const position = computePosition(trades, auctionMints);
 
   return (
-    <div className="p-2 bg-card">
+    <div className="p-0 bg-card">
       <div className="bg-card overflow-hidden">
         <ScrollViewport>
-          <div className="ledger-header sticky top-0 z-10" style={{ gridTemplateColumns: POS_COL }}>
-            <div>Size</div>
-            <div className="text-right">Position Value</div>
-            <div className="text-right">Entry Price</div>
-            <div className="text-right">Current Price</div>
-            <div className="text-right">PNL</div>
-            <div className="text-right">Contribution</div>
-          </div>
-          {trades.length === 0 && auctionMints.length === 0 && totalFim < 0.0001 ? (
-            <div className="flex items-center justify-center py-6">
-              <p className="section-label opacity-30">No position</p>
+          <div className="ledger-grid" style={{ gridTemplateColumns: POS_COL }}>
+            <div className="ledger-header sticky top-0 z-10">
+              <div>Size</div>
+              <div className="text-right">Value</div>
+              <div className="text-right">Entry Price</div>
+              <div className="text-right">Current Price</div>
+              <div className="text-right">PNL</div>
+              <div className="text-right">Contribution</div>
             </div>
-          ) : (
-            <PositionRow totalFim={totalFim} entryPrice={position?.entryPrice} currentPrice={currentPrice} contribution={contribution} />
-          )}
+            {trades.length === 0 && auctionMints.length === 0 && totalFim < 0.0001 ? (
+              <div className="flex items-center justify-center py-6" style={{ gridColumn: '1 / -1' }}>
+                <p className="section-label opacity-30">No position</p>
+              </div>
+            ) : (
+              <PositionRow totalFim={totalFim} entryPrice={position?.entryPrice} currentPrice={currentPrice} contribution={contribution} />
+            )}
+          </div>
         </ScrollViewport>
       </div>
     </div>
@@ -409,7 +438,7 @@ function PositionRow({ totalFim, entryPrice, currentPrice, contribution }: Posit
   const contribPositive = contribution >= 0;
 
   return (
-    <div className="ledger-row items-center" style={{ gridTemplateColumns: POS_COL }}>
+    <div className="ledger-row items-center">
       <span className="ledger-cell-metric" style={{ textAlign: 'left' }}>{Math.round(totalFim).toLocaleString()}</span>
 
       <span className="ledger-cell-metric">
@@ -443,7 +472,7 @@ function PositionRow({ totalFim, entryPrice, currentPrice, contribution }: Posit
 
 // ── Trade History ──────────────────────────────────────────────────────────────
 
-const HIST_COL = '1.8fr 1fr 1fr 1fr 1.2fr 1fr';
+const HIST_COL = 'minmax(min-content, max-content) repeat(5, max-content)';
 
 type HistoryEntry =
   | { kind: 'trade'; data: MyTrade }
@@ -466,32 +495,34 @@ function TradeHistoryView({ trades, cancelledOrders, auctionMints }: TradeHistor
   ].sort((a, b) => b.data.timestamp - a.data.timestamp);
 
   return (
-    <div className="p-2 bg-card">
+    <div className="p-0 bg-card">
       <div className="bg-card overflow-hidden">
         <ScrollViewport>
-          <div className="ledger-header sticky top-0 z-10" style={{ gridTemplateColumns: HIST_COL }}>
-            <div>Time</div>
-            <div>Direction</div>
-            <div className="text-right">Price</div>
-            <div className="text-right">Size</div>
-            <div className="text-right">Trade Value</div>
-            <div className="text-right">Fees</div>
-          </div>
-          {entries.length === 0 ? (
-            <div className="flex items-center justify-center py-6">
-              <p className="section-label opacity-30">No history</p>
+          <div className="ledger-grid" style={{ gridTemplateColumns: HIST_COL }}>
+            <div className="ledger-header sticky top-0 z-10">
+              <div>Time</div>
+              <div>Direction</div>
+              <div className="text-right">Price</div>
+              <div className="text-right">Size</div>
+              <div className="text-right">Trade Value</div>
+              <div className="text-right">Fees</div>
             </div>
-          ) : (
-            entries.map((entry) =>
-              entry.kind === 'trade' ? (
-                <TradeHistoryTradeRow key={entry.data.id} trade={entry.data} />
-              ) : entry.kind === 'order' ? (
-                <TradeHistoryOrderRow key={entry.data.id} order={entry.data} />
-              ) : (
-                <TradeHistoryAuctionRow key={entry.data.id} mint={entry.data} />
+            {entries.length === 0 ? (
+              <div className="flex items-center justify-center py-6" style={{ gridColumn: '1 / -1' }}>
+                <p className="section-label opacity-30">No history</p>
+              </div>
+            ) : (
+              entries.map((entry) =>
+                entry.kind === 'trade' ? (
+                  <TradeHistoryTradeRow key={entry.data.id} trade={entry.data} />
+                ) : entry.kind === 'order' ? (
+                  <TradeHistoryOrderRow key={entry.data.id} order={entry.data} />
+                ) : (
+                  <TradeHistoryAuctionRow key={entry.data.id} mint={entry.data} />
+                )
               )
-            )
-          )}
+            )}
+          </div>
         </ScrollViewport>
       </div>
     </div>
@@ -501,8 +532,6 @@ function TradeHistoryView({ trades, cancelledOrders, auctionMints }: TradeHistor
 // A fill (maker or taker). One row per trade the user took part in.
 function TradeHistoryTradeRow({ trade }: { trade: MyTrade }) {
   const { isBuy, fimAmount, usdcAmount, timestamp, feePaid } = trade;
-
-  const displayTime = formatDateTime(timestamp);
   const direction = isBuy ? 'Buy' : 'Sell';
   const pricePerFim = fimAmount > 0 ? (usdcAmount / fimAmount).toFixed(4) : '0';
   const displaySize = Math.round(fimAmount).toLocaleString();
@@ -515,8 +544,8 @@ function TradeHistoryTradeRow({ trade }: { trade: MyTrade }) {
     : '—';
 
   return (
-    <div className="ledger-row items-center" style={{ gridTemplateColumns: HIST_COL }}>
-      <span className="ledger-cell-secondary">{displayTime}</span>
+    <div className="ledger-row items-center">
+      <TimeCell ts={timestamp} />
 
       <span
         className="ledger-cell-secondary"
@@ -535,16 +564,14 @@ function TradeHistoryTradeRow({ trade }: { trade: MyTrade }) {
 // order size. Price is per-FIM (MyOrder.price is already per-FIM, matching OpenOrderRow).
 function TradeHistoryOrderRow({ order }: { order: MyOrder }) {
   const { isBuy, price, initialAmount, timestamp } = order;
-
-  const displayTime = formatDateTime(timestamp);
   const direction = `${isBuy ? 'Buy' : 'Sell'} - Cancelled`;
   const pricePerFim = price.toFixed(4);
   const displaySize = Math.round(initialAmount).toLocaleString();
   const displayValue = `$${(price * initialAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
-    <div className="ledger-row items-center" style={{ gridTemplateColumns: HIST_COL }}>
-      <span className="ledger-cell-secondary">{displayTime}</span>
+    <div className="ledger-row items-center">
+      <TimeCell ts={timestamp} />
 
       <span className="ledger-cell-secondary" style={{ color: 'var(--color-text2)' }}>{direction}</span>
 
@@ -558,8 +585,6 @@ function TradeHistoryOrderRow({ order }: { order: MyOrder }) {
 
 function TradeHistoryAuctionRow({ mint }: { mint: AuctionMint }) {
   const { fimAmount, usdcAmount, timestamp } = mint;
-
-  const displayTime = formatDateTime(timestamp);
   const pricePerFim = fimAmount > 0 ? (usdcAmount / fimAmount).toFixed(4) : '0';
   const displaySize = Math.round(fimAmount).toLocaleString();
   const displayValue = `$${usdcAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -568,11 +593,10 @@ function TradeHistoryAuctionRow({ mint }: { mint: AuctionMint }) {
     <div
       className="ledger-row items-center"
       style={{
-        gridTemplateColumns: HIST_COL,
         boxShadow: 'inset 3px 0 0 0 var(--color-gold)',
       }}
     >
-      <span className="ledger-cell-secondary">{displayTime}</span>
+      <TimeCell ts={timestamp} />
 
       <span className="ledger-cell-secondary" style={{ color: 'var(--color-gold)' }}>Auction</span>
 

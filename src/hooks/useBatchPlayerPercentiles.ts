@@ -4,8 +4,14 @@
 
 import { useMemo } from "react";
 import { formatUnits } from "viem";
+import type { Abi } from "viem";
+import { useReadContract } from 'wagmi';
+import GameSeasonAbiJson from '@/deployments/abis/GameSeason.json';
+import { useTenantChainId } from '@/context/TenantContext';
 import { useSeasonPlayers } from './useSeasonPlayers';
 import { useSeasonActiveOrders } from './useSeasonActiveOrders';
+
+const GameSeasonAbi = GameSeasonAbiJson as Abi;
 
 export interface PercentileData {
   factionPercentile: number;
@@ -25,6 +31,18 @@ export function useBatchPlayerPercentiles(
   userAddresses: string[],
   exchangeAddress?: string
 ) {
+  const chainId = useTenantChainId();
+  const { data: existentialThresholdRaw } = useReadContract({
+    address: seasonAddress as `0x${string}`,
+    abi: GameSeasonAbi,
+    functionName: 'existentialThresholdFim',
+    chainId,
+    query: { enabled: !!seasonAddress },
+  });
+  const existentialThreshold = existentialThresholdRaw
+    ? BigInt(existentialThresholdRaw.toString())
+    : 0n;
+
   const { data: players, isFetched: playersFetched, isLoading: playersLoading } =
     useSeasonPlayers(seasonAddress);
   const { data: activeOrders, isFetched: ordersFetched, isLoading: ordersLoading } =
@@ -69,11 +87,18 @@ export function useBatchPlayerPercentiles(
       playerBalances.delete(exchangeAddress.toLowerCase());
     }
 
-    const economy = Array.from(playerBalances.entries()).map(([address, bal]) => ({
-      address,
-      balanceRaw: bal,
-      balanceNum: Number(formatUnits(bal, 18))
-    }));
+    // Drop sub-threshold (dust) holders before ranking — mirrors gini.ts and the
+    // contract's `bal >= existentialThresholdFim`. The eligible population alone
+    // defines the 50% mass threshold and faction membership; a dust wallet can
+    // never consume a rank index or get a percentile. Raw-wei compare; never
+    // float-convert before filtering. Threshold 0n still drops empty wallets.
+    const economy = Array.from(playerBalances.entries())
+      .filter(([, bal]) => bal >= existentialThreshold && bal > 0n)
+      .map(([address, bal]) => ({
+        address,
+        balanceRaw: bal,
+        balanceNum: Number(formatUnits(bal, 18))
+      }));
 
     // --- ISSUE 3 FIX: CALCULATE LIVE 50% MASS THRESHOLD OFF-CHAIN ---
     economy.sort((a, b) => (a.balanceRaw < b.balanceRaw ? -1 : a.balanceRaw > b.balanceRaw ? 1 : 0));
@@ -150,7 +175,7 @@ export function useBatchPlayerPercentiles(
     }
 
     return resultsMap;
-  }, [seasonAddress, players, activeOrders, stableAddresses, exchangeAddress]);
+  }, [seasonAddress, players, activeOrders, stableAddresses, exchangeAddress, existentialThreshold]);
 
   const enabled = !!seasonAddress && stableAddresses.length > 0;
   const isFetched = !enabled ? false : playersFetched && ordersFetched;

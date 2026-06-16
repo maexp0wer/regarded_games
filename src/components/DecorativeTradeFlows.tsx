@@ -136,6 +136,7 @@ const buildChordMatrix = (
 export default function DecorativeTradeFlows({ isHovered }: { isHovered: boolean }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<d3.Selection<HTMLDivElement, unknown, HTMLElement, unknown> | null>(null);
   const [isDark, setIsDark] = useState(false);
   const [size, setSize] = useState(250);
 
@@ -168,6 +169,20 @@ export default function DecorativeTradeFlows({ isHovered }: { isHovered: boolean
     });
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     return () => mo.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const t = d3.select('body').append('div')
+      .style('position', 'fixed')
+      .style('pointer-events', 'none')
+      .style('font-family', 'JetBrains Mono, monospace')
+      .style('font-size', '11px')
+      .style('padding', '0')
+      .style('border-radius', '4px')
+      .style('display', 'none')
+      .style('z-index', '9999');
+    tooltipRef.current = t;
+    return () => { t.remove(); tooltipRef.current = null; };
   }, []);
 
   // ── Intro (once): a curated transaction order + a sparse starting web ─────
@@ -236,7 +251,12 @@ export default function DecorativeTradeFlows({ isHovered }: { isHovered: boolean
     const MAGENTA_COLOR = getCSSVar('--color-magenta') || '#D81B60';
     const ORANGE_COLOR  = getCSSVar('--color-orange')  || '#FF8C00';
     const BG_COLOR      = getCSSVar('--color-card')    || '#15120f';
+    const BG3_COLOR     = getCSSVar('--color-card3')   || '#221d18';
     const TXT_COLOR     = getCSSVar('--color-text2')   || '#8a8378';
+    const TXT1_COLOR    = getCSSVar('--color-text')    || '#f4ede0';
+    const BORDER2_COLOR = getCSSVar('--color-border2') || '#4C3F7A';
+    const IN_COLOR      = getCSSVar('--color-green')   || '#00F5A0';
+    const OUT_COLOR     = getCSSVar('--color-red')     || '#FF4D6D';
 
     const N = groups.length;
     const cyberStops = [
@@ -256,11 +276,13 @@ export default function DecorativeTradeFlows({ isHovered }: { isHovered: boolean
     const numCap = groups.filter(g => g.isCapitalist).length;
     const numSoc = N - numCap;
 
-    const totalVol = Array.from({ length: N }, (_, i) => {
-      let v = 0;
-      for (let j = 0; j < N; j++) v += matrix[i][j] + matrix[j][i];
-      return v;
+    const outVol = Array.from({ length: N }, (_, i) => {
+      let v = 0; for (let j = 0; j < N; j++) v += matrix[i][j]; return v;
     });
+    const inVol = Array.from({ length: N }, (_, i) => {
+      let v = 0; for (let j = 0; j < N; j++) v += matrix[j][i]; return v;
+    });
+    const totalVol = Array.from({ length: N }, (_, i) => inVol[i] + outVol[i]);
 
     const capTotal = totalVol.slice(0, numCap).reduce((s, v) => s + v, 0);
     const socTotal = totalVol.slice(numCap).reduce((s, v) => s + v, 0);
@@ -355,19 +377,53 @@ export default function DecorativeTradeFlows({ isHovered }: { isHovered: boolean
       }
     }
 
+    if (!tooltipRef.current) return;
+    const tooltip = tooltipRef.current
+      .style('background', BG3_COLOR)
+      .style('border', `1px solid ${BORDER2_COLOR}`)
+      .style('color', TXT1_COLOR)
+      .style('display', 'none');
+
     // Outer segments.
     for (let i = 0; i < N; i++) {
       const color = groupColor(i);
       const a = arcAngles[i];
       const isEmpty = totalVol[i] === 0;
+      const isCapitalist = i < numCap;
+      const bandIndex = isCapitalist ? i : i - numCap;
+      const pctLow  = bandIndex * 10;
+      const pctHigh = (bandIndex + 1) * 10;
+      const factionName = isCapitalist ? 'Capitalists' : 'Proletarians';
+      const factionPct  = `${pctLow}–${pctHigh}%`;
 
-      root.append('path')
+      const arc = root.append('path')
         .datum(a)
         .attr('d', arcGen)
         .attr('fill', color)
         .attr('fill-opacity', isEmpty ? 0.8 : 0.9)
         .attr('stroke', BG_COLOR)
         .attr('stroke-width', isEmpty ? 0 : 1);
+
+      if (!isEmpty) arc
+        .on('mouseover', () => {
+          const net = inVol[i] - outVol[i];
+          const netColor = net >= 0 ? IN_COLOR : OUT_COLOR;
+          const netSign  = net >= 0 ? '+' : '-';
+          const divider  = `<div style="border-top:1px solid ${BORDER2_COLOR};margin:4px 0;"></div>`;
+          tooltip.style('display', 'block').html(
+            `<div style="padding:6px 10px 0">${factionName}</div>` +
+            `<div style="padding:0 10px 0;color:${TXT_COLOR}">${factionPct}</div>` +
+            divider +
+            `<div style="padding:0 10px"><span style="color:${IN_COLOR}">IN</span> ${inVol[i].toFixed(1)} FIM</div>` +
+            `<div style="padding:0 10px"><span style="color:${OUT_COLOR}">OUT</span> ${outVol[i].toFixed(1)} FIM</div>` +
+            divider +
+            `<div style="padding:0 10px 6px"><span style="color:${netColor}">${netSign}${Math.abs(net).toFixed(1)} FIM</span></div>`
+          );
+        })
+        .on('mousemove', (event: MouseEvent) => {
+          tooltip.style('left', `${event.clientX + 12}px`).style('top', `${event.clientY - 28}px`);
+        })
+        .on('mouseleave', () => tooltip.style('display', 'none'));
     }
 
     // Axis labels (100%, 0%).
@@ -396,7 +452,7 @@ export default function DecorativeTradeFlows({ isHovered }: { isHovered: boolean
   return (
     <div className="w-full h-full p-1 flex items-center justify-center">
       <div ref={containerRef} className="flex items-center justify-center h-full w-full min-w-0 min-h-0 select-none">
-        <svg ref={svgRef} className="block pointer-events-none" width={size} height={size} />
+        <svg ref={svgRef} className="block pointer-events-auto" width={size} height={size} />
       </div>
     </div>
   );

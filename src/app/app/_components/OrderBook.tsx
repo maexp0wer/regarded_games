@@ -4,6 +4,7 @@ import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { Order, useOrderBook } from '@/hooks/useOrderBook';
 import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
 import { PercentileCircle } from './PercentileCircle';
+import PercentRangeSlider from './PercentRangeSlider';
 
 interface OrderBookProps {
   seasonAddress: string;
@@ -26,8 +27,23 @@ export function OrderBook({
 
   const [sideFilter, setSideFilter] = useState<'ask' | 'bid' | null>(null);
   const [factionFilter, setFactionFilter] = useState<'bourgeoisie' | 'proletariat' | null>(null);
-  const [minPercentile, setMinPercentile] = useState<number | ''>(0);
-  const [maxPercentile, setMaxPercentile] = useState<number | ''>(100);
+
+  // Each faction remembers its own percentile range independently.
+  type Range = { min: number | ''; max: number | '' };
+  const [ranges, setRanges] = useState<Record<'proletariat' | 'bourgeoisie', Range>>({
+    proletariat: { min: 0, max: 100 },
+    bourgeoisie: { min: 0, max: 100 },
+  });
+
+  // Active faction's range, with setters that write into its slot. Falls back to
+  // proletariat's slot when no faction is selected (the inputs are hidden then).
+  const activeFaction = factionFilter ?? 'proletariat';
+  const minPercentile = ranges[activeFaction].min;
+  const maxPercentile = ranges[activeFaction].max;
+  const setMinPercentile = (v: number | '') =>
+    setRanges((r) => ({ ...r, [activeFaction]: { ...r[activeFaction], min: v } }));
+  const setMaxPercentile = (v: number | '') =>
+    setRanges((r) => ({ ...r, [activeFaction]: { ...r[activeFaction], max: v } }));
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const targetRowRef = useRef<HTMLDivElement>(null);
@@ -165,14 +181,6 @@ export function OrderBook({
     [priceRows],
   );
 
-  // Reset range inputs when the faction filter is disabled
-  useEffect(() => {
-    if (factionFilter === null) {
-      setMinPercentile(0);
-      setMaxPercentile(100);
-    }
-  }, [factionFilter]);
-
   const isOwnOrder = (order: AggregatedOrder) =>
     !!userAddress && order.maker.toLowerCase() === userAddress.toLowerCase();
   const isClickable = (order: AggregatedOrder | undefined): order is AggregatedOrder =>
@@ -239,10 +247,10 @@ export function OrderBook({
       if (direction === 'up') {
         const nextMin = Math.min(100, currentMin + 1);
         setMinPercentile(nextMin);
-        
-        // Push max up if min crosses it
-        if (nextMin > currentMax) {
-          setMaxPercentile(nextMin);
+
+        // Push max up to keep a span of at least 1 between them
+        if (nextMin >= currentMax) {
+          setMaxPercentile(Math.min(100, nextMin + 1));
         }
       } else {
         const nextMin = Math.max(0, currentMin - 1);
@@ -255,10 +263,10 @@ export function OrderBook({
       } else {
         const nextMax = Math.max(0, currentMax - 1);
         setMaxPercentile(nextMax);
-        
-        // Pull min down if max crosses it
-        if (nextMax < currentMin) {
-          setMinPercentile(nextMax);
+
+        // Pull min down to keep a span of at least 1 between them
+        if (nextMax <= currentMin) {
+          setMinPercentile(Math.max(0, nextMax - 1));
         }
       }
     }
@@ -295,15 +303,11 @@ export function OrderBook({
   }, []);
 
   const renderPercentileInputs = () => {
-    // Calculate character length dynamically for precise sizing
-    const minLength = String(minPercentile === '' ? 0 : minPercentile).length;
-    const maxLength = String(maxPercentile === '' ? 100 : maxPercentile).length;
-
     return (
-      <div className="flex items-center gap-1 w-full mt-1.5 animate-in fade-in duration-200">
+      <div className="flex items-center gap-2 w-full mt-1.5 animate-in fade-in duration-200">
         {/* MINIMUM PERCENTILE */}
-        <div className="flex items-center bg-card3 flex-1 rounded border border-transparent h-[26px] focus-within:border-border2 focus-within:ring-1 focus-within:ring-purple-500/20 transition-all">
-          <div className="flex-1 flex justify-center items-center h-full">
+        <div className="flex items-center bg-card3 shrink-0 rounded border border-transparent h-[26px] focus-within:border-border2 focus-within:ring-1 focus-within:ring-purple-500/20 transition-all">
+          <div className="flex-1 flex justify-center items-center h-full pl-2">
             <input
               type="number" 
               min="0" 
@@ -316,13 +320,13 @@ export function OrderBook({
               }}
               // Removed fixed padding/margins so browser styles don't push the layout around
               className="no-spinners text-text bg-transparent text-center font-mono text-[12px] tracking-wide uppercase h-full p-0 m-0 outline-none border-none min-w-0"
-              style={{ width: `${minLength}ch` }}
+              style={{ width: '2ch' }}
             />
             <span className="font-mono text-[12px] text-text2 select-none pointer-events-none pl-1">%</span>
           </div>
           
           {/* Minimalist Stepper (Right) */}
-          <div className="flex flex-col gap-[2px] pr-2 justify-center shrink-0 select-none">
+          <div className="flex flex-col gap-[2px] pl-1 pr-2 justify-center shrink-0 select-none">
             <button
               type="button"
               tabIndex={-1}
@@ -350,11 +354,18 @@ export function OrderBook({
           </div>
         </div>
 
-        <span className="font-mono shrink-0 text-[10px] px-0.5 text-text2 self-center">—</span>
+        <PercentRangeSlider
+          min={minPercentile === '' ? 0 : minPercentile}
+          max={maxPercentile === '' ? 100 : maxPercentile}
+          onChangeMin={setMinPercentile}
+          onChangeMax={setMaxPercentile}
+          faction={factionFilter ?? 'proletariat'}
+        />
+
 
         {/* MAXIMUM PERCENTILE */}
-        <div className="flex items-center bg-card3 flex-1 rounded border border-transparent h-[26px] focus-within:border-border2 focus-within:ring-1 focus-within:ring-purple-500/20 transition-all">
-          <div className="flex-1 flex justify-center items-center h-full">
+        <div className="flex items-center bg-card3 shrink-0 rounded border border-transparent h-[26px] focus-within:border-border2 focus-within:ring-1 focus-within:ring-purple-500/20 transition-all">
+          <div className="flex-1 flex justify-center items-center h-full pl-2">
             <input
               type="number" 
               min="0" 
@@ -366,13 +377,13 @@ export function OrderBook({
                 setMaxPercentile(raw === '' ? '' : Math.min(100, Math.max(0, parseInt(raw) || 0)));
               }}
               className="no-spinners text-text bg-transparent text-center font-mono text-[12px] tracking-wide uppercase h-full p-0 m-0 outline-none border-none min-w-0"
-              style={{ width: `${maxLength}ch` }}
+              style={{ width: '3ch' }}
             />
             <span className="font-mono text-[12px] text-text2 select-none pointer-events-none pl-2">%</span>
           </div>
 
           {/* Minimalist Stepper (Right) */}
-          <div className="flex flex-col gap-[2px] pr-2 justify-center shrink-0 select-none">
+          <div className="flex flex-col gap-[2px] pl-1 pr-2 justify-center shrink-0 select-none">
             <button
               type="button"
               tabIndex={-1}
@@ -416,7 +427,7 @@ export function OrderBook({
             <button
               onClick={() => setSideFilter(v => v === 'bid' ? null : 'bid')}
               className={`flex-1 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
-                sideFilter === 'bid' ? 'text-text' : 'bg-card2 text-text2 hover:text-text'
+                sideFilter === 'bid' ? 'text-text' : 'bg-card2 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-green-15),var(--color-card2))]'
               }`}
               style={sideFilter === 'bid' ? { backgroundColor: 'color-mix(in srgb, var(--color-green) 30%, var(--color-card3))' } : undefined}
             >
@@ -425,7 +436,7 @@ export function OrderBook({
             <button
               onClick={() => setSideFilter(v => v === 'ask' ? null : 'ask')}
               className={`flex-1 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
-                sideFilter === 'ask' ? 'text-text' : 'bg-card2 text-text2 hover:text-text'
+                sideFilter === 'ask' ? 'text-text' : 'bg-card2 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-red-15),var(--color-card2))]'
               }`}
               style={sideFilter === 'ask' ? { backgroundColor: 'color-mix(in srgb, var(--color-red) 30%, var(--color-card3))' } : undefined}
             >
@@ -439,13 +450,12 @@ export function OrderBook({
               <button
                 onClick={() => setFactionFilter(v => v === 'proletariat' ? null : 'proletariat')}
                 className={`w-full px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
-                  factionFilter === 'proletariat' ? 'text-text' : 'bg-card2 text-text2 hover:text-text'
+                  factionFilter === 'proletariat' ? 'text-text' : 'bg-card2 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-purple-35),var(--color-card2))]'
                 }`}
                 style={factionFilter === 'proletariat' ? { backgroundColor: 'color-mix(in srgb, var(--color-purple) 30%, var(--color-card3))' } : undefined}
               >
                 Proletarians
               </button>
-              {factionFilter === 'proletariat' && renderPercentileInputs()}
             </div>
 
             {/* Capitalists Column */}
@@ -453,19 +463,20 @@ export function OrderBook({
               <button
                 onClick={() => setFactionFilter(v => v === 'bourgeoisie' ? null : 'bourgeoisie')}
                 className={`w-full px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
-                  factionFilter === 'bourgeoisie' ? 'text-text' : 'bg-card2 text-text2 hover:text-text'
+                  factionFilter === 'bourgeoisie' ? 'text-text' : 'bg-card2 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-gold-15),var(--color-card2))]'
                 }`}
                 style={factionFilter === 'bourgeoisie' ? { backgroundColor: 'color-mix(in srgb, var(--color-gold) 30%, var(--color-card3))' } : undefined}
               >
                 Capitalists
               </button>
-              {factionFilter === 'bourgeoisie' && renderPercentileInputs()}
             </div>
           </div>
+          {/* Row 3: Full-width percentile range (shown when a faction is active) */}
+          {factionFilter !== null && renderPercentileInputs()}
         </div>
 
         {/* Rows viewport — header is sticky inside so both share the same scrollbar-adjusted width */}
-        <div ref={scrollContainerRef} data-chrome-scroll-guard className={`flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain relative ${isOverflowing ? '[scrollbar-width:thin] [scrollbar-color:transparent_transparent] hover:[scrollbar-color:var(--color-text2)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-[10px] [&::-webkit-scrollbar-thumb]:transition-colors [&::-webkit-scrollbar-thumb]:duration-200 [&:hover::-webkit-scrollbar-thumb]:bg-text2' : ''}`}>
+        <div ref={scrollContainerRef} data-chrome-scroll-guard className={`flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain relative custom-scrollbar`}>
           <div
             className="ledger-header sticky top-0 z-10"
             style={{ gridTemplateColumns: showBoth ? 'repeat(6, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))', paddingLeft: 0, paddingRight: 0 }}
@@ -544,13 +555,13 @@ export function OrderBook({
                           <span className="ledger-cell-secondary text-right pr-2">
                             {row.bid.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
-                          <span className="ledger-cell-metric text-right pr-3" style={{ color: 'var(--color-green)' }}>
+                          <span className="ledger-cell-metric text-[0.72rem] text-right pr-3" style={{ color: 'var(--color-green)' }}>
                             ${parseFloat(row.price).toFixed(4)}
                           </span>
                         </>
                       ) : (
                         <>
-                          <span className="ledger-cell-metric pl-3" style={{ color: 'var(--color-green)', textAlign: 'left' }}>
+                          <span className="ledger-cell-metric text-[0.72rem] pl-3" style={{ color: 'var(--color-green)', textAlign: 'left' }}>
                             ${parseFloat(row.price).toFixed(4)}
                           </span>
                           <span className="ledger-cell-metric pl-2" style={{ textAlign: 'left' }}>
@@ -581,7 +592,7 @@ export function OrderBook({
                       )}
                       {row.ask ? (showBoth ? (
                         <>
-                          <span className="ledger-cell-metric pl-3" style={{ color: 'var(--color-red)', textAlign: 'left' }}>
+                          <span className="ledger-cell-metric text-[0.72rem] pl-3" style={{ color: 'var(--color-red)', textAlign: 'left' }}>
                             ${parseFloat(row.price).toFixed(4)}
                           </span>
                           <span className="ledger-cell-secondary pl-2">
@@ -591,7 +602,7 @@ export function OrderBook({
                         </>
                       ) : (
                         <>
-                          <span className="ledger-cell-metric pl-3" style={{ color: 'var(--color-red)', textAlign: 'left' }}>
+                          <span className="ledger-cell-metric text-[0.72rem] pl-3" style={{ color: 'var(--color-red)', textAlign: 'left' }}>
                             ${parseFloat(row.price).toFixed(4)}
                           </span>
                           <span className="ledger-cell-metric pl-2" style={{ textAlign: 'left' }}>

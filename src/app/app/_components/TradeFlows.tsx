@@ -60,7 +60,7 @@ export function TradeFlows({
       .style('pointer-events', 'none')
       .style('font-family', 'JetBrains Mono, monospace')
       .style('font-size', '11px')
-      .style('padding', '6px 10px')
+      .style('padding', '0')
       .style('border-radius', '4px')
       .style('display', 'none')
       .style('z-index', '9999');
@@ -106,6 +106,7 @@ export function TradeFlows({
     const ORANGE_COLOR  = getCSSVar('--color-orange')  || '#FF8C00';
     const BG_COLOR      = getCSSVar('--color-card')    || '#15120f';
     const BG2_COLOR     = getCSSVar('--color-card2')   || '#1b1814';
+    const BG3_COLOR     = getCSSVar('--color-card3')   || '#221d18';
     const TXT_COLOR     = getCSSVar('--color-text2')   || '#8a8378';
     const TXT1_COLOR    = getCSSVar('--color-text')    || '#f4ede0';
     const BORDER2_COLOR = getCSSVar('--color-border2') || '#4C3F7A';
@@ -219,7 +220,7 @@ export function TradeFlows({
 
     if (!tooltipRef.current) return;
     const tooltip = tooltipRef.current
-      .style('background', BG2_COLOR)
+      .style('background', BG3_COLOR)
       .style('border', `1px solid ${BORDER2_COLOR}`)
       .style('color', TXT1_COLOR)
       .style('display', 'none');
@@ -266,10 +267,29 @@ export function TradeFlows({
 
       if (!isEmpty) arc
         .on('mouseover', () => {
+          const net = inVol[i] - outVol[i];
+          const netColor = net >= 0 ? IN_COLOR : OUT_COLOR;
+          const netSign = net >= 0 ? '+' : '-';
+          const divider = `<div style="border-top:1px solid ${BORDER2_COLOR};margin:4px 0;"></div>`;
+          const [factionName, factionPct] = g.label.split(/\s(?=\d)/);
           tooltip.style('display', 'block').html(
-            `${g.label}<br/>${g.playerCount} player${g.playerCount !== 1 ? 's' : ''}` +
-            `<br/><span style="color:${IN_COLOR}">IN</span> ${inVol[i].toFixed(1)} FIM` +
-            `<br/><span style="color:${OUT_COLOR}">OUT</span> ${outVol[i].toFixed(1)} FIM`
+            `<div style="padding:6px 10px 0">` +
+            `${g.playerCount} ${factionName}` +
+            `</div>` +
+            `<div style="padding:0 10px 0;color:${TXT_COLOR}">` +
+            `${factionPct}` +
+            `</div>` +
+            divider +
+            `<div style="padding:0 10px">` +
+            `<span style="color:${IN_COLOR}">IN</span> ${inVol[i].toFixed(1)} FIM` +
+            `</div>` +
+            `<div style="padding:0 10px">` +
+            `<span style="color:${OUT_COLOR}">OUT</span> ${outVol[i].toFixed(1)} FIM` +
+            `</div>` +
+            divider +
+            `<div style="padding:0 10px 6px">` +
+            `<span style="color:${netColor}">${netSign}${Math.abs(net).toFixed(1)} FIM</span>` +
+            `</div>`
           );
         })
         .on('mousemove', (event: MouseEvent) => {

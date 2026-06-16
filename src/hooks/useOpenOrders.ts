@@ -52,13 +52,18 @@ interface RawOrder {
 }
 
 function mapOrder(o: RawOrder): MyOrder {
+  // Indexer stores `price` as the TOTAL USDC value of the order (6 decimals),
+  // not the per-FIM price. Derive per-FIM here so `MyOrder.price` is the price
+  // of 1 FIM, matching how useOrderBook computes `pricePerFim`.
+  const totalUsdc = Number(formatUnits(BigInt(o.price), 6));
+  const initialAmount = Number(formatUnits(BigInt(o.initialAmount), 18));
   return {
     id: o.id,
     orderId: BigInt(o.orderId),
     isBuy: o.isBuy,
-    price: Number(formatUnits(BigInt(o.price), 6)),
+    price: initialAmount > 0 ? totalUsdc / initialAmount : 0,
     remainingAmount: Number(formatUnits(BigInt(o.remainingAmount), 18)),
-    initialAmount: Number(formatUnits(BigInt(o.initialAmount), 18)),
+    initialAmount,
     isCancelled: o.isCancelled,
     timestamp: Number(o.timestamp),
     settledAt: o.settledAt ? Number(o.settledAt) : undefined,

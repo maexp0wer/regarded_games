@@ -370,7 +370,6 @@ html, body {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: var(--color-text2);
-  border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--color-text2);
@@ -380,11 +379,11 @@ html, body {
    page so revealing the navbar (which briefly grows the document past the
    viewport) doesn't flash a page scrollbar. */
 .hide-scrollbar {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* legacy Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .hide-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
+  display: none;
 }
 
 /* ================================================================
@@ -1022,11 +1021,48 @@ html, body {
    TERMINAL LEDGER / DATA LIST COMPONENT
    ========================================================================= */
 
+/* 0. THE TABLE GRID (Orders tabs) — owns the columns once so header + every row
+   share tracks. Columns size to their widest content (max-content); leftover space
+   spreads evenly between columns (space-between → equal gaps). Header and rows opt
+   into these tracks via `grid-template-columns: subgrid` so they stay aligned.
+   Scoped to descendants only — standalone .ledger-header/.ledger-row (OrderBook,
+   activity feeds, leaderboard) keep their own inline grid-template-columns. */
+.ledger-grid {
+  display: grid;
+  width: 100%;                   /* Fill the viewport so space-between has room to distribute */
+  justify-content: space-between; /* Distribute leftover space evenly between columns */
+  column-gap: 0.75rem;           /* Minimum gap; space-between adds to this */
+  padding-inline: 1.5rem;        /* Horizontal padding lives on the grid, not the rows */
+  container-type: inline-size;   /* Container context for responsive header labels */
+}
+
+/* Responsive header label — show the full label by default, swap to the short
+   form once the list gets narrow enough that the timestamp would wrap. Both
+   variants are rendered; only one is shown. The threshold is tuned to kick in
+   around the same width where the Time column starts wrapping. */
+.label-short { display: none; }
+@container (max-width: 30rem) {
+  .label-full { display: none; }
+  .label-short { display: inline; }
+}
+
+.ledger-grid > .ledger-header,
+.ledger-grid > .ledger-row {
+  grid-column: 1 / -1;            /* Span every column of the parent .ledger-grid */
+  grid-template-columns: subgrid; /* Inherit the parent's column tracks */
+  /* Full-bleed dividers: break out of the grid's 1.5rem inline padding so the
+     border-bottom (and row background/hover) reach the container edges, then
+     re-pad by the same amount to keep cell content aligned with the columns. */
+  margin-inline: -1.5rem;
+  padding-inline: 1.5rem;
+}
+
 /* 1. THE LIST HEADER STRIP */
 .ledger-header {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr; /* Adjust ratios based on your layout needs */
-  padding: 1.25rem 1.5rem 0.5rem 1.5rem;
+  align-items: start; /* Top-align so two-line labels share a top edge with single-line ones */
+  padding: 0.5rem 1.5rem;
   background-color: var(--color-card); /* Grounds the header slightly */
   border-bottom: 1px solid var(--color-border); /* High-contrast tier-2 separation boundary */
 
@@ -1035,7 +1071,7 @@ html, body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-text2); /* Muted baseline label color */  
+  color: var(--color-text2); /* Muted baseline label color */
 }
 
 /* 2. THE LIST INDIVIDUAL ROWS */

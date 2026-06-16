@@ -586,18 +586,30 @@ export function TradingMask({
   }
 
   return (
-    <div className="flex flex-col gap-5 h-full relative">
+    <div className="@container/mask flex flex-col gap-5 h-full relative">
 
-      {/* ── Wallet balances card ── */}
+      {/* ── Wallet balances card ──
+          Folds out of existence when the trading column is too short to hold both
+          this and the panel below (size container query on the root). The panel is
+          the protected part; when vertical space runs out the balance card hides
+          entirely rather than squeezing the trade controls. */}
       {(totalFim > 0 || userStats) && (
-        <div className="terminal-pane">
-          <div className="terminal-pane-header">
-            <span className="terminal-pane-title">Balance</span>
-          </div>
+        <div className="@max-h-[620px]/mask:hidden terminal-pane">
+          {/* Header collapses once orders are queued — the queue dominates the
+              column, so the Balance / Class Rank labels are dropped to reclaim
+              vertical space for the trade controls below. */}
+          {selectedOrders.length === 0 && (
+            <div className="terminal-pane-header grid grid-cols-[1fr_auto] items-center gap-4">
+              <span className="terminal-pane-title">Balance</span>
+              {userStats && (
+                <span className="terminal-pane-title justify-self-start">Class Rank</span>
+              )}
+            </div>
+          )}
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
+            <div className="grid grid-cols-[1fr_auto] items-center gap-4">
               {totalFim > 0 && (
-                <div className="flex flex-col min-w-0">
+                <div className="flex flex-col justify-center min-w-0">
                   <div
                     className="font-mono font-bold leading-none text-display-trading tabular-nums"
                     style={{ color: fimColor, textShadow: `0 0 40px ${fimGlow}` }}
@@ -612,8 +624,9 @@ export function TradingMask({
                   )}
                 </div>
               )}
+              {totalFim <= 0 && <div />}
               {userStats && (
-                <div className="flex flex-col items-end min-w-0 ml-auto shrink-0">
+                <div className="flex flex-col items-start min-w-0 justify-self-start">
                   <PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="lg" />
                 </div>
               )}
@@ -710,7 +723,7 @@ export function TradingMask({
               </div>
               {!isMaker && (
                 
-                <div data-chrome-scroll-guard className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar rounded-md p-2  border border-border bg-card2 max-h-51 xl:max-h-none">
+                <div data-chrome-scroll-guard className="flex-1 min-h-0 max-h-58 overflow-y-auto overscroll-contain custom-scrollbar rounded-md p-2  border border-border bg-card2">
                   {(hasAsksInQueue ? groupedAskQueue : groupedBidQueue).length === 0 ? (
                     <button
                       onClick={onOpenOrderBook}
@@ -797,7 +810,7 @@ export function TradingMask({
                   </div>
                   <PercentSlider value={buySliderPct} onChange={handleBuySliderChange} disabled={isBusy} />
                 </div>
-                <div data-chrome-scroll-guard className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar rounded-md p-2 border border-border bg-card2 max-h-51 xl:max-h-none">
+                <div data-chrome-scroll-guard className="flex-1 min-h-0 max-h-58 overflow-y-auto overscroll-contain custom-scrollbar rounded-md p-2 border border-border bg-card2">
                   {groupedAskQueue.map((group, groupIdx) => {
                     const filledBefore = groupedAskQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
                     return (
@@ -839,7 +852,7 @@ export function TradingMask({
                   </div>
                   <PercentSlider value={sellSliderPct} onChange={handleSellSliderChange} disabled={isBusy} />
                 </div>
-                <div data-chrome-scroll-guard className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar rounded-md p-2 border border-border bg-card2 max-h-51 xl:max-h-none">
+                <div data-chrome-scroll-guard className="flex-1 min-h-0 max-h-58 overflow-y-auto overscroll-contain custom-scrollbar rounded-md p-2 border border-border bg-card2">
                   {groupedBidQueue.map((group, groupIdx) => {
                     const filledBefore = groupedBidQueue.slice(0, groupIdx).reduce((acc, g) => acc + g.amount, 0);
                     return (
@@ -1006,16 +1019,14 @@ export function TradingMask({
           {isUnderCollateralized && !isSelfFill && (
             <Link
               href="/stake"
-              className="rounded-lg px-4 py-3 flex flex-col gap-1 surface-pink-warn transition-colors hover:brightness-110"
+              className="rounded-md px-4 py-2 flex flex-col gap-1 surface-pink-warn transition-colors hover:brightness-110"
             >
-              <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-red">
+              <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-red">
                 Stake more RGD to unlock
               </span>
               <span className="font-mono text-[11px] text-text2 tabular-nums">
-                {isMaker ? 'Placing' : 'Buying'} {Number(formatUnits(fimToCommit, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} FIM needs{' '}
-                {Number(formatUnits(collateralGate.needed, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} RGD.
-                You have {Number(formatUnits(collateralGate.headroom, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} free —
-                stake {Number(formatUnits(collateralGate.shortfall, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} more.
+                {Number(formatUnits(collateralGate.needed, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} staked RGD required.
+                Stake {Number(formatUnits(collateralGate.shortfall, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} more.
               </span>
             </Link>
           )}

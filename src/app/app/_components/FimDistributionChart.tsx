@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSeasonFimDistribution } from '@/hooks/useSeasonFimDistribution';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -74,9 +75,13 @@ export function FimDistributionChart({ seasonAddress, exchangeAddress }: FimDist
   const { darkMode } = useTheme();
   const { bars, isLoading } = useSeasonFimDistribution(seasonAddress, exchangeAddress);
   const [hoveredBucket, setHoveredBucket] = useState<number | null>(null);
+  const [overBar, setOverBar] = useState(false);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [mounted, setMounted] = useState(false);
   const colorsRef = useRef<ColorStops | null>(null);
   const [, forceUpdate] = useState(0);
+
+  useEffect(() => setMounted(true), []);
 
   // Read CSS vars on mount and when dark mode changes
   useEffect(() => {
@@ -85,7 +90,7 @@ export function FimDistributionChart({ seasonAddress, exchangeAddress }: FimDist
   }, [darkMode]);
 
   const getBarColor = (bucket: number): string => {
-    const t = bucket / 39;
+    const t = bucket / 19;
     if (!colorsRef.current) return `rgba(128,128,128,0.5)`;
     return interpolateSunset(colorsRef.current, t);
   };
@@ -103,7 +108,7 @@ export function FimDistributionChart({ seasonAddress, exchangeAddress }: FimDist
       {isLoading ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 animate-pulse px-4">
           <div className="flex items-end gap-px h-24 w-full">
-            {Array.from({ length: 40 }).map((_, i) => (
+            {Array.from({ length: 20 }).map((_, i) => (
               <div
                 key={i}
                 className="flex-1 rounded-sm bg-border"
@@ -115,20 +120,28 @@ export function FimDistributionChart({ seasonAddress, exchangeAddress }: FimDist
         </div>
       ) : (
         <div className="flex flex-1 flex-col min-h-0 px-3 pt-2 pb-1 relative">
-          {/* Tooltip */}
-          {hoveredBar && (
-            <div
-              className="pointer-events-none absolute z-50 rounded bg-card3 border border-border2 px-2 py-1.5 font-mono text-[11px] leading-tight whitespace-nowrap shadow-lg"
-              style={{ left: tooltipPos.x, top: tooltipPos.y, transform: 'translate(-50%, -110%)' }}
-            >
-              <div className="text-text2">
-                {hoveredBar.isCapitalist
-                  ? `Cap ${(hoveredBar.bucket - 20) * 5}–${(hoveredBar.bucket - 19) * 5}%`
-                  : `Soc ${(19 - hoveredBar.bucket) * 5}–${(20 - hoveredBar.bucket) * 5}%`}
-              </div>
-              <div className="text-text font-bold">{fmtFim(hoveredBar.fimAmount)} FIM</div>
-            </div>
-          )}
+          {/* Tooltip — fixed-position portal so it tracks the cursor and can overflow the pane */}
+          {mounted && hoveredBar &&
+            createPortal(
+              <div
+                className="pointer-events-none fixed z-9999 rounded bg-card3 border border-border2 font-mono text-[11px] leading-tight whitespace-nowrap shadow-lg"
+                style={{ left: tooltipPos.x + 12, top: tooltipPos.y - 28 }}
+              >
+                <div className="px-2.5 pt-1.5 text-text">
+                  {hoveredBar.playerCount} {hoveredBar.isCapitalist ? 'Capitalists' : 'Socialists'}
+                </div>
+                <div className="px-2.5 pb-1.5 text-text2">
+                  {hoveredBar.isCapitalist
+                    ? `${(hoveredBar.bucket - 10) * 10}–${(hoveredBar.bucket - 9) * 10}%`
+                    : `${(9 - hoveredBar.bucket) * 10}–${(10 - hoveredBar.bucket) * 10}%`}
+                </div>
+                <div className="border-t border-border2" />
+                <div className="px-2.5 py-1.5 text-text font-bold">
+                  {fmtFim(hoveredBar.fimAmount)} FIM
+                </div>
+              </div>,
+              document.body,
+            )}
 
           {/* Bar area */}
           <div className="flex flex-1 items-end gap-px min-h-0">
@@ -137,28 +150,34 @@ export function FimDistributionChart({ seasonAddress, exchangeAddress }: FimDist
               const color = getBarColor(bar.bucket);
               const isHovered = hoveredBucket === bar.bucket;
               return (
+                // Full-height hover column so the empty space above the bar is also hoverable
                 <div
                   key={bar.bucket}
-                  className="flex-1 min-w-0 rounded-t-sm cursor-crosshair transition-opacity duration-100"
-                  style={{
-                    height: `${Math.max(heightPct, 1)}%`,
-                    backgroundColor: color,
-                    opacity: hoveredBucket !== null && !isHovered ? 0.55 : 1,
-                    outline: isHovered ? '1px solid rgba(255,255,255,0.3)' : 'none',
-                  }}
+                  className={`flex flex-1 min-w-0 h-full items-end cursor-crosshair rounded-t-sm ${
+                    isHovered && !overBar ? 'bg-card2' : ''
+                  }`}
                   onMouseEnter={(e) => {
                     setHoveredBucket(bar.bucket);
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const parentRect = e.currentTarget.closest('.relative')?.getBoundingClientRect();
-                    if (parentRect) {
-                      setTooltipPos({
-                        x: rect.left - parentRect.left + rect.width / 2,
-                        y: rect.top - parentRect.top,
-                      });
-                    }
+                    setTooltipPos({ x: e.clientX, y: e.clientY });
                   }}
-                  onMouseLeave={() => setHoveredBucket(null)}
-                />
+                  onMouseMove={(e) => setTooltipPos({ x: e.clientX, y: e.clientY })}
+                  onMouseLeave={() => {
+                    setHoveredBucket(null);
+                    setOverBar(false);
+                  }}
+                >
+                  <div
+                    className="w-full rounded-t-sm transition-opacity duration-100"
+                    style={{
+                      height: `${Math.max(heightPct, 1)}%`,
+                      backgroundColor: color,
+                      opacity: hoveredBucket !== null && !isHovered ? 0.55 : 1,
+                      outline: isHovered ? '1px solid var(--color-border2)' : 'none',
+                    }}
+                    onMouseEnter={() => setOverBar(true)}
+                    onMouseLeave={() => setOverBar(false)}
+                  />
+                </div>
               );
             })}
           </div>

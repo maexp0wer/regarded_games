@@ -117,23 +117,28 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
   // drops to the narrow rules: chart solo, or up to 2 non-chart panels stacked.
   const panelWide = is2xl || (isXl && !props.maskWide);
 
-  // Narrow (1–2 cols): chart is mutually exclusive with the non-chart panels —
-  // either the chart alone, or up to 2 non-chart panels stacked in two rows.
+  // Trim open panels when the viewport shrinks to enforce per-breakpoint limits.
   useEffect(() => {
-    if (!panelWide) {
-      setOpen(prev => {
-        const others = PRIORITY.filter(p => p !== 'chart-orders' && prev.has(p));
-        // Chart alongside others → collapse to chart only.
-        if (prev.has('chart-orders')) {
+    setOpen(prev => {
+      const others = PRIORITY.filter(p => p !== 'chart-orders' && prev.has(p));
+      const chartOpen = prev.has('chart-orders');
+      if (!panelWide) {
+        // Below xl: chart is solo; otherwise max 2 non-chart stacked.
+        if (chartOpen) {
           if (others.length === 0) return prev;
           return new Set<PanelId>(['chart-orders']);
         }
-        // More than 2 non-chart open → keep the two highest-priority.
         if (others.length <= 2) return prev;
         return new Set<PanelId>(others.slice(0, 2));
-      });
-    }
-  }, [panelWide]);
+      }
+      if (!is2xl && chartOpen) {
+        // xl with chart: max 2 non-chart panels.
+        if (others.length <= 2) return prev;
+        return new Set<PanelId>([...prev].filter(p => p === 'chart-orders' || others.slice(0, 2).includes(p)));
+      }
+      return prev;
+    });
+  }, [panelWide, is2xl]);
 
   // Wide: chart open → max 2 non-chart panels at xl, 4 at 2xl; chart closed → max 4
   const NON_CHART = PRIORITY.filter(p => p !== 'chart-orders');
@@ -167,7 +172,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
         // opening chart reduces non-chart limit: 4 at 2xl, 2 at xl
         trimNonChart(next, is2xl ? 4 : 2);
       } else {
-        const limit = next.has('chart-orders') ? (is2xl ? 4 : 2) : 4;
+        const limit = next.has('chart-orders') ? (is2xl ? 4 : 2) : (is2xl ? 6 : 3);
         trimNonChart(next, limit - 1);
       }
       next.add(id);
@@ -188,7 +193,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
         next.add(id);
         return next;
       }
-      const limit = next.has('chart-orders') ? (is2xl ? 4 : 2) : 4;
+      const limit = next.has('chart-orders') ? (is2xl ? 4 : 2) : (is2xl ? 6 : 3);
       trimNonChart(next, limit - 1);
       next.add(id);
       return next;
@@ -372,55 +377,82 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
               )}
               {otherPanels.length > 0 && (
                 panelWide && chartOpen ? (
-                  /* Chart visible: side column beside the chart.
-                     xl      : single column, panels stacked (up to 2).
-                     2xl, 3p : highest-priority gets its own left column; bottom 2 share the right column.
-                     2xl, 4p : 2×2 grid. */
-                  <div className={`shrink-0 flex border-t xl:border-t-0 xl:border-l border-border xl:w-[calc(100%/3)] 2xl:w-[calc(100%/4)]${is2xl && otherPanels.length >= 3 ? ' 2xl:w-[calc(100%/2)]!' : ''}`}>
-                    {is2xl && otherPanels.length >= 3 ? (
-                      /* 2-column sub-grid */
-                      <>
-                        {/* Left sub-column: top item (3p) or top 2 items (4p) */}
-                        <div className="flex-1 min-w-0 flex flex-col border-r border-border">
-                          {otherPanels.slice(0, otherPanels.length === 3 ? 1 : 2).map((id, i) => (
-                            <div key={id} className={`flex-1 min-h-0 overflow-hidden${i > 0 ? ' border-t border-border' : ''}`}>
-                              {renderPanel(id)}
-                            </div>
-                          ))}
-                        </div>
-                        {/* Right sub-column: bottom 2 items */}
-                        <div className="flex-1 min-w-0 flex flex-col">
-                          {otherPanels.slice(otherPanels.length === 3 ? 1 : 2).map((id, i) => (
-                            <div key={id} className={`flex-1 min-h-0 overflow-hidden${i > 0 ? ' border-t border-border' : ''}`}>
-                              {renderPanel(id)}
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    ) : (
-                      /* Single column (xl, or 2xl with ≤2 panels) */
-                      <div className="flex-1 flex flex-col">
-                        {otherPanels.map((id, i) => (
-                          <div key={id} className={`flex-1 min-h-0 overflow-hidden${i > 0 ? ' border-t border-border' : ''}`}>
-                            {renderPanel(id)}
+
+                  <div
+                    className="shrink-0 flex border-t xl:border-t-0 xl:border-l border-border"
+                    style={{
+                      width: is2xl ? (() => {
+                        const numCols = otherPanels.length <= 2 ? 1 : 2;
+                        const hasOB = otherPanels.includes('orderbook');
+                        return hasOB
+                          ? `calc((${numCols} + 0.3) * 100% / 4)`
+                          : `calc(${numCols} * 100% / 4)`;
+                      })() : otherPanels.includes('orderbook') ? 'calc(100% / 3 * 1.3)' : 'calc(100% / 3)',
+                    }}
+                  >
+                    {(() => {
+                      // xl: only 1 side column, all panels stack in it
+                      // 2xl: 1p→col1 full; 2p→col1 split; 3p→col1 full + col2 split; 4p→col1 split + col2 split
+                      const col1 = is2xl
+                        ? (otherPanels.length === 3 ? otherPanels.slice(0, 1) : otherPanels.slice(0, Math.min(2, otherPanels.length)))
+                        : otherPanels;
+                      const col2 = is2xl ? otherPanels.slice(col1.length) : [];
+                      const col1HasOB = col1.includes('orderbook');
+                      const col2HasOB = col2.includes('orderbook');
+                      return (
+                        <>
+                          <div className="min-w-0 flex flex-col" style={{ flex: col1HasOB ? 1.3 : 1 }}>
+                            {col1.map((id, i) => (
+                              <div key={id} className={`flex-1 min-h-0 overflow-hidden${i > 0 ? ' border-t border-border' : ''}`}>
+                                {renderPanel(id)}
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    )}
+                          {col2.length > 0 && (
+                            <div className="min-w-0 flex flex-col border-l border-border" style={{ flex: col2HasOB ? 1.3 : 1 }}>
+                              {col2.map((id, i) => (
+                                <div key={id} className={`flex-1 min-h-0 overflow-hidden${i > 0 ? ' border-t border-border' : ''}`}>
+                                  {renderPanel(id)}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 ) : (
-                  /* No chart: wide packs rows of 2 (2×2); narrow stacks one per
-                     row (up to 2 → two rows). */
-                  <div className="flex-1 min-w-0 flex flex-col">
-                    {chunk(otherPanels, panelWide ? 2 : 1).map((row, i) => (
-                      <div key={i} className={`flex-1 min-h-0 flex flex-row${i > 0 ? ' border-t border-border' : ''}`}>
-                        {row.map((id, j) => (
-                          <div key={id} className={`flex-1 min-w-0 overflow-hidden${j > 0 ? ' border-l border-border' : ''}`}>
-                            {renderPanel(id)}
-                          </div>
-                        ))}
-                      </div>
-                    ))}
+                  <div className="flex-1 min-w-0 flex flex-row">
+                    {(() => {
+                      const cols = is2xl ? 4 : 3;
+                      // panels that get their own full-height column
+                      const overflowCount = Math.max(0, otherPanels.length - cols);
+                      const splitColCount = overflowCount; // each overflow panel gets its own split column
+                      const fullCols = otherPanels.slice(0, cols - splitColCount);
+                      // panels that share a column (stacked 2 per column)
+                      const splitPanels = otherPanels.length > cols ? otherPanels.slice(fullCols.length) : [];
+                      const splitCols: PanelId[][] = [];
+                      for (let i = 0; i < splitPanels.length; i += 2)
+                        splitCols.push(splitPanels.slice(i, i + 2));
+                      return (
+                        <>
+                          {fullCols.map((id, j) => (
+                            <div key={id} className={`flex-1 min-w-0 min-h-0 overflow-hidden${j > 0 ? ' border-l border-border' : ''}`}>
+                              {renderPanel(id)}
+                            </div>
+                          ))}
+                          {splitCols.map((col, ci) => (
+                            <div key={`sc-${ci}`} className="flex-1 min-w-0 min-h-0 flex flex-col border-l border-border">
+                              {col.map((id, ri) => (
+                                <div key={id} className={`flex-1 min-h-0 overflow-hidden${ri > 0 ? ' border-t border-border' : ''}`}>
+                                  {renderPanel(id)}
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </>
+                      );
+                    })()}
                   </div>
                 )
               )}
