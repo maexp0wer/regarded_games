@@ -1,8 +1,0 @@
-.next/types/app/docs/[slug]/page.ts(2,24): error TS2307: Cannot find module '../../../../../src/app/docs/[slug]/page.js' or its corresponding type declarations.
-.next/types/app/docs/[slug]/page.ts(5,29): error TS2307: Cannot find module '../../../../../src/app/docs/[slug]/page.js' or its corresponding type declarations.
-.next/types/app/docs/layout.ts(2,24): error TS2307: Cannot find module '../../../../src/app/docs/layout.js' or its corresponding type declarations.
-.next/types/app/docs/layout.ts(5,29): error TS2307: Cannot find module '../../../../src/app/docs/layout.js' or its corresponding type declarations.
-.next/types/app/docs/page.ts(2,24): error TS2307: Cannot find module '../../../../src/app/docs/page.js' or its corresponding type declarations.
-.next/types/app/docs/page.ts(5,29): error TS2307: Cannot find module '../../../../src/app/docs/page.js' or its corresponding type declarations.
-docs/src/pages/index.tsx(6,30): error TS2307: Cannot find module '@site/src/components/HomepageFeatures' or its corresponding type declarations.
-src/hooks/useBatchPlayerPercentiles.ts(94,68): error TS2339: Property 'fimBurned' does not exist on type '{ playerAddress: string; fimBalance: string; }'.

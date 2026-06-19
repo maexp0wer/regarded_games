@@ -13,7 +13,7 @@ import type { Abi } from 'abitype';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
 import { useSeasonPhase } from '@/hooks/useSeasonPhase';
 import { useSeasonVictory } from '@/hooks/useSeasonVictory';
-import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
+import { useBatchPlayerClass } from '@/hooks/useBatchPlayerClass';
 import { usePayout } from '@/hooks/usePayout';
 import { useOpenOrders } from '@/hooks/useOpenOrders';
 import { useMyTrades, MyTrade } from '@/hooks/useMyTrades';
@@ -242,7 +242,7 @@ function SeasonHoldingRow({ pos, playerAddress, onValidation }: { pos: SeasonPos
 // ============================================================================
 function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: { pos: SeasonPosition; playerAddress: string; payoutData: { payout: number; pnl: number; realizedPayout: number; fimBurned: number } }) {
   const { data: giniData } = useSeasonGini(pos.season);
-  const { data: statsMap } = useBatchPlayerPercentiles(pos.season, [playerAddress.toLowerCase()]);
+  const { data: statsMap } = useBatchPlayerClass(pos.season, [playerAddress.toLowerCase()]);
   const playerStats = statsMap?.[playerAddress.toLowerCase()];
 
   const { currentPhase, isAuctionOrBootstrap, isTrading, isBootstrap, isAuction, isPayout, tradingStart, seasonEnd } = useSeasonPhase(pos.season);
@@ -356,7 +356,7 @@ function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: { pos: Seas
         <div className="meta-data-group shrink-0">
           <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">{isPayout ? 'Your Result' : 'Standing'}</span>
           {playerStats ? (
-            <PercentileCircle percentage={playerStats.factionPercentile} isCapitalist={playerStats.isCapitalist} size="sm" />
+            <PercentileCircle percentage={playerStats.classPercentile} isCapitalist={playerStats.isCapitalist} size="sm" />
           ) : (
             <span className="font-mono text-sm text-text2">—</span>
           )}

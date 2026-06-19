@@ -2,13 +2,12 @@ import { NextResponse } from 'next/server';
 import { isAddress } from 'viem';
 import { query } from '@/lib/db';
 import { fetchAllPonderItems } from '@/lib/ponder';
+import { loadQuestsConfig, type QuestsConfig } from '@/lib/quests';
 import {
-  loadQuestsConfig,
   computeTotalReferralPoints,
   computeWinScoreForSeason,
   relativePnl,
-  type QuestsConfig,
-} from '@/lib/quests';
+} from '@/utils/quests';
 import { getCommunitySession } from '@/lib/communitySession';
 import { TENANTS } from '@/config/tenants';
 

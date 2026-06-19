@@ -349,7 +349,7 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
     else break;
   }
 
-  // Distance-based percentile (mirrors useBatchPlayerPercentiles algorithm)
+  // Distance-based percentile within a class (mirrors useBatchPlayerClass algorithm)
   const capBals = sortedBals.filter(b => b > massThreshold);
   const socBals = sortedBals.filter(b => b <= massThreshold);
   const thresholdNum = Number(massThreshold);

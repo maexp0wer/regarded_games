@@ -10,7 +10,7 @@ import { useSeasonGini, useSeasonById } from '@/hooks/useSeasonGini';
 import { useSeasonPhase } from '@/hooks/useSeasonPhase';
 import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 import { Order } from '@/hooks/useOrderBook';
-import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
+import { useBatchPlayerClass } from '@/hooks/useBatchPlayerClass';
 import { useSeasonPlayers } from '@/hooks/useSeasonPlayers';
 import { useSeasonChart } from '@/hooks/useSeasonChart';
 
@@ -94,12 +94,12 @@ export default function SeasonDetailPage() {
     }
   }, [effectiveVictoryPending]);
 
-  const { data: percentilesMap } = useBatchPlayerPercentiles(
+  const { data: classMap } = useBatchPlayerClass(
     seasonAddress,
     userAddress ? [userAddress] : [],
     exchangeAddress
   );
-  const factionData = userAddress ? percentilesMap?.[userAddress.toLowerCase()] : undefined;
+  const factionData = userAddress ? classMap?.[userAddress.toLowerCase()] : undefined;
 
   // Participation: a connected wallet that holds a season stats row interacted with
   // the season. Hide the payout panel for connected non-participants; keep it for a

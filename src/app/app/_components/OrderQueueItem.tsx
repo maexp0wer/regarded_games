@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Order } from '@/hooks/useOrderBook';
-import { PercentileData } from '@/hooks/useBatchPlayerPercentiles';
+import { PlayerClassData } from '@/hooks/useBatchPlayerClass';
 import { PercentileCircle } from './PercentileCircle';
 
 export interface GroupedOrder extends Order {
@@ -19,7 +19,7 @@ interface OrderQueueItemProps {
   draggedGroupIdx: number | null;
   targetAmount: string;
   filledBefore: number;
-  stats: PercentileData | undefined;
+  stats: PlayerClassData | undefined;
   onMoveGroup: (idx: number, direction: -1 | 1) => void;
   onRemoveGroup: (group: GroupedOrder) => void;
   onDragStart: (idx: number) => void;
@@ -59,7 +59,7 @@ export function OrderQueueItem({
       {/* Col 2: Maker rank */}
       <div className="flex flex-col gap-1.5">
         {stats ? (
-          <PercentileCircle percentage={stats.factionPercentile} isCapitalist={stats.isCapitalist} size="xxs" />
+          <PercentileCircle percentage={stats.classPercentile} isCapitalist={stats.isCapitalist} size="xxs" />
         ) : (
           <span className="text-[8px] text-text2 animate-pulse">Loading...</span>
         )}

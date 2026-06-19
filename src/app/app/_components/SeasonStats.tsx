@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { usePlayerRank } from '@/hooks/usePlayerRank';
-import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
+import { useBatchPlayerClass } from '@/hooks/useBatchPlayerClass';
 import { usePayout } from '@/hooks/usePayout';
 import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 
@@ -23,15 +23,15 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
     loading: rankLoading,
   } = usePlayerRank(seasonAddress, userAddress);
 
-  const { data: percentilesMap, isLoading: percentileLoading } =
-    useBatchPlayerPercentiles(seasonAddress, userAddress ? [userAddress] : [], exchangeAddress);
-  const percentileData = userAddress ? percentilesMap?.[userAddress.toLowerCase()] ?? null : null;
+  const { data: classMap, isLoading: classLoading } =
+    useBatchPlayerClass(seasonAddress, userAddress ? [userAddress] : [], exchangeAddress);
+  const classData = userAddress ? classMap?.[userAddress.toLowerCase()] ?? null : null;
 
   // Same source as PayoutMask — authoritative Season P/L for the current user.
   const { pnl: seasonPnl, userNetContrib, loading: payoutLoading } = usePayout(seasonAddress, userAddress);
   const { winningSide } = useSeasonVictory(seasonAddress);
 
-  const loading = rankLoading || percentileLoading || payoutLoading;
+  const loading = rankLoading || classLoading || payoutLoading;
 
   const absoluteTopPercent = totalPlayers > 1 ? ((rank - 1) / (totalPlayers - 1)) * 100 : 0;
   const relativeTopPercent = efficiencyPercent;
@@ -44,16 +44,16 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
   const overlayShadow = '0 1px 2px rgba(0,0,0,0.6)';
 
   let pointerPos = 50;
-  let factionPercentile = 0;
+  let classPercentile = 0;
   let isCapitalist = false;
 
-  if (percentileData) {
-    factionPercentile = percentileData.factionPercentile;
-    isCapitalist = percentileData.isCapitalist;
-    if (percentileData.isCapitalist) {
-      pointerPos = 50 + (factionPercentile / 2);
+  if (classData) {
+    classPercentile = classData.classPercentile;
+    isCapitalist = classData.isCapitalist;
+    if (classData.isCapitalist) {
+      pointerPos = 50 + (classPercentile / 2);
     } else {
-      pointerPos = 50 - (factionPercentile / 2);
+      pointerPos = 50 - (classPercentile / 2);
     }
   }
 
@@ -71,7 +71,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
     );
   }
 
-  if (!userAddress || rank === -1 || totalPlayers < 1 || !percentileData) return null;
+  if (!userAddress || rank === -1 || totalPlayers < 1 || !classData) return null;
 
   const pnlSign = seasonPnl >= 0 ? '+' : '-';
   const displayGrowthPercent = userNetContrib > 0 ? (seasonPnl / userNetContrib) * 100 : growthPercent;
@@ -87,7 +87,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
         <div className="terminal-pane border-none! p-2.5 gap-2 lg:col-span-2 2xl:col-span-1">
           <div className="flex items-baseline font-mono text-xs uppercase tracking-wide">
             <span className="font-bold text-text2">Rank</span>
-            <span className="flex-1 text-center font-bold text-text">{factionPercentile.toFixed(2)}% {isCapitalist ? 'Capitalist' : 'Proletarian'}</span>
+            <span className="flex-1 text-center font-bold text-text">{classPercentile.toFixed(2)}% {isCapitalist ? 'Capitalist' : 'Proletarian'}</span>
             <span className="font-bold text-text">{isCapitalist ? 'BOURGEOISIE' : 'PROLETARIAT'}</span>
           </div>
           <div className="rank-track-chassis">

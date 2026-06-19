@@ -1,4 +1,4 @@
-// hooks/useBatchPlayerPercentiles.ts
+// hooks/useBatchPlayerClass.ts
 
 'use client';
 
@@ -13,20 +13,22 @@ import { useSeasonActiveOrders } from './useSeasonActiveOrders';
 
 const GameSeasonAbi = GameSeasonAbiJson as Abi;
 
-export interface PercentileData {
-  factionPercentile: number;
+export interface PlayerClassData {
+  classPercentile: number;
   isCapitalist: boolean;
-  totalInFaction: number;
-  factionRank: number;
+  totalInClass: number;
+  classRank: number;
 }
 
 /**
- * Computes faction percentiles for a set of addresses off the shared season
- * primitives (players + active sell orders). Multiple call sites with different
- * address lists all reuse the same two cached fetches; only the per-address
- * derivation differs.
+ * Computes each player's class (Capitalist/Oligarchy vs Socialist/Masses) off the
+ * shared season primitives (players + active sell orders). The class boundary is the
+ * live supply-share Masses/Oligarchy cut — the largest set of poorest holders whose
+ * balances sum to ≤50% of total FIM *supply* (NOT a population percentile). Multiple
+ * call sites with different address lists all reuse the same two cached fetches; only
+ * the per-address derivation differs.
  */
-export function useBatchPlayerPercentiles(
+export function useBatchPlayerClass(
   seasonAddress: string | undefined,
   userAddresses: string[],
   exchangeAddress?: string
@@ -57,7 +59,7 @@ export function useBatchPlayerPercentiles(
     [addressesKey]
   );
 
-  const data = useMemo<Record<string, PercentileData>>(() => {
+  const data = useMemo<Record<string, PlayerClassData>>(() => {
     if (!seasonAddress || !players || stableAddresses.length === 0) return {};
     if (players.length === 0) return {};
 
@@ -82,16 +84,16 @@ export function useBatchPlayerPercentiles(
     // The Exchange contract accumulates FIM from sell-order locks and appears
     // in playerSeasonStats as a phantom player. Its balance equals exactly the
     // locked FIM we already added back to makers above — remove it to avoid
-    // double-counting in the economy / faction threshold calculation.
+    // double-counting in the economy / class boundary calculation.
     if (exchangeAddress) {
       playerBalances.delete(exchangeAddress.toLowerCase());
     }
 
     // Drop sub-threshold (dust) holders before ranking — mirrors gini.ts and the
     // contract's `bal >= existentialThresholdFim`. The eligible population alone
-    // defines the 50% mass threshold and faction membership; a dust wallet can
-    // never consume a rank index or get a percentile. Raw-wei compare; never
-    // float-convert before filtering. Threshold 0n still drops empty wallets.
+    // defines the supply-share Masses/Oligarchy cut and class membership; a dust
+    // wallet can never consume a rank index or get a percentile. Raw-wei compare;
+    // never float-convert before filtering. Threshold 0n still drops empty wallets.
     const economy = Array.from(playerBalances.entries())
       .filter(([, bal]) => bal >= existentialThreshold && bal > 0n)
       .map(([address, bal]) => ({
@@ -100,7 +102,8 @@ export function useBatchPlayerPercentiles(
         balanceNum: Number(formatUnits(bal, 18))
       }));
 
-    // --- ISSUE 3 FIX: CALCULATE LIVE 50% MASS THRESHOLD OFF-CHAIN ---
+    // --- ISSUE 3 FIX: LIVE SUPPLY-SHARE MASSES/OLIGARCHY CUT (50% OF SUPPLY, NOT
+    // POPULATION), COMPUTED OFF-CHAIN IN RAW WEI ---
     economy.sort((a, b) => (a.balanceRaw < b.balanceRaw ? -1 : a.balanceRaw > b.balanceRaw ? 1 : 0));
 
     const totalSupply = economy.reduce((sum, p) => sum + p.balanceRaw, 0n);
@@ -118,55 +121,59 @@ export function useBatchPlayerPercentiles(
       }
     }
 
-    const liveThresholdNum = Number(formatUnits(liveMassThresholdRaw, 18));
+    const massThresholdNum = Number(formatUnits(liveMassThresholdRaw, 18));
 
-    // --- PREPARE FACTIONS & BOUNDARIES ---
-    const capitalists = economy.filter(p => p.balanceNum > liveThresholdNum);
-    const socialists = economy.filter(p => p.balanceNum <= liveThresholdNum);
+    // --- PREPARE CLASSES & BOUNDARIES ---
+    // Class membership is decided in RAW WEI against the supply-share cut, mirroring
+    // the indexer (index.ts) and the player-class API route — so a balance sitting
+    // within a wei of the cut classifies identically everywhere. The float
+    // `massThresholdNum` below is used ONLY for the display distance metric.
+    const capitalists = economy.filter(p => p.balanceRaw > liveMassThresholdRaw);
+    const socialists = economy.filter(p => p.balanceRaw <= liveMassThresholdRaw);
 
     capitalists.sort((a, b) => b.balanceNum - a.balanceNum);
     socialists.sort((a, b) => b.balanceNum - a.balanceNum);
 
     // Find the absolute Richest Capitalist and Poorest Socialist for the scale
-    const maxCapBalance = capitalists.length > 0 ? capitalists[0].balanceNum : liveThresholdNum;
+    const maxCapBalance = capitalists.length > 0 ? capitalists[0].balanceNum : massThresholdNum;
     const minSocBalance = socialists.length > 0 ? socialists[socialists.length - 1].balanceNum : 0;
 
-    const resultsMap: Record<string, PercentileData> = {};
+    const resultsMap: Record<string, PlayerClassData> = {};
 
     // --- ISSUE 2 FIX: CALCULATE DISTANCE-BASED PERCENTILES ---
     for (const addr of stableAddresses) {
       const uAddr = addr.toLowerCase();
       const user = economy.find(p => p.address === uAddr);
-      const userBalanceNum = user ? user.balanceNum : 0;
 
-      if (userBalanceNum === 0) {
+      if (!user || user.balanceRaw === 0n) {
         continue;
       }
 
-      const isCapitalist = userBalanceNum > liveThresholdNum;
+      const userBalanceNum = user.balanceNum;
+      const isCapitalist = user.balanceRaw > liveMassThresholdRaw;
       let percentile = 0;
 
       if (isCapitalist) {
         // Capitalist Distance: 0% (At Threshold) to 100% (Richest Player)
-        const range = maxCapBalance - liveThresholdNum;
-        percentile = range > 0 ? ((userBalanceNum - liveThresholdNum) / range) * 100 : 100;
+        const range = maxCapBalance - massThresholdNum;
+        percentile = range > 0 ? ((userBalanceNum - massThresholdNum) / range) * 100 : 100;
       } else {
         // Socialist Distance: 0% (At Threshold) to 100% (Poorest Player)
-        const range = liveThresholdNum - minSocBalance;
-        percentile = range > 0 ? ((liveThresholdNum - userBalanceNum) / range) * 100 : 100;
+        const range = massThresholdNum - minSocBalance;
+        percentile = range > 0 ? ((massThresholdNum - userBalanceNum) / range) * 100 : 100;
       }
 
       // Cap strictly between 0 and 100
       percentile = Math.max(0, Math.min(100, percentile));
 
-      const factionMembers = isCapitalist ? capitalists : socialists;
-      const rankIndex = factionMembers.findIndex(p => p.address === uAddr);
+      const classMembers = isCapitalist ? capitalists : socialists;
+      const rankIndex = classMembers.findIndex(p => p.address === uAddr);
 
-      const data: PercentileData = {
-        factionPercentile: percentile,
+      const data: PlayerClassData = {
+        classPercentile: percentile,
         isCapitalist,
-        totalInFaction: factionMembers.length,
-        factionRank: rankIndex === -1 ? 0 : rankIndex + 1,
+        totalInClass: classMembers.length,
+        classRank: rankIndex === -1 ? 0 : rankIndex + 1,
       };
 
       // Save identically for both casing formats to prevent undefined lookup crashes in UI

@@ -10,7 +10,7 @@ import { WalletButton } from './WalletButton';
 import AmountInput from '@/components/AmountInput';
 import { sliderPctToAmount } from '@/utils/sliderAmount';
 import { PercentileCircle } from './PercentileCircle';
-import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
+import { useBatchPlayerClass } from '@/hooks/useBatchPlayerClass';
 
 import ERC20Abi from '@/deployments/abis/FakeUSDC.json';
 import StakingAbi from '@/deployments/abis/Staking.json';
@@ -123,7 +123,7 @@ function AuctionMaskInner({
   const { refetch: refetchUsdcAllowance } = useReadContract({ address: usdcAddr, abi: ERC20Abi, functionName: 'allowance', args: [address, auctionAddress as `0x${string}`], chainId, query: { staleTime: 0 } });
 
   const userMakers = useMemo(() => (address ? [address.toLowerCase()] : []), [address]);
-  const { data: userStatsMap } = useBatchPlayerPercentiles(seasonAddress, userMakers, auctionAddress);
+  const { data: userStatsMap } = useBatchPlayerClass(seasonAddress, userMakers, auctionAddress);
   const userStats = address ? userStatsMap?.[address.toLowerCase()] : undefined;
 
   const { writeContractAsync } = useWriteContract();
@@ -248,7 +248,7 @@ function AuctionMaskInner({
             )}
             {userStats && (
               <div className="flex flex-col items-end min-w-0 ml-auto shrink-0">
-                <PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="lg" />
+                <PercentileCircle percentage={userStats.classPercentile} isCapitalist={userStats.isCapitalist} size="lg" />
               </div>
             )}
           </div>

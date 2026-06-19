@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     if (uniqueAddresses.length === 0) return NextResponse.json({});
 
     const rawThreshold = BigInt(massThreshold);
-    const results: Record<string, { factionPercentile: number; isCapitalist: boolean; totalInFaction: number; factionRank: number }> = {};
+    const results: Record<string, { classPercentile: number; isCapitalist: boolean; totalInClass: number; classRank: number }> = {};
 
     // Parallel execution is efficient here because Postgres handles concurrent reads well
     await Promise.all(uniqueAddresses.map(async (uAddr) => {
@@ -56,30 +56,30 @@ export async function POST(req: Request) {
           AND fim_balance ${operator} $2::NUMERIC
       `, [sAddr, rawThreshold.toString(), rawUserBalance.toString()]);
 
-      const totalInFaction = Number(statsRes.rows[0].total_in_faction ?? 0);
+      const totalInClass = Number(statsRes.rows[0].total_in_faction ?? 0);
       const richerThanUser = Number(statsRes.rows[0].richer_than_user ?? 0);
       const rank = richerThanUser + 1;
 
-      let factionPercentile = 0;
-      if (totalInFaction <= 1) {
-        factionPercentile = 100;
+      let classPercentile = 0;
+      if (totalInClass <= 1) {
+        classPercentile = 100;
       } else {
-        const index = totalInFaction - rank;
-        factionPercentile = (index / (totalInFaction - 1)) * 100;
+        const index = totalInClass - rank;
+        classPercentile = (index / (totalInClass - 1)) * 100;
       }
 
       results[uAddr] = {
-        factionPercentile,
+        classPercentile,
         isCapitalist,
-        totalInFaction,
-        factionRank: rank
+        totalInClass,
+        classRank: rank
       };
     }));
 
     return NextResponse.json(results);
 
   } catch (error: unknown) {
-    console.error("Batch Percentile API Error:", error instanceof Error ? error.message : error);
+    console.error("Batch player-class API Error:", error instanceof Error ? error.message : error);
     return NextResponse.json(null, { status: 500 });
   }
 }

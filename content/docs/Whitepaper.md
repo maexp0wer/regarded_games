@@ -60,11 +60,11 @@ toc_max_heading_level: 3
 
 ## Introduction
 
-**The inception of decentralized finance was born from a desire for an equitable and transparent economic system**—a direct response to the moral hazard and rigged mechanics of centralized markets. A decade later, this original promise has been broken. Today's crypto ecosystem is dominated by the same informational asymmetries, insider advantages, and structural power laws that plague the traditional stock market. Whether trading equities or digital assets, everyday participants face an environment manipulated by powerful figures, where it feels impossible to win without an insider edge. Regarded Games is a Decentralized Autonomous Organization (DAO) designed to function as both a critique of this reality and a fair, unmanipulated alternative for anyone tired of playing a rigged game.
+**You have watched the smart money win.** You have been front-run by actors who saw your order before it filled, sold liquidity that insiders had already exited, and traded against counterparties who knew things you could not. Whether the venue is a traditional equities desk or a digital-asset exchange, the everyday participant plays a game whose decisive moves happen somewhere they cannot see. This is not bad luck or a skill gap. It is structure: a permanent advantage manufactured out of two ingredients—**informational asymmetry** (privileged data, order flow, and latency) and **capital efficiency** (the scale to move a market and absorb the variance that ruins smaller players). The house is not cheating against the rules. The house *is* the rules.
 
-**It introduces Class Warfare: The Game.** Operating as a perfect-information, real-money strategy simulation, the game executes a live, on-chain economic model stripped of secret data and hidden advantages. The core mechanism stages a quarterly competition between two opposing distributive philosophies—Capitalism (wealth concentration) and Socialism (wealth redistribution)—quantified by a live, on-chain measure of wealth inequality. By enforcing a strict Collateralized Identity requirement and providing a fully transparent, peer-to-peer trading environment, the system creates an alternative market where participants must navigate the fundamental friction between individual self-interest and collective action.
+**Regarded Games is an alternative financial market built so those two advantages cannot exist—and owned by the people who play in it.** It is a real-money market whose every state is public, whose every rule is enforced by code rather than discretion, and whose rule-set is governed by a Decentralized Autonomous Organization (DAO) composed of its own participants. There is no privileged data feed, no hidden order flow, no administrator who can reach in and tilt the outcome. Smart money is welcome to play; it simply cannot cheat. What it loses at the door is not its capital but its structural edge—and on a field where that edge is gone, the only variables left are the quality of your strategy and the strength of your coordination.
 
-In this arena, opaque market manipulation is impossible. The only remaining variables are the quality of your strategy and the strength of your coordination. Regarded Games demonstrates that when the playing field is truly levelled, clear incentives and transparent constraints can resolve complex coordination problems. It serves as a practical framework for moving the decentralized ecosystem beyond purely speculative extraction and back toward its foundational purpose: the creation of a truly honest marketplace for global socio-economic coordination.
+**The market is structured as a game—Class Warfare: The Game—because a game is the most honest way to make the structure visible.** It is a perfect-information, real-money arena that stages a recurring competition between two distributive philosophies—Capitalism (wealth concentration) and Socialism (wealth redistribution)—measured by a live, on-chain index of inequality. A strict Collateralized Identity requirement and a fully transparent peer-to-peer order book turn each trade into a choice with consequences for the whole, forcing the friction between individual self-interest and collective action into the open. But the game is the *vehicle*, not the point. The point is what participants discover by trading in a market where the cheats are gone and the rules belong to them: that decentralized governance can produce genuine fairness and participation, and that this—giving ordinary people the tools to recreate the economy on more equitable terms—is what distributed-ledger technology was always supposed to be for.
 
 ---
 
@@ -96,9 +96,9 @@ Current market structures systematically capitalize on these drivers. By validat
 
 **To confront the structural dissonance outlined above**—the conflict between the egalitarian ethos of the original cypherpunk vision and the hyper-concentrative reality of the current market—we introduce the Regarded Games protocol.
 
-**This intervention is designed not merely as a recreational application, but as a live, on-chain economic laboratory.** It proceeds from the premise that the cryptocurrency ecosystem is currently trapped in a state of ideological suspension: fundamentally "socialist" in its architectural promise of open access and peer-to-peer solidarity, yet ruthlessly "capitalist" in its execution, governed by power laws and capital efficiency. Regarded Games externalizes this internal conflict, transforming the implicit tension of the market into an explicit, gamified mechanism.
+**This intervention is not a recreational application but a functioning alternative market—one whose rules are written, enforced, and owned by its participants.** It proceeds from the premise that the cryptocurrency ecosystem is currently trapped in a state of ideological suspension: fundamentally "socialist" in its architectural promise of open access and peer-to-peer solidarity, yet ruthlessly "capitalist" in its execution, governed by power laws and capital efficiency. Regarded Games externalizes this internal conflict, turning the implicit tension of the market into an explicit mechanism—and, crucially, placing the dial that balances the two forces in the hands of the players themselves (see §5).
 
-**The simulation functions as a closed-loop economy** where these two archetypal systems—Capitalism (Capital Concentration) and Socialism (Capital Redistribution)—compete for systemic dominance. The environment is governed by the following mechanism design principles:
+**The market operates as a closed-loop economy** where these two archetypal systems—Capitalism (Capital Concentration) and Socialism (Capital Redistribution)—compete for systemic dominance. The environment is governed by the following mechanism design principles:
 
 1. **Capital Initialization (The Arena):** Participation begins with the exchange of stablecoin collateral (USDC) for a seasonal, closed-loop asset (\$FIM). This injected capital forms the total value locked (TVL) of the simulation, serving as the distinct economic aggregate for the seasonal cycle.
 
@@ -124,7 +124,7 @@ By creating a transparent, deterministic environment where wealth distribution i
 
 ## 4. The Game as Pedagogical Intervention: A Socratic Dialogue in Code
 
-**The architecture of Regarded Games serves a dual function:** it is simultaneously a competitive economic simulation and a mechanism for the deconstruction of market biases. To effectively intervene in the prevailing market culture, the protocol adopts the aesthetic and linguistic conventions of the high-velocity speculative environment it seeks to critique. It introduces Class Warfare: The Game—an unmanipulated alternative market designed for those who recognise that in traditional equities and digital assets, the "edge" is no longer determined by merit, but by structural privilege.
+**The architecture of Regarded Games serves a dual function:** it is first a competitive, player-owned market, and—because of what trading on a truly level field reveals—a mechanism for the deconstruction of market biases. To meet participants where they already are, the protocol adopts the aesthetic and linguistic conventions of the high-velocity speculative environment it offers an alternative to. It introduces Class Warfare: The Game—an unmanipulated market for those who recognise that in traditional equities and digital assets, the "edge" is no longer determined by merit, but by structural privilege.
 
 **This approach is codified in the project's title and its central archetype, Regardo.** While the name functions on the surface as an ironic reappropriation of the "high-conviction" labels common in decentralised finance, its deeper methodological significance lies in the concept of Systemic Regard. In the opaque and manipulated ecosystems of global finance, participants are often reduced to reactive noise traders. To "regard," in this protocol, is to possess the intentionality to look beyond the immediate price of an asset to the structural state of the aggregate economy.
 
@@ -132,7 +132,7 @@ By imposing strategic friction and perfect information, the simulation rewards t
 
 ### 4.1. The Trojan Horse Mechanism: From Individualism to Coordination
 
-The protocol operates as an adversarial pedagogical tool—a "Trojan Horse" designed to align user incentives with collective action. It utilises the familiar aesthetics of speculative culture, specifically through the deployment of two distinct archetypal characters that externalise the ideological conflict:
+The protocol does not preach; it lets a level field do the teaching. Because no one holds a hidden edge, players are free to discover for themselves where their real interest lies—and that discovery, not any lecture, is what aligns individual incentives with collective action. The familiar aesthetics of speculative culture are the on-ramp, carried by two archetypal characters that externalise the ideological conflict:
 
 - **Regardo, the Capitalist:** This archetype represents the drive for individual market dominance and the relentless concentration of capital. Regardo embodies the pursuit of becoming the "highly regarded" apex actor within the simulation—an individual who successfully navigates the high-risk environment to achieve Oligarch status through winner-take-all strategies.
 
@@ -140,7 +140,7 @@ The protocol operates as an adversarial pedagogical tool—a "Trojan Horse" desi
 
 It invites participation via the familiar allure of high-variance returns and winner-take-all dynamics (the Capitalist payout structure). However, the internal logic of the game reveals a stark mathematical reality that contradicts the initial assumptions of the retail participant.
 
-*Upon entry, the typical participant—conditioned by the individualistic accumulation narratives of the broader market—will invariably default to a competitive strategy. The "Oligarchy" payout functions as the bait, mirroring the aspirational promise of crypto wealth. However, the game's "Gini-aware" microstructure creates a barrier to entry for this strategy: affecting the Gini Coefficient toward concentration requires disproportionate capital dominance. The average participant quickly discovers that in a non-cooperative game state (Capitalism), their individual agency is negligible against larger, capitalised actors. Furthermore, the payout logic reinforces that a Capitalist victory creates no "winning faction," but only a winning elite.*
+*Upon entry, the typical participant—conditioned by the individualistic accumulation narratives of the broader market—will invariably default to a competitive strategy. The "Oligarchy" payout mirrors the aspirational promise of crypto wealth, and the player is free to chase it. But on a level field the mathematics are no longer hidden: the game's "Gini-aware" microstructure makes concentration genuinely hard, because affecting the Gini Coefficient toward concentration requires disproportionate capital dominance. The average participant quickly discovers that in a non-cooperative game state (Capitalism), their individual agency is negligible against larger, capitalised actors. Furthermore, the payout logic reinforces that a Capitalist victory creates no "winning faction," but only a winning elite.*
 
 **This realization forces a Socratic dilemma upon the player.** The participant's primary motivator remains rational self-interest, yet the definition of that interest is compelled to evolve in real-time. Faced with the statistical improbability of achieving Oligarch status, the player encounters a binary strategic choice:
 
@@ -154,21 +154,31 @@ It invites participation via the familiar allure of high-variance returns and wi
 
 The operational requirements of the Regarded Games protocol are incompatible with traditional corporate structures. A centralised entity, bound by fiduciary obligations to maximise shareholder equity, introduces a fundamental conflict of interest. Such an entity would be structurally incentivised to manipulate the simulation's parameters—such as issuance rates or fee structures—to optimise for revenue extraction rather than the integrity of the game. Under a centralised administrator, the simulation would cease to be a neutral laboratory and effectively become a rent-seeking platform.
 
-Consequently, the adoption of a Decentralised Autonomous Organisation (DAO) framework is not a stylistic preference, but a functional necessity. The DAO serves as the immutable administrator of the protocol, replacing subjective human oversight with algorithmic enforcement. This structure guarantees credible neutrality—a state where the mechanism treats all participants fairly, not because of the benevolence of its creators, but because the rules of interaction are transparent, verifiable, and unchangeable. Participants need not trust the founders; they need only verify the code governing the system.
+Consequently, the adoption of a Decentralised Autonomous Organisation (DAO) framework is not a stylistic preference, but a functional necessity. The DAO serves as the immutable administrator of the protocol, replacing subjective human oversight with algorithmic enforcement. This structure guarantees credible neutrality—a state where the mechanism treats all participants fairly, not because of the benevolence of its creators, but because the rules of interaction are transparent, verifiable, and—for the duration of any live season—fixed. Participants need not trust the founders; they need only verify the code governing the system.
 
-### 5.1. From Sovereign Capital to Automated Coordination
+### 5.1. Who Holds the Dial: The Players Set the Balance
+
+This is where the project's central claim becomes concrete. Every market embeds a thumb on the scale—some parameter that decides whether the structure favours the concentration of capital or its distribution. In the markets most people trade today, that thumb belongs to a hidden minority, and it presses in their favour. In Regarded Games, the most consequential of those parameters is the **Compensation Multiplier**: the lever that balances the Capitalist faction against the Socialist faction, making one side's victory easier or harder to reach. It is the single most powerful knob in the entire economy.
+
+That knob is not held by the founders, and it is not for sale to whoever brings the most capital. It is held by the players, collectively, through a DAO vote—and it is adjusted the way a competitive game studio patches for balance: openly, between seasons, in response to how the last season actually played out. Within a live season the multiplier is fixed and cannot be touched, so no one can reach in and change the rules mid-game; between seasons, the people who live under the rules are the same people who set them. That identity—rule-makers and rule-takers being one and the same—is not a feature bolted onto the protocol. It *is* what decentralized governance means.
+
+A sharp reader will object: if the players vote on the dial, and most players stand to gain from tilting it one way, won't the majority simply rig the field in their own favour? The answer is yes—and that is the point, not a flaw. Every market is balanced in *someone's* favour. The difference here is that the balancing happens in daylight, on the record, by the participants themselves, subject to a vote anyone can see and contest—rather than in secret, by a minority the rest of the market never gets to vote against. Honest democracy openly contested is not the same failure mode as a rigged game played behind closed doors; it is its remedy. (The formal mechanics of the multiplier and its governance parameter are given in §17.3 and Appendix §21.2.)
+
+### 5.2. From Sovereign Capital to Automated Coordination
 
 Ultimately, Regarded Games functions as a direct intervention in the prevailing economic paradigm of the cryptocurrency sector. The dominant narrative, rooted in the legacy of first-generation blockchain protocols, frames crypto-assets primarily as Sovereign Capital—tools for the decentralised accumulation and storage of value. While revolutionary, this view limits the technology's potential to simple asset ownership.
 
 Our objective is to substantiate the alternative paradigm of Algorithmic Coordination. This framework, enabled by programmable smart contracts, posits that the primary utility of the technology is disintermediation. In traditional markets, a central intermediary captures the surplus value generated by network activity. In a DAO-governed system, this rent-seeking layer is removed. The protocol is programmed to automate the clearing of value, ensuring that the surplus generated by the ecosystem is distributed directly to the participants who created it.
 
-Regarded Games represents the practical application of this shift. It is a proof-of-concept designed to demonstrate that the highest utility of distributed ledger technology lies not in speculative accumulation, but in the capacity to engineer more equitable, self-governing systems of human organisation.
+Regarded Games is the practical application of this shift—not a demonstration model but a market people actually trade in, whose surplus and whose rules both flow back to its participants. It stands for a simple thesis, which the rest of this paper makes concrete: the highest utility of distributed-ledger technology lies not in speculative accumulation, but in giving ordinary participants the tools to recreate the economy as a more equitable, self-governing system—and to own the rules that govern it.
 
 ---
 
 # Part II: Organizational & Technical Framework
 
 ## 6. Governance Architecture and Operational Axioms
+
+If the market belongs to its players, then so must its guarantees. The governance design that follows is what turns "fair" from a promise into something participants can verify and enforce for themselves rather than take on trust.
 
 ### 6.1. The Imperative of Credible Neutrality
 
@@ -232,7 +242,7 @@ The framework is composed of three strata:
 
 ### 7.3. The Operational Layer: On-Chain Enforcement
 
-Critical administrative functions within the protocol architecture (such as `GameController.startNewSeason` or `Treasury.setSeasonPolicy`) are gated by OpenZeppelin's `Ownable` (`onlyOwner`). The owner of `GameController` — which in turn owns `Treasury` and `Staking` — is the Execution Council multisig. This cryptographic gatekeeping ensures that no changes to the game rules or financial parameters can occur without the consensus of the Execution Council, acting on the mandate of a passed proposal.
+Critical administrative functions within the protocol architecture (such as `GameController.startNewSeason` or `Treasury.setSeasonPolicy`) are gated by OpenZeppelin's `onlyOwner`. The owner of `GameController` — which in turn owns `Treasury` and `Staking` — is the Execution Council multisig. To eliminate the risk of locking control by transferring it to a wrong address, `GameController` uses `Ownable2Step`: the deployer *offers* ownership to the Council, which must explicitly `acceptOwnership` to complete the handover. This cryptographic gatekeeping ensures that no changes to the game rules or financial parameters can occur without the consensus of the Execution Council, acting on the mandate of a passed proposal.
 
 ### 7.4. The Governance Lifecycle
 
@@ -294,7 +304,7 @@ A primary vulnerability in anonymous economic simulations is the "Sybil Attack"�
 
 - **The Rule:** To participate in the Capital Initialization Phase (Auction) a wallet must have staked \$RGD in the `Staking` contract.
 
-- **The Mechanism:** The check is enforced at mint. When a player buys \$FIM in the `Auction`, the contract locks a **fixed quantity of \$RGD per whole \$FIM acquired** — the `rgdWeiLockedPerFim` parameter set for the season in the `SeasonManifest` (currently `0.1 RGD` locked per \$FIM). This is a fixed token amount, *not* a price-aware percentage of value: the lock does not float with the market price of \$RGD. If the player's staked balance is insufficient to cover the newly required lock, the purchase reverts. Note that this requirement is enforced when minting \$FIM in the Auction; secondary trades on the `Exchange` do not impose an additional per-trade collateral check.
+- **The Mechanism:** The check is enforced at every point where FIM changes hands. When a player buys \$FIM in the `Auction`, the contract locks a **fixed quantity of \$RGD per whole \$FIM acquired** — the `rgdWeiLockedPerFim` parameter set for the season in the `SeasonManifest` (currently `0.1 RGD` locked per \$FIM). This is a fixed token amount, *not* a price-aware percentage of value: the lock does not float with the market price of \$RGD. If the player's staked balance is insufficient to cover the newly required lock, the purchase reverts. Secondary trades on the `Exchange` maintain the same invariant: every FIM holder — whether acquired at the Auction or purchased from another player — must back their holdings with staked \$RGD. The `Exchange` calls into `Staking` on every order lifecycle event (placement, fill, cancel, settlement) to transfer the collateral obligation from seller to buyer atomically. A buyer placing a bid (`isBuy` order) must reserve the collateral upfront; a taker filling an ask is checked at fill time. Neither leg can complete unless the buyer's staked balance covers the resulting lock.
 
 - **High-Water Mark Efficiency:** Locks operate on a High-Water Mark (MAX) basis inside `Staking`. The contract records the exact \$RGD locked for each active season and requires the staked balance to cover only the **largest** single-season lock, so one pool of staked \$RGD can collateralize multiple concurrent seasons. A player cannot unstake below this high-water mark while any season they joined is still active.
 
@@ -314,7 +324,7 @@ A primary vulnerability in anonymous economic simulations is the "Sybil Attack"�
 
 **Contract Logic: `Auction.sol`**
 
-The simulation commences with a fixed-length capital formation window (the season's `auctionDuration`) — approximately **one month on mainnet**, with the public testnet using a shorter **7-day** auction so seasons cycle quickly.
+The simulation commences with a fixed-length capital formation window (the season's `auctionDuration`). This duration is **not a protocol constant**: it is a per-season parameter read from `seasonManifest.json` and set when the season is created, so each season can run on its own schedule. The figures cited in this paper are illustrative proposals rather than fixed guarantees — for example, mainnet and testnet are launched under different conditions and may use different windows (e.g. a longer formation window on mainnet versus a shorter ~7-day window on testnet so seasons cycle quickly). The exact value for any given season is whatever its manifest specifies at deployment.
 
 - **Fixed-Rate Minting:** Participants enter the simulation by exchanging stablecoin collateral (\$USDC) for \$FIM at a fixed `1 USDC = 1 FIM` rate (the `Auction` scales 6-decimal USDC to 18-decimal FIM).
 
@@ -335,6 +345,8 @@ Unlike standard Decentralised Exchanges (AMMs) which obscure individual actors b
 - ***Mechanism:*** Players post bids and asks. However, the order book publicly indexes the identity and current balance of every Maker.
 
 - **Strategic Rationale:** This transparency allows for "Gini-aware" execution. A participant wishing to sell \$FIM can choose their counterparty based not only on price but on distributional impact. Selling to a "whale" increases the Gini (aiding Capitalism); selling to a low-net-worth player decreases the Gini (aiding Socialism). By exposing the counterparty's identity, the contract transforms every trade into a political act.
+
+- **One Boundary, Live and at Settlement:** The faction a player is shown as during trading — Capitalist (Oligarchy) or Socialist (Masses) — is not a cosmetic label distinct from the endgame. It is the *same* supply-share cut that governs the payout in §9.5: the largest set of holders whose balances sum to ≤50% of \$FIM supply are the Masses, and the remainder form the Oligarchy. The live class indicator a player trades against is therefore a continuous readout of where they stand relative to the very boundary that will decide the settlement distribution.
 
 **The Arbiter of Truth: The Gini Calculation**
 
@@ -381,6 +393,8 @@ Where Beta (The Base Multiplier, the `baseMultiplierBps` season parameter) is cu
 
 - **Rationale:** This metric prevents "freeloading." It distinguishes between the "Martyr" (who spent capital to buy \$FIM and burn it or hold it to lower the Gini) and the passive observer. By rewarding Net Contribution, the contract mathematically incentivises financial sacrifice for the collective goal.
 
+- ***Anti-gaming (Wash-Trade Friction):*** Because Net Contribution accrues from real trades, two colluding wallets could in principle round-trip \$FIM to inflate one wallet's contribution. This is deterred economically rather than by a balance cap (which cannot distinguish genuine above-par sacrifice from a wash): the per-fill **trade fee** (§10.3) is charged on every leg, so each round-trip pays the fee twice and bleeds unrecoverable USDC into the prize pool, making the attack progressively self-defeating.
+
 **Scenario C: Settlement by Proportional Progress (The Blended Outcome)** If the quarterly timer expires before either faction achieves the full `V_thresh` (25% progress), the contract executes a Proportional Blended Payout.
 
 1. **Progress Calculation:** Let `P_Cap` be the Capitalist progress and `P_Soc` be the Socialist progress. The overall progress is determined by the greater of the two.
@@ -409,7 +423,7 @@ Where Beta (The Base Multiplier, the `baseMultiplierBps` season parameter) is cu
 
 - **Governance Checkpointing:** Each stake/unstake writes a `(blockNumber, value)` checkpoint, allowing off-chain governance interfaces (Snapshot) to query a user's staked balance at a historical block height — the basis for flash-loan-resistant voting power.
 
-- **Locking Mechanism:** A player cannot unstake \$RGD if doing so would drop their balance below `requiredRegStake` — i.e. below the collateral still locked by any active season they joined. Locks are released back to the player when they claim their payout at season end (`releaseCollateral`).
+- **Locking Mechanism:** A player cannot unstake \$RGD if doing so would drop their balance below `requiredRegStake` — i.e. below the collateral still locked by any active season they joined. Locks are released back to the player when they claim their payout at season end (`releaseCollateral`). The `Staking` contract exposes three additional entry points used exclusively by the approved `Exchange`: `reserveCollateral` (locks collateral when a bid is placed), `releaseCollateralPartial` (frees collateral when a bid is cancelled or filled from the seller's side), and `adjustCollateral` (atomically releases the seller's lock and adds the buyer's lock on a completed trade). Together these ensure the invariant `seasonLocks == (FIM held + FIM committed in open bids) × rgdWeiLockedPerFim` is maintained across the full secondary-market lifecycle.
 
 ### 10.2. The Governance & Administrative Layer
 
@@ -417,9 +431,9 @@ Where Beta (The Base Multiplier, the `baseMultiplierBps` season parameter) is cu
 
 - **Function:** The administrative hub that orchestrates season creation. It does not itself contain a global collateral ratio; instead `startNewSeason` forwards a full set of per-season parameters (durations, victory threshold, base multiplier, treasury splits, existential threshold, the `rgdWeiLockedPerFim` collateral lock, and the verification bond) to a dedicated `SeasonFactory`.
 
-- ***The `SeasonFactory`:*** A separate contract whose sole job is to deploy and wire a season's four disposable contracts (`GameSeason`, `Auction`, `Exchange`, `FIM`) in one transaction, renounce/transfer their ownership appropriately, and return their addresses. `GameController` then registers the season and grants it the necessary `Staking` and `Treasury` approvals.
+- ***The `SeasonFactory`:*** A separate contract whose sole job is to deploy and wire a season's four disposable contracts (`GameSeason`, `Auction`, `Exchange`, `FIM`) in one transaction, renounce/transfer their ownership appropriately, and return their addresses. `GameController` then registers the season and grants it the necessary `Staking` and `Treasury` approvals. Because `GameSeason` and `Exchange` have large constructors that would push `SeasonFactory` past the EIP-170 24 576-byte runtime limit, their creation bytecode is held in two lightweight sub-deployer contracts (`GameSeasonDeployer` and `ExchangeDeployer`) that are deployed once in `SeasonFactory`'s constructor. This is a pure bytecode-size optimisation; the wiring logic and the API exposed to `GameController` are unchanged.
 
-- ***The Season Manifest:*** The game rules are authored off-chain in `config/seasonManifest.json` (the "SeasonManifest") and read by the deployment script, which passes them into `startNewSeason`. Financial splits are in basis points; durations are in seconds.
+- ***The Season Manifest:*** The game rules are authored off-chain in `config/seasonManifest.json` (the "SeasonManifest") and read by the deployment script, which passes them into `startNewSeason`. Financial splits are in basis points; durations are in seconds. **Every value in the SeasonManifest is a per-season parameter, not a hard-coded protocol constant.** Each is bound to a single season at creation time and is subject to change between seasons through DAO governance: any figure quoted in this paper (auction and game durations, victory threshold, base multiplier, treasury splits, existential threshold, the `rgdWeiLockedPerFim` collateral lock, the trade fee, the verification bond, etc.) reflects a current proposal, and the value used for any given season is whatever a passed Snapshot proposal — executed on-chain by the Execution Council via `startNewSeason` — has ratified for that season. This lets the DAO tune the economic rule-set season over season (e.g. adjusting the multiplier or victory threshold) without redeploying the core protocol.
 
 - **Governance Interface:** `GameController` is `Ownable`; `startNewSeason` is `onlyOwner`. Ownership is held by the **Execution Council multisig**, so no new season can be created without the Council's signature acting on a passed proposal.
 
@@ -429,9 +443,13 @@ Where Beta (The Base Multiplier, the `baseMultiplierBps` season parameter) is cu
 
 - **JIT Asset Management:** The Treasury supplies idle USDC to **Aave V3** to generate yield (`depositPrincipal`) and withdraws only when required for payouts (`payWinner`).
 
-- ***Multi-Ledger Accounting:*** It tracks `seasonPrincipals` per season alongside a `totalGlobalPrincipal`, ensuring the principal owed to one season is never paid out to another. Aave yield is only ever the balance in excess of `totalGlobalPrincipal`.
+- ***Multi-Ledger Accounting:*** It tracks `seasonPrincipals` per season alongside a `totalGlobalPrincipal`, ensuring the principal owed to one season is never paid out to another. With multiple seasons live at once, yield is attributed **per season by its share of global principal**: when a season harvests, it realizes only `totalYield × seasonPrincipal ÷ totalGlobalPrincipal` and leaves the remaining seasons' yield untouched in the pool to be realized at their own harvest. A season can therefore never drain the yield earned on another season's capital.
 
-- **Season-Locked Policies:** Each season's revenue policy (Buyback / Liquidity / Prize-Pool-reinvest / DAO basis points) is snapshotted at deployment via `setSeasonPolicy` and must sum to 10 000. `harvestAndExecutePolicy` applies these splits **to the realized yield only** — never to principal: the DAO and liquidity shares are transferred to their recipient addresses, the prize-pool share is reinvested by adding it back to the season's principal, and the buyback share is forwarded as USDC to a `buybackRecipient`. The Treasury no longer performs an automatic on-chain buy-and-burn of \$RGD (that path was removed to eliminate an exploit vector); any buyback is executed separately by the DAO-controlled recipient.
+- **Season-Locked Policies:** Each season's revenue policy (Buyback / Liquidity / Prize-Pool-reinvest / DAO basis points) is snapshotted at deployment via `setSeasonPolicy` and must sum to 10 000. `harvestAndExecutePolicy` applies these splits **to that season's realized yield only** — never to principal: the DAO and liquidity shares are transferred to their recipient addresses, the prize-pool share is reinvested by adding it back to the season's principal, and the buyback share is forwarded as USDC to a `buybackRecipient`. The Treasury no longer performs an automatic on-chain buy-and-burn of \$RGD (that path was removed to eliminate an exploit vector); any buyback is executed separately by the DAO-controlled recipient.
+
+- ***Trading-Fee Ingress:*** The seasonal `Exchange` charges a per-fill trade fee that flows into the Treasury via `collectTradingFee` and is credited **in full to the originating season's prize pool** (added to `seasonPrincipals`). This makes the prize pool that game-aligned players compete for grow with trading activity, taxes purely speculative flow, and — critically — makes attempts to wash-trade the Solidarity-Fund metric cost real, unrecoverable money on every leg.
+
+- **Emergency Principal Recovery:** An owner-only `sweepSeasonPrincipal(season, to)` function allows the Execution Council to recover residual USDC principal for a given season (withdrawing from Aave if needed) and send it to a specified address. This function is the on-chain counterpart to `GameSeason.sweepUnclaimed` and is called by that function after the 365-day lockout elapses.
 
 ### 10.3. The Seasonal Execution Layer (Disposable Contracts)
 
@@ -447,25 +465,33 @@ Where Beta (The Base Multiplier, the `baseMultiplierBps` season parameter) is cu
 
 - **Function:** A transparent, peer-to-peer limit order book. There is no AMM and no automatic matching engine.
 
-- **Mechanism Design:** A Maker calls `createOrder(isBuy, fimAmount, usdcPrice)`, escrowing USDC (for a bid) or \$FIM (for an ask) into the contract. A Taker chooses a specific order and calls `fillOrder(orderId)` (full fill) or `fillBatch(orderIds[], amounts[])` (partial / multi-order fills). Because the Taker selects the exact counterparty by `orderId`, every trade is a deliberate choice of *whom* to trade with. `cancelOrder` refunds the Maker's escrow.
+- **Mechanism Design:** A Maker calls `createOrder(isBuy, fimAmount, usdcPrice)`, escrowing USDC (for a bid) or \$FIM (for an ask) into the contract. A Taker chooses a specific order and calls `fillOrder(orderId)` (full fill) or `fillBatch(orderIds[], amounts[])` (partial / multi-order fills). Because the Taker selects the exact counterparty by `orderId`, every trade is a deliberate choice of *whom* to trade with. `cancelOrder` refunds the Maker's escrow and releases any reserved collateral.
+
+- **Collateral Lifecycle:** The `Exchange` is approved in `Staking` and calls back into it at every step. When a **bid** (buy order) is placed, `reserveCollateral` locks the buyer's \$RGD upfront — the order cannot be created if the buyer is under-collateralized. When a bid is filled, `releaseCollateralPartial` frees the seller's lock as their FIM leaves them (the buyer's reservation already covers the newly acquired FIM, so no second lock is added). When an **ask** (sell order) is filled, `adjustCollateral` atomically releases the seller's lock and adds the buyer's lock, reverting the entire fill if the buyer cannot cover it. On cancel or end-of-season `settleOrders`, any reserved bid collateral is released via `releaseCollateralPartial`.
+
+- **Trade Fee:** Every fill carries a protocol fee on the USDC leg, set per season by the `tradeFeeBps` parameter in the `SeasonManifest` (default `100` bps = 1 %). The fee is **borne by the Taker** — the Maker always receives (or pays) exactly their quoted price — and is routed in full into the season's prize pool. The fee both monetises speculative flow and economically deters wash-trading of the Net-Contribution metric (see §9.5).
 
 - **Strategic Rationale:** This friction forces participants to evaluate each counterparty's impact on the Gini Coefficient — the counterparty's identity is the Maker's `owner` address, and balances are queryable from `GameSeason`.
 
-- **Ledger Sync:** Every fill calls `GameSeason.updateLedger` so the season's authoritative \$FIM balances and net-contribution figures stay consistent with on-chain settlement. When a season is finalized, `settleAllOrders` (called by `GameSeason`) cancels every still-open order and refunds escrow.
+- **Ledger Sync:** Every fill calls `GameSeason.updateLedger` so the season's authoritative \$FIM balances and net-contribution figures stay consistent with on-chain settlement. When a season is finalized, `GameSeason` flips the Exchange into settlement mode (`openSettlement`); anyone can then drain still-open orders and refund their escrow to the Makers in bounded slices via the paginated, permissionless `settleOrders(maxCount)` (replacing a single unbounded loop, so settlement can never exceed the block gas limit).
 
 **`GameSeason.sol` (The State Machine & Arbiter)**
 
 - **Function:** The autonomous referee managing season state and settlement.
 
-- **The Phase Engine:** An internal `State` enum (`BOOTSTRAP → ACTIVE → CALCULATING → DISTRIBUTION → ENDED`) surfaces to clients through `getPhase()` as the human-readable lifecycle `AUCTION → BOOTSTRAP → TRADING → SETTLING → PAYOUT` (with a terminal `ENDED`). The auction runs while the season is still in `BOOTSTRAP`.
+- **The Phase Engine:** An internal `State` enum (`BOOTSTRAP → ACTIVE → CALCULATING → DISTRIBUTION`) surfaces to clients through `getPhase()` as the human-readable lifecycle `AUCTION → BOOTSTRAP → TRADING → SETTLING → PAYOUT`. The `ENDED` state no longer exists; the season remains in `DISTRIBUTION` indefinitely so latecomers can always claim. The auction runs while the season is still in `BOOTSTRAP`.
 
 - **The Bootstrap Phase:** After the auction window closes, trading stays paused until `G_initial` is established. `startBootstrap` opens the batch, `processBatch` consumes the sorted player set, and `finalizeBootstrap` records `G_initial` and transitions to `ACTIVE`.
 
-- **Trustless Verification (The Arbitrator):** Any external actor (a Keeper or Bot) drives a state transition by posting a USDC bond (`bondAmountUsdc`) and submitting the player set in **ascending balance order**. The validation logic enforces a sort check, a no-duplicates check, and the dust filter (`existentialThresholdFim`). On a successful finalization the bond is returned to the submitter; an attempted settlement that does not yet meet a victory or time condition forfeits the bond to the Treasury.
+- **Trustless Verification (The Arbitrator):** Any external actor (a Keeper or Bot) drives a state transition by posting a USDC bond (`bondAmountUsdc`), which makes them the season's `settlementStarter`. **Only that bonded starter may submit batches** via `processBatch`, and the set must be in **ascending balance order**; the validation logic enforces a sort check, a no-duplicates check, and the dust filter (`existentialThresholdFim`). Gating batch submission to the bond-poster prevents a griefer from poisoning a partially-processed batch into an unfinalisable state; should a starter abandon a batch mid-flight, the Execution Council can reassign it with `resetSettlement`. On a successful finalization the bond is returned to the starter; an attempted settlement that does not yet meet a victory or time condition forfeits the bond **to the DAO** (routed to the `daoRecipient`, not the Treasury balance, so it is never miscounted as yield).
 
 - **The Multiplier Logic:** Applies the compensation formula `M = β + (1 − G_initial)²` (all in basis points) in favour of the Socialist faction.
 
-- **Settlement Engine:** On a triggering condition `finalizeGame` locks state, closes open orders, harvests Treasury yield, computes each player's payout, and moves to `DISTRIBUTION`, where players pull their USDC via `claimPayout` (which also releases their \$RGD collateral and burns their \$FIM).
+- **Settlement Engine:** On a triggering condition `finalizeGame` locks state, opens Exchange settlement, harvests Treasury yield, and snapshots the final prize pool (`finalPoolSize`), then moves to `DISTRIBUTION`. Payouts are computed **lazily, per player, at claim time** (`claimPayout`) rather than in one unbounded loop, so finalization cost is independent of the player count. `claimPayout` **always releases the player's \$RGD collateral and burns their \$FIM — even when their payout is zero** — so no player's stake can ever be stranded by an ended season; USDC is transferred only when a payout is owed.
+
+- **Payout Preview:** The view function `computePayout(player)` returns exactly what a player would receive from `claimPayout` right now, enabling frontends to display pending rewards without requiring a transaction. It returns 0 before settlement, for already-claimed players, and for players below the existential threshold.
+
+- **Unclaimed-Principal Sweep:** If any USDC principal remains unclaimed 365 days after the season enters `DISTRIBUTION`, the owner (Execution Council) may call `sweepUnclaimed(to)`, which forwards the season's residual principal from the `Treasury` to the specified address. This 1-year lockout gives every participant ample time to claim before any administrative recovery is possible.
 
 **`FIM.sol` (The Seasonal Asset)**
 
@@ -483,15 +509,15 @@ Where Beta (The Base Multiplier, the `baseMultiplierBps` season parameter) is cu
 
 **The End-of-Season "Finalization Cascade":**
 
-1. *Trigger:* A Keeper posts the USDC bond via `startSettlement()`, submits the sorted player set through `processBatch()`, then calls `finalizeGame()`.
+1. *Trigger:* The bonded Keeper (`settlementStarter`) posts the USDC bond via `startSettlement()`, submits the sorted player set through `processBatch()`, then calls `finalizeGame()`.
 
-2. State Locking: If a victory or the time limit is met, game state is frozen (`CALCULATING → DISTRIBUTION`) and any open Exchange orders are settled.
+2. State Locking: If a victory or the time limit is met, game state is frozen (`CALCULATING → DISTRIBUTION`) and the Exchange is flipped into settlement mode; open orders are then drained permissionlessly in bounded slices via `settleOrders`.
 
-3. Settlement Calculation: Winning faction and final progress determined; each player's payout is written to `finalPayoutUSDC`.
+3. Settlement Calculation: Winning faction and final progress are determined and the final prize pool is snapshotted (`finalPoolSize`); individual payouts are computed lazily, per player, when each calls `claimPayout`.
 
-4. Treasury Routing: `harvestAndExecutePolicy` realizes Aave yield and applies the revenue policy; the season's prize pool is sized from `getSeasonPoolSize`.
+4. Treasury Routing: `harvestAndExecutePolicy` realizes this season's pro-rata Aave yield and applies the revenue policy; the season's prize pool is sized from `getSeasonPoolSize`.
 
-5. Incentivisation: The Keeper's bond is returned on a successful finalization (a premature settlement attempt instead forfeits the bond to the Treasury, discouraging spam).
+5. Incentivisation: The Keeper's bond is returned on a successful finalization (a premature settlement attempt instead forfeits the bond to the DAO, discouraging spam).
 
 **The Operational Lifecycle:** Auction → Bootstrap → Trading → Settling → Payout
 
@@ -500,6 +526,8 @@ Where Beta (The Base Multiplier, the `baseMultiplierBps` season parameter) is cu
 # Part IV: The Economic Framework
 
 ## 11. Tokenomics & Governance
+
+Ownership of this market is not metaphorical; it is something participants hold. The token design below is what makes "ruled by the players" a concrete arrangement rather than a sentiment—it defines who governs the rules and who shares in the value the market creates.
 
 **The economic architecture of Regarded Games uses a Dual-Token System**, separating the short-term seasonal game state from the permanent governance and value-accrual layer.
 
@@ -529,6 +557,8 @@ Where Beta (The Base Multiplier, the `baseMultiplierBps` season parameter) is cu
 
 4. **DAO / Operations:** Sent to the DAO recipient to fund ongoing operations.
 
+In addition to Aave yield, the seasonal `Exchange` **trade fee** (default 1 %, configurable per season via `tradeFeeBps`) is a second revenue stream: it accrues directly to the active season's prize pool, so trading activity and speculation continuously deepen the pot that participants compete for.
+
 ### 11.3. Supply Distribution
 
 **The total supply of \$RGD is fixed at 1,000,000,000 tokens.** | Category | Allocation | Total Tokens | Purpose and Vesting Schedule |
@@ -540,6 +570,8 @@ Where Beta (The Base Multiplier, the `baseMultiplierBps` season parameter) is cu
 | **Market Formation** | 15% | 150,000,000 | **Market Initialisation.** 5% Capital Auction / 5% Liquidity Pool / 3% Testnet Quests / 2% Airdrops. See Section 13. |
 | **Total** | 100% | 1,000,000,000 |
 ## 12. Strategic Rationale: Temporal Distribution & Float Management
+
+The same principle that governs the market governs its ownership: it should be earned by the people who build and play it, not auctioned to whoever brings the most capital on day one. The distribution rationale below exists to keep the very concentration the protocol critiques from re-forming at the level of governance itself.
 
 **The emission schedule prioritises long-term protocol stability over short-term speculative velocity.** Initial circulating supply is set at 5%, representing the starting state of a Progressive Ownership Model.
 
@@ -561,6 +593,8 @@ Their economic success is entirely contingent on the multi-year viability and gr
 
 ## 13. Liquidity Initialization and Capital Controls
 
+A market owned by its participants has to be *launched* in a way that honours that ownership—without a privileged tranche of insiders positioned to extract from everyone who arrives later. The instantiation mechanics below bind the launch to the public allocation rules rather than to anyone's discretion.
+
 ### 13.1. Atomic Instantiation (TGE)
 
 The \$RGD economy is instantiated through a Token Generation Event (TGE) anchored by the `CapitalAuction` contract. The entire immutable supply of 1,000,000,000 \$RGD is minted **into `CapitalAuction`** at deployment. When the auction window closes, anyone may call `finalize()`, which atomically: pairs 100% of the raised USDC with the 5% Liquidity tranche into a Uniswap V2 pool; sends the 5% sale tranche's pro-rata claims to depositors; routes the 85% vesting allocation to the `Vesting` contract; routes the 3% testnet-quest allocation to the `TestnetRewardDistributor`; and routes the 2% airdrop allocation to its recipient — and starts the vesting clocks (`Vesting.init` / `TestnetRewardDistributor.init`) in the same transaction. This binds the live distribution strictly to the allocation table in Section 11.3.
@@ -579,7 +613,7 @@ The 15% of supply allocated to Market Formation is divided into four tranches to
 
 ### 13.3. Market Formation via Parity Listing
 
-**Upon the conclusion of the Capital Formation Auction, `finalize()` executes an automated Parity Listing.** 100% of the USDC raised during the auction is paired with the 5% Liquidity tranche to instantiate a Uniswap V2 pool. Because the auction sale tranche (5%) and the liquidity tranche (5%) are equal in size, the secondary market opens at the exact clearing price discovered during the auction, eliminating Day 1 price discrepancies.
+**Upon the conclusion of the Capital Formation Auction, `finalize()` executes an automated Parity Listing.** 100% of the USDC raised during the auction is paired with the 5% Liquidity tranche to instantiate a Uniswap V2 pool. Because the auction sale tranche (5%) and the liquidity tranche (5%) are equal in size, the secondary market opens at the exact clearing price discovered during the auction, eliminating Day 1 price discrepancies. To protect the genesis listing from front-running, `finalize()` refuses to deposit if the \$RGD/USDC pair has been pre-created and seeded with skewed reserves, and supplies liquidity with non-zero minimum-amount bounds rather than accepting any ratio; an owner-only `recoverToken` escape hatch (disabled once finalized) allows recovery if such a griefing attempt blocks the listing.
 
 ### 13.4. Liquidity Locking: The Transition to Protocol-Owned Liquidity (POL)
 
@@ -728,7 +762,9 @@ The deployment of novel economic primitives involves inherent uncertainties. We 
 
 ## 18. Conclusion: The Clean Room of Finance
 
-**At its core, Class Warfare: The Game is a perfect-information, real-money economic simulation built on a foundation of pure strategy.** It is a competitive arena where victory is not determined by luck or informational asymmetry, but by a participant's ability to analyse a complex economic system and coordinate effectively with others to achieve a collective goal. Beyond its function as a high-stakes competitive environment, the protocol is conceived as an unmanipulated alternative market built on a permissionless infrastructure. It poses a fundamental challenge to the global trading community: if provided with perfect information, zero-latency data, and a transparent rule-set, can you outmanoeuvre the competition? For too long, everyday participants in both traditional equities and digital assets have been subjected to an environment where insiders hold an insurmountable edge. By stripping away these hidden advantages and opaque algorithms, we provide a "Clean Room" for the pure expression of human coordination. By mathematically incentivising the individualist to consider the collective, we aim to steer the energy of the decentralised ecosystem back toward its original promise. The market is a war, but for the first time, the weapons are distributed equally. The game is the lesson.
+**At its core, Class Warfare: The Game is a perfect-information, real-money market built on a foundation of pure strategy.** It is a competitive arena where victory is not determined by luck or informational asymmetry, but by a participant's ability to analyse a complex economic system and coordinate effectively with others to achieve a collective goal. It poses a fundamental challenge to the global trading community: if provided with perfect information, zero-latency data, and a transparent rule-set, can you outmanoeuvre the competition? For too long, everyday participants in both traditional equities and digital assets have been subjected to an environment where insiders hold an insurmountable edge—an edge manufactured out of privileged information and overwhelming capital. By stripping those two advantages out of the structure itself, we provide a "Clean Room" for the pure expression of human coordination: a market where smart money may play but cannot cheat.
+
+But the deepest result is not who wins a season. It is what the market reveals once the cheats are gone and the rule-book is handed to the people who trade under it. Players discover, through real stakes rather than any sermon, that on a level field their own best outcome is bound up with the collective's—and they discover that the dial which balances the whole economy is theirs to set, in the open, by vote. That is the realisation the protocol exists to produce: that decentralized governance is not a slogan but a working machine for fairness and participation, and that this—handing ordinary people the tools to rebuild the economy on equitable terms and to own the rules that govern it—is what distributed-ledger technology was for all along. The market is a war, but for the first time the weapons are distributed equally, and the rules belong to the people holding them. The game is the lesson; the lesson is that a fairer market is something we can simply choose to build.
 
 ## 19. Roadmap & Future Vision
 
@@ -749,6 +785,8 @@ The initial game mode establishes the baseline mechanism. The Regarded DAO is em
 - **The "Volatile Asset" Game Mode:** Instead of stablecoin minting, the game utilises real, volatile crypto assets (e.g., minting Fake Internet Coins (\$FIC) by depositing ETH or WBTC). This introduces a profound new layer of complexity: the Gini Coefficient would constantly shift not just from player trading, but from the real-world price movements of the underlying collateral, testing a faction's ability to manage a truly chaotic, multi-variable economy.
 
 ## 20. The "Equal Start" Game Mode (The Proletariat Arena)
+
+This is one shape the market can take once its participants own the rule-set—a variant the DAO can choose to run, illustrating that the fair field is not a single fixed game but a space the players themselves can reconfigure.
 
 The open-ended Auction is replaced with a fixed buy-in. Every participant purchases an identical, predetermined amount of \$FIM. This ensures every player begins the game with an initial Gini Coefficient of 0.0. The strategic challenge then becomes a pure test of post-auction gameplay, examining the Capitalist faction's ability to create inequality from a perfectly level playing field, and the Socialist faction's ability to defend it.
 

@@ -6,7 +6,7 @@ import { parseUnits, formatUnits, erc20Abi, maxUint256, type Abi } from 'viem';
 import { Order } from '@/hooks/useOrderBook';
 import { useOpenOrders } from '@/hooks/useOpenOrders';
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
-import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
+import { useBatchPlayerClass } from '@/hooks/useBatchPlayerClass';
 import { useButtonHold } from '@/hooks/useButtonHold';
 import { useGiniImpact } from '@/hooks/useGiniImpact';
 import { useTradeExecution, ExecutionPayload } from '@/hooks/useTradeExecution';
@@ -144,7 +144,7 @@ export function TradingMask({
     )),
     [groupedAskQueue, groupedBidQueue]
   );
-  const { data: percentileMap } = useBatchPlayerPercentiles(seasonAddress, queueMakers, exchangeAddress);
+  const { data: classMap } = useBatchPlayerClass(seasonAddress, queueMakers, exchangeAddress);
 
   const executionPayload = useMemo<ExecutionPayload>(() => {
     if (isMaker) return { ids: [], amounts: [], totalCostRaw: 0n, totalFimRaw: 0n };
@@ -521,7 +521,7 @@ export function TradingMask({
     || isUnderCollateralized;
 
   const userMakers = useMemo(() => (address ? [address.toLowerCase()] : []), [address]);
-  const { data: userStatsMap } = useBatchPlayerPercentiles(seasonAddress, userMakers, exchangeAddress);
+  const { data: userStatsMap } = useBatchPlayerClass(seasonAddress, userMakers, exchangeAddress);
   const userStats = address ? userStatsMap?.[address.toLowerCase()] : undefined;
 
   const isQueueLocked = !isMaker && selectedOrders.length > 0;
@@ -627,7 +627,7 @@ export function TradingMask({
               {totalFim <= 0 && <div />}
               {userStats && (
                 <div className="flex flex-col items-start min-w-0 justify-self-start">
-                  <PercentileCircle percentage={userStats.factionPercentile} isCapitalist={userStats.isCapitalist} size="lg" />
+                  <PercentileCircle percentage={userStats.classPercentile} isCapitalist={userStats.isCapitalist} size="lg" />
                 </div>
               )}
             </div>
@@ -742,7 +742,7 @@ export function TradingMask({
                           group={group} groupIdx={groupIdx} groupCount={activeQueue.length}
                           draggedGroupIdx={hasAsksInQueue ? draggedAskGroupIdx : draggedBidGroupIdx}
                           targetAmount={activeTarget}
-                          filledBefore={filledBefore} stats={percentileMap?.[group.maker?.toLowerCase()]}
+                          filledBefore={filledBefore} stats={classMap?.[group.maker?.toLowerCase()]}
                           onMoveGroup={hasAsksInQueue ? handleMoveAskGroupButton : handleMoveBidGroupButton}
                           onRemoveGroup={handleRemoveGroup}
                           onDragStart={hasAsksInQueue ? setDraggedAskGroupIdx : setDraggedBidGroupIdx}
@@ -818,7 +818,7 @@ export function TradingMask({
                         key={group.ids[0]}
                         group={group} groupIdx={groupIdx} groupCount={groupedAskQueue.length}
                         draggedGroupIdx={draggedAskGroupIdx} targetAmount={buyTargetAmount}
-                        filledBefore={filledBefore} stats={percentileMap?.[group.maker?.toLowerCase()]}
+                        filledBefore={filledBefore} stats={classMap?.[group.maker?.toLowerCase()]}
                         onMoveGroup={handleMoveAskGroupButton} onRemoveGroup={handleRemoveGroup}
                         onDragStart={setDraggedAskGroupIdx} onDragOver={handleAskGroupDragOver}
                         onDragEnd={() => setDraggedAskGroupIdx(null)}
@@ -860,7 +860,7 @@ export function TradingMask({
                         key={group.ids[0]}
                         group={group} groupIdx={groupIdx} groupCount={groupedBidQueue.length}
                         draggedGroupIdx={draggedBidGroupIdx} targetAmount={sellTargetAmount}
-                        filledBefore={filledBefore} stats={percentileMap?.[group.maker?.toLowerCase()]}
+                        filledBefore={filledBefore} stats={classMap?.[group.maker?.toLowerCase()]}
                         onMoveGroup={handleMoveBidGroupButton} onRemoveGroup={handleRemoveGroup}
                         onDragStart={setDraggedBidGroupIdx} onDragOver={handleBidGroupDragOver}
                         onDragEnd={() => setDraggedBidGroupIdx(null)}

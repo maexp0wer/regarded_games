@@ -24,7 +24,7 @@ export interface FimDistributionBar {
  * buckets 10–19 are capitalist (just above threshold→richest).
  *
  * Reuses the shared useSeasonPlayers + useSeasonActiveOrders fetches — no new
- * network calls. Effective balance mirrors useBatchPlayerPercentiles:
+ * network calls. Effective balance mirrors useBatchPlayerClass:
  *   effectiveBalance = fimBalance + fimBurned + locked FIM in active sell orders
  */
 export function useSeasonFimDistribution(

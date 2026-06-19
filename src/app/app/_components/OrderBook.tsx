@@ -2,7 +2,7 @@
 
 import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { Order, useOrderBook } from '@/hooks/useOrderBook';
-import { useBatchPlayerPercentiles } from '@/hooks/useBatchPlayerPercentiles';
+import { useBatchPlayerClass } from '@/hooks/useBatchPlayerClass';
 import { PercentileCircle } from './PercentileCircle';
 import PercentRangeSlider from './PercentRangeSlider';
 
@@ -56,7 +56,7 @@ export function OrderBook({
     return Array.from(makers);
   }, [data]);
 
-  const { data: percentileMap } = useBatchPlayerPercentiles(seasonAddress, uniqueMakers);
+  const { data: classMap } = useBatchPlayerClass(seasonAddress, uniqueMakers);
 
   const priceRows = useMemo(() => {
     const bidsRaw = data?.bids || [];
@@ -116,7 +116,7 @@ export function OrderBook({
       const makerAddress = row.ask?.maker || row.bid?.maker;
       if (!makerAddress) return true;
 
-      const stats = percentileMap?.[makerAddress.toLowerCase()];
+      const stats = classMap?.[makerAddress.toLowerCase()];
 
       if (factionFilter !== null) {
         if (!stats) return false;
@@ -124,12 +124,12 @@ export function OrderBook({
         if (factionFilter === 'proletariat' && stats.isCapitalist) return false;
 
         // Filter automatically by rank when faction filter is active
-        if (stats.factionPercentile < parsedMin || stats.factionPercentile > parsedMax) return false;
+        if (stats.classPercentile < parsedMin || stats.classPercentile > parsedMax) return false;
       }
 
       return true;
     });
-  }, [data, percentileMap, sideFilter, factionFilter, minPercentile, maxPercentile]);
+  }, [data, classMap, sideFilter, factionFilter, minPercentile, maxPercentile]);
 
   const maxAskAmount = useMemo(
     () => Math.max(0, ...priceRows.map(r => r.ask?.amount ?? 0)),
@@ -195,7 +195,7 @@ export function OrderBook({
   };
 
   const renderRank = (makerAddress: string, align: 'start' | 'end') => {
-    const stats = percentileMap?.[makerAddress.toLowerCase()];
+    const stats = classMap?.[makerAddress.toLowerCase()];
     if (!stats) return (
       <div className={`flex w-full items-center ${align === 'end' ? 'justify-end' : 'justify-start'}`}>
         <span className="font-mono text-[10px] opacity-20 text-text2">—</span>
@@ -204,10 +204,10 @@ export function OrderBook({
     return (
       <div className={`flex w-full items-center ${align === 'end' ? 'justify-end' : 'justify-start'}`}>
         <span className="sm:hidden">
-          <PercentileCircle percentage={stats.factionPercentile} isCapitalist={stats.isCapitalist} size="xxs" />
+          <PercentileCircle percentage={stats.classPercentile} isCapitalist={stats.isCapitalist} size="xxs" />
         </span>
         <span className="hidden sm:inline-flex">
-          <PercentileCircle percentage={stats.factionPercentile} isCapitalist={stats.isCapitalist} size="xxs" />
+          <PercentileCircle percentage={stats.classPercentile} isCapitalist={stats.isCapitalist} size="xxs" />
         </span>
       </div>
     );

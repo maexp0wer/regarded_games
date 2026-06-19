@@ -2,11 +2,15 @@
 
 ## Project Overview
 
-Perfect-information strategy game with real-money stakes on Base. Players trade FIM tokens in a seasonal on-chain exchange/auction. Two factions based on each player's FIM balance vs. the live 50th-percentile threshold: **Proletariat/Socialists** (below) and **Bourgeoisie/Capitalists** (above).
+Perfect-information strategy game with real-money stakes on Base. Players trade FIM tokens in a seasonal on-chain exchange/auction. Two factions based on each player's FIM balance vs. the live **Masses/Oligarchy boundary** — the supply-share (Lorenz) cut at 50% of total FIM *supply*, **not** a population percentile (the largest set of poorest holders whose balances sum to ≤50% of supply are the Masses): **Proletariat/Socialists** (the Masses, at or below the cut) and **Bourgeoisie/Capitalists** (the Oligarchy, above).
 
 Three layers: **Frontend** (Next.js 15, `src/`), **Indexer** (Ponder, `indexer/`), **Community** (self-hosted Discourse via SSO).
 
-Local dev launched via `start.bat`: Next.js on :3000, Anvil on :8545, Ponder GraphQL on :42069.
+Local dev launched via `start.bat` in **`fork` mode**: Next.js on :3000, plus a dual-fork backend — two Anvils + two Ponders running side-by-side, one per tenant:
+- `app.localhost` — Base mainnet fork (chain 31337, Anvil :8545, Ponder :42069)
+- `app.sepolia.localhost` — Base Sepolia fork (chain 31338, Anvil :8546, Ponder :42070)
+
+In **`mainnet` mode** there is no local Anvil/Ponder; both subdomains hit the real chains and hosted Ponder endpoints.
 
 ---
 
@@ -40,7 +44,7 @@ A new context requires the same bar: (a) ambient config that cannot reasonably b
 const items = await fetchAllPonderItems<T>(PONDER_URL, query, vars, (d) => d.collectionName);
 ```
 
-Ponder GraphQL endpoint: `http://127.0.0.1:42069/graphql`
+Ponder GraphQL endpoints (fork mode): `http://127.0.0.1:42069/graphql` (mainnet fork), `http://127.0.0.1:42070/graphql` (sepolia fork). The frontend selects the right one per tenant.
 
 ---
 
@@ -54,11 +58,11 @@ All data-fetching hooks use `useQuery` from `@tanstack/react-query` with a stabl
 
 - **Client-side:** wagmi hooks (`useReadContract`, `useWriteContract`, `useAccount`, `usePublicClient`)
 - **Server-side (API routes):** instantiate viem `publicClient` directly via `NEXT_PUBLIC_CHAIN_ID`
-- Chains: dev 31337 (Anvil), testnet 84532 (Base Sepolia), prod 8453 (Base mainnet)
+- Chains: local Anvil forks 31337 (Base mainnet fork) / 31338 (Base Sepolia fork); real chains 8453 (Base mainnet) / 84532 (Base Sepolia)
 - Contract addresses from `src/deployments/local/core.json` via `src/lib/contracts.ts`
 - ABIs in `src/deployments/abis/` (source of truth)
 - Wallet addresses always normalized to lowercase
-- Faction threshold calculated live client-side from raw balances — **not** read from the contract (contract value is stale)
+- Faction boundary (the supply-share Masses/Oligarchy cut, not a population percentile) calculated live client-side from raw balances — **not** read from the contract (contract value is stale)
 
 ---
 

@@ -7,8 +7,8 @@ import { useTenantPonderUrl } from '@/context/TenantContext';
 /**
  * Raw `playerSeasonStatss` row for a season. Selects the superset of fields any
  * consumer needs so a single cached fetch serves every derived hook
- * (useSeasonGini, useBatchPlayerPercentiles, useFactionPercentile,
- * usePlayerRank, usePayout, useOrderBook maker balances).
+ * (useSeasonGini, useBatchPlayerClass, usePlayerRank, usePayout,
+ * useOrderBook maker balances).
  */
 export interface SeasonPlayer {
   playerAddress: string;

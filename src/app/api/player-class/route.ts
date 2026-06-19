@@ -64,30 +64,30 @@ export async function POST(req: Request) {
         rawUserBalance.toString()
     ]);
     
-    const totalInFaction = Number(statsRes.rows[0].total_in_faction ?? 0);
+    const totalInClass = Number(statsRes.rows[0].total_in_faction ?? 0);
     const richerThanUser = Number(statsRes.rows[0].richer_than_user ?? 0);
 
-    // 4. Calculate Percentile
+    // 4. Calculate distance percentile within the class
     const rank = richerThanUser + 1;
-    let factionPercentile = 0;
+    let classPercentile = 0;
 
-    if (totalInFaction <= 1) {
-      factionPercentile = 100; 
+    if (totalInClass <= 1) {
+      classPercentile = 100;
     } else {
-      const index = totalInFaction - rank;
-      factionPercentile = (index / (totalInFaction - 1)) * 100;
+      const index = totalInClass - rank;
+      classPercentile = (index / (totalInClass - 1)) * 100;
     }
 
     return NextResponse.json({
-      factionPercentile,
+      classPercentile,
       isCapitalist,
-      totalInFaction,
-      factionRank: rank
+      totalInClass,
+      classRank: rank
     });
 
   } catch (error) {
     // Keep this error log for monitoring production issues
-    console.error("Percentile API Error:", error instanceof Error ? error.message : error);
+    console.error("Player-class API Error:", error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

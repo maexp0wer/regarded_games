@@ -19,6 +19,10 @@
 .DS_Store
 *.pem
 
+# python bytecode cache (discourse-*.py tooling)
+__pycache__/
+*.pyc
+
 # debug
 npm-debug.log*
 yarn-debug.log*
@@ -63,3 +67,5 @@ indexer/.env*.local
 # Ponder
 indexer/generated/
 indexer/.ponder/
+
+NOTES.md

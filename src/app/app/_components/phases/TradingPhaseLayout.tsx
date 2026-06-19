@@ -15,7 +15,7 @@ import { TradingMask } from '../TradingMask';
 import { FactionDiscussionBoard } from '../FactionDiscussionBoard';
 import { TradingPanelMenu } from '../TradingPanelMenu';
 import type { Order } from '@/hooks/useOrderBook';
-import type { PercentileData } from '@/hooks/useBatchPlayerPercentiles';
+import type { PlayerClassData } from '@/hooks/useBatchPlayerClass';
 import type { useSeasonChart } from '@/hooks/useSeasonChart';
 import type { SeasonConfig } from '@/hooks/useSeasonPhase';
 
@@ -36,7 +36,7 @@ interface TradingPhaseLayoutProps {
   effectiveVictoryPending: boolean;
 
   // Faction + discussion board
-  factionData?: PercentileData;
+  factionData?: PlayerClassData;
   showBoard: boolean;
   onToggleBoard: () => void;
 

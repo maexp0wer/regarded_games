@@ -41,8 +41,8 @@ const QUERY = `
 
 /**
  * Single shared fetch of every active order for a season. Consumed by
- * useOrderBook, useSeasonGini, useBatchPlayerPercentiles, useFactionPercentile
- * (sell side), and useOpenOrders ('open' variant, filtered by maker).
+ * useOrderBook, useSeasonGini, useBatchPlayerClass (sell side), and
+ * useOpenOrders ('open' variant, filtered by maker).
  */
 export function useSeasonActiveOrders(
   seasonAddress: string | undefined,

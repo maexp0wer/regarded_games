@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     // Compute mass threshold off-chain.
     // The on-chain `massThresholdBalance()` is stale (per CLAUDE.md) and reverts
     // in some lifecycle states. Mirror the algorithm used by the indexer's
-    // Exchange:OrderFilled handler and useBatchPlayerPercentiles: effective
+    // Exchange:OrderFilled handler and useBatchPlayerClass: effective
     // balance per player = fimBalance + fimBurned + FIM locked in active sell
     // orders, minus the exchange phantom.
     const sAddr = seasonAddress.toLowerCase();
