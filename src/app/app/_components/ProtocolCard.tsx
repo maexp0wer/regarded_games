@@ -1,9 +1,7 @@
 'use client';
 
 import React from 'react';
-
-const truncateAddress = (addr: string) =>
-  addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : '—';
+import { useTenantChainId } from '@/context/TenantContext';
 
 interface ProtocolCardProps {
   seasonAddress: string;
@@ -13,7 +11,14 @@ interface ProtocolCardProps {
   isAuction?: boolean;
 }
 
+function scannerUrl(chainId: number, addr: string): string {
+  if (chainId === 84532) return `https://sepolia.basescan.org/address/${addr}`;
+  return `https://basescan.org/address/${addr}`;
+}
+
 export function ProtocolCard({ seasonAddress, fimAddress, auctionAddress, exchangeAddress, isAuction }: ProtocolCardProps) {
+  const chainId = useTenantChainId();
+
   if (!fimAddress && !auctionAddress && !exchangeAddress) return null;
 
   return (
@@ -24,17 +29,19 @@ export function ProtocolCard({ seasonAddress, fimAddress, auctionAddress, exchan
       <div className="flex flex-col gap-3">
         {[
           { label: 'Season',                                   addr: seasonAddress },
-          { label: 'FIM Token',                                addr: fimAddress },
+          { label: '$FIM',                                addr: fimAddress },
           { label: isAuction ? 'Auction' : 'Exchange',        addr: isAuction ? auctionAddress : exchangeAddress },
         ].filter(r => r.addr).map(({ label, addr }) => (
           <div key={label} className="kv-row">
             <span className="font-mono text-[11px] text-text2">{label}</span>
-            <code
-              className="font-mono text-[11px] bg-surface px-2 py-0.5 rounded text-text2 border border-border select-all"
-              title={addr}
+            <a
+              href={scannerUrl(chainId, addr!)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-[11px] px-2 py-0.5 rounded text-text2 select-all hover:text-text transition-colors"
             >
-              {truncateAddress(addr!)}
-            </code>
+              {addr}
+            </a>
           </div>
         ))}
       </div>

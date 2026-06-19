@@ -17,6 +17,99 @@ belongs to below, follow its anatomy, and lift the verbatim class structure from
 reference file. The token, class, and color catalog is authoritative in **CLAUDE.md → Styling**
 — this doc points at it rather than restating it.
 
+**Before writing any markup, read Section 0.** It is the set of non-negotiable rules that the
+generated output keeps violating. If a choice in a later section ever seems to conflict with
+Section 0, Section 0 wins.
+
+---
+
+## 0. Non-Negotiable Rules (read this first)
+
+These are hard constraints, not preferences. Most "off-brand" output comes from breaking one of
+them. Apply all of them on every component.
+
+### 0.1 Surface layering — pick the level by depth, never by taste
+
+Surfaces nest in a strict ladder. The level is determined by *how deeply nested* the element is,
+not by how much you want it to stand out:
+
+| Element | Surface token |
+| --- | --- |
+| Page canvas (the route background) | `bg-bg` |
+| A plain card / pane sitting on the page | `bg-card` |
+| A card **on** a card (raised module, active panel, a tile inside a card) | `bg-card2` |
+| A card **on** a card-on-a-card (inner well, dropdown, the deepest nested block) | `bg-card3` |
+| **Input fields** (text/number inputs, the AmountInput rail, any field that takes typing) | `bg-card3` |
+
+Rules:
+- Go **exactly one level deeper** per nesting step. A card inside a `card` is `card2`; do not jump
+  straight to `card3` to "make it pop," and do not put a `card` on a `card`.
+- **Input fields are always `card3`**, regardless of how deep they sit. A search/number/text field
+  reads as the deepest well on the surface.
+- Do not invent intermediate shades, opacities, or tints to fake a new level. The four tokens
+  (`bg` → `card` → `card2` → `card3`) are the entire vocabulary.
+
+### 0.2 Flat surfaces — NO box-shadow, NO gradients on content
+
+Content surfaces are completely flat. Separation comes from the surface ladder (0.1) and borders
+(0.3) — never from shadow or gradient.
+
+- **Never** add `box-shadow` to a card, pane, stat cell, data row, tile, list item, or input.
+  No `shadow-*` Tailwind utilities, no `box-shadow:` inline, no glow halos (`0 0 …`), no drop
+  shadows for "depth." `.terminal-pane` is flat by definition — keep everything that way.
+- **Never** put a gradient on a content surface as decoration (no `bg-gradient-*`, no
+  `linear-gradient(...)` fills on cards/panes/rows/headers).
+- **The only sanctioned exceptions** — already baked into existing global classes, so you get them
+  for free and should not re-create them by hand:
+  - The **primary CTA** (`.btn-game-primary`) and the **execute buttons**
+    (`.btn-terminal-action.action-buy|.action-sell`) deliberately use the `--sunset` gradient fill
+    and a colored glow. Use the class; never hand-roll the gradient/shadow elsewhere.
+  - The **Band** header strip uses the `--sunset-15` viewport-pinned gradient (Section 1 → Band).
+  - The live-rail **`dial-knob`**, the **live status ping** (pulsing green dot), and hero-number
+    **text-shadow** carry meaning, not decoration.
+  - **Modals / dropdowns** (`.modal-overlay-blur` and elevated `card3` popovers) may carry an
+    elevation shadow — that is the one place "floating above the page" is real.
+- For hover feedback on a flat surface, change the **surface** (`hover:bg-card2`) or the **border**
+  (`hover:border-border2`) or grow a solid accent strip — **not** a shadow.
+
+### 0.3 Fonts — numbers are `font-mono`, everything else is `font-display`
+
+- **`font-mono` (JetBrains Mono):** every numeric value — balances, prices, ranks, percentages,
+  countdowns, timestamps, addresses — **plus** small mono labels/units. Always pair changing
+  numbers with the `tabular-nums` class so digits don't jitter.
+- **`font-display` (Exo 2):** everything that is not a number — titles, headings, button labels,
+  tab labels, section labels, big game actions. Usually `font-black uppercase tracking-tight`.
+- `font-sans` (Space Grotesk) is reserved for genuine prose/body copy (descriptions, help text).
+- If you are unsure: a value you'd read as a *figure* → `font-mono`; a *word* the UI presents →
+  `font-display`.
+
+### 0.4 Selectors / segmented toggles — use the established selector treatment
+
+Any "pick one of N views/options" control (tabs, view switchers, timeframe pickers, filter
+segments) uses one of the two existing patterns — never a bespoke styled `<button>` group:
+
+- **Panel/view tabs:** `terminal-view-selector-bar` › `terminal-view-btn`, open tab gets
+  ` active` (lights the bottom indicator). See `AuctionPanelMenu.tsx`.
+- **Compact segmented selector** (the timeframe-pill pattern): a `flex items-center gap-0.5` row of
+  buttons styled exactly like the `TimeframeSelector` in `TradingChart.tsx`:
+  ```
+  className={`px-2 py-0.5 text-[11px] font-mono font-bold uppercase tracking-wide rounded
+    transition-colors duration-150 ${
+      active ? 'bg-card3 text-text' : 'text-text2 hover:bg-card2 hover:text-text'
+    }`}
+  ```
+  Active segment = `bg-card3 text-text`; inactive = `text-text2 hover:bg-card2 hover:text-text`.
+- Filter rails inside inputs use `btn-input-switch` (`.filter-buy|sell|all|gold`). See `OrderBook`.
+
+### 0.5 Regular buttons — use `btn-game-secondary`
+
+A standard (non-CTA, non-selector) button is the **`btn-game-secondary`** class, used verbatim —
+the same button as the "All Seasons / Active Seasons" toggle in `SeasonListDashboard.tsx`
+(`className="btn-game-secondary px-4 py-2 text-[11px]"`). It resolves to a `font-display`
+uppercase label, a flat `card2` background (no shadow, per 0.2), and a `border` → `border2`
+border on hover. Do not hand-roll button colors; reach for this class (or `btn-game-primary` for
+the one primary CTA per view, and `btn-terminal-action` for buy/sell execute).
+
 ---
 
 ## 1. Component Archetypes
@@ -171,9 +264,11 @@ rationale, so deviate knowingly rather than by accident.
   column-aligned and stable while they tick. Use the `tabular-nums` class, not inline
   `style={{ fontVariantNumeric: 'tabular-nums' }}` — keep it in the className alongside the other
   utilities.
-- **Match the font to the content.** `font-mono` (JetBrains Mono) for numbers, addresses,
-  timestamps, and labels; `font-display` (Exo 2, usually `font-black uppercase tracking-tight`)
-  for titles and big game actions; `font-sans` (Space Grotesk) for body copy and descriptions.
+- **Match the font to the content.** This is **Rule 0.3**. `font-mono` (JetBrains Mono) for every
+  number (and addresses, timestamps, mono labels/units); `font-display` (Exo 2, usually
+  `font-black uppercase tracking-tight`) for everything that is not a number — titles, headings,
+  button/tab labels, big game actions; `font-sans` (Space Grotesk) for genuine body copy and
+  descriptions only.
 - **Decide faction color at the data layer and thread it down.** Where a value *does* carry
   faction identity, resolve `isCapitalist` once (from the percentile/faction data) and pass it as
   a prop; let components map it to gold (Capitalist/Bourgeoisie) or purple
@@ -184,12 +279,17 @@ rationale, so deviate knowingly rather than by accident.
   carry the most weight when reserved for a few highlights per view. On faction-neutral surfaces,
   default to the neutral `text`/`text2` tokens with `green`/`red` for genuine positive/negative
   signals, and let purple/gold be the occasional accent rather than the baseline.
-- **Keep surfaces flat — no decorative glow.** The terminal aesthetic is flat: `.terminal-pane`
-  carries no `box-shadow`, and accent strips / dividers are solid color bars, not glowing ones.
-  Don't add `box-shadow: 0 0 …` halos to highlight strips, stat cells, or card edges. Reserve
-  glow for the few places it carries meaning — the live-rail `dial-knob`, the live status ping,
-  and value text-shadow on hero numbers (`textShadow: 0 0 … var(--color-…-15)`) — not as ambient
-  decoration. Prefer a `hover:bg-card2` / width-grow strip for hover feedback over a shadow.
+- **Keep surfaces flat — no decorative glow.** This is **Rule 0.2** — restated here because it is
+  the most-violated one. The terminal aesthetic is flat: `.terminal-pane` carries no `box-shadow`,
+  and accent strips / dividers are solid color bars, not glowing ones. Don't add `box-shadow` /
+  `shadow-*` / `0 0 …` halos to highlight strips, stat cells, card edges, rows, or inputs, and
+  don't put gradients on content surfaces. Reserve glow/gradient for the sanctioned exceptions in
+  0.2 (gradient CTAs, the Band, the live-rail `dial-knob`, the live status ping, hero-number
+  text-shadow, elevated modals). Prefer a `hover:bg-card2` / `hover:border-border2` / width-grow
+  strip for hover feedback over a shadow.
+- **Layer surfaces by nesting depth.** This is **Rule 0.1**. Page → `card` → `card2` → `card3`,
+  one step deeper per level of nesting; inputs are always `card3`. Don't skip levels or invent
+  tints to fake a new surface.
 - **Prefer tokens and utilities over inline `style`.** Where a CSS variable maps to a Tailwind
   token (`text-text2`, `bg-card3`, `border-border`, `text-green`), use the class — including for
   conditional colors via a className expression — rather than `style={{ color: 'var(--color-…)' }}`.

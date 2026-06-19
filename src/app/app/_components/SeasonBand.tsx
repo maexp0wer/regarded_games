@@ -21,12 +21,12 @@ function SeasonCountdown({ targetTimestamp, label }: { targetTimestamp: number; 
   const pad = (n: number) => String(n).padStart(2, '0');
 
   if (!targetTimestamp) {
-    return <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-text2">SHORTLY</span>;
+    return <span className="gini-label">SHORTLY</span>;
   }
 
   const remaining = Math.max(0, targetTimestamp - now);
   if (remaining === 0) {
-    return <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-text2">FINALIZING</span>;
+    return <span className="gini-label">FINALIZING</span>;
   }
 
   const days    = Math.floor(remaining / 86400);
@@ -44,10 +44,10 @@ function SeasonCountdown({ targetTimestamp, label }: { targetTimestamp: number; 
       ].map(({ val, unit }) => (
         <span key={unit} className="flex items-baseline gap-0.5">
           <span className="font-mono text-md font-bold text-text tabular-nums">{val}</span>
-          <span className="font-mono text-[11px] font-bold uppercase text-text2">{unit}</span>
+          <span className="gini-label">{unit}</span>
         </span>
       ))}
-      <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-text2">{label}</span>
+      <span className="gini-label">{label}</span>
     </div>
   );
 }
@@ -205,7 +205,7 @@ export function SeasonBand({ seasonAddress, seasonName, className = '' }: Season
                 style={{ textShadow: '0 0 16px var(--color-gold-15)' }}
               >
                 {totalPrizePool.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                <span className="text-xs text-text2 font-normal ml-1">USDC</span>
+                <span className="gini-label ml-1">USDC</span>
               </div>
               {hasYieldBonus && (
                 <div className="mt-1 flex items-baseline gap-2">
@@ -254,7 +254,7 @@ export function SeasonBand({ seasonAddress, seasonName, className = '' }: Season
             </div>
 
             <div className={`flex-col items-center text-center ${isPayout && winningSide === 'none' ? 'hidden lg:flex' : 'hidden sm:flex'}`}>
-              <span className={`font-display text-2xl font-extrabold uppercase tracking-[-0.04em] ${isPayout ? 'hero-gradient-text' : 'text-text2'}`}>
+              <span className={`font-display text-2xl font-extrabold uppercase tracking-widest ${isPayout ? 'hero-gradient-text' : 'text-text2'}`}>
                 {isPayout
                   ? (winningSide === 'soc' ? 'Proletariat Wins' : winningSide === 'cap' ? 'Capitalists Win' : 'Season Concluded')
                   : 'Gini Score'}

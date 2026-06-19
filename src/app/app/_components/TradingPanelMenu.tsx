@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Order } from '@/hooks/useOrderBook';
 import { SeasonTrade } from '@/hooks/useSeasonTrades';
 import { OrderBook } from './OrderBook';
@@ -75,10 +75,13 @@ export interface TradingPanelMenuProps {
 // so panelWide is correct before any effect runs.
 const matchesXl = () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1280px)').matches;
 const matches2xl = () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1536px)').matches;
+// sm + xs (below md): the two narrow panels stack vertically instead of side by side.
+const matchesBelowMd = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
 
 export function TradingPanelMenu(props: TradingPanelMenuProps) {
   const [isXl, setIsXl] = useState(matchesXl);
   const [is2xl, setIs2xl] = useState(matches2xl);
+  const [isBelowMd, setIsBelowMd] = useState(matchesBelowMd);
   // Open the orderbook beside the chart from xl up; chart only below. Seeded
   // lazily (not in an effect) so the collapse effect never sees a transient
   // narrow state that would strip the orderbook before it paints.
@@ -87,27 +90,46 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
       ? new Set<PanelId>(['chart-orders', 'orderbook'])
       : new Set<PanelId>(['chart-orders'])
   );
-  const tabBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const xl = window.matchMedia('(min-width: 1280px)');
     const xxl = window.matchMedia('(min-width: 1536px)');
+    const belowMd = window.matchMedia('(max-width: 767px)');
     setIsXl(xl.matches);
     setIs2xl(xxl.matches);
+    setIsBelowMd(belowMd.matches);
 
     const xlH = (e: MediaQueryListEvent) => setIsXl(e.matches);
     const xxlH = (e: MediaQueryListEvent) => setIs2xl(e.matches);
+    const belowMdH = (e: MediaQueryListEvent) => setIsBelowMd(e.matches);
     xl.addEventListener('change', xlH);
     xxl.addEventListener('change', xxlH);
+    belowMd.addEventListener('change', belowMdH);
     return () => {
       xl.removeEventListener('change', xlH);
       xxl.removeEventListener('change', xxlH);
+      belowMd.removeEventListener('change', belowMdH);
     };
   }, []);
 
+  // The matchMedia listeners above only fire at the xl/2xl thresholds, so the
+  // panel never re-renders while the window is resized *within* a tier. The
+  // panel-content columns derive their widths from inline `%`-based calc() styles
+  // and from the live breakpoint flags, so without a re-render those go stale and
+  // the panel can clip at the right edge until a refresh recomputes them. Bump a
+  // tick on every resize (rAF-throttled) so the tree re-evaluates at the new width.
+  const [, forceTick] = useState(0);
   useEffect(() => {
-    const el = tabBarRef.current;
-    if (el) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+    let raf = 0;
+    const onResize = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => forceTick((n) => n + 1));
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', onResize);
+    };
   }, []);
 
   // The panel layout follows how many grid columns the panel area actually spans,
@@ -353,7 +375,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
       <div className="h-[calc(100vh-2.75rem)] xl:h-full flex flex-col overflow-hidden rounded-lg border border-border bg-card">
 
           {/* Horizontal tab bar */}
-          <div ref={tabBarRef} className="terminal-view-selector-bar terminal-view-selector-bar--chat shrink-0">
+          <div className="terminal-view-selector-bar shrink-0">
             {BUTTONS.map(({ id, label }) => (
               <button
                 key={id}
@@ -422,7 +444,11 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
                     })()}
                   </div>
                 ) : (
-                  <div className="flex-1 min-w-0 flex flex-row">
+                  // sm/xs (below md): stack the (≤2) panels vertically. md+ narrow:
+                  // side by side, as before. min-h-0 is required once this becomes a
+                  // flex column so the stacked panels shrink to their equal share
+                  // instead of growing past the box (which clipped the bottom one).
+                  <div className={`flex-1 min-w-0 min-h-0 flex ${isBelowMd ? 'flex-col' : 'flex-row'}`}>
                     {(() => {
                       const cols = is2xl ? 4 : 3;
                       // panels that get their own full-height column
@@ -434,10 +460,13 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
                       const splitCols: PanelId[][] = [];
                       for (let i = 0; i < splitPanels.length; i += 2)
                         splitCols.push(splitPanels.slice(i, i + 2));
+                      // Separator follows the stacking axis: top border when stacked
+                      // vertically (sm/xs), left border when side by side.
+                      const sep = isBelowMd ? 'border-t' : 'border-l';
                       return (
                         <>
                           {fullCols.map((id, j) => (
-                            <div key={id} className={`flex-1 min-w-0 min-h-0 overflow-hidden${j > 0 ? ' border-l border-border' : ''}`}>
+                            <div key={id} className={`flex-1 min-w-0 min-h-0 overflow-hidden${j > 0 ? ` ${sep} border-border` : ''}`}>
                               {renderPanel(id)}
                             </div>
                           ))}

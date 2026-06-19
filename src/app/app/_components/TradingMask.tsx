@@ -644,7 +644,7 @@ export function TradingMask({
       <div className="rounded-md bg-card border border-border flex flex-col flex-1 min-h-0">
         
         {/* ── Maker/Taker Selector Bar ── */}
-        <div className="terminal-view-selector-bar--full">
+        <div className="terminal-view-selector-bar terminal-view-selector-bar--full">
           <button
             disabled={isQueueLocked}
             onClick={() => setIsMaker(false)}

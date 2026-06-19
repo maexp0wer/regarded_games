@@ -80,6 +80,9 @@ export default function AnimatedAuctionChart({ isHovered }: AnimatedAuctionChart
     if (!el) return;
 
     const c = DARK_COLORS;
+    // canvas can't resolve CSS vars, so read --font-mono off the DOM here.
+    const fontFamily =
+      getComputedStyle(document.documentElement).getPropertyValue('--font-mono').trim() || 'monospace';
 
     const chart = createChart(el, {
       width: el.clientWidth,
@@ -88,7 +91,7 @@ export default function AnimatedAuctionChart({ isHovered }: AnimatedAuctionChart
       layout: {
         background: { color: 'transparent' },
         textColor: 'transparent',
-        fontFamily: 'JetBrains Mono, monospace',
+        fontFamily,
         fontSize: 11,
         attributionLogo: false,
         panes: { separatorColor: 'transparent', separatorHoverColor: 'transparent' },

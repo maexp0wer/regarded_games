@@ -269,8 +269,9 @@ function AuctionMaskInner({
             <p className="font-mono text-[10px] uppercase font-bold tracking-widest" style={{ color: 'var(--color-red)' }}>Phase data unavailable</p>
           </div>
         ) : !isAuctionPhase ? (
-          <div className="rounded-lg px-4 py-3 text-center" style={{ background: 'var(--color-red-15)', border: '1px solid var(--color-red)' }}>
+          <div className="rounded-lg px-4 py-3 text-left" style={{ background: 'var(--color-red-15)', border: '1px solid var(--color-red)' }}>
             <p className="section-label" style={{ color: 'var(--color-red)' }}>Season on Hold</p>
+            <p className="section-label" style={{ color: 'var(--color-red)' }}>The Auction Phase has concluded and trading will start shortly.</p>
           </div>
         ) : (
           <>

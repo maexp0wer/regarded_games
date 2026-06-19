@@ -426,8 +426,8 @@ export function OrderBook({
           <div className="flex gap-1 mt-1.5">
             <button
               onClick={() => setSideFilter(v => v === 'bid' ? null : 'bid')}
-              className={`flex-1 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
-                sideFilter === 'bid' ? 'text-text' : 'bg-card2 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-green-15),var(--color-card2))]'
+              className={`flex-1 px-2.5 py-1 text-[11px] font-dispaly font-bold uppercase tracking-[0.1rem]  rounded border border-border transition duration-150 active:scale-98 ${
+                sideFilter === 'bid' ? 'text-text' : 'bg-card3 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-green-15),var(--color-card2))]'
               }`}
               style={sideFilter === 'bid' ? { backgroundColor: 'color-mix(in srgb, var(--color-green) 30%, var(--color-card3))' } : undefined}
             >
@@ -435,8 +435,8 @@ export function OrderBook({
             </button>
             <button
               onClick={() => setSideFilter(v => v === 'ask' ? null : 'ask')}
-              className={`flex-1 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
-                sideFilter === 'ask' ? 'text-text' : 'bg-card2 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-red-15),var(--color-card2))]'
+              className={`flex-1 px-2.5 py-1 text-[11px] font-display font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
+                sideFilter === 'ask' ? 'text-text' : 'bg-card3 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-red),var(--color-card2))]'
               }`}
               style={sideFilter === 'ask' ? { backgroundColor: 'color-mix(in srgb, var(--color-red) 30%, var(--color-card3))' } : undefined}
             >
@@ -449,8 +449,8 @@ export function OrderBook({
             <div className="flex-1 flex flex-col">
               <button
                 onClick={() => setFactionFilter(v => v === 'proletariat' ? null : 'proletariat')}
-                className={`w-full px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
-                  factionFilter === 'proletariat' ? 'text-text' : 'bg-card2 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-purple-35),var(--color-card2))]'
+                className={`w-full px-2.5 py-1 text-[11px] font-display font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
+                  factionFilter === 'proletariat' ? 'text-text' : 'bg-card3 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-purple),var(--color-card2))]'
                 }`}
                 style={factionFilter === 'proletariat' ? { backgroundColor: 'color-mix(in srgb, var(--color-purple) 30%, var(--color-card3))' } : undefined}
               >
@@ -462,8 +462,8 @@ export function OrderBook({
             <div className="flex-1 flex flex-col">
               <button
                 onClick={() => setFactionFilter(v => v === 'bourgeoisie' ? null : 'bourgeoisie')}
-                className={`w-full px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
-                  factionFilter === 'bourgeoisie' ? 'text-text' : 'bg-card2 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-gold-15),var(--color-card2))]'
+                className={`w-full px-2.5 py-1 text-[11px] font-display font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
+                  factionFilter === 'bourgeoisie' ? 'text-text' : 'bg-card3 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-gold-15),var(--color-card2))]'
                 }`}
                 style={factionFilter === 'bourgeoisie' ? { backgroundColor: 'color-mix(in srgb, var(--color-gold) 30%, var(--color-card3))' } : undefined}
               >
@@ -475,13 +475,12 @@ export function OrderBook({
           {factionFilter !== null && renderPercentileInputs()}
         </div>
 
-        {/* Rows viewport — header is sticky inside so both share the same scrollbar-adjusted width */}
-        <div ref={scrollContainerRef} data-chrome-scroll-guard className={`flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain relative custom-scrollbar`}>
-          <div
-            className="ledger-header sticky top-0 z-10"
-            style={{ gridTemplateColumns: showBoth ? 'repeat(6, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))', paddingLeft: 0, paddingRight: 0 }}
-          >
-            {displayBids && (showBoth ? (
+        {/* Header — fixed above the scrollable rows */}
+        <div
+          className="ledger-header shrink-0"
+          style={{ gridTemplateColumns: showBoth ? 'repeat(6, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))', paddingLeft: 0, paddingRight: 0 }}
+        >
+          {displayBids && (showBoth ? (
               <>
                 <div className="text-right pl-4 pr-2">Class</div>
                 <div className="text-right pr-2">Amount</div>
@@ -509,7 +508,10 @@ export function OrderBook({
                 <div className="pl-2 pr-4">Class</div>
               </>
             ))}
-          </div>
+        </div>
+
+        {/* Rows viewport — scrollable container for rows only */}
+        <div ref={scrollContainerRef} data-chrome-scroll-guard className={`flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain relative custom-scrollbar`}>
           {priceRows.length === 0 ? (
             <div className="flex items-center justify-center h-full py-20">
               <p className="section-label opacity-40">No Matching Orders Found</p>

@@ -50,6 +50,7 @@ interface ChartColors {
   text1Color: string; // --color-text — prize-pool line + fill
   textColor: string;  // --color-text2 — muted labels / axis text
   volColor: string;   // --color-green — volume bars
+  fontFamily: string; // --font-mono — canvas can't read CSS vars, so resolve here
 }
 
 /** Read the live theme colors from CSS variables (light/dark resolved by `.dark`). */
@@ -63,6 +64,7 @@ function readColors(): ChartColors {
     text1Color: v('--color-text')    || '#FFFFFF',
     textColor:  v('--color-text2')   || '#9E97BD',
     volColor:   v('--color-green')   || '#00F5A0',
+    fontFamily: v('--font-mono')     || 'monospace',
   };
 }
 
@@ -84,6 +86,10 @@ const poolFormatter = (val: number) => {
 export function AuctionChart({ points, timeframe, onTimeframeChange }: AuctionChartProps) {
   const { darkMode } = useTheme();
 
+  // sizeRef is the pure-layout sizing box; containerRef (the chart mount) is
+  // absolutely positioned inside it so the injected canvas never contributes to
+  // layout and can't hold the box open when the viewport narrows.
+  const sizeRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const chartRef = useRef<IChartApi | null>(null);
@@ -106,19 +112,21 @@ export function AuctionChart({ points, timeframe, onTimeframeChange }: AuctionCh
   // ── Create the chart once on mount ───────────────────────────────────────
     useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    const box = sizeRef.current;
+    if (!el || !box) return;
 
     const c = readColors();
     themeRef.current = c;
 
     const chart = createChart(el, {
-      width: el.clientWidth,
-      height: el.clientHeight,
+      // Size from the layout box, not the (absolutely positioned) mount element.
+      width: box.clientWidth,
+      height: box.clientHeight,
       autoSize: false,
       layout: {
         background: { color: 'transparent' },
         textColor: c.textColor,
-        fontFamily: 'JetBrains Mono, monospace',
+        fontFamily: c.fontFamily,
         fontSize: 11,
         attributionLogo: false,
         panes: {
@@ -307,15 +315,18 @@ export function AuctionChart({ points, timeframe, onTimeframeChange }: AuctionCh
   }, [darkMode]);
 
   // ── Smooth responsive resize ─────────────────────────────────────────────
+  // Observe the pure-layout sizing box. The chart mount (containerRef) is
+  // absolutely positioned, so the injected canvas never holds the box open — it
+  // shrinks freely with the card and reports the true width as the viewport narrows.
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+    const box = sizeRef.current;
+    if (!box) return;
     const ro = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect;
       chartRef.current?.applyOptions({ width: Math.round(width), height: Math.round(height) });
       positionLegendsRef.current();
     });
-    ro.observe(el);
+    ro.observe(box);
     return () => ro.disconnect();
   }, []);
 
@@ -327,14 +338,18 @@ export function AuctionChart({ points, timeframe, onTimeframeChange }: AuctionCh
         <span className="w-1.5 h-1.5 rounded-full bg-green shadow-[0_0_8px_var(--color-green-35)] animate-pulse" />
       </div>
 
-      <div
-        ref={containerRef}
-        data-chrome-scroll-guard="always"
-        className="relative w-full flex-1 min-h-0"
-      >
-        {/* Per-pane legend overlays; `top` set imperatively to each pane's top. */}
-        <div ref={poolLegendRef} className="absolute left-5 z-20 pointer-events-none font-mono text-[11px] leading-snug whitespace-nowrap tabular-nums" />
-        <div ref={mintLegendRef} className="absolute left-5 z-20 pointer-events-none font-mono text-[11px] leading-snug whitespace-nowrap tabular-nums" />
+      {/* Pure-layout sizing box: shrinks with the card. The chart mount is
+          absolutely positioned inside it so the injected canvas can't hold it open. */}
+      <div ref={sizeRef} className="relative w-full flex-1 min-h-0 min-w-0">
+        <div
+          ref={containerRef}
+          data-chrome-scroll-guard="always"
+          className="absolute inset-0"
+        >
+          {/* Per-pane legend overlays; `top` set imperatively to each pane's top. */}
+          <div ref={poolLegendRef} className="absolute left-5 z-20 pointer-events-none font-mono text-[11px] leading-snug whitespace-nowrap tabular-nums" />
+          <div ref={mintLegendRef} className="absolute left-5 z-20 pointer-events-none font-mono text-[11px] leading-snug whitespace-nowrap tabular-nums" />
+        </div>
       </div>
     </div>
   );

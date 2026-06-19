@@ -292,11 +292,11 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
     <div ref={panelRef} className="flex flex-col h-full w-full overflow-hidden rounded-lg bg-card">
       {/* Header (auction) or tab selector (trading) */}
       {auctionMode ? (
-        <div className="terminal-pane-header">
+        <div className="shrink-0 flex items-center justify-between px-5 pt-5 pb-2 border-b border-border">
           <span className="terminal-pane-title">Chat</span>
         </div>
       ) : (
-        <div className="terminal-view-selector-bar--full shrink-0">
+        <div className="terminal-view-selector-bar terminal-view-selector-bar--full shrink-0">
           <button
             onClick={() => switchTab('faction')}
             className={`terminal-view-btn${tab === 'faction' ? ' active' : ''}`}
@@ -370,13 +370,13 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
 
       {/* Error and input footer */}
       {channelId && address && signedIn && (
-        <div className={`shrink-0 flex flex-col gap-2 border-t border-border px-3 py-3 ${!auctionMode && showBoard ? 'hidden lg:flex' : 'flex'}`}>
+        <div className="flex flex-col gap-1.5 shrink-0 px-5 pt-5 pb-2 border-b border-border">
           {sendError && (
             <p className="font-mono text-[10px] text-red">
               {sendError}
             </p>
           )}
-          <div className="flex items-end gap-2">
+          <div className="flex w-full items-end gap-2">
             <textarea
               ref={textareaRef}
               rows={1}

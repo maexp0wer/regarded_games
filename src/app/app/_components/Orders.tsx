@@ -121,7 +121,7 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress, fimAddress
     <div className="flex flex-col">
 
       {/* Button bar */}
-      <div className="terminal-view-selector-bar terminal-view-selector-bar--chat">
+      <div className="terminal-view-selector-bar">
         {TABS.map(({ key, label }) => (
           <button
             key={key}

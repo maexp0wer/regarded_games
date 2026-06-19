@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuctionChart } from './AuctionChart';
 import { AuctionActivityFeed } from './AuctionActivityFeed';
 import { FactionChat } from './FactionChat';
@@ -54,7 +54,6 @@ export function AuctionPanelMenu(props: AuctionPanelMenuProps) {
       ? new Set<PanelId>(['chart', 'transactions'])
       : new Set<PanelId>(['chart'])
   );
-  const tabBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const xl = window.matchMedia('(min-width: 1280px)');
@@ -72,9 +71,24 @@ export function AuctionPanelMenu(props: AuctionPanelMenuProps) {
     };
   }, []);
 
+  // The matchMedia listeners above only fire at the xl/2xl thresholds, so the
+  // panel never re-renders while the window is resized *within* a tier. The
+  // panel-content columns derive their widths from the live breakpoint flags, so
+  // without a re-render they can go stale and the panel can clip at the right edge
+  // until a refresh recomputes them. Bump a tick on every resize (rAF-throttled)
+  // so the tree re-evaluates at the new width.
+  const [, forceTick] = useState(0);
   useEffect(() => {
-    const el = tabBarRef.current;
-    if (el) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+    let raf = 0;
+    const onResize = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => forceTick((n) => n + 1));
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', onResize);
+    };
   }, []);
 
   const panelWide = is2xl || isXl;
@@ -190,7 +204,7 @@ export function AuctionPanelMenu(props: AuctionPanelMenuProps) {
       <div className="h-[calc(100vh-2.75rem)] xl:h-full flex flex-col overflow-hidden rounded-lg border border-border bg-card">
 
         {/* Horizontal tab bar */}
-        <div ref={tabBarRef} className="terminal-view-selector-bar terminal-view-selector-bar--chat shrink-0">
+        <div className="terminal-view-selector-bar shrink-0">
           {BUTTONS.map(({ id, label }) => (
             <button
               key={id}
@@ -250,7 +264,7 @@ export function AuctionPanelMenu(props: AuctionPanelMenuProps) {
                 </div>
               ) : (
                 /* No chart: wide packs rows of 2; narrow stacks one per row (up to 2). */
-                <div className="flex-1 min-w-0 flex flex-col">
+                <div className="flex-1 min-w-0 min-h-0 flex flex-col">
                   {chunk(otherPanels, panelWide ? 2 : 1).map((row, i) => (
                     <div key={i} className={`flex-1 min-h-0 flex flex-row${i > 0 ? ' border-t border-border' : ''}`}>
                       {row.map((id, j) => (

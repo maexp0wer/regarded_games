@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { usePublicClient } from 'wagmi';
+import { usePublicClient, useReadContract } from 'wagmi';
 import { Address, getAddress } from 'viem';
 import { useQuery } from '@tanstack/react-query';
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
@@ -56,6 +56,16 @@ function SeasonCard({ season }: { season: SeasonRegistry }) {
   const { data: giniData } = useSeasonGini(season.season);
   const phase = useSeasonPhase(season.season);
   const victory = useSeasonVictory(season.season);
+  const chainId = useTenantChainId();
+
+  const { data: gInitialRaw } = useReadContract({
+    address: season.season as Address,
+    abi: GAME_SEASON_FULL_ABI,
+    functionName: 'g_initial',
+    chainId,
+    query: { enabled: !!season.season, staleTime: Infinity },
+  });
+  const gInitial = gInitialRaw ? Number(gInitialRaw) : 0;
 
   const seasonNumber = season.id + 1;
   const slug = `season_${seasonNumber}`;
@@ -79,7 +89,13 @@ function SeasonCard({ season }: { season: SeasonRegistry }) {
   const statusLabel = isTrading ? 'Trading Ends' : 'Trading Starts';
   const countdownTarget = (effectiveVictoryPending || isBootstrap) ? 0 : isTrading ? seasonEnd : tradingStart;
 
-  const multiplier = (config.baseMultiplierBps / 10000 + Math.pow(1 - (gCurrent / 10000), 2)).toFixed(2);
+  // g_initial only locks in once the auction closes; during auction/bootstrap
+  // preview the multiplier from the live Gini (mirrors useSeasonVictory).
+  const giniForMultiplier = (isAuction || isBootstrap)
+    ? ((giniData?.playerCount ?? 0) === 0 ? 5000 : (giniData?.gini ?? 0))
+    : gInitial;
+
+  const multiplier = (config.baseMultiplierBps / 10000 + Math.pow(1 - (giniForMultiplier / 10000), 2)).toFixed(2);
 
   return (
     <Link href={`/${slug}`} className="block group">

@@ -212,7 +212,7 @@ export function StakeMask() {
             <div className="kv-row">
               <span className="font-mono text-[11px] text-text2">Withdrawable Stake</span>
               <span className="font-mono text-[13px] font-semibold text-green tabular-nums">
-                {fmtRgd(withdrawable)}<span className="text-text2 font-normal ml-1">free</span>
+                {fmtRgd(withdrawable)}<span className="text-text2 font-normal ml-1">RGD</span>
               </span>
             </div>
             <div className="kv-row">
@@ -239,7 +239,7 @@ export function StakeMask() {
       <div className="terminal-pane bg-card! flex flex-col gap-0 self-start w-full min-h-0 p-0!">
 
         {/* Stake / Unstake selector bar */}
-        <div className="terminal-view-selector-bar--full">
+        <div className="terminal-view-selector-bar terminal-view-selector-bar--full">
           <button
             disabled={isBusy}
             onClick={() => { setMode('stake'); setAmount(""); }}

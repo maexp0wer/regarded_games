@@ -27,6 +27,7 @@ interface DecorativeAuctionChartProps {
 interface ChartColors {
   text1Color: string; // --color-text — prize-pool line + fill
   volColor: string;   // --color-green — volume bars
+  fontFamily: string; // --font-mono — canvas can't read CSS vars, so resolve here
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -44,6 +45,7 @@ function readColors(): ChartColors {
   return {
     text1Color: v('--color-text')  || '#FFFFFF',
     volColor:   v('--color-green') || '#00F5A0',
+    fontFamily: v('--font-mono')   || 'monospace',
   };
 }
 
@@ -107,7 +109,7 @@ export default function DecorativeAuctionChart({ isHovered }: DecorativeAuctionC
       layout: {
         background: { color: 'transparent' },
         textColor: 'transparent',
-        fontFamily: 'JetBrains Mono, monospace',
+        fontFamily: c.fontFamily,
         fontSize: 11,
         attributionLogo: false,
         panes: { separatorColor: 'transparent', separatorHoverColor: 'transparent' },

@@ -189,7 +189,7 @@ export default function AnimatedTradeFlows({ isHovered }: { isHovered: boolean }
     const t = d3.select('body').append('div')
       .style('position', 'fixed')
       .style('pointer-events', 'none')
-      .style('font-family', 'JetBrains Mono, monospace')
+      .style('font-family', 'var(--font-mono)')
       .style('font-size', '11px')
       .style('padding', '0')
       .style('border-radius', '4px')
@@ -478,7 +478,7 @@ export default function AnimatedTradeFlows({ isHovered }: { isHovered: boolean }
         .attr('text-anchor', anchor)
         .attr('dominant-baseline', 'middle')
         .attr('fill', color)
-        .attr('font-family', 'JetBrains Mono, monospace')
+        .style('font-family', 'var(--font-mono)')
         .attr('font-size', fontSize)
         .attr('font-weight', weight)
         .text(text);

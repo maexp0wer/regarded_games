@@ -107,10 +107,10 @@ export function PayoutPhaseLayout({
   const lendingCard = <LendingDistributionCard seasonAddress={seasonAddress} config={config} />;
   const detailCards = (
     <>
-      {protocolCard}
       {policyCard}
       {scheduleCard}
       {lendingCard}
+      {protocolCard}
     </>
   );
   const leaderboard = <SeasonLeaderboard seasonAddress={seasonAddress} seasonName={formattedName} />;
@@ -139,10 +139,10 @@ export function PayoutPhaseLayout({
         is2xl ? (
           // 2xl: single fill row — [4 cards 2×2] [Leaderboard] [Mask].
           <ChromeRevealRow index={rung} className="grid grid-cols-5 grid-rows-2 gap-5">
-            <div className="col-start-1 row-start-1 flex flex-col">{protocolCard}</div>
-            <div className="col-start-1 row-start-2 flex flex-col">{policyCard}</div>
-            <div className="col-start-2 row-start-1 flex flex-col">{scheduleCard}</div>
-            <div className="col-start-2 row-start-2 flex flex-col">{lendingCard}</div>
+            <div className="col-start-1 row-start-1 flex flex-col">{policyCard}</div>
+            <div className="col-start-1 row-start-2 flex flex-col">{scheduleCard}</div>
+            <div className="col-start-2 row-start-1 flex flex-col">{lendingCard}</div>
+            <div className="col-start-2 row-start-2 flex flex-col">{protocolCard}</div>
             <div className="custom-scrollbar col-start-3 col-span-2 row-span-2 row-start-1 flex min-h-0 flex-col overflow-y-auto">
               {leaderboard}
             </div>

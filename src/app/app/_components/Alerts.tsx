@@ -53,7 +53,7 @@ function PollCountdown({ targetTimestamp }: { targetTimestamp: number | null }) 
 
   if (!targetTimestamp) {
     return (
-      <span className="font-mono text-[10px] font-bold text-text2 uppercase tracking-wider">
+      <span className="font-mono text-[10px] font-bold text-text uppercase tracking-wider">
         No deadline
       </span>
     );
@@ -63,7 +63,7 @@ function PollCountdown({ targetTimestamp }: { targetTimestamp: number | null }) 
 
   if (remaining === 0) {
     return (
-      <span className="font-mono text-[10px] font-bold text-text2 uppercase tracking-wider">
+      <span className="font-mono text-[10px] font-bold text-text uppercase tracking-wider">
         Closed
       </span>
     );
@@ -74,7 +74,7 @@ function PollCountdown({ targetTimestamp }: { targetTimestamp: number | null }) 
   const minutes = Math.floor((remaining % 3600) / 60);
 
   return (
-    <div className="flex items-center gap-1 font-mono text-[11px] text-text2">
+    <div className="flex items-center gap-1 font-mono text-[11px] text-text">
       <span className="text-[9px] tracking-wider uppercase mr-1">Closes:</span>
       <div className="flex items-center gap-1 bg-card border border-border rounded px-1.5 py-0.5">
         <span className="font-bold text-text tabular-nums">{pad(days)}</span>
@@ -105,7 +105,7 @@ function AlertItem({
 }) {
   return (
     <div
-      className="relative flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 w-full overflow-hidden border-l-4 transition-colors group bg-[color-mix(in_srgb,var(--alert-accent)_15%,transparent)] hover:bg-[color-mix(in_srgb,var(--alert-accent)_22%,transparent)]"
+      className="relative flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 w-full overflow-hidden border-l-4 transition-colors group bg-[color-mix(in_srgb,var(--alert-accent)_30%,transparent)] hover:bg-[color-mix(in_srgb,var(--alert-accent)_22%,transparent)]"
       style={{
         borderLeftColor: `var(${accentVar})`,
         ['--alert-accent' as string]: `var(${accentVar})`,
@@ -212,27 +212,28 @@ function ClaimableCard({
         <AlertItem accentVar="--color-gold">
           <div className="flex flex-col gap-2 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="h4-app text-gold">
-                Season {String(season.id).padStart(2, '0')}
-              </span>
+              <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-2xl shrink-0">
+              S<em className="not-italic font-medium text-text2 tabular-nums">{String(season.id).padStart(2, '0')}</em>
+            </p>
+              
               <span
-                className="font-mono text-[10px] bg-gold border-0 px-2 py-0.5 rounded text-card2 uppercase tracking-wider"
+                className='font-mono text-[10px] bg-gold px-2 py-0.5 rounded text-[var(--color-bg)] uppercase tracking-wider font-bold'
               >
                 Claim Ready
               </span>
             </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-sans text-xs text-text2">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-sans text-xs text-text">
               <span>
-                Season PNL:{' '}
+                Season P/L:{' '}
                 <strong className={`font-mono font-bold tabular-nums ${pnlPositive ? 'text-green' : 'text-red'}`}>
-                  {pnlPositive ? '+' : ''} ${Math.abs(pnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {pnlPositive ? '+' : ''}${Math.abs(pnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </strong>
               </span>
               <span className="hidden sm:inline text-border2">•</span>
               <span>
                 Claimable:{' '}
                 <strong className="font-mono font-bold text-gold tabular-nums">
-                  {payout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC
+                  ${payout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </strong>
               </span>
             </div>
@@ -293,7 +294,7 @@ function PollAlertRow({ poll }: { poll: PendingPoll }) {
               Active Proposal
             </span>
           </div>
-          <p className="font-sans text-xs text-text2">
+          <p className="font-sans text-xs text-text">
             Governance vote · Your voice hasn&rsquo;t been cast yet
           </p>
         </div>
@@ -333,7 +334,7 @@ function ReplyAlertCard({
 
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" className="block" onClick={handleClick}>
-      <AlertItem accentVar="--color-text2">
+      <AlertItem accentVar="--color-text">
         <div className="flex flex-col gap-2 max-w-md min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             {reply.replyCount === 1 ? (
@@ -341,10 +342,10 @@ function ReplyAlertCard({
                 <span className="font-mono text-xs font-bold text-gold truncate max-w-35" title={reply.latestReplierUsername}>
                   {reply.latestReplierUsername}
                 </span>
-                <span className="font-sans text-xs text-text2">replied in</span>
+                <span className="font-sans text-xs text-text">replied in</span>
               </>
             ) : (
-              <span className="font-sans text-xs text-text2">
+              <span className="font-sans text-xs text-text">
                 <strong className="font-mono font-bold text-text">{reply.replyCount}</strong> replies in
               </span>
             )}
@@ -354,12 +355,12 @@ function ReplyAlertCard({
           </div>
 
           {reply.latestReplyExcerpt && (
-            <p className="font-sans text-xs text-text2 truncate italic">
+            <p className="font-sans text-xs text-text truncate italic">
               &ldquo;{reply.latestReplyExcerpt}&rdquo;
             </p>
           )}
 
-          <span className="font-mono text-[9px] text-text2 opacity-50 uppercase tracking-wider">
+          <span className="font-mono text-[9px] text-text opacity-50 uppercase tracking-wider">
             {timeAgo(reply.latestReplyAt)}
           </span>
         </div>

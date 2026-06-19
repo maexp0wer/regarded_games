@@ -80,6 +80,7 @@ interface ChartColors {
   downColor2: string;
   capColor: string;
   socColor: string;
+  fontFamily: string; // --font-mono — canvas can't read CSS vars, so resolve here
 }
 
 /** Read the live theme colors from CSS variables (light/dark resolved by `.dark`). */
@@ -98,6 +99,7 @@ function readColors(): ChartColors {
     downColor2:  v('--color-border2')     || '#FF3B69',
     capColor:   v('--color-gold')    || '#FFC300',
     socColor:   v('--color-purple')  || '#9D4EDD',
+    fontFamily: v('--font-mono')     || 'monospace',
   };
 }
 
@@ -124,6 +126,11 @@ export function TradingChart({
 }: TradingChartProps) {
   const { darkMode } = useTheme();
 
+  // sizeRef is the pure-layout sizing box; containerRef (the chart mount) is
+  // absolutely positioned inside it so the injected canvas never contributes to
+  // layout and can't hold the box open when the viewport narrows. We measure the
+  // wrapper and push the size to the chart.
+  const sizeRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const bandRef = useRef<HTMLDivElement>(null);
 
@@ -167,19 +174,21 @@ export function TradingChart({
   // ── Create the chart once on mount ───────────────────────────────────────
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    const box = sizeRef.current;
+    if (!el || !box) return;
 
     const c = readColors();
     themeRef.current = c;
 
     const chart = createChart(el, {
-      width: el.clientWidth,
-      height: el.clientHeight,
+      // Size from the layout box, not the (absolutely positioned) mount element.
+      width: box.clientWidth,
+      height: box.clientHeight,
       autoSize: false,
       layout: {
         background: { color: 'transparent' },
         textColor: c.textColor,
-        fontFamily: 'JetBrains Mono, monospace',
+        fontFamily: c.fontFamily,
         fontSize: 11,
         attributionLogo: false,
         panes: { separatorColor: c.grid2Color, separatorHoverColor: c.grid2Color },
@@ -514,16 +523,20 @@ export function TradingChart({
   }, [selectedRange, timeframe, candles]);
 
   // ── Smooth responsive resize (the whole point of the rewrite) ────────────
+  // Observe the pure-layout sizing box. The chart mount (containerRef) is
+  // absolutely positioned, so the injected canvas never holds the box open — the
+  // box shrinks freely with the card and reports the true available width here,
+  // even as the viewport narrows.
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+    const box = sizeRef.current;
+    if (!box) return;
     const ro = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect;
       chartRef.current?.applyOptions({ width: Math.round(width), height: Math.round(height) });
       repositionBandRef.current();
       positionLegendsRef.current(); // pane heights changed → re-anchor legends
     });
-    ro.observe(el);
+    ro.observe(box);
     return () => ro.disconnect();
   }, []);
 
@@ -544,23 +557,28 @@ export function TradingChart({
           is appended directly into this div by lightweight-charts.
           `data-chrome-scroll-guard="always"`: the chart owns the wheel to zoom/pan,
           so a wheel here must never fold the season-page chrome (see seasonChromeReveal). */}
-      <div
-        ref={containerRef}
-        data-chrome-scroll-guard="always"
-        className="relative w-full flex-1 min-h-0"
-      >
-        {/* Selection band: a translucent vertical highlight over the clicked
-            candle, positioned imperatively against the time scale. */}
+      {/* Pure-layout sizing box: shrinks with the card. The chart mount below is
+          absolutely positioned inside it, so the injected canvas never feeds back
+          into layout and the box can narrow freely (the ResizeObserver watches it). */}
+      <div ref={sizeRef} className="relative w-full flex-1 min-h-0 min-w-0">
         <div
-          ref={bandRef}
-          className="absolute top-0 bottom-0 z-10 pointer-events-none"
-          style={{ display: 'none' }}
-        />
-        {/* Per-pane legend overlays. `top` is set imperatively to each pane's top
-            (positionLegends); content is set on hover / latest candle. */}
-        <div ref={priceLegendRef} className="absolute left-5 z-20 pointer-events-none font-mono text-[11px] leading-snug whitespace-nowrap tabular-nums" />
-        <div ref={giniLegendRef}  className="absolute left-5 z-20 pointer-events-none font-mono text-[11px] leading-snug whitespace-nowrap tabular-nums" />
-        <div ref={volLegendRef}   className="absolute left-5 z-20 pointer-events-none font-mono text-[11px] leading-snug whitespace-nowrap tabular-nums" />
+          ref={containerRef}
+          data-chrome-scroll-guard="always"
+          className="absolute inset-0"
+        >
+          {/* Selection band: a translucent vertical highlight over the clicked
+              candle, positioned imperatively against the time scale. */}
+          <div
+            ref={bandRef}
+            className="absolute top-0 bottom-0 z-10 pointer-events-none"
+            style={{ display: 'none' }}
+          />
+          {/* Per-pane legend overlays. `top` is set imperatively to each pane's top
+              (positionLegends); content is set on hover / latest candle. */}
+          <div ref={priceLegendRef} className="absolute left-5 z-20 pointer-events-none font-mono text-[11px] leading-snug whitespace-nowrap tabular-nums" />
+          <div ref={giniLegendRef}  className="absolute left-5 z-20 pointer-events-none font-mono text-[11px] leading-snug whitespace-nowrap tabular-nums" />
+          <div ref={volLegendRef}   className="absolute left-5 z-20 pointer-events-none font-mono text-[11px] leading-snug whitespace-nowrap tabular-nums" />
+        </div>
       </div>
     </div>
   );

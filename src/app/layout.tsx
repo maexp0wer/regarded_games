@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Space_Grotesk, JetBrains_Mono, Exo_2, Orbitron } from 'next/font/google';
+import { Space_Grotesk, Azeret_Mono, Exo_2, Orbitron } from 'next/font/google';
 import { headers } from 'next/headers';
 import { cookieToInitialState } from 'wagmi';
 import { config } from '@/config/wagmi';
@@ -29,7 +29,7 @@ const spaceGrotesk = Space_Grotesk({
   display: 'swap',
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const azeretMono = Azeret_Mono({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
   variable: '--font-mono',
@@ -70,7 +70,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${orbitron.variable} ${exo2.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
+      <body className={`${orbitron.variable} ${exo2.variable} ${spaceGrotesk.variable} ${azeretMono.variable}`}>
         <script dangerouslySetInnerHTML={{ __html: blockingThemeScript }} />
 
         <Providers initialState={initialState} initialChainId={initialChainId}>

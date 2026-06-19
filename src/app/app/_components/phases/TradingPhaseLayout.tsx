@@ -194,15 +194,15 @@ export function TradingPhaseLayout({
 
   const detailCards = (
     <>
+      <PolicyCard M_dynamic={M_dynamic} seasonAddress={seasonAddress} exchangeAddress={exchangeAddress} config={config} />
+      <ScheduleCard tradingStart={tradingStart} seasonEnd={seasonEnd} config={config} />
+      <LendingDistributionCard seasonAddress={seasonAddress} config={config} />
       <ProtocolCard
         seasonAddress={seasonAddress}
         fimAddress={fimAddress}
         auctionAddress={auctionAddress}
         exchangeAddress={exchangeAddress}
       />
-      <PolicyCard M_dynamic={M_dynamic} seasonAddress={seasonAddress} exchangeAddress={exchangeAddress} config={config} />
-      <ScheduleCard tradingStart={tradingStart} seasonEnd={seasonEnd} config={config} />
-      <LendingDistributionCard seasonAddress={seasonAddress} config={config} />
     </>
   );
 
