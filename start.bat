@@ -23,11 +23,23 @@ set "CMD_D=npm start"
 set "FOLDER_TO_DELETE=C:\Users\info\Documents\Work\ritardo_games\indexer\.ponder"
 
 :: PostgreSQL
-set "PG_ADMIN_URL=postgresql://postgres:***REMOVED***@localhost:5432/postgres"
-set "PG_APP_URL=postgresql://postgres:***REMOVED***@localhost:5432/regarded_games"
+:: Secrets are NOT hardcoded. Set PG_PASS (postgres superuser) and PONDER_PASS
+:: in your environment, or drop them in a local, gitignored start.env.bat:
+::     set "PG_PASS=your_postgres_password"
+::     set "PONDER_PASS=your_ponder_password"
+if exist "%~dp0start.env.bat" call "%~dp0start.env.bat"
+if not defined PG_PASS (
+    echo [ERROR] PG_PASS is not set. Define it in your environment or in start.env.bat
+    exit /b 1
+)
+if not defined PONDER_PASS (
+    echo [ERROR] PONDER_PASS is not set. Define it in your environment or in start.env.bat
+    exit /b 1
+)
+set "PG_ADMIN_URL=postgresql://postgres:%PG_PASS%@localhost:5432/postgres"
+set "PG_APP_URL=postgresql://postgres:%PG_PASS%@localhost:5432/regarded_games"
 set "PSQL_PATH=C:\Program Files\PostgreSQL\18\bin\psql.exe"
 set "PONDER_USER=ponder_user"
-set "PONDER_PASS=***REMOVED***"
 
 :: Dual-fork chain assignments (must match src/config/tenants.ts + wagmi.ts)
 set "MAINNET_CHAIN_ID=31337"
