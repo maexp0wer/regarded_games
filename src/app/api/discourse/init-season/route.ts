@@ -144,33 +144,33 @@ export async function POST(req: Request) {
     if (debug) console.log(`[init-season] found ${players.length} players`);
 
     // --- Fetch all three group IDs upfront in parallel ---
-    const [bourgeoisieGroupRes, proletariatGroupRes, playersGroupRes] = await Promise.all([
-      fetch(`${url}/groups/${names.groups.bourgeoisie}.json`, { headers }),
+    const [capitalistGroupRes, proletariatGroupRes, playersGroupRes] = await Promise.all([
+      fetch(`${url}/groups/${names.groups.capitalist}.json`, { headers }),
       fetch(`${url}/groups/${names.groups.proletariat}.json`, { headers }),
       fetch(`${url}/groups/${names.groups.players}.json`, { headers }),
     ]);
 
-    if (!bourgeoisieGroupRes.ok || !proletariatGroupRes.ok) {
+    if (!capitalistGroupRes.ok || !proletariatGroupRes.ok) {
       return NextResponse.json({ error: 'Faction groups not found — run setup-season first' }, { status: 404 });
     }
 
-    const bourgeoisieGroupId = (await bourgeoisieGroupRes.json()).group.id as number;
+    const capitalistGroupId = (await capitalistGroupRes.json()).group.id as number;
     const proletariatGroupId = (await proletariatGroupRes.json()).group.id as number;
     const playersGroupId = playersGroupRes.ok ? (await playersGroupRes.json()).group.id as number : null;
 
     if (!playersGroupId) console.warn(`[init-season] players group not found — skipping players group assignment`);
 
     // --- Phase 1: classify all players by faction ---
-    const bourgeoisieWallets: string[] = [];
+    const capitalistWallets: string[] = [];
     const proletariatWallets: string[] = [];
 
     for (const player of players) {
       const wallet = player.playerAddress.toLowerCase();
-      if (BigInt(player.fimBalance) > threshold) bourgeoisieWallets.push(wallet);
+      if (BigInt(player.fimBalance) > threshold) capitalistWallets.push(wallet);
       else proletariatWallets.push(wallet);
     }
 
-    const allWallets = [...bourgeoisieWallets, ...proletariatWallets];
+    const allWallets = [...capitalistWallets, ...proletariatWallets];
 
     // --- Phase 2: existence checks in parallel batches (GETs are cheap rate-limit-wise) ---
     const newWallets: string[] = [];
@@ -214,10 +214,10 @@ export async function POST(req: Request) {
     // PUT is idempotent — already-members are silently skipped by Discourse.
     const bulkPuts: Promise<Response>[] = [];
 
-    if (bourgeoisieWallets.length > 0) {
-      bulkPuts.push(fetch(`${url}/groups/${bourgeoisieGroupId}/members.json`, {
+    if (capitalistWallets.length > 0) {
+      bulkPuts.push(fetch(`${url}/groups/${capitalistGroupId}/members.json`, {
         method: 'PUT', headers,
-        body: JSON.stringify({ usernames: bourgeoisieWallets.join(',') }),
+        body: JSON.stringify({ usernames: capitalistWallets.join(',') }),
       }));
     }
     if (proletariatWallets.length > 0) {

@@ -24,10 +24,10 @@
   --color-border2: #CBD5E1;   /* Tier 2: Stronger Interactive Divider */
 
   /* Accents Pushed to Deep Jewel Tones (Passes Web Accessibility Checks) */
-  --color-purple: #6A1B9A;       /* Royal Faction Violet — Proletariat/Socialist */
+  --color-purple: #6A1B9A;       /* Royal Faction Violet — Proletariat */
   --color-purple-hover: #4A148C; /* Ultra Deep Purple state */
 
-  --color-gold: #D4AF37;         /* Burnished Amber Gold — Bourgeoisie/Capitalist */
+  --color-gold: #D4AF37;         /* Burnished Amber Gold — Capitalist */
   --color-gold-hover: #AA820A;   /* Rich Ochre Shadow state */
 
   /* Safe Trading Signals on White Canvas */
@@ -64,10 +64,10 @@
   --color-border2: #4C3F7A;   /* Tier 2: High Contrast Divider / Inactive Focus */
 
   /* Faction Accents */
-  --color-purple: #9D4EDD;       /* Proletariat/Socialist: Cyber Purple */
+  --color-purple: #9D4EDD;       /* Proletariat: Cyber Purple */
   --color-purple-hover: #B577F2; /* Glowing Hover state */
 
-  --color-gold: #FFC300;         /* Bourgeoisie/Capitalist: Liquid Gold */
+  --color-gold: #FFC300;         /* Capitalist: Liquid Gold */
   --color-gold-hover: #FFD447;   /* Brighter Metallic Gold state */
 
   /* Trading Signals */
@@ -95,12 +95,12 @@
   --sunset-15: linear-gradient(90deg, var(--color-purple-15) 0%, var(--color-magenta-15) 45%, var(--color-orange-15) 75%, var(--color-gold-15) 100%);
   --sunset-35: linear-gradient(90deg, var(--color-purple-35) 0%, var(--color-magenta-35) 45%, var(--color-orange-35) 75%, var(--color-gold-35) 100%);
 
-  /* Purple (Proletariat/Socialist) Transparencies */
+  /* Purple (Proletariat) Transparencies */
   --color-purple-15: color-mix(in srgb, var(--color-purple) 15%, transparent);
   --color-purple-35: color-mix(in srgb, var(--color-purple) 35%, transparent);
   --color-purple-70: color-mix(in srgb, var(--color-purple) 70%, transparent);
 
-  /* Gold (Bourgeoisie/Capitalist) Transparencies */
+  /* Gold (Capitalist) Transparencies */
   --color-gold-15: color-mix(in srgb, var(--color-gold) 15%, transparent);
   --color-gold-35: color-mix(in srgb, var(--color-gold) 35%, transparent);
   --color-gold-70: color-mix(in srgb, var(--color-gold) 70%, transparent);
@@ -226,7 +226,7 @@ html, body {
 /* GiniDisplay panel — unified label typography
    Used for all field/section labels: Proletarian Target, Capitalist Target,
    BPS unit, Players, Prize Pool, Auction Ends In, countdown units,
-   from Proletariat/Bourgeoisie Target, Equilibrium Maintained */
+   from Proletariat/Capitalist Target, Equilibrium Maintained */
 .gini-label {
   @apply font-display text-[10px] font-semibold tracking-[0.14em] uppercase text-text2;
 }
@@ -990,7 +990,7 @@ html, body {
 
 /* 3. Proletarian (Purple Accent) */
 
-/* 4. Bourgeoisie Gold */
+/* 4. Capitalist Gold */
 
 /* btn-input-switch color active variants (OrderBook filters) */
 .btn-input-switch.filter-buy.active {

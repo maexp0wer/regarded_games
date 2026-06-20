@@ -9,18 +9,18 @@ export function discourseNames(tenant: TenantKey, seasonNum: number) {
   return {
     groups: {
       players:     `S${seasonNum}_Players${nameSfx}`,
-      bourgeoisie: `S${seasonNum}_Bourgeoisie${nameSfx}`,
-      proletariat: `S${seasonNum}_Proletariat${nameSfx}`,
+      capitalist:  `S${seasonNum}_Capitalists${nameSfx}`,
+      proletariat: `S${seasonNum}_Proletarians${nameSfx}`,
     },
     categories: {
-      parent:      { slug: `season-${seasonNum}${slugSfx}`,                name: `Season ${seasonNum}${dispSfx}` },
-      bourgeoisie: { slug: `s${seasonNum}-bourgeoisie-strategy${slugSfx}`, name: `S${seasonNum} Bourgeoisie Strategy${dispSfx}` },
-      proletariat: { slug: `s${seasonNum}-proletariat-strategy${slugSfx}`, name: `S${seasonNum} Proletariat Strategy${dispSfx}` },
+      parent:      { slug: `season-${seasonNum}${slugSfx}`,                 name: `Season ${seasonNum}${dispSfx}` },
+      capitalist:  { slug: `s${seasonNum}-capitalists-strategy${slugSfx}`,  name: `S${seasonNum} Capitalists Strategy${dispSfx}` },
+      proletariat: { slug: `s${seasonNum}-proletarians-strategy${slugSfx}`, name: `S${seasonNum} Proletarians Strategy${dispSfx}` },
     },
     channels: {
       general:     `S${seasonNum}_General${nameSfx}`,
-      bourgeoisie: `S${seasonNum}_Bourgeoisie${nameSfx}`,
-      proletariat: `S${seasonNum}_Proletariat${nameSfx}`,
+      capitalist:  `S${seasonNum}_Capitalists${nameSfx}`,
+      proletariat: `S${seasonNum}_Proletarians${nameSfx}`,
     },
   };
 }

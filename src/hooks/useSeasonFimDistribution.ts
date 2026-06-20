@@ -109,7 +109,7 @@ export function useSeasonFimDistribution(
     const totalSoc = socialists.length;
     const totalCap = capitalists.length;
 
-    // Socialists: sorted ascending (index 0 = poorest). Bucket 0–9.
+    // Proletarians: sorted ascending (index 0 = poorest). Bucket 0–9.
     // Divide by (totalSoc - 1) so the last player lands exactly in bucket 9.
     socialists.forEach((p, idx) => {
       const bucket = totalSoc > 1 ? Math.min(9, Math.floor((idx / (totalSoc - 1)) * 9)) : 0;

@@ -214,8 +214,8 @@ export async function POST(req: Request) {
       const bal = BigInt(balances[i] as bigint);
       const isCap = bal > threshold;
 
-      const targetGroupName = isCap ? names.groups.bourgeoisie : names.groups.proletariat;
-      const oldGroupName = isCap ? names.groups.proletariat : names.groups.bourgeoisie;
+      const targetGroupName = isCap ? names.groups.capitalist : names.groups.proletariat;
+      const oldGroupName = isCap ? names.groups.proletariat : names.groups.capitalist;
 
       const factionKey = nsKey(tenant.key, 'userFaction', username, seasonNum);
       if (await cache.get<string>(factionKey) === targetGroupName) {

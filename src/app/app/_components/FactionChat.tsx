@@ -90,7 +90,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
   const tabCache = useRef<Partial<Record<'faction' | 'general', { channelId: number | null; messages: DiscourseMessage[] }>>>({});
   const activeAddressRef = useRef<string | undefined>(undefined);
 
-  const factionLabel = isCapitalist ? 'BOURGEOISIE' : 'PROLETARIAT';
+  const factionLabel = isCapitalist ? 'CAPITALISTS' : 'PROLETARIANS';
   const factionColor = isCapitalist ? 'gold' : 'purple';
 
   // Discover channel + fetch initial messages in one shot to avoid intermediate empty states.

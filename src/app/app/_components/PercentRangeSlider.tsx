@@ -7,7 +7,7 @@ interface PercentRangeSliderProps {
   max: number;
   onChangeMin: (pct: number) => void;
   onChangeMax: (pct: number) => void;
-  faction?: 'proletariat' | 'bourgeoisie';
+  faction?: 'proletariat' | 'capitalist';
   disabled?: boolean;
 }
 
@@ -22,10 +22,10 @@ export default function PercentRangeSlider({
 
   // Faction gradient painted full-width behind the track; the active span
   // [min, max] reveals a slice of it while the inactive ends are masked.
-  const factionGradient = faction === 'bourgeoisie'
+  const factionGradient = faction === 'capitalist'
     ? 'linear-gradient(to right, var(--color-orange), var(--color-gold))'
     : 'linear-gradient(to right, var(--color-purple), var(--color-magenta))';
-  const accentColor = faction === 'bourgeoisie' ? 'var(--color-gold)' : 'var(--color-purple)';
+  const accentColor = faction === 'capitalist' ? 'var(--color-gold)' : 'var(--color-purple)';
 
   // Dragging one thumb into the other pushes it ahead, keeping a span of at
   // least 1 — mirrors the stepper push/pull logic in OrderBook. At the ceiling

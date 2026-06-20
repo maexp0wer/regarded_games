@@ -214,8 +214,8 @@ function AuctionMaskInner({
   const showModal = status !== 'idle' && status !== 'canceled';
 
   const getButtonLabel = () => {
-    if (!hasStakedAnything) return 'Stake REGARDS to Unlock';
-    if (isMaxedOut) return 'Stake More REGARDS';
+    if (!hasStakedAnything) return 'Stake $RGD to Unlock';
+    if (isMaxedOut) return 'Stake More $RGD';
     if (isOverLimit) return 'Limit Exceeded';
     return 'Buy FIM';
   };
@@ -296,7 +296,7 @@ function AuctionMaskInner({
           {isAuctionPhase && (
             needsStaking ? (
               <Link href="/stake" className="btn-game-primary text-center">
-                {isMaxedOut ? 'Stake More REGARDS' : 'Stake REGARDS to Unlock'}
+                {isMaxedOut ? 'Stake More $RGD' : 'Stake $RGD to Unlock'}
               </Link>
             ) : (
               <button

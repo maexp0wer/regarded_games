@@ -26,13 +26,13 @@ export function OrderBook({
   const { data } = useOrderBook(seasonAddress);
 
   const [sideFilter, setSideFilter] = useState<'ask' | 'bid' | null>(null);
-  const [factionFilter, setFactionFilter] = useState<'bourgeoisie' | 'proletariat' | null>(null);
+  const [factionFilter, setFactionFilter] = useState<'capitalist' | 'proletariat' | null>(null);
 
   // Each faction remembers its own percentile range independently.
   type Range = { min: number | ''; max: number | '' };
-  const [ranges, setRanges] = useState<Record<'proletariat' | 'bourgeoisie', Range>>({
+  const [ranges, setRanges] = useState<Record<'proletariat' | 'capitalist', Range>>({
     proletariat: { min: 0, max: 100 },
-    bourgeoisie: { min: 0, max: 100 },
+    capitalist: { min: 0, max: 100 },
   });
 
   // Active faction's range, with setters that write into its slot. Falls back to
@@ -120,7 +120,7 @@ export function OrderBook({
 
       if (factionFilter !== null) {
         if (!stats) return false;
-        if (factionFilter === 'bourgeoisie' && !stats.isCapitalist) return false;
+        if (factionFilter === 'capitalist' && !stats.isCapitalist) return false;
         if (factionFilter === 'proletariat' && stats.isCapitalist) return false;
 
         // Filter automatically by rank when faction filter is active
@@ -461,11 +461,11 @@ export function OrderBook({
             {/* Capitalists Column */}
             <div className="flex-1 flex flex-col">
               <button
-                onClick={() => setFactionFilter(v => v === 'bourgeoisie' ? null : 'bourgeoisie')}
+                onClick={() => setFactionFilter(v => v === 'capitalist' ? null : 'capitalist')}
                 className={`w-full px-2.5 py-1 text-[11px] font-display font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
-                  factionFilter === 'bourgeoisie' ? 'text-text' : 'bg-card3 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-gold-15),var(--color-card2))]'
+                  factionFilter === 'capitalist' ? 'text-text' : 'bg-card3 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-gold-15),var(--color-card2))]'
                 }`}
-                style={factionFilter === 'bourgeoisie' ? { backgroundColor: 'color-mix(in srgb, var(--color-gold) 30%, var(--color-card3))' } : undefined}
+                style={factionFilter === 'capitalist' ? { backgroundColor: 'color-mix(in srgb, var(--color-gold) 30%, var(--color-card3))' } : undefined}
               >
                 Capitalists
               </button>

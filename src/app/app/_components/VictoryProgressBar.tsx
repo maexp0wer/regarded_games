@@ -27,7 +27,7 @@ export function VictoryProgressBar({ seasonAddress, hideLabels = false }: Victor
   }
 
   const isTie = progressPercent === 0 || winningSide === 'none';
-  const sideLabel = winningSide === 'cap' ? 'Bourgeois' : 'Proletarian';
+  const sideLabel = winningSide === 'cap' ? 'Capitalist' : 'Proletarian';
   const suffix = currentPhase === 'PAYOUT' ? 'Win' : 'Progress';
 
   return (

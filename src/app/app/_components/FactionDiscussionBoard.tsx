@@ -74,13 +74,13 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
   const isAtBottom = useRef(true);
 
   const factionColor = isCapitalist ? 'var(--color-gold)' : 'var(--color-purple)';
-  const factionLabel = isCapitalist ? 'THE BOURGEOISIE' : 'THE PROLETARIAT';
+  const factionLabel = isCapitalist ? 'THE CAPITALISTS' : 'THE PROLETARIANS';
   const pillClass = isCapitalist ? 'bg-(--color-gold-15)' : 'bg-(--color-purple-15)';
   const hoverBorderColor = isCapitalist ? 'var(--color-gold-35)' : 'var(--color-purple-35)';
   const seasonNum = seasonSlug.match(/\d+/)?.[0] || '1';
   const tenantKey = useTenantKey();
   const names = discourseNames(tenantKey, Number(seasonNum));
-  const childCat = isCapitalist ? names.categories.bourgeoisie : names.categories.proletariat;
+  const childCat = isCapitalist ? names.categories.capitalist : names.categories.proletariat;
   const discourseNewTopicUrl = forumLoginUrl(`/c/${names.categories.parent.slug}/${childCat.slug}`);
 
   // ── Fetch topic list ──────────────────────────────────────────────────────
@@ -326,7 +326,7 @@ export function FactionDiscussionBoard({ seasonSlug, isCapitalist, embedded = fa
           className={`shrink-0 font-mono text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${pillClass}`}
           style={{ color: factionColor }}
         >
-          {isCapitalist ? 'Bourgeois Access' : 'Proletariat Access'}
+          {isCapitalist ? 'Capitalist Access' : 'Proletarian Access'}
         </span>
       </div>
 

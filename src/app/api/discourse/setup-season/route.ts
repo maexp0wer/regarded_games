@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     }
 
     await ensureGroup(names.groups.players);
-    await ensureGroup(names.groups.bourgeoisie);
+    await ensureGroup(names.groups.capitalist);
     await ensureGroup(names.groups.proletariat);
 
     // ── 2. Ensure Categories (idempotent via /site.json slug lookup) ───
@@ -112,21 +112,21 @@ export async function POST(req: Request) {
       text_color: 'FFFFFF',
       permissions: {
         [names.groups.players]: 1,
-        [names.groups.bourgeoisie]: 1,
+        [names.groups.capitalist]: 1,
         [names.groups.proletariat]: 1
       }
     });
     if (parentTopicId) await updateAboutTopic(parentTopicId, 'season-parent');
 
-    const { id: capCategoryId, topicId: capTopicId } = await ensureCategory(names.categories.bourgeoisie.slug, {
-      name: names.categories.bourgeoisie.name,
-      slug: names.categories.bourgeoisie.slug,
+    const { id: capCategoryId, topicId: capTopicId } = await ensureCategory(names.categories.capitalist.slug, {
+      name: names.categories.capitalist.name,
+      slug: names.categories.capitalist.slug,
       parent_category_id: parentId,
       color: '0088CC',
       text_color: 'FFFFFF',
-      permissions: { [names.groups.bourgeoisie]: 1 }
+      permissions: { [names.groups.capitalist]: 1 }
     });
-    if (capTopicId) await updateAboutTopic(capTopicId, 'bourgeoisie-strategy');
+    if (capTopicId) await updateAboutTopic(capTopicId, 'capitalists-strategy');
 
     const { id: socCategoryId, topicId: socTopicId } = await ensureCategory(names.categories.proletariat.slug, {
       name: names.categories.proletariat.name,
@@ -136,7 +136,7 @@ export async function POST(req: Request) {
       text_color: 'FFFFFF',
       permissions: { [names.groups.proletariat]: 1 }
     });
-    if (socTopicId) await updateAboutTopic(socTopicId, 'proletariat-strategy');
+    if (socTopicId) await updateAboutTopic(socTopicId, 'proletarians-strategy');
 
     // ── 3. Ensure Chat Channels (idempotent via name lookup) ────────────
     async function ensureChannel(name: string, payload: object): Promise<void> {
@@ -163,12 +163,12 @@ export async function POST(req: Request) {
       });
     }
     if (capCategoryId) {
-      await ensureChannel(names.channels.bourgeoisie, {
+      await ensureChannel(names.channels.capitalist, {
         channel: {
           chatable_type: 'Category',
           chatable_id: capCategoryId,
-          name: names.channels.bourgeoisie,
-          description: `Season ${seasonNum} Bourgeoisie faction chat`,
+          name: names.channels.capitalist,
+          description: `Season ${seasonNum} Capitalists faction chat`,
           auto_join_users: true
         }
       });
@@ -179,7 +179,7 @@ export async function POST(req: Request) {
           chatable_type: 'Category',
           chatable_id: socCategoryId,
           name: names.channels.proletariat,
-          description: `Season ${seasonNum} Proletariat faction chat`,
+          description: `Season ${seasonNum} Proletarians faction chat`,
           auto_join_users: true
         }
       });

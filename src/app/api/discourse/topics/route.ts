@@ -14,7 +14,7 @@ function resolveTenantFromQuery(req: Request, bodyTenant?: unknown) {
 export async function GET(req: Request) {
   // Identity from the verified session. Reading the category AS the user (not
   // `system`) means Discourse enforces faction-group access — a Proletariat user
-  // requesting the Bourgeoisie category is denied at the source.
+  // requesting the Capitalists category is denied at the source.
   const wallet = getCommunitySession(req);
   if (!wallet) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
 
@@ -36,7 +36,7 @@ export async function GET(req: Request) {
   const tenant = resolveTenantFromQuery(req, tenantParam);
   const seasonNum = Number(seasonSlug.match(/\d+/)?.[0] || '1');
   const names = discourseNames(tenant.key, seasonNum);
-  const child = isCapitalist ? names.categories.bourgeoisie : names.categories.proletariat;
+  const child = isCapitalist ? names.categories.capitalist : names.categories.proletariat;
   const categorySlug = `${names.categories.parent.slug}/${child.slug}`;
 
   try {
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
     const seasonNum = Number(seasonSlug.match(/\d+/)?.[0] || '1');
     const names = discourseNames(tenant.key, seasonNum);
     const subcategorySlug = isCapitalist === true
-      ? names.categories.bourgeoisie.slug
+      ? names.categories.capitalist.slug
       : names.categories.proletariat.slug;
 
     const siteRes = await fetch(`${discourseUrl}/site.json`, {

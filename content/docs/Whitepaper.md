@@ -49,7 +49,7 @@ toc_max_heading_level: 3
 - **Part VI: Conclusion & Future Vision**
   - [18. Conclusion: The Clean Room of Finance](#18-conclusion-the-clean-room-of-finance)
   - [19. Roadmap & Future Vision](#19-roadmap--future-vision)
-  - [20. The "Equal Start" Game Mode (The Proletariat Arena)](#20-the-equal-start-game-mode-the-proletariat-arena)
+  - [20. The "Equal Start" Game Mode (The Proletarian Arena)](#20-the-equal-start-game-mode-the-proletarian-arena)
 
 - **Appendices**
   - [21. Appendix A: Formal Mechanics & Mathematical Notation](#21-appendix-a-formal-mechanics--mathematical-notation)
@@ -110,13 +110,13 @@ Current market structures systematically capitalize on these drivers. By validat
 
 5. ***Gini-Aware Market Microstructure:*** This architecture introduces a novel strategic constraint: distributional impact. In standard order-book markets, counterparty identity is irrelevant to price discovery. In this simulation, the specific inventory of the counterparty determines the trade's impact on the global Gini score. Consequently, every transaction carries an externality. Participants must engage in "Gini-aware" execution, where the decision of whom to trade with is as mathematically significant as the price at which the trade occurs.
 
-6. **Sybil Resistance via Capital-Backed Identity:** To prevent manipulation, eligibility to trade requires the staking of the protocol's governance asset (RGD). This commitment operates on a High-Water Mark (MAX) basis, allowing a single stake to collateralize multiple active seasons, maximizing capital efficiency while maintaining strict Sybil Resistance.
+6. **Sybil Resistance via Capital-Backed Identity:** To prevent manipulation, eligibility to trade requires the staking of the protocol's governance asset, the **Regarded Token (\$RGD)**. This commitment operates on a High-Water Mark (MAX) basis, allowing a single stake to collateralize multiple active seasons, maximizing capital efficiency while maintaining strict Sybil Resistance.
 
 7. **Conditional Payout Functions (The Stakes):**
 
-- **Capitalist Victory (Oligarchic Distribution):** Results in a convex payout curve, where the majority of the pool is concentrated among the top-performing percentile of participants—mirroring the "winner-take-all" dynamics of the current crypto market.
+- **Capitalist Victory (Oligarchic Distribution):** Results in a convex payout curve, where the entire pool is concentrated among the Oligarchy (the top holders who together control ≥ 50% of \$FIM supply)—mirroring the "winner-take-all" dynamics of the current crypto market.
 
-- **Socialist Victory (Redistributive Distribution):** Triggers a "Solidarity Fund" mechanism, capping individual upside to ensure a flatter, more egalitarian distribution of the total yield—mirroring the original promise of decentralised equity.
+- **Proletarian Victory (Redistributive Distribution):** Triggers a "Solidarity Fund" mechanism, capping individual upside to ensure a flatter, more egalitarian distribution of the total yield—mirroring the original promise of decentralised equity.
 
 By creating a transparent, deterministic environment where wealth distribution is the primary victory condition, the protocol effectively isolates the competing forces driving the crypto economy, allowing for a structured exploration of coordination, greed, and collective action.
 
@@ -146,7 +146,7 @@ It invites participation via the familiar allure of high-variance returns and wi
 
 1. **Persist in non-cooperative competition,** effectively serving as liquidity for dominant market actors.
 
-2. **Shift toward cooperative equilibrium,** recognising that for the vast majority of the player base, the "Socialist" outcome (redistribution) offers the highest expected value (EV).
+2. **Shift toward cooperative equilibrium,** recognising that for the vast majority of the player base, the "Proletarian" outcome (redistribution) offers the highest expected value (EV).
 
 **Thus, the mechanism does not rely on moral persuasion to encourage cooperation; it utilises financial determinism.** To secure a return, the aspiring individualist is mathematically incentivised to become a practising collectivist. The protocol thereby proves that under specific structural conditions, the most rational, self-serving action is to coordinate for the benefit of the whole. This creates a visceral, financially motivated learning effect, demonstrating that the market is often rigged not by nature, but by the absence of coordinated counter-strategy.
 
@@ -298,7 +298,7 @@ The mechanics of Regarded Games are not arbitrary gamification elements; they ar
 
 **Contract Logic: `Staking.sol` / `Auction.sol`**
 
-A primary vulnerability in anonymous economic simulations is the "Sybil Attack"—specifically, the ability of a capital-rich actor (a "whale") to mimic a collective of low-capital participants by splitting funds across hundreds of wallets. This behaviour would artificially deflate the Gini Coefficient, rendering the "Socialist" victory condition trivial to exploit.
+A primary vulnerability in anonymous economic simulations is the "Sybil Attack"—specifically, the ability of a capital-rich actor (a "whale") to mimic a collective of low-capital participants by splitting funds across hundreds of wallets. This behaviour would artificially deflate the Gini Coefficient, rendering the "Proletariat" victory condition trivial to exploit.
 
 **To mitigate this, the protocol enforces a strict Collateralized Identity requirement.**
 
@@ -344,9 +344,9 @@ Unlike standard Decentralised Exchanges (AMMs) which obscure individual actors b
 
 - ***Mechanism:*** Players post bids and asks. However, the order book publicly indexes the identity and current balance of every Maker.
 
-- **Strategic Rationale:** This transparency allows for "Gini-aware" execution. A participant wishing to sell \$FIM can choose their counterparty based not only on price but on distributional impact. Selling to a "whale" increases the Gini (aiding Capitalism); selling to a low-net-worth player decreases the Gini (aiding Socialism). By exposing the counterparty's identity, the contract transforms every trade into a political act.
+- **Strategic Rationale:** This transparency allows for "Gini-aware" execution. A participant wishing to sell \$FIM can choose their counterparty based not only on price but on distributional impact. Selling to a "whale" increases the Gini (aiding Capitalism); selling to a low-net-worth player decreases the Gini (aiding Socialism). By exposing the counterparty's identity, the contract transforms every trade into a political act. The interface does not leave this calculation to intuition: for any queued fill it surfaces a live, signed **Gini-impact preview** (the exact basis-point delta the trade would move the live coefficient, positive toward concentration or negative toward redistribution), computed against the current population with the same arithmetic the contract uses — so "Gini-aware execution" is quantified for the player in real time.
 
-- **One Boundary, Live and at Settlement:** The faction a player is shown as during trading — Capitalist (Oligarchy) or Socialist (Masses) — is not a cosmetic label distinct from the endgame. It is the *same* supply-share cut that governs the payout in §9.5: the largest set of holders whose balances sum to ≤50% of \$FIM supply are the Masses, and the remainder form the Oligarchy. The live class indicator a player trades against is therefore a continuous readout of where they stand relative to the very boundary that will decide the settlement distribution.
+- **One Boundary, Live and at Settlement:** The faction a player is shown as during trading — Capitalist (Oligarchy) or Proletariat (Masses) — is not a cosmetic label distinct from the endgame. It is the *same* supply-share cut that governs the payout in §9.5: the largest set of holders whose balances sum to ≤50% of \$FIM supply are the Masses, and the remainder form the Oligarchy. The live class indicator a player trades against is therefore a continuous readout of where they stand relative to the very boundary that will decide the settlement distribution.
 
 **The Arbiter of Truth: The Gini Calculation**
 
@@ -360,11 +360,11 @@ Victory is defined as a Proportional Race. The simulation does not demand absolu
 
 - **Capitalist Win Condition:** `(G_current − G_initial) / (1 − G_initial) ≥ 0.25`
 
-- **Socialist Win Condition:** `((G_initial − G_current) / G_initial) × M ≥ 0.25`
+- **Proletarian Win Condition:** `((G_initial − G_current) / G_initial) × M ≥ 0.25`
 
 **The Compensation Multiplier (M) as a Dynamic Balancing Lever**
 
-To account for the inherent entropic tendency of markets toward concentration (often observed as the Power Law), the system applies a structural handicap in favour of the Socialist faction. The multiplier M is calculated via the following function:
+To account for the inherent entropic tendency of markets toward concentration (often observed as the Power Law), the system applies a structural handicap in favour of the Proletarian faction. The multiplier M is calculated via the following function:
 M = Beta + (1 - G_initial)^2
 
 Where Beta (The Base Multiplier, the `baseMultiplierBps` season parameter) is currently initialised at 1.2. This formula mathematically compensates for the fundamental asymmetry of the simulation: the significantly higher coordination cost required to distribute wealth (Socialism) versus the lower entropy cost of concentrating it (Capitalism). Crucially, the parameter Beta serves as the protocol's primary Governance Lever. It is not a static constant, but a mutable variable subject to DAO ratification. This design empowers the community to engage in dynamic game balancing. By analysing empirical data from concluded seasons, the DAO can vote to adjust Beta upward or downward. This mechanism ensures that the simulation remains competitive and theoretically sound, preventing long-term statistical dominance by either ideology purely due to market mechanics.
@@ -379,15 +379,15 @@ Where Beta (The Base Multiplier, the `baseMultiplierBps` season parameter) is cu
 
 - **Logic:** The system identifies the "Oligarchy"—the smallest subset of top holders who collectively control ≥ 50% of the total \$FIM supply.
 
-- **Execution:** The entire Prize Pool is distributed exclusively to these addresses, proportional to their holdings. The bottom 99% of players receive zero. This effectively models a "Winner-Take-All" market outcome.
+- **Execution:** The entire Prize Pool is distributed exclusively to these addresses, proportional to their holdings. Every player outside the Oligarchy receives zero. This effectively models a "Winner-Take-All" market outcome.
 
-**Scenario B: Socialist Victory (The Solidarity Fund)**
+**Scenario B: Proletarian Victory (The Solidarity Fund)**
 
 - **Logic:** The system enforces a Redistributive Cap.
 
-1. The player base is bisected into the "Elite" (Top 50%) and the "Masses" (Bottom 50%). 2. A `Cap_Value` is derived from the highest balance within the "Masses."
+1. The player base is split by the **same supply-share cut used during trading** (§9.4): the "Masses" are the largest set of poorest holders whose balances sum to ≤ 50% of total \$FIM supply; the remaining top holders form the "Oligarchy." (This is a supply-share cut, **not** a Top-50%/Bottom-50% population split — the Masses are typically far more than half the players.) 2. A `Cap_Value` is derived from the highest balance within the "Masses."
 
-3. **Any Elite player's claim is programmatically capped. The surplus value is seized to form the Solidarity Fund.**
+3. **Any Oligarchy player's claim is programmatically capped. The surplus value is seized to form the Solidarity Fund.**
 
 - ***Proof of Sacrifice:*** The Solidarity Fund is redistributed to all players based on their Net Contribution (`Money_In - Money_Out`).
 
@@ -397,7 +397,7 @@ Where Beta (The Base Multiplier, the `baseMultiplierBps` season parameter) is cu
 
 **Scenario C: Settlement by Proportional Progress (The Blended Outcome)** If the quarterly timer expires before either faction achieves the full `V_thresh` (25% progress), the contract executes a Proportional Blended Payout.
 
-1. **Progress Calculation:** Let `P_Cap` be the Capitalist progress and `P_Soc` be the Socialist progress. The overall progress is determined by the greater of the two.
+1. **Progress Calculation:** Let `P_Cap` be the Capitalist progress and `P_Soc` be the Proletarian progress. The overall progress is determined by the greater of the two.
 
 2. **Blended Payout Mechanism:** - `Payout = (P_final × Winning Payout Logic) + ((1 - P_final) × Draw Payout Logic)`
 
@@ -479,13 +479,13 @@ Where Beta (The Base Multiplier, the `baseMultiplierBps` season parameter) is cu
 
 - **Function:** The autonomous referee managing season state and settlement.
 
-- **The Phase Engine:** An internal `State` enum (`BOOTSTRAP → ACTIVE → CALCULATING → DISTRIBUTION`) surfaces to clients through `getPhase()` as the human-readable lifecycle `AUCTION → BOOTSTRAP → TRADING → SETTLING → PAYOUT`. The `ENDED` state no longer exists; the season remains in `DISTRIBUTION` indefinitely so latecomers can always claim. The auction runs while the season is still in `BOOTSTRAP`.
+- **The Phase Engine:** An internal `State` enum surfaces to clients through `getPhase()` as the human-readable lifecycle `AUCTION → BOOTSTRAP → TRADING → SETTLING → PAYOUT`. `getPhase()` returns the distinct string `AUCTION` while the capital-formation window is open; once it closes, the season reports `BOOTSTRAP` until `G_initial` is established, then `TRADING`. The internal `CALCULATING`/`DISTRIBUTION` states surface as `SETTLING`/`PAYOUT`. The `ENDED` state no longer exists; the season remains in `DISTRIBUTION` (`PAYOUT`) indefinitely so latecomers can always claim.
 
 - **The Bootstrap Phase:** After the auction window closes, trading stays paused until `G_initial` is established. `startBootstrap` opens the batch, `processBatch` consumes the sorted player set, and `finalizeBootstrap` records `G_initial` and transitions to `ACTIVE`.
 
 - **Trustless Verification (The Arbitrator):** Any external actor (a Keeper or Bot) drives a state transition by posting a USDC bond (`bondAmountUsdc`), which makes them the season's `settlementStarter`. **Only that bonded starter may submit batches** via `processBatch`, and the set must be in **ascending balance order**; the validation logic enforces a sort check, a no-duplicates check, and the dust filter (`existentialThresholdFim`). Gating batch submission to the bond-poster prevents a griefer from poisoning a partially-processed batch into an unfinalisable state; should a starter abandon a batch mid-flight, the Execution Council can reassign it with `resetSettlement`. On a successful finalization the bond is returned to the starter; an attempted settlement that does not yet meet a victory or time condition forfeits the bond **to the DAO** (routed to the `daoRecipient`, not the Treasury balance, so it is never miscounted as yield).
 
-- **The Multiplier Logic:** Applies the compensation formula `M = β + (1 − G_initial)²` (all in basis points) in favour of the Socialist faction.
+- **The Multiplier Logic:** Applies the compensation formula `M = β + (1 − G_initial)²` (all in basis points) in favour of the Proletarian faction.
 
 - **Settlement Engine:** On a triggering condition `finalizeGame` locks state, opens Exchange settlement, harvests Treasury yield, and snapshots the final prize pool (`finalPoolSize`), then moves to `DISTRIBUTION`. Payouts are computed **lazily, per player, at claim time** (`claimPayout`) rather than in one unbounded loop, so finalization cost is independent of the player count. `claimPayout` **always releases the player's \$RGD collateral and burns their \$FIM — even when their payout is zero** — so no player's stake can ever be stranded by an ended season; USDC is transferred only when a payout is owed.
 
@@ -509,7 +509,7 @@ Where Beta (The Base Multiplier, the `baseMultiplierBps` season parameter) is cu
 
 **The End-of-Season "Finalization Cascade":**
 
-1. *Trigger:* The bonded Keeper (`settlementStarter`) posts the USDC bond via `startSettlement()`, submits the sorted player set through `processBatch()`, then calls `finalizeGame()`.
+1. *Trigger:* The bonded Keeper (`settlementStarter`) posts the USDC bond via `startSettlement()` (the same bonded-crank mechanism used by `startBootstrap()` to establish `G_initial`), submits the sorted player set through `processBatch()`, then calls `finalizeGame()`.
 
 2. State Locking: If a victory or the time limit is met, game state is frozen (`CALCULATING → DISTRIBUTION`) and the Exchange is flipped into settlement mode; open orders are then drained permissionlessly in bounded slices via `settleOrders`.
 
@@ -784,11 +784,11 @@ The initial game mode establishes the baseline mechanism. The Regarded DAO is em
 
 - **The "Volatile Asset" Game Mode:** Instead of stablecoin minting, the game utilises real, volatile crypto assets (e.g., minting Fake Internet Coins (\$FIC) by depositing ETH or WBTC). This introduces a profound new layer of complexity: the Gini Coefficient would constantly shift not just from player trading, but from the real-world price movements of the underlying collateral, testing a faction's ability to manage a truly chaotic, multi-variable economy.
 
-## 20. The "Equal Start" Game Mode (The Proletariat Arena)
+## 20. The "Equal Start" Game Mode (The Proletarian Arena)
 
 This is one shape the market can take once its participants own the rule-set—a variant the DAO can choose to run, illustrating that the fair field is not a single fixed game but a space the players themselves can reconfigure.
 
-The open-ended Auction is replaced with a fixed buy-in. Every participant purchases an identical, predetermined amount of \$FIM. This ensures every player begins the game with an initial Gini Coefficient of 0.0. The strategic challenge then becomes a pure test of post-auction gameplay, examining the Capitalist faction's ability to create inequality from a perfectly level playing field, and the Socialist faction's ability to defend it.
+The open-ended Auction is replaced with a fixed buy-in. Every participant purchases an identical, predetermined amount of \$FIM. This ensures every player begins the game with an initial Gini Coefficient of 0.0. The strategic challenge then becomes a pure test of post-auction gameplay, examining the Capitalist faction's ability to create inequality from a perfectly level playing field, and the Proletarian faction's ability to defend it.
 
 ---
 
@@ -804,6 +804,8 @@ This section provides a precise mathematical definition of the game's core mecha
 
 *Let t_i be the balance of \$FIM tokens held by player p_i.* *Let T = Σ t_i be the total supply of \$FIM tokens.* Let c_i = MoneyIn_i - MoneyOut_i be the Net Contribution of player p_i.
 
+*Let P\* ⊆ P be the **eligible set**: the players whose balance clears the existential (dust) threshold, `t_i ≥ existentialThresholdFim`. Let A = Σ_{p_i ∈ P\*} t_i be the **accumulated (dust-filtered) supply**.* The 50%-of-supply **boundary** is always taken against the raw total `T` (so dust cannot shift the cut), but every payout **share** is divided by the eligible accumulated supply `A` — never by `T` — so excluded dust holders neither receive a payout nor dilute anyone else's. (On-chain: `T` = `totalSupply`, `A` = `accumulatedSupply`; the contract divides each share by `accumulatedSupply`.)
+
 ### 21.2. Gini Coefficient (G)
 
 **The Gini Coefficient is calculated as:**
@@ -811,11 +813,11 @@ G = (Σ_i Σ_j |t_i - t_j|) / (2 × n × Σ_i t_i)
 
 This formula is computed off-chain by the Solver Bot and verified on-chain via sorted batch processing to establish G_initial (during the Bootstrap Phase) and G_current (during the Settlement Phase).
 
-**Victory Conditions:** Let V_thresh = 0.25 be the Victory Threshold. *Let M = 1.2 + (1 - G_initial)² be the Compensation Multiplier (the base, β, is the governance-tunable `baseMultiplierBps`, currently 1.2).* *The Capitalist Faction wins if:* `(G_current - G_initial) / (1 - G_initial) ≥ V_thresh` *The Socialist Faction wins if:* `((G_initial - G_current) / G_initial) × M ≥ V_thresh`
+**Victory Conditions:** Let V_thresh = 0.25 be the Victory Threshold. *Let M = 1.2 + (1 - G_initial)² be the Compensation Multiplier (the base, β, is the governance-tunable `baseMultiplierBps`, currently 1.2).* *The Capitalist Faction wins if:* `(G_current - G_initial) / (1 - G_initial) ≥ V_thresh` *The Proletarian Faction wins if:* `((G_initial - G_current) / G_initial) × M ≥ V_thresh`
 
 ### 21.3. Payout Logic Formalization
 
-**Oligarchy Payout (Capitalist Win):** - Let O ⊂ P be the subset of players of minimum cardinality |O| such that Σ_{p_i ∈ O} t_i ≥ 0.5 × T. - For a player p_j ∈ O: `Payout_j = PrizePool × (t_j / Σ_{p_i ∈ O} t_i)` - For a player p_k ∉ O: `Payout_k = 0` **Solidarity Fund Payout (Socialist Win):** - Let P_M ⊂ P be the "Masses," the largest subset such that Σ_{p_i ∈ P_M} t_i ≤ 0.5 × T. - Let s_i = PrizePool × (t_i / T) be the theoretical proportional share for each player p_i.
+**Oligarchy Payout (Capitalist Win):** - Let O ⊂ P\* be the subset of eligible players of minimum cardinality |O| such that Σ_{p_i ∈ O} t_i ≥ 0.5 × T. - For a player p_j ∈ O: `Payout_j = PrizePool × (t_j / Σ_{p_i ∈ O} t_i)` - For a player p_k ∉ O: `Payout_k = 0` **Solidarity Fund Payout (Proletarian Win):** - Let P_M ⊆ P\* be the "Masses," the largest subset of eligible players such that Σ_{p_i ∈ P_M} t_i ≤ 0.5 × T. - Let s_i = PrizePool × (t_i / A) be the theoretical proportional share for each eligible player p_i (divided by the dust-filtered accumulated supply A, **not** by T).
 
 - *Let Cap_Value = max({s_j | p_j ∈ P_M}).*
 
@@ -829,7 +831,7 @@ The design of Regarded Games is an exercise in applied game theory. The rules ar
 
 ### 22.1. The Core Dilemma: The Individual vs. The Collective
 
-The game presents a classic multi-player dilemma. The most intuitive, low-coordination strategy for any individual player is to act in their own immediate self-interest (buy low, sell high to maximise personal \$USDC profit). However, every such trade, if made without considering the counterparty, is statistically likely to push the Gini Coefficient up, benefiting the Capitalist faction. If all non-whale players adopt this simple strategy, they collectively guarantee a Capitalist victory where they are almost certain to win nothing. The globally optimal strategy for the majority is to overcome this coordination problem and act as a collective for the Socialist victory.
+The game presents a classic multi-player dilemma. The most intuitive, low-coordination strategy for any individual player is to act in their own immediate self-interest (buy low, sell high to maximise personal \$USDC profit). However, every such trade, if made without considering the counterparty, is statistically likely to push the Gini Coefficient up, benefiting the Capitalist faction. If all non-whale players adopt this simple strategy, they collectively guarantee a Capitalist victory where they are almost certain to win nothing. The globally optimal strategy for the majority is to overcome this coordination problem and act as a collective for the Proletarian victory.
 
 ### 22.2. Nash Equilibrium & The Learning Effect
 
@@ -841,7 +843,7 @@ The game is designed to reveal that this is a suboptimal equilibrium for most pa
 
 The platform's design, which provides perfect information about counterparty balances on the Peer-to-Peer Order Book, gives rise to a set of sophisticated strategies we term "Gini-Aware Trading." Unlike traditional markets focused solely on price, players in Regarded Games must price in the externality of their trade's impact on the Gini Coefficient.
 
-- **The Socialist Premium:** A Socialist player seeking to reduce inequality is rationally willing to pay a premium for tokens from the largest possible holders (whales), as this trade has the most significant positive impact on their cause.
+- **The Proletarian Premium:** A Proletarian player seeking to reduce inequality is rationally willing to pay a premium for tokens from the largest possible holders (whales), as this trade has the most significant positive impact on their cause.
 
 - **The Capitalist Discount:** Conversely, a Capitalist player seeking to increase inequality is rationally willing to offer a discount to a zero-balance wallet, as creating a new token holder has the most significant positive impact on their cause.
 
@@ -863,7 +865,7 @@ The protocol's rules are designed to be robust against common attack vectors.
 
 **The Free-Rider Problem:**
 
-- **The Threat:** A player might align with the Socialist faction but contribute nothing, hoping to benefit from others' sacrifice.
+- **The Threat:** A player might align with the Proletarian faction but contribute nothing, hoping to benefit from others' sacrifice.
 
 - ***The Mitigation:*** Our Net Contribution payout metric solves this. It rewards financial sacrifice (MoneyIn − MoneyOut), ensuring that free-riders receive a proportionally smaller share of the Solidarity Fund.
 
@@ -883,12 +885,12 @@ The protocol's rules are designed to be robust against common attack vectors.
 
 **Gini Coefficient:** A statistical measure of distribution used to gauge economic inequality. A score of 0 represents perfect equality, and 1 represents perfect inequality.
 
-**Net Contribution:** A core metric calculated as a player's total MoneyIn minus their total MoneyOut. It serves as a Sybil-resistant "Proof of Sacrifice." **Oligarchy:** In a Capitalist victory, the smallest group of top players whose combined FIM holdings equal or exceed 50% of the total supply. **\$RGD (Regarded Games):** The governance token of the Regarded Games ecosystem (ERC-20, fixed 1,000,000,000 supply, burnable). Holders govern the DAO and their staked balance is required as collateral to participate in the game.
+**Net Contribution:** A core metric calculated as a player's total MoneyIn minus their total MoneyOut. It serves as a Sybil-resistant "Proof of Sacrifice." **Oligarchy:** In a Capitalist victory, the smallest group of top players whose combined FIM holdings equal or exceed 50% of the total supply. **\$RGD (Regarded Token):** The governance token of the Regarded Games ecosystem (ERC-20, fixed 1,000,000,000 supply, burnable). Holders govern the DAO and their staked balance is required as collateral to participate in the game.
 
 **Capital Formation Auction (ILO):** The one-time `CapitalAuction` batch sale that bootstraps the \$RGD market at the Token Generation Event. Participants deposit USDC; on finalize, the raised USDC is paired with a protocol-owned liquidity tranche into a Uniswap V2 pool and depositors claim \$RGD pro-rata at a uniform clearing price.
 
 **Vesting Contract:** The `Vesting` contract that custodies the Team, DAO Treasury, Growth, Operational (LLC), and protocol-owned-liquidity allocations, releasing them on per-schedule cliffs and linear vesting clocks started at the TGE.
 
-**Solidarity Fund:** In a Socialist victory, the fund created by capping the winnings of the elite players, which is then redistributed to all players based on their Net Contribution.
+**Solidarity Fund:** In a Proletarian victory, the fund created by capping the winnings of the elite players, which is then redistributed to all players based on their Net Contribution.
 
 **Vesting:** The process of granting an owner full rights to their tokens over a set period. It is used to ensure long-term commitment from the team and stakeholders.

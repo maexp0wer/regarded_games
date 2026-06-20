@@ -128,7 +128,7 @@ export function FimDistributionChart({ seasonAddress, exchangeAddress }: FimDist
                 style={{ left: tooltipPos.x + 12, top: tooltipPos.y - 28 }}
               >
                 <div className="px-2.5 pt-1.5 text-text">
-                  {hoveredBar.playerCount} {hoveredBar.isCapitalist ? 'Capitalists' : 'Socialists'}
+                  {hoveredBar.playerCount} {hoveredBar.isCapitalist ? 'Capitalists' : 'Proletarians'}
                 </div>
                 <div className="px-2.5 pb-1.5 text-text2">
                   {hoveredBar.isCapitalist

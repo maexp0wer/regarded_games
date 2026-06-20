@@ -256,7 +256,7 @@ export function SeasonBand({ seasonAddress, seasonName, className = '' }: Season
             <div className={`flex-col items-center text-center ${isPayout && winningSide === 'none' ? 'hidden lg:flex' : 'hidden sm:flex'}`}>
               <span className={`font-display text-2xl font-extrabold uppercase tracking-widest ${isPayout ? 'hero-gradient-text' : 'text-text2'}`}>
                 {isPayout
-                  ? (winningSide === 'soc' ? 'Proletariat Wins' : winningSide === 'cap' ? 'Capitalists Win' : 'Season Concluded')
+                  ? (winningSide === 'soc' ? 'Proletarians Win' : winningSide === 'cap' ? 'Capitalists Win' : 'Season Concluded')
                   : 'Gini Score'}
               </span>
             </div>
@@ -343,7 +343,7 @@ export function SeasonBand({ seasonAddress, seasonName, className = '' }: Season
                     {isPayout ? (progressPercent >= 100 ? 'Victory:' : 'Partial Victory:') : 'Leader:'}
                   </span>{' '}
                   <span className={`font-bold ${winningSide === 'soc' ? 'text-purple' : 'text-gold'}`}>
-                    {winningSide === 'soc' ? 'Proletariat' : 'Bourgeoisie'} ({progressPercent.toFixed(1)}%)
+                    {winningSide === 'soc' ? 'Proletariat' : 'Capitalist'} ({progressPercent.toFixed(1)}%)
                   </span>
                 </span>
               ) : (

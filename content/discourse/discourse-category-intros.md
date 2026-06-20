@@ -8,18 +8,18 @@ This is the main hub for all Season {seasonNum} discussion. Use the faction-spec
 
 Good luck, and may the best faction win.
 
-## bourgeoisie-strategy
+## capitalists-strategy
 
-### Bourgeoisie Strategy Hub — Season {seasonNum}
+### Capitalists Strategy Hub — Season {seasonNum}
 
-Welcome, Bourgeoisie of Season {seasonNum}.
+Welcome, Capitalists of Season {seasonNum}.
 
-Your FIM balance puts you above the threshold. Use this space to coordinate strategy, share market analysis, and plan your moves. Only fellow Bourgeoisie can read or post here.
+Your FIM balance puts you above the threshold. Use this space to coordinate strategy, share market analysis, and plan your moves. Only fellow Capitalists can read or post here.
 
-## proletariat-strategy
+## proletarians-strategy
 
-### Proletariat Strategy Hub — Season {seasonNum}
+### Proletarians Strategy Hub — Season {seasonNum}
 
-Welcome, Proletariat of Season {seasonNum}.
+Welcome, Proletarians of Season {seasonNum}.
 
-Your FIM balance puts you below the threshold. Use this space to coordinate strategy, discuss redistribution, and organise. Only fellow Proletariat can read or post here.
+Your FIM balance puts you below the threshold. Use this space to coordinate strategy, discuss redistribution, and organise. Only fellow Proletarians can read or post here.

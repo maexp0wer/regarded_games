@@ -25,7 +25,7 @@ export async function POST(req: Request) {
 
     const targetGroupName = isGeneral
       ? names.channels.general
-      : isCapitalist ? names.channels.bourgeoisie : names.channels.proletariat;
+      : isCapitalist ? names.channels.capitalist : names.channels.proletariat;
 
     const res = await fetch(`${process.env.NEXT_PUBLIC_DISCOURSE_URL}/chat/api/channels`, {
       headers: {

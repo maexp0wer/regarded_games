@@ -88,7 +88,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
           <div className="flex items-baseline font-mono text-xs uppercase tracking-wide">
             <span className="font-bold text-text2">Rank</span>
             <span className="flex-1 text-center font-bold text-text">{classPercentile.toFixed(2)}% {isCapitalist ? 'Capitalist' : 'Proletarian'}</span>
-            <span className="font-bold text-text">{isCapitalist ? 'BOURGEOISIE' : 'PROLETARIAT'}</span>
+            <span className="font-bold text-text">{isCapitalist ? 'CAPITALISTS' : 'PROLETARIANS'}</span>
           </div>
           <div className="rank-track-chassis">
             <div style={{ height: '100%', background: 'var(--sunset)', position: 'relative' }}>

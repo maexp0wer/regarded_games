@@ -10,6 +10,76 @@ canonical vocabulary; code, comments, and docs should match these definitions.
 
 ## Glossary
 
+### Faction progress is mutually exclusive (no positive-positive tie)
+`capProgress > 0` requires `g_current > g_initial` (Gini rose); `socProgress > 0`
+requires `g_current < g_initial` (Gini fell). A single `g_current` can't be both
+above and below `g_initial`, so **at most one faction ever has positive progress**.
+The only way `capProgress == socProgress` is when **both are 0** (Gini unchanged).
+Consequence: an exact tie ⇒ `finalProgressBps == 0` ⇒ payout is the **pure draw
+share** (`winShare×0 + drawShare×1`), i.e. every eligible player gets their
+holdings-proportional money back. The `isOligarchyWin = (capProgress >= socProgress)`
+flag is set `true` on that tie but is **inert** — it only weights `winShare`, which
+is multiplied by zero progress. So a tie NEVER produces a Capitalist win.
+(`GameSeason.sol` `_settleVictory` L341-347, `_calculateSinglePayout` L426.)
+
+### Faction labels (canonical — Class names) — CLASS vs PLAYER nouns
+The two factions are named by their **economic class**, everywhere (code, UI,
+Whitepaper). **Distinguish the name of the *class* from the name of a *player* in
+it:**
+
+| | Capitalist side (`isCapitalist === true`, gold) | Proletariat side (`isCapitalist === false`, purple) |
+|---|---|---|
+| **The class** | **Capitalist** ("Class: Capitalist", "Capitalist victory") | **Proletariat** ("Class: Proletariat", "Proletariat victory") |
+| **A player** | a **Capitalist** / the **Capitalists** | a **Proletarian** / the **Proletarians** |
+
+So "Proletariat" is **only** the standalone class noun — a *member* is a
+**Proletarian**, never "a Proletariat". "Capitalist" doubles as both the class
+name and the player noun. ⚠️ Never call a person "a Proletariat".
+
+**Adjective form = Capitalist / Proletarian** (not "Proletariat"). When the class
+name modifies another noun, use the adjective:
+- "**Proletarian** faction / victory / progress / premium / player" ✓
+- "the **Proletariat**" / "Class: **Proletariat**" (standalone noun) ✓
+- ✗ "Proletariat faction" / "Proletariat victory" — wrong, those are adjectival.
+
+**Deprecated as faction labels — do not use to name a class or a player:**
+"Socialist(s)", "Bourgeoisie / Bourgeois". (The archetypes **Regardo the
+Capitalist** and **Carlo the Socialist** keep their proper names; "Socialist"
+survives only as Carlo's archetype descriptor, not as a faction label.)
+
+**"Oligarchy" and "Masses" are NOT faction labels** — they are the precise names
+of the supply-share *coalitions* at settlement (the set of holders ≥50% / ≤50% of
+supply; see below). Use them only when naming the cut or the payout coalition,
+never as a player's displayed class identity.
+
+**Discourse (full rename, incl. slugs — `discourseNames.ts` is source of truth):**
+the `bourgeoisie` key is now `capitalist`; `proletariat` key stays. Generated
+artifacts use the **player plural** (a strategy room is a room of players):
+- groups: `S{n}_Capitalists` / `S{n}_Proletarians`
+- category slugs: `s{n}-capitalists-strategy` / `s{n}-proletarians-strategy`
+- category names: `S{n} Capitalists Strategy` / `S{n} Proletarians Strategy`
+- intro keys in `content/discourse/discourse-category-intros.md`:
+  `capitalists-strategy` / `proletarians-strategy`.
+⚠️ Slug change breaks existing category URLs — needs a Discourse-side rename/
+migration for any season already provisioned under the old slugs.
+OrderBook/PercentRangeSlider faction-filter union value: `'bourgeoisie' →
+'capitalist'`.
+
+### Masses / Oligarchy boundary (the faction cut)
+The single supply-share (Lorenz) cut that decides a player's faction **and** the
+Socialist payout. Sort holders ascending; the **largest set of poorest holders
+whose balances sum to ≤50% of total \$FIM *supply*** are the **Masses**
+(Proletariat / Socialist); the remainder are the **Oligarchy** (Bourgeoisie /
+Capitalist). This is a **supply-share cut, NOT a population percentile** — it is
+typically far more than 50% of *people*. The boundary is one and the same live
+during trading and at settlement (Whitepaper §9.4, §21.3). Computed live,
+off-chain, in raw wei (`useBatchPlayerClass.ts`, `payoutProjection.ts`,
+`player-class` API) — the on-chain `massThresholdBalance()` is stale, never read.
+> **Canonical-source conflict (Whitepaper):** §9.4 and Appendix §21.3 define this
+> correctly as a supply-share cut. §9.5 Scenario B mis-describes it as a
+> population bisection ("Elite (Top 50%) / Masses (Bottom 50%)"). **§9.5 prose is
+> the bug** (resolved 2026-06-20); code and the other two sections are canonical.
+
 ### Collateral
 RGD that a player has **locked** by virtue of holding FIM — or *committing* to
 acquire FIM via an open bid — in a season. Distinct from *staked* RGD: a player
@@ -30,11 +100,13 @@ a bid never reverts on the maker's collateral — no maker simulation needed.
 RGD a player has deposited into the `Staking` contract (`stakedBalances`). The
 total pool from which collateral is drawn. Staking is never phase-gated.
 
-### Naming across surfaces (RGD / REGARDS / reg; collateral / locked)
+### Naming across surfaces (RGD / reg; collateral / locked)
 One concept, multiple deliberate surface forms — do not "fix" these into one:
-- **Token** — code/identifier: `rgd` (matches the `RGD` address key and
-  `rgdLockedPerFim`). User-facing copy: **"REGARDS"** (brand) or "RGD". Contract
-  internals: `reg` (`requiredRegStake`, `regForFim`). Keep each as-is per layer.
+- **Token** — canonical name **"Regarded Token"**, abbreviated **"\$RGD"**.
+  code/identifier: `rgd` (matches the `RGD` address key and `rgdLockedPerFim`).
+  User-facing copy: **"\$RGD"** (or spell out "Regarded Token" on first use).
+  Contract internals: `reg` (`requiredRegStake`, `regForFim`). Keep each as-is per
+  layer. **"REGARDS" is deprecated** — do not reintroduce it in copy or code.
 - **Locked collateral** — code/identifier: `collateral` / `lockedRgd` (matches
   the handoff and the `Collateral*` events). User-facing copy: **"Vault Locked"**
   / "Locked RGD" (brand, untouched). Contract: `requiredRegStake` /
@@ -82,9 +154,9 @@ then. **Therefore the frontend controls GROSS vs NET via array order:**
 - Put **all bid (sell) legs before all ask (buy) legs** in `ids`/`amounts`.
   Releases land first → effective requirement is **NET**
   (`regForFim(buyFimRaw − sellFimRaw)`).
-- ⚠️ The current `executionPayload` in TradingMask builds **asks first, then
-  bids** (`TradingMask.tsx` ~L151-167) — that is the GROSS-requiring order and
-  **must be reversed** to bids-first to realize NET.
+- ✅ DONE: `executionPayload` in TradingMask now builds **sell (bid) legs first,
+  then buy (ask) legs** (`TradingMask.tsx` ~L154-177) — the NET-realizing order.
+  (The earlier asks-first version was the GROSS bug; it has been reversed.)
 Pre-check uses `regForFim(max(0, buyFimRaw − sellFimRaw))`, matching the
 guaranteed leg order. Keep GROSS only as a fallback if leg order can't be
 guaranteed (it can — we build the array).
