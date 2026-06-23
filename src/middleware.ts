@@ -25,8 +25,15 @@ export function middleware(req: NextRequest) {
   const hostname = req.headers.get('host')!;
   const path = url.pathname;
 
-  // 1. DOCS SUBDOMAIN — docs.localhost:3000 OR docs.yourdomain.com
-  if (hostname === `docs.${PROD_ROOT_DOMAIN}` || hostname === `docs.${DEV_ROOT_DOMAIN}`) {
+  // 1. DOCS SUBDOMAIN (dev only) — docs.localhost:3000 routes through the
+  // /docsproxy rewrite to the local Docusaurus server on :3001. In production
+  // docs live on a SEPARATE Vercel project reached directly via DNS, so the docs
+  // subdomain never hits this app; the proxy rewrite is gated to fork mode (the
+  // rewrite itself is also empty outside fork mode — see next.config.ts).
+  if (
+    process.env.NEXT_PUBLIC_ENVIRONMENT === 'fork' &&
+    (hostname === `docs.${PROD_ROOT_DOMAIN}` || hostname === `docs.${DEV_ROOT_DOMAIN}`)
+  ) {
     return NextResponse.rewrite(new URL(`/docsproxy${path}`, req.url));
   }
 

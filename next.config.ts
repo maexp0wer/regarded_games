@@ -11,6 +11,13 @@ const nextConfig: NextConfig = {
   },
 
   async rewrites() {
+    // Dev-only docs shim: in fork mode the docs subdomain is served by a local
+    // Docusaurus server on :3001 via this proxy. In production docs live on their
+    // own Vercel project at docs.<domain>, so this rewrite must be inert — there
+    // is no localhost:3001 next to the serverless functions.
+    if (process.env.NEXT_PUBLIC_ENVIRONMENT !== 'fork') {
+      return [];
+    }
     return [
       {
         source: '/docsproxy',
