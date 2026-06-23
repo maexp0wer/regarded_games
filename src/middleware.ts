@@ -5,7 +5,15 @@ export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico|Regardo_Head.svg).*)'],
 };
 
-const PROD_ROOT_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN ?? 'yourdomain.com';
+/* NEXT_PUBLIC_MAIN_DOMAIN is authored as a full URL (e.g. https://regarded.games)
+   because most call sites need the protocol (DOCS_URL derivation, auth redirects,
+   nav links). Middleware, however, compares against the bare `Host` header, which
+   carries no protocol and no trailing path — but DOES carry the port in dev
+   (localhost:3000). So normalize to a host[:port] here: strip the scheme and any
+   trailing slash/path, but preserve the port. */
+const PROD_ROOT_DOMAIN = (process.env.NEXT_PUBLIC_MAIN_DOMAIN ?? 'regarded.games')
+  .replace(/^https?:\/\//, '')
+  .replace(/\/.*$/, '');
 const DEV_ROOT_DOMAIN = 'localhost:3000';
 
 /* Soft-launch gate (server-only, NOT NEXT_PUBLIC_): when a surface is gated,

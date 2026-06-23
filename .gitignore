@@ -35,6 +35,9 @@ yarn-error.log*
 # local secrets for start.bat (PG_PASS / PONDER_PASS) — never commit
 start.env.bat
 
+# Claude Code — keep shared commands/settings, ignore per-developer local files
+.claude/settings.local.json
+
 # vercel
 .vercel
 
