@@ -198,7 +198,7 @@ export default function HeroCard({
                     </div>
                     {classDesc && (
                       <p className="text-[13px] leading-relaxed italic border-t pt-1.5" style={{ borderColor: '#251F3D', fontFamily: 'var(--font-sans)', color: '#9E97BD' }}>
-                        "{classDesc}"
+                        &ldquo;{classDesc}&rdquo;
                       </p>
                     )}
                   

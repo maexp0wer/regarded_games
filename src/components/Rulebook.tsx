@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTheme } from '@/context/ThemeContext';
 import RulebookCard from '@/components/RulebookCard';
-import { motion, useMotionValue, useTransform, animate, type MotionValue, type ValueAnimationTransition } from 'framer-motion';
+import { motion, useMotionValue, useTransform, animate, type ValueAnimationTransition } from 'framer-motion';
 
 /* Docs subdomain base, derived the same way page.tsx / useDocNavigation do: the
    main domain with a `docs.` prefix (e.g. http://docs.localhost:3000 locally,

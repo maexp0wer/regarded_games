@@ -79,7 +79,7 @@ function SeasonCard({ season }: { season: SeasonRegistry }) {
     seasonEnd,
     config,
   } = phase;
-  const { gCurrent, effectiveVictoryPending, progressPercent, winningSide } = victory;
+  const { effectiveVictoryPending, progressPercent, winningSide } = victory;
 
   if (!config || !currentPhase) return null;
 

@@ -42,7 +42,7 @@ function avatarUrl(template: string | undefined, username: string, size = 40): s
   return `https://api.dicebear.com/9.x/bottts/svg?seed=${encodeURIComponent(username)}`;
 }
 
-function ChatMessage({ msg, isOwn, address, isCapitalist }: { msg: DiscourseMessage; isOwn: boolean; address: string; isCapitalist: boolean }) {
+function ChatMessage({ msg, isOwn, isCapitalist }: { msg: DiscourseMessage; isOwn: boolean; isCapitalist: boolean }) {
   const factionColor = isCapitalist ? 'gold' : 'purple';
   const [errored, setErrored] = useState(false);
   const src = errored
@@ -91,7 +91,6 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
   const activeAddressRef = useRef<string | undefined>(undefined);
 
   const factionLabel = isCapitalist ? 'CAPITALISTS' : 'PROLETARIANS';
-  const factionColor = isCapitalist ? 'gold' : 'purple';
 
   // Discover channel + fetch initial messages in one shot to avoid intermediate empty states.
   // When the wallet address changes (switch or disconnect), flush the tab cache so the new
@@ -360,7 +359,6 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
                 key={msg.id}
                 msg={msg}
                 isOwn={isOwn}
-                address={address}
                 isCapitalist={isCapitalist}
               />
             );

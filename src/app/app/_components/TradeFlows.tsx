@@ -105,7 +105,6 @@ export function TradeFlows({
     const MAGENTA_COLOR = getCSSVar('--color-magenta') || '#D81B60';
     const ORANGE_COLOR  = getCSSVar('--color-orange')  || '#FF8C00';
     const BG_COLOR      = getCSSVar('--color-card')    || '#15120f';
-    const BG2_COLOR     = getCSSVar('--color-card2')   || '#1b1814';
     const BG3_COLOR     = getCSSVar('--color-card3')   || '#221d18';
     const TXT_COLOR     = getCSSVar('--color-text2')   || '#8a8378';
     const TXT1_COLOR    = getCSSVar('--color-text')    || '#f4ede0';

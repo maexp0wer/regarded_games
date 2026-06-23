@@ -27,9 +27,6 @@ const BUTTONS: { id: PanelId; label: string }[] = [
 
 const PRIORITY: PanelId[] = ['chart-orders', 'orderbook', 'trades', 'gini', 'chord', 'fim-dist', 'chat'];
 
-const chunk = <T,>(arr: T[], size: number): T[][] =>
-  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) => arr.slice(i * size, i * size + size));
-
 export interface TradingPanelMenuProps {
   seasonAddress: string;
   isBuy: boolean;
@@ -221,8 +218,6 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
       return next;
     });
   };
-
-  const openChord = () => openPanel('chord');
 
   const handleCandleClick = (
     range: { start: number; end: number } | null,

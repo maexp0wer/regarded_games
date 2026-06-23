@@ -47,7 +47,6 @@ export function OrderBook({
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const targetRowRef = useRef<HTMLDivElement>(null);
-  const [isOverflowing, setIsOverflowing] = useState(false);
 
   const uniqueMakers = useMemo(() => {
     if (!data) return [];
@@ -152,16 +151,6 @@ export function OrderBook({
     }
     // If every row is below $1, anchor the divider above the first row instead.
     return lastAboveKey ?? priceRows[0].uniqueKey;
-  }, [priceRows]);
-
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const update = () => setIsOverflowing(container.scrollHeight > container.clientHeight);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(container);
-    return () => ro.disconnect();
   }, [priceRows]);
 
   useEffect(() => {
