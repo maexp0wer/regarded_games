@@ -7,11 +7,11 @@ toc_max_heading_level: 3
 
 # Whitepaper
 
-**Version 0.8 - 21.06.2026**
+**Version 0.8 - 23.06.2026**
 
 **Website:** [www.regarded.games](https://www.regarded.games)
 
-**Contact:** [your-contact-email@example.com]
+**Contact:** [regardedgames@proton.me](mailto:regardedgames@proton.me)
 
 ---
 
@@ -57,7 +57,7 @@ toc_max_heading_level: 3
 
 ---
 
-## Introduction
+# Introduction
 
 **You have watched the smart money win.** You have been front-run by actors who saw your order before it filled, sold liquidity that insiders had already exited, and traded against counterparties who knew things you could not. Whether the venue is a traditional equities desk or a digital-asset exchange, the everyday participant plays a game whose decisive moves happen somewhere they cannot see. This is not bad luck or a skill gap. It is structure: a permanent advantage built out of two things ordinary players never have—**better information** (privileged data, order flow, and the speed to act on it first) and **deeper pockets** (the scale to move a market and absorb the swings that wipe out smaller players). The house is not cheating against the rules. The house *is* the rules.
 

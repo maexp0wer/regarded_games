@@ -5,7 +5,7 @@ import Head from 'next/head';
 import { motion, LayoutGroup, AnimatePresence, type TargetAndTransition } from 'framer-motion';
 import '@/app/globals.css';
 import { useTheme } from '@/context/ThemeContext';
-import { Logo, MoonIcon, SunIcon } from '@/components/icons/svg';
+import { MoonIcon, SunIcon } from '@/components/icons/svg';
 import Regardo from '@/components/icons/Regardo.svg';
 import Carlo from '@/components/icons/Carlo.svg';
 import {
@@ -1336,15 +1336,7 @@ export default function Home() {
 
       <LayoutGroup>
         <main className="relative mx-auto min-w-0 w-full">
-          {/* Logo + theme toggle overlay the hero slide and fade away with it. */}
-          <motion.div
-            initial={false}
-            animate={{ opacity: heroActive ? 1 : 0 }}
-            transition={{ duration: 0.5 }}
-            className="absolute top-5 inset-x-0 z-40 flex justify-center items-center pointer-events-none text-gold"
-          >
-            <Logo className="w-40 text-white" />
-          </motion.div>
+          {/* Theme toggle overlays the hero slide and fades away with it. */}
           <motion.button
             initial={false}
             animate={{ opacity: heroActive ? 1 : 0 }}

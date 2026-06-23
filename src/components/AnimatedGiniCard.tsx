@@ -278,7 +278,7 @@ export default function AnimatedGiniCard({
               className="absolute w-px"
               style={{ [socIsLeft ? 'right' : 'left']: NUDGE, top: '0', bottom: '0', backgroundColor: '#9D4EDD' }}
             />
-            {/* Value in Proletarian purple */}
+
             <span 
               className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 whitespace-nowrap font-mono text-[9px] font-bold tracking-tight tabular-nums"
               style={{ color: '#9D4EDD' }}

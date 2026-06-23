@@ -112,13 +112,23 @@ function buildOverviewToc(parts: {part: Part; headings: Heading[]}[]): string {
   const lines: string[] = ['## Table of Contents', ''];
 
   for (const {part, headings} of parts) {
-    const isIndex = part.slug === '/';
-    const base = isIndex ? '/whitepaper/' : `/whitepaper/${part.slug}`;
-    // The index page's own sections (e.g. Introduction) are listed flat at the
-    // top; every other Part gets a bold group header.
-    if (!isIndex) lines.push(`- **${displayText(part.label)}**`);
+    // The index page is the overview itself; skip it so the TOC never lists or
+    // links to itself.
+    if (part.slug === '/') continue;
+    const base = `/whitepaper/${part.slug}`;
+
+    // A Part with no H2/H3 sections (e.g. Introduction) is a leaf page: render it
+    // as a single top-level link to the page rather than an empty bold header.
+    if (headings.length === 0) {
+      lines.push(`- [${displayText(part.label)}](${base})`);
+      lines.push('');
+      continue;
+    }
+
+    // Otherwise the Part is a bold group header with its sections nested under it.
+    lines.push(`- **${displayText(part.label)}**`);
     for (const h of headings) {
-      const indent = isIndex ? '' : h.level === 2 ? '  ' : '    ';
+      const indent = h.level === 2 ? '  ' : '    ';
       lines.push(`${indent}- [${displayText(h.text)}](${base}#${h.anchor})`);
     }
     lines.push('');
