@@ -107,12 +107,23 @@ export default function RulebookCard({
           gold panel hugs this wrapper and matches the PageFace inner panel */}
       <div className="flex flex-col flex-grow">
         <div
-          className="relative flex flex-col flex-grow rounded-sm border overflow-hidden shadow-inner"
-          style={{ backgroundColor: 'var(--color-card)', borderColor: `rgba(${themeColorRgba}, 0.3)` }}
+          className="relative flex flex-col flex-grow rounded-sm border overflow-hidden shadow-inner border-t-transparent md:border-t-(--rb-panel-border)"
+          style={{
+            backgroundColor: 'var(--color-card)',
+            // Drive border color through a CSS var so the responsive top-color
+            // utilities above can win. Mobile drops the top border (the page
+            // already supplies top chrome above this embedded panel); desktop
+            // restores it. Other three sides always use the var.
+            ['--rb-panel-border' as string]: `rgba(${themeColorRgba}, 0.3)`,
+            borderRightColor: 'var(--rb-panel-border)',
+            borderBottomColor: 'var(--rb-panel-border)',
+            borderLeftColor: 'var(--rb-panel-border)',
+          }}
         >
-          {/* Corner brackets inside the page panel */}
-          <div className="absolute top-1 left-1 w-3 h-3 border-t border-l pointer-events-none z-20" style={{ borderColor: `rgba(${themeColorRgba}, 0.5)` }} />
-          <div className="absolute top-1 right-1 w-3 h-3 border-t border-r pointer-events-none z-20" style={{ borderColor: `rgba(${themeColorRgba}, 0.5)` }} />
+          {/* Corner brackets inside the page panel — top brackets hidden on mobile
+              (the page already has its own top chrome above this embedded panel) */}
+          <div className="hidden md:block absolute top-1 left-1 w-3 h-3 border-t border-l pointer-events-none z-20" style={{ borderColor: `rgba(${themeColorRgba}, 0.5)` }} />
+          <div className="hidden md:block absolute top-1 right-1 w-3 h-3 border-t border-r pointer-events-none z-20" style={{ borderColor: `rgba(${themeColorRgba}, 0.5)` }} />
           <div className="absolute bottom-1 left-1 w-3 h-3 border-b border-l pointer-events-none z-20" style={{ borderColor: `rgba(${themeColorRgba}, 0.5)` }} />
           <div className="absolute bottom-1 right-1 w-3 h-3 border-b border-r pointer-events-none z-20" style={{ borderColor: `rgba(${themeColorRgba}, 0.5)` }} />
 

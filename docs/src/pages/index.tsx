@@ -3,68 +3,62 @@ import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 
+import CyclingSubheading from '@site/src/components/CyclingSubheading';
 import styles from './index.module.css';
 
 type DocCard = {
-  index:       string;
-  eyebrow:     string;
-  title:       string;
-  body:        string;
-  to:          string;
-  accentClass: string;
+  title: string;
+  body:  string;
+  to:    string;
 };
 
 const CARDS: DocCard[] = [
   {
-    index:       '01',
-    eyebrow:     'Overview',
-    title:       'Intro',
-    body:        'What Regarded Games is, the two factions, and how a season of economic warfare plays out on-chain.',
-    to:          '/intro',
-    accentClass: styles.accentPurple,
+    title: 'Intro',
+    body:  'What Regarded Games is, the two classes, and how a season of class war plays out on-chain.',
+    to:    '/intro',
   },
   {
-    index:       '02',
-    eyebrow:     'Onboarding',
-    title:       'Getting Started',
-    body:        'Connect a wallet, acquire FIM, and place your first trade on the seasonal exchange.',
-    to:          '/getting-started',
-    accentClass: styles.accentGreen,
+    title: 'Getting Started',
+    body:  'Connect your wallet, complete testnet quests, take part in the capital auction. Acquire FIM, and place your first trade on the exchange.',
+    to:    '/getting-started',
   },
   {
-    index:       '03',
-    eyebrow:     'Specification',
-    title:       'Whitepaper',
-    body:        'The full philosophical, economic, and technical specification behind the game.',
-    to:          '/whitepaper',
-    accentClass: styles.accentGold,
+    title: 'Whitepaper',
+    body:  'The full philosophical, economic, and technical specification behind the project.',
+    to:    '/whitepaper',
   },
 ];
 
 function HomepageHero() {
-  const {siteConfig} = useDocusaurusContext();
   return (
     <header className={styles.hero}>
+      {/* Sunset glow — the same soft blurred radial backdrop the app's main
+          landing hero uses (see src/app/main/page.tsx "Background Light").
+          Centered on the hero's middle and stretched tall so its lower half
+          reaches down behind the cards rather than being clipped. */}
+      <div className={styles.heroGlow} aria-hidden />
       <div className={styles.heroInner}>
-        <span className={styles.heroEyebrow}>Documentation</span>
-        <h1 className={styles.heroTitle}>{siteConfig.title}</h1>
-        <p className={styles.heroSubtitle}>
-          Perfect-information economic warfare with real-money stakes on Base.
-          Trade FIM, shift the Gini Coefficient, and claim the prize pool.
-        </p>
+        {/* Soft-launch marker above the headline, mirroring the app's landing
+            hero (the !APP_LIVE "Coming Soon" badge in src/app/main/page.tsx). */}
+        <span className={styles.heroBadge}>Coming Soon</span>
+        {/* Headline lockup mirrors the app's landing hero: "Class War" in
+            neutral text, "The Game" in the sunset gradient. */}
+        <h1 className={styles.heroTitle}>
+          Class War<br />
+          <span className={styles.heroTitleGradient}>The Game</span>
+        </h1>
+        <div className={styles.heroSubtitle}>
+          <CyclingSubheading />
+        </div>
       </div>
     </header>
   );
 }
 
-function DocCardLink({index, eyebrow, title, body, to, accentClass}: DocCard) {
+function DocCardLink({title, body, to}: DocCard) {
   return (
     <Link to={to} className={styles.card}>
-      <span className={`${styles.cardAccent} ${accentClass}`} />
-      <div className={styles.cardHead}>
-        <span className={styles.cardEyebrow}>{eyebrow}</span>
-        <span className={styles.cardIndex}>{index}</span>
-      </div>
       <h3 className={styles.cardTitle}>{title}</h3>
       <p className={styles.cardBody}>{body}</p>
       <span className={styles.cardCta}>Read</span>
@@ -77,7 +71,7 @@ export default function Home(): ReactNode {
   return (
     <Layout
       title={siteConfig.title}
-      description="Perfect-information strategy game with real-money stakes on Base. Trade FIM tokens, shift the Gini Coefficient, and claim the prize pool.">
+      description="A real-money market where privileged information and deep pockets buy no edge — owned by its players, scored by the Gini Coefficient.">
       <div className={styles.page}>
         <HomepageHero />
         <main className={styles.cardsSection}>

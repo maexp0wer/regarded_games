@@ -2,11 +2,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|Regardo_Head.svg).*)'],
 };
 
-const PROD_ROOT_DOMAIN = 'yourdomain.com';
+const PROD_ROOT_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN ?? 'yourdomain.com';
 const DEV_ROOT_DOMAIN = 'localhost:3000';
+
+/* Soft-launch gate (server-only, NOT NEXT_PUBLIC_): when a surface is gated,
+   every app.* / app.sepolia.* request is rewritten to /coming-soon instead of
+   the trading app. This is the real security boundary — defence in depth behind
+   not pointing the app.* subdomains at the host at all. Env changes take effect
+   only on redeploy (Vercel binds env at build/deploy time).
+     (unset)                → app is LIVE (default)
+     APP_LIVE=false         → gate the mainnet app (app.*)
+     TESTNET_APP_LIVE=false → gate the testnet app (app.sepolia.*) independently
+   Anything other than the literal "false" leaves the surface live. */
+const APP_LIVE = process.env.APP_LIVE !== 'false';
+const TESTNET_APP_LIVE = process.env.TESTNET_APP_LIVE !== 'false';
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl;
@@ -23,6 +35,9 @@ export function middleware(req: NextRequest) {
     hostname === `app.sepolia.${PROD_ROOT_DOMAIN}` ||
     hostname === `app.sepolia.${DEV_ROOT_DOMAIN}`
   ) {
+    if (!TESTNET_APP_LIVE) {
+      return NextResponse.rewrite(new URL('/coming-soon', req.url));
+    }
     const res = NextResponse.rewrite(new URL(`/app${path}`, req.url));
     res.headers.set('x-tenant', 'sepolia');
     res.headers.set('x-app-path', path);
@@ -31,6 +46,9 @@ export function middleware(req: NextRequest) {
 
   // 3. APP SUBDOMAIN (mainnet tenant) — app.localhost:3000 OR app.yourdomain.com
   if (hostname === `app.${PROD_ROOT_DOMAIN}` || hostname === `app.${DEV_ROOT_DOMAIN}`) {
+    if (!APP_LIVE) {
+      return NextResponse.rewrite(new URL('/coming-soon', req.url));
+    }
     const res = NextResponse.rewrite(new URL(`/app${path}`, req.url));
     res.headers.set('x-tenant', 'mainnet');
     res.headers.set('x-app-path', path);

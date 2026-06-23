@@ -6,21 +6,21 @@ setlocal enabledelayedexpansion
 :: ==========================================
 
 :: 1. Frontend (Next.js)
-set "PATH_A=C:\Users\info\Documents\Work\ritardo_games"
+set "PATH_A=C:\Users\info\Documents\Work\regarded_games"
 set "CMD_A=npm run dev"
 
 :: 2. Contracts folder (Anvil is launched from here)
-set "PATH_B=C:\Users\info\Documents\Work\ritardo_contracts"
+set "PATH_B=C:\Users\info\Documents\Work\regarded_contracts"
 
 :: 3. Indexer (Ponder)
-set "PATH_C=C:\Users\info\Documents\Work\ritardo_games\indexer"
+set "PATH_C=C:\Users\info\Documents\Work\regarded_games\indexer"
 
 :: 4. Docusaurus docs
-set "PATH_D=C:\Users\info\Documents\Work\ritardo_games\docs"
+set "PATH_D=C:\Users\info\Documents\Work\regarded_games\docs"
 set "CMD_D=npm start"
 
 :: Ponder cache folder to wipe on start
-set "FOLDER_TO_DELETE=C:\Users\info\Documents\Work\ritardo_games\indexer\.ponder"
+set "FOLDER_TO_DELETE=C:\Users\info\Documents\Work\regarded_games\indexer\.ponder"
 
 :: PostgreSQL
 :: Secrets are NOT hardcoded. Set PG_PASS (postgres superuser) and PONDER_PASS
@@ -52,7 +52,7 @@ set "SEPOLIA_ANVIL_PORT=8546"
 set "SEPOLIA_PONDER_PORT=42070"
 set "SEPOLIA_DB=ponder_fork_sepolia"
 
-ECHO --- Ritardo Games: Local Test Environment Setup ---
+ECHO --- Regarded Games: Local Test Environment Setup ---
 
 :: =========================================================================
 :: Read environment config from root .env (override from .env.local)

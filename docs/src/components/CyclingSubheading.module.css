@@ -1,0 +1,30 @@
+/* Mirrors the app's CyclingSubheading (Tailwind: flex flex-col items-center
+   text-center, with an inline-grid swap slot that reserves the longest word's
+   width so the headline doesn't jump as words cycle). */
+.wrapper {
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  text-align:      center;
+}
+
+.swap {
+  position:     relative;
+  display:      inline-grid;
+  place-items:  center;
+}
+
+/* Invisible ghost reserves the max width; both it and the live word occupy the
+   same single grid cell so the live word is centered over it. */
+.ghost {
+  visibility:  hidden;
+  grid-row:    1;
+  grid-column: 1;
+  padding:     0 0.25rem;
+}
+
+.word {
+  grid-row:    1;
+  grid-column: 1;
+  white-space: nowrap;
+}

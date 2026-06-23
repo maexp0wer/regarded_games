@@ -2,11 +2,11 @@
 setlocal enabledelayedexpansion
 
 :: ==========================================
-::   Ritardo Games - stop the local env
+::   Regarded Games - stop the local env
 ::   Counterpart to start.bat
 :: ==========================================
 
-ECHO --- Ritardo Games: Stopping Local Test Environment ---
+ECHO --- Regarded Games: Stopping Local Test Environment ---
 
 :: =========================================================================
 :: Discourse (local community forum, WSL2 container 'app')

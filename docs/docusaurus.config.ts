@@ -8,23 +8,35 @@ import {generateWhitepaperPages, GENERATED_DIR, WHITEPAPER_SOURCE} from './white
 // changes so `docusaurus start` hot-reloads.
 generateWhitepaperPages();
 
+// Navbar external targets. "App" links to the running game app (the `app.`
+// subdomain locally, the deployed app in production); "Project" links to the
+// project/landing site (the bare Next.js root). Override via env in prod.
+const MAIN_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN;
+const APP_URL = MAIN_DOMAIN ? `https://app.${MAIN_DOMAIN}` : 'http://app.localhost:3000';
+const PROJECT_URL = MAIN_DOMAIN ? `https://${MAIN_DOMAIN}` : 'http://localhost:3000';
+
 const config: Config = {
   title: 'Regarded Games',
   tagline: 'Perfect-information strategy game with real-money stakes on Base',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/Regardo_Head.svg',
 
   future: {
     v4: true,
   },
 
-  url: 'http://localhost:3000',
+  url: MAIN_DOMAIN ? `https://docs.${MAIN_DOMAIN}` : 'http://localhost:3000',
   baseUrl: '/',
 
   onBrokenLinks: 'warn',
 
+  // Re-applies the URL fragment scroll after each route renders, fixing the
+  // initial-load anchor race when a docs page is opened directly at a #hash
+  // (e.g. the landing-page HeroCard info buttons). See the module for detail.
+  clientModules: ['./src/clientModules/hashScroll.ts'],
+
   stylesheets: [
     {
-      href: 'https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap',
+      href: 'https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800;900&family=Orbitron:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap',
       type: 'text/css',
     },
   ],
@@ -88,7 +100,11 @@ const config: Config = {
       },
     },
     navbar: {
-      title: 'Regarded Games',
+      title: 'Regarded Docs',
+      logo: {
+        alt: 'Regarded Games',
+        src: 'img/Regardo_Head.svg',
+      },
       items: [
         {
           type: 'docSidebar',
@@ -104,14 +120,19 @@ const config: Config = {
           label: 'Whitepaper',
         },
         {
-          href: 'http://localhost:3000',
+          href: PROJECT_URL,
+          label: 'Project',
+          position: 'right',
+        },
+        {
+          href: APP_URL,
           label: 'App',
           position: 'right',
         },
       ],
     },
     footer: {
-      style: 'dark',
+      style: 'light',
       copyright: `Copyright © ${new Date().getFullYear()} Regarded Games.`,
     },
     prism: {

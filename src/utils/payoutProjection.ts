@@ -4,7 +4,7 @@
  * P/L before the on-chain snapshot exists (during TRADING) and to keep those
  * figures consistent with the contract once it settles.
  *
- * Authoritative source: ritardo_contracts/src/seasonal/GameSeason.sol.
+ * Authoritative source: regarded_contracts/src/seasonal/GameSeason.sol.
  *
  * Key facts encoded here:
  *  - The distributable pool is `seasonPrincipals` = auction USDC + trading fees +

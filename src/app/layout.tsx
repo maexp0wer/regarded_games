@@ -51,6 +51,9 @@ const blockingThemeScript = `(function() {
 export const metadata: Metadata = {
   title: 'Regarded Games',
   description: 'Economic Warfare - Fought on Chain',
+  icons: {
+    icon: '/Regardo_Head.svg',
+  },
 };
 
 export default async function RootLayout({

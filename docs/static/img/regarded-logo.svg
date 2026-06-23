@@ -1,0 +1,23 @@
+<svg viewBox="0 0 170 44" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(-18.890893,-98.131631)">
+    <g transform="matrix(0.26458333,0,0,0.26458333,2.1376452,39.638359)">
+      <text
+        xml:space="preserve"
+        x="193.93756"
+        y="323.83566"
+      >
+        <tspan
+          style="font-weight:900;font-size:96px;line-height:1;font-family:Orbitron;text-align:start;text-anchor:start;"
+          x="193.93756"
+          y="323.83566"
+          fill="#FFC300"
+        >Regarded</tspan><tspan
+          x="193.93756"
+          y="372.57062"
+          style="font-weight:900;font-size:42.6667px;line-height:0.8;font-family:Orbitron;text-align:start;text-anchor:start;"
+          fill="#FFC300"
+        >GAMES</tspan>
+      </text>
+    </g>
+  </g>
+</svg>

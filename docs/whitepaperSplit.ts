@@ -179,7 +179,9 @@ export function generateWhitepaperPages(): Part[] {
     const fm = frontmatter({
       id: part.id,
       title: segment.title,
-      sidebar_label: segment.title,
+      // The index page's sidebar entry labels the whole document, so it reads
+      // "Table of Contents" rather than echoing the page title ("Whitepaper").
+      sidebar_label: isIndex ? 'Table of Contents' : segment.title,
       sidebar_position: position,
       slug: part.slug,
       toc_min_heading_level: TOC_MIN_HEADING_LEVEL,

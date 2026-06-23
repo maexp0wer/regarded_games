@@ -7,6 +7,14 @@ import { useTheme } from '@/context/ThemeContext';
 import RulebookCard from '@/components/RulebookCard';
 import { motion, useMotionValue, useTransform, animate, type MotionValue, type ValueAnimationTransition } from 'framer-motion';
 
+/* Docs subdomain base, derived the same way page.tsx / useDocNavigation do: the
+   main domain with a `docs.` prefix (e.g. http://docs.localhost:3000 locally,
+   https://docs.<domain> in prod). The back-cover info buttons render as raw
+   <a href> on the main app domain, so a bare "intro#..." would resolve against
+   the app domain and 404 — these must be absolute docs URLs. */
+const MAIN_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN || '';
+const DOCS_URL = MAIN_DOMAIN.replace('://', '://docs.');
+
 interface Tier3Child {
   name: string;
   percentage: number;
@@ -108,11 +116,19 @@ interface Group {
 function resolveColor(cssValue: string): string {
   if (typeof window === 'undefined') return '#888888';
   if (!cssValue.startsWith('var(')) return cssValue;
+  /* The rulebook always renders with dark-mode tokens (see the forced-dark
+     wrapper in page.tsx), so the probe must resolve under `.dark` too — the
+     ECharts wheel reads its colors through here, and the probe is appended to
+     document.body (outside the wrapper), which carries the live page theme. */
+  const host = document.createElement('div');
+  host.className = 'dark';
+  host.style.cssText = 'position:fixed;width:0;height:0';
   const el = document.createElement('div');
   el.setAttribute('style', `position:fixed;width:0;height:0;background:${cssValue}`);
-  document.body.appendChild(el);
+  host.appendChild(el);
+  document.body.appendChild(host);
   const resolved = getComputedStyle(el).backgroundColor;
-  document.body.removeChild(el);
+  document.body.removeChild(host);
   return resolved || '#888888';
 }
 
@@ -162,33 +178,110 @@ const goldFrame = (surface: string, widths: string): React.CSSProperties => ({
   background: `linear-gradient(${surface}, ${surface}) padding-box, ${GOLD_CHASSIS_GRADIENT} border-box`,
 });
 
-/* Front-cover artwork: emblem + title. */
+/* Cover variant of goldFrame: the page FACE itself is the gold metal (front &
+   back covers), not just the edge. Same transparent-border frame so the corner
+   radii survive, but the padding-box surface is the chassis gradient too — so
+   the whole cover reads as one continuous sheet of gold. */
+const goldCoverFrame = (widths: string): React.CSSProperties => ({
+  borderStyle: 'solid',
+  borderColor: 'transparent',
+  borderWidth: widths,
+  background: `${GOLD_CHASSIS_GRADIENT} padding-box, ${GOLD_CHASSIS_GRADIENT} border-box`,
+});
+
+/* Front-cover artwork: studio name + title. Printed on the gold-gradient
+   cover, so both read in the page canvas color (--color-bg). */
 const coverArt = (
   <div className="flex flex-col items-center gap-3">
-    <div
-      className="w-7 h-7 rounded flex items-center justify-center font-black border"
-      style={{ backgroundColor: 'var(--color-card3)', borderColor: 'var(--color-gold)', color: 'var(--color-gold-hover)' }}
-    >
-      <span className="font-sans text-[15px]">§</span>
-    </div>
-    <span className="font-display font-black uppercase tracking-[0.3em] text-3xl" style={{ color: 'var(--color-gold)' }}>
+    <span className="font-mono text-[13px] font-bold uppercase tracking-[0.3em]" style={{ color: 'var(--color-bg)', opacity: 0.8 }}>
+      Regarded Games
+    </span>
+    <span className="font-display font-black uppercase tracking-[0.3em] text-3xl" style={{ color: 'var(--color-bg)' }}>
       Rulebook
     </span>
   </div>
 );
 
-/* Campaign Sequence roadmap — placeholder milestones, content TBD. */
-const ROADMAP_POINTS = [
-  { clause: '5.1', title: 'Phase I', status: 'Pending', desc: 'To be defined.' },
-  { clause: '5.2', title: 'Phase II', status: 'Pending', desc: 'To be defined.' },
-  { clause: '5.3', title: 'Phase III', status: 'Pending', desc: 'To be defined.' },
-  { clause: '5.4', title: 'Phase IV', status: 'Pending', desc: 'To be defined.' },
+/* Campaign Sequence roadmap — mirrors Whitepaper §19. `state` drives the rail
+   node + status pill styling (done = green, live = pulsing gold, upcoming =
+   muted). `when` is the timeframe chip; `items` are the individual milestones,
+   each ticked off (`done`) as it lands — so a live phase shows partial progress. */
+type RoadmapState = 'done' | 'live' | 'upcoming';
+interface RoadmapItem {
+  label: string;
+  done: boolean;
+}
+const ROADMAP_POINTS: {
+  clause: string;
+  phase: string;
+  title: string;
+  when: string;
+  status: string;
+  state: RoadmapState;
+  items: RoadmapItem[];
+}[] = [
+  {
+    clause: '5.1',
+    phase: 'Phase I',
+    title: 'Foundation',
+    when: '2025',
+    status: 'Complete',
+    state: 'done',
+    items: [
+      { label: 'Conceptualisation & game-theory design', done: true },
+      { label: 'Dual-token economic model', done: true },
+      { label: 'DAO LLC legal structure', done: true },
+    ],
+  },
+  {
+    clause: '5.2',
+    phase: 'Phase II',
+    title: 'Build',
+    when: 'Q1–Q2 2026',
+    status: 'In Progress',
+    state: 'live',
+    items: [
+      { label: 'Core smart contracts on Base', done: true },
+      { label: 'dApp build-out (Exchange, Terminal, Community)', done: true },
+      { label: 'Pre-launch community seeding', done: false },
+    ],
+  },
+  {
+    clause: '5.3',
+    phase: 'Phase III',
+    title: 'Testnet',
+    when: 'Q3 2026',
+    status: 'Upcoming',
+    state: 'upcoming',
+    items: [
+      { label: 'Public testnet on Base Sepolia', done: false },
+      { label: 'Community Genesis: testnet quests & Genesis Airdrop', done: false },
+      { label: 'Immunefi audit competition', done: false },
+      { label: 'Execution Council established', done: false },
+    ],
+  },
+  {
+    clause: '5.4',
+    phase: 'Phase IV',
+    title: 'Mainnet',
+    when: 'Q4 2026',
+    status: 'Upcoming',
+    state: 'upcoming',
+    items: [
+      { label: '$RGD TGE & Capital Auction', done: false },
+      { label: 'Genesis Airdrop distributed, market opens', done: false },
+      { label: 'Mainnet launch & Season 1', done: false },
+      { label: 'Hybrid governance (Snapshot + Council)', done: false },
+    ],
+  },
 ];
 
-/* Backside info buttons — placeholder targets/labels, content TBD. */
+/* Backside info buttons — the two rulebook pages each link to their explainer
+   section in the docs intro (Distribution of Power → #distribution, Campaign
+   Sequence → #roadmap). Opened in a new tab, like the HeroCard info buttons. */
 const BACK_INFO_BUTTONS = [
-  { label: 'Distribution', href: '#' },
-  { label: 'Roadmap', href: '#' },
+  { label: 'Distribution', href: `${DOCS_URL}/intro#distribution` },
+  { label: 'Campaign', href: `${DOCS_URL}/intro#roadmap` },
 ];
 
 /* Section heading row, rulebook style. */
@@ -201,35 +294,135 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* One milestone row on the Campaign Sequence page. */
-function RoadmapEntry({ point, isLive, isLast }: { point: (typeof ROADMAP_POINTS)[number]; isLive: boolean; isLast: boolean }) {
+/* State-driven palette for the rail node + status pill. `done` reads green
+   (settled), `live` pulses gold (the current phase), `upcoming` is muted. */
+const ROADMAP_STATE_STYLE: Record<RoadmapState, { accent: string; tint: string; ring: string }> = {
+  done: { accent: 'var(--color-green)', tint: 'var(--color-green-15)', ring: 'var(--color-green-35)' },
+  live: { accent: 'var(--color-gold)', tint: 'var(--color-gold-15)', ring: 'var(--color-gold-35)' },
+  upcoming: { accent: 'var(--color-text2)', tint: 'transparent', ring: 'var(--color-border)' },
+};
+
+/* A single milestone tick: a small filled green disc with a centred check when
+   done, an empty muted ring when still pending — the compact treatment, with a
+   tight 3px tint ring. Display only — reflects real progress. The check svg is
+   `block` + viewBox-fitted so it sits cleanly inside the circle (no inline-svg
+   baseline gap, no overflow). */
+function MilestoneCheck({ item }: { item: RoadmapItem }) {
   return (
-    <div className="flex gap-3">
-      {/* Rail: node + connector down to the next milestone */}
-      <div className="flex flex-col items-center pt-[3px]">
+    <li className="flex items-start gap-2.5">
+      {item.done ? (
         <span
-          className="w-2 h-2 rounded-full shrink-0 border"
-          style={isLive
-            ? { backgroundColor: 'var(--color-gold)', borderColor: 'var(--color-gold)', boxShadow: '0 0 8px var(--color-gold-35)' }
-            : { backgroundColor: 'transparent', borderColor: 'var(--color-border2)' }}
+          className="grid place-items-center w-3.5 h-3.5 rounded-full shrink-0 mt-1"
+          style={{ backgroundColor: 'var(--color-green)', boxShadow: '0 0 0 3px var(--color-green-35)' }}
+        >
+          <svg viewBox="0 0 10 10" className="block w-2 h-2" fill="none" stroke="var(--color-card)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 5.2 L4.2 7.4 L8 3" />
+          </svg>
+        </span>
+      ) : (
+        <span
+          className="w-3.5 h-3.5 rounded-full shrink-0 mt-1 border-2"
+          style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-card2)' }}
         />
-        {!isLast && <span className="w-px flex-1 opacity-50" style={{ backgroundColor: 'var(--color-border2)' }} />}
+      )}
+      <span
+        className="font-sans text-[13px] leading-snug"
+        style={{ color: item.done ? 'var(--color-text)' : 'var(--color-text2)' }}
+      >
+        {item.label}
+      </span>
+    </li>
+  );
+}
+
+/* Rail node: the larger phase marker — a filled disc + tick for a done phase, a
+   pulsing filled dot for the live phase, a hollow ring for an upcoming one, with
+   a soft 2px halo. */
+function RailNode({ state }: { state: RoadmapState }) {
+  const s = ROADMAP_STATE_STYLE[state];
+  if (state === 'done') {
+    return (
+      <span
+        className="grid place-items-center w-4.25 h-4.25 rounded-full shrink-0"
+        style={{ backgroundColor: s.accent, boxShadow: '0 0 0 2px var(--color-green-15)' }}
+      >
+        <svg viewBox="0 0 12 12" className="block w-2.5 h-2.5" fill="none" stroke="var(--color-card)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 6.3 L5.2 8.4 L9 3.6" />
+        </svg>
+      </span>
+    );
+  }
+  if (state === 'live') {
+    return (
+      <span className="relative grid place-items-center w-4.25 h-4.25 shrink-0">
+        <span className="absolute inset-0 rounded-full animate-ping opacity-60" style={{ backgroundColor: s.accent }} />
+        <span className="relative w-3 h-3 rounded-full" style={{ backgroundColor: s.accent, boxShadow: `0 0 8px ${s.ring}` }} />
+      </span>
+    );
+  }
+  return (
+    <span
+      className="w-4.25 h-4.25 rounded-full shrink-0 border-2"
+      style={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-border2)' }}
+    />
+  );
+}
+
+/* One milestone row on the Campaign Sequence page. */
+function RoadmapEntry({ point, isLast }: { point: (typeof ROADMAP_POINTS)[number]; isLast: boolean }) {
+  const s = ROADMAP_STATE_STYLE[point.state];
+  const live = point.state === 'live';
+  const doneCount = point.items.filter((i) => i.done).length;
+  return (
+    <div className="flex gap-3.5">
+      {/* Rail: node + connector down to the next milestone. The connector below a
+          completed phase is drawn in its accent so the finished run reads solid. */}
+      <div className="flex flex-col items-center pt-px">
+        <RailNode state={point.state} />
+        {!isLast && (
+          <span
+            className="w-px flex-1 mt-1"
+            style={{ backgroundColor: point.state === 'done' ? s.accent : 'var(--color-border2)', opacity: point.state === 'done' ? 0.5 : 0.4 }}
+          />
+        )}
       </div>
       <div className="flex flex-col gap-1.5 flex-1 pb-5 min-w-0">
-        <div className="flex items-end gap-1.5">
-          <span className="font-mono text-[13px] font-black tabular-nums shrink-0 mb-px text-text">§ {point.clause}</span>
-          <span className="font-display font-black text-[14px] uppercase tracking-widest leading-tight text-text">{point.title}</span>
+        {/* Eyebrow: clause + phase tag + timeframe chip */}
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[11px] font-black tabular-nums shrink-0 tracking-wider" style={{ color: live ? s.accent : 'var(--color-text2)' }}>§ {point.clause}</span>
+          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-text2 opacity-70">{point.phase}</span>
           <DottedLeader />
           <span
-            className="font-mono text-[13px] font-black uppercase tracking-widest px-2 py-0.5 rounded border shrink-0"
-            style={isLive
-              ? { color: 'var(--color-gold)', borderColor: 'var(--color-gold-35)', backgroundColor: 'var(--color-gold-15)' }
-              : { color: 'var(--color-text2)', borderColor: 'var(--color-border)' }}
+            className="font-mono text-[11px] font-bold tabular-nums tracking-wider px-2.5 py-0.5 rounded-full border shrink-0"
+            style={{ color: 'var(--color-text2)', backgroundColor: 'var(--color-card2)', borderColor: 'var(--color-border)' }}
           >
-            {point.status}
+            {point.when}
           </span>
         </div>
-        <p className="font-sans text-[14px] text-text2 leading-relaxed">{point.desc}</p>
+        {/* Title + status pill + progress counter */}
+        <div className="flex items-center gap-2">
+          <span
+            className="font-display font-black text-[15px] uppercase tracking-widest leading-tight"
+            style={{ color: point.state === 'upcoming' ? 'var(--color-text)' : s.accent }}
+          >
+            {point.title}
+          </span>
+          <span
+            className="font-mono text-[11px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0 flex items-center gap-1.5"
+            style={{ color: s.accent, borderColor: s.ring, backgroundColor: s.tint }}
+          >
+            {live && <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: s.accent }} />}
+            {point.status}
+          </span>
+          <DottedLeader />
+          <span className="font-mono text-[10px] font-bold tabular-nums shrink-0 text-text2 opacity-70">{doneCount}/{point.items.length}</span>
+        </div>
+        {/* Individual milestones, each ticked off as it lands */}
+        <ul className="flex flex-col gap-1.5 mt-0.5">
+          {point.items.map((item, i) => (
+            <MilestoneCheck key={i} item={item} />
+          ))}
+        </ul>
       </div>
     </div>
   );
@@ -240,7 +433,7 @@ function RoadmapList({ from, to }: { from: number; to: number }) {
   return (
     <div className="flex flex-col">
       {points.map((p, i) => (
-        <RoadmapEntry key={p.clause} point={p} isLive={from + i === 0} isLast={i === points.length - 1} />
+        <RoadmapEntry key={p.clause} point={p} isLast={i === points.length - 1} />
       ))}
     </div>
   );
@@ -322,86 +515,80 @@ function BackCoverDesign({ edge = 'left' }: { edge?: 'left' | 'full' }) {
   return (
     <div
       className={`relative h-full w-full flex flex-col items-center justify-between p-7 overflow-hidden ${edge === 'left' ? 'rounded-l-md' : 'rounded-md'}`}
-      style={goldFrame('var(--color-card2)', edge === 'left' ? '3px 0 3px 3px' : '3px')}>
-      <div className="absolute inset-2 rounded-sm border pointer-events-none" style={{ borderColor: 'rgba(212, 175, 55, 0.3)' }} />
-      {/* Cross lines */}
-      <div className="absolute inset-y-3 left-1/2 -translate-x-1/2 w-0.5 opacity-30 pointer-events-none" style={{ backgroundColor: 'var(--color-border2)' }} />
-      <div className="absolute top-1/2 -translate-y-1/2 inset-x-3 h-0.5 opacity-30 pointer-events-none" style={{ backgroundColor: 'var(--color-border2)' }} />
-      {/* Heavy corner brackets */}
-      <div className="absolute top-1 left-1 w-8 h-8 border-t-4 border-l-4 pointer-events-none rounded-tl-sm" style={{ borderColor: 'var(--color-gold)' }} />
-      <div className="absolute top-1 right-1 w-8 h-8 border-t-4 border-r-4 pointer-events-none rounded-tr-sm" style={{ borderColor: 'var(--color-gold)' }} />
-      <div className="absolute bottom-1 left-1 w-8 h-8 border-b-4 border-l-4 pointer-events-none rounded-bl-sm" style={{ borderColor: 'var(--color-gold)' }} />
-      <div className="absolute bottom-1 right-1 w-8 h-8 border-b-4 border-r-4 pointer-events-none rounded-br-sm" style={{ borderColor: 'var(--color-gold)' }} />
+      style={goldCoverFrame(edge === 'left' ? '3px 0 3px 3px' : '3px')}>
+      <div className="absolute inset-2 rounded-sm border pointer-events-none" style={{ borderColor: 'var(--color-bg)', opacity: 0.4 }} />
+      {/* Heavy corner brackets — tucked just inside the thin inset-2 border */}
+      <div className="absolute top-3 left-3 w-8 h-8 border-t-4 border-l-4 pointer-events-none rounded-tl-sm" style={{ borderColor: 'var(--color-bg)' }} />
+      <div className="absolute top-3 right-3 w-8 h-8 border-t-4 border-r-4 pointer-events-none rounded-tr-sm" style={{ borderColor: 'var(--color-bg)' }} />
+      <div className="absolute bottom-3 left-3 w-8 h-8 border-b-4 border-l-4 pointer-events-none rounded-bl-sm" style={{ borderColor: 'var(--color-bg)' }} />
+      <div className="absolute bottom-3 right-3 w-8 h-8 border-b-4 border-r-4 pointer-events-none rounded-br-sm" style={{ borderColor: 'var(--color-bg)' }} />
 
-      {/* Top text — masks the horizontal line */}
-      <div className="flex flex-col items-center justify-center font-mono text-[13px] tracking-[0.3em] font-bold uppercase select-none z-10 text-center px-5 py-2" style={{ backgroundColor: 'var(--color-card2)' }}>
-        <div className="opacity-60 flex flex-col items-center gap-1.5 text-text2">
+      {/* Top text — sits in the clear gap above the shortened cross line. */}
+      <div className="flex flex-col items-center justify-center font-mono text-[13px] tracking-[0.3em] font-bold uppercase select-none z-10 text-center px-5 py-2">
+        <div className="opacity-80 flex flex-col items-center gap-1.5" style={{ color: 'var(--color-bg)' }}>
           <span>REGARDED</span>
           <span>GAMES</span>
         </div>
       </div>
 
-      {/* Peanut capsule — two circles stacked vertically with a narrow waist.
-          Built as: glow → masking pad → gradient ring → inner body with two
-          circular i-buttons separated by a pinched gap. */}
+      {/* Stadium capsule — rounded pill: gold-gradient ring over a dark fill,
+          no heavy border. Two i-buttons + labels stacked inside. */}
       <div className="relative flex items-center justify-center z-10">
         {/* Pulsing glow */}
         <div className="absolute w-32 h-56 rounded-full blur-xl opacity-20 pointer-events-none animate-pulse" style={{ background: 'var(--color-gold)' }} />
-        {/* Masking pad: round-pill shape covers the cross lines */}
-        <div className="p-3 pointer-events-none" style={{
+        {/* Gradient ring — thin pill frame */}
+        <div className="p-[3px] shadow-lg" style={{
           borderRadius: '9999px',
-          backgroundColor: 'var(--color-card2)',
+          background: 'linear-gradient(180deg, var(--color-gold) 0%, var(--color-gold-15) 100%)',
         }}>
-          {/* Gradient ring — pill matching the inner body */}
-          <div className="p-[3px] shadow-lg" style={{
-            borderRadius: '9999px',
-            background: 'linear-gradient(180deg, var(--color-gold) 0%, var(--color-gold-15) 100%)',
-          }}>
-            {/* Inner body: two circles + pinched waist via SVG clip-path */}
-            <div className="relative flex flex-col items-center pointer-events-auto"
-              style={{ borderRadius: '9999px', backgroundColor: 'var(--color-card3)', border: '4px solid var(--color-border2)' }}>
-              {/* Dashed inner outline following the peanut */}
-              <div className="absolute inset-1.5 pointer-events-none" style={{
-                borderRadius: '9999px',
-                border: '1px dashed var(--color-text2)',
-                opacity: 0.25,
-              }} />
-              {/* Top button */}
-              <div className="flex flex-col items-center gap-2 z-10 px-7 pt-6 pb-2.5">
-                <a
-                  href={BACK_INFO_BUTTONS[0].href}
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-16 h-16 rounded-full flex items-center justify-center border-2 hover:scale-110 active:scale-95 transition-all duration-300 shadow-md"
-                  style={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-gold)', color: 'var(--color-gold-hover)' }}
-                >
-                  <span className="text-3xl font-serif italic font-extrabold select-none">i</span>
-                </a>
-                <span className="font-mono text-[14px] font-bold uppercase tracking-widest text-text2">{BACK_INFO_BUTTONS[0].label}</span>
-              </div>
-              {/* Waist pinch — narrow horizontal divider */}
-              <div className="w-10 h-px opacity-40 pointer-events-none" style={{ backgroundColor: 'var(--color-border2)' }} />
-              {/* Bottom button */}
-              <div className="flex flex-col items-center gap-2 z-10 px-7 pt-2.5 pb-6">
-                <a
-                  href={BACK_INFO_BUTTONS[1].href}
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-16 h-16 rounded-full flex items-center justify-center border-2 hover:scale-110 active:scale-95 transition-all duration-300 shadow-md"
-                  style={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-gold)', color: 'var(--color-gold-hover)' }}
-                >
-                  <span className="text-3xl font-serif italic font-extrabold select-none">i</span>
-                </a>
-                <span className="font-mono text-[14px] font-bold uppercase tracking-widest text-text2">{BACK_INFO_BUTTONS[1].label}</span>
-              </div>
+          {/* Inner body */}
+          <div className="relative flex flex-col items-center pointer-events-auto"
+            style={{ borderRadius: '9999px', backgroundColor: 'var(--color-card3)' }}>
+            {/* Dashed inner outline following the pill */}
+            <div className="absolute inset-1.5 pointer-events-none" style={{
+              borderRadius: '9999px',
+              border: '1px dashed var(--color-text2)',
+              opacity: 0.25,
+            }} />
+            {/* Top button */}
+            <div className="flex flex-col items-center gap-2 z-10 px-7 pt-6 pb-2.5">
+              <a
+                href={BACK_INFO_BUTTONS[0].href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="w-16 h-16 rounded-full flex items-center justify-center border-2 hover:scale-110 active:scale-95 transition-all duration-300 shadow-md"
+                style={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-gold)', color: 'var(--color-gold-hover)' }}
+              >
+                <span className="text-3xl font-serif italic font-extrabold select-none">i</span>
+              </a>
+              <span className="font-mono text-[14px] font-bold uppercase tracking-widest text-text2">{BACK_INFO_BUTTONS[0].label}</span>
+            </div>
+            {/* Waist divider */}
+            <div className="w-10 h-px opacity-40 pointer-events-none" style={{ backgroundColor: 'var(--color-gold)' }} />
+            {/* Bottom button */}
+            <div className="flex flex-col items-center gap-2 z-10 px-7 pt-2.5 pb-6">
+              <a
+                href={BACK_INFO_BUTTONS[1].href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="w-16 h-16 rounded-full flex items-center justify-center border-2 hover:scale-110 active:scale-95 transition-all duration-300 shadow-md"
+                style={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-gold)', color: 'var(--color-gold-hover)' }}
+              >
+                <span className="text-3xl font-serif italic font-extrabold select-none">i</span>
+              </a>
+              <span className="font-mono text-[14px] font-bold uppercase tracking-widest text-text2">{BACK_INFO_BUTTONS[1].label}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom text — masks the horizontal line */}
-      <div className="flex flex-col items-center justify-center font-mono text-[13px] tracking-[0.3em] font-bold uppercase select-none z-10 text-center px-5 py-2" style={{ backgroundColor: 'var(--color-card2)' }}>
-        <div className="opacity-60 flex flex-col items-center gap-1.5 text-text2">
-          <span>OFFICIAL</span>
-          <span>RULEBOOK</span>
+      {/* Bottom text — sits in the clear gap below the shortened cross line. */}
+      <div className="flex flex-col items-center justify-center font-mono text-[13px] tracking-[0.3em] font-bold uppercase select-none z-10 text-center px-5 py-2">
+        <div className="opacity-80 flex flex-col items-center gap-1.5" style={{ color: 'var(--color-bg)' }}>
+          <span>CLASS WAR</span>
+          <span>THE GAME</span>
         </div>
       </div>
     </div>
@@ -714,7 +901,8 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [darkMode]);
 
-  /* Slice-only — used by the mobile overlay swap (parent ring hover does nothing on mobile). */
+  /* Mobile overlay swap — slice hover, falling back to the inner (parent) ring
+     so the inner pie reveals its group details just like the outer slices. */
   const activeDisplay = useMemo(() => {
     if (hoveredIndex !== null) {
       const item = data[hoveredIndex];
@@ -727,8 +915,19 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
         subChildren: item.subChildren,
       };
     }
+    if (hoveredParent !== null) {
+      const pData = data.find(d => d.parentName === hoveredParent);
+      return {
+        clause: clauses.byParent[hoveredParent],
+        name: hoveredParent,
+        explanation: pData?.parentExplanation,
+        color: 'var(--color-text)',
+        percentage: pData?.parentPercentage,
+        subChildren: [] as Tier3Child[],
+      };
+    }
     return null;
-  }, [hoveredIndex, data, clauses]);
+  }, [hoveredIndex, hoveredParent, data, clauses]);
 
   /* Slice + parent ring — used by the desktop inline hover only. */
   const activeDisplayDesktop = useMemo(() => {
@@ -1323,7 +1522,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
                   {cornerBrackets}
                   {chartCanvas}
                 </div>
-                <PageFooter left="Official Rulebook" right="004 /" />
+                <PageFooter left="001" right="Rulebook" />
               </div>
 
               {/* Back face at rotateY(180deg): cover art — visible on entry fold,
@@ -1331,13 +1530,13 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
               <div
                 className="absolute inset-0 rounded-r-md flex items-center justify-center"
                 style={{
-                  ...goldFrame('var(--color-card2)', '3px'),
+                  ...goldCoverFrame('3px'),
                   transform: 'rotateY(180deg)',
                   backfaceVisibility: 'hidden',
                   WebkitBackfaceVisibility: 'hidden',
                 }}
               >
-                <div className="absolute inset-2 rounded-sm border pointer-events-none" style={{ borderColor: 'rgba(212, 175, 55, 0.3)' }} />
+                <div className="absolute inset-2 rounded-sm border pointer-events-none" style={{ borderColor: 'var(--color-bg)', opacity: 0.4 }} />
                 {coverArt}
               </div>
             </motion.div>
@@ -1371,7 +1570,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
                   className="absolute inset-0"
                   style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: backShown ? 'none' : 'auto' }}
                 >
-                  <PageFace side="right" footer={<PageFooter left="005" right="Campaign Sequence ↗" />}>{roadmapRightContent}</PageFace>
+                  <PageFace side="right" footer={<PageFooter left="Campaign Sequence ↗" right="004" />}>{roadmapRightContent}</PageFace>
                 </div>
                 <div
                   className="absolute inset-0"
@@ -1412,13 +1611,13 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
                     style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent 0px, transparent 1.5px, rgba(0,0,0,0.22) 1.5px, rgba(0,0,0,0.22) 2.5px)' }}
                   />
                   {rulebookCard}
-                  <PageFooter left="005" right="Allocation Map ↗" />
+                  <PageFooter left="Distribution of Power ↗" right="002" />
                 </div>
                 <div
                   className="absolute inset-0"
                   style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: page >= 1 && !backShown ? 'auto' : 'none' }}
                 >
-                  <PageFace side="left" footer={<PageFooter left="Official Rulebook" right="005 /" />}>{roadmapLeftContent}</PageFace>
+                  <PageFace side="left" footer={<PageFooter left="003" right="Rulebook" />}>{roadmapLeftContent}</PageFace>
                 </div>
               </motion.div>
               </div>
@@ -1496,9 +1695,9 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
 
                 {/* Running footer — inside the gold frame */}
                 <div className="flex justify-between items-center px-4 pb-2.5 text-[14px] font-mono opacity-80" style={{ color: 'var(--color-text2)' }}>
-                  <span>Official Rulebook</span>
-                  <span>004 / 005</span>
-                  <span>Allocation Map ↗</span>
+                  
+                  <span>Distribution of Power ↗</span>
+                  <span>001</span>
                 </div>
               </div>
             </motion.div>
@@ -1515,8 +1714,8 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
                 pointerEvents: mCoverAway ? 'none' : 'auto',
               }}
             >
-              <div className="relative h-full rounded-md flex items-center justify-center" style={goldFrame('var(--color-card2)', '3px')}>
-                <div className="absolute inset-2 rounded-sm border pointer-events-none" style={{ borderColor: 'rgba(212, 175, 55, 0.3)' }} />
+              <div className="relative h-full rounded-md flex items-center justify-center" style={goldCoverFrame('3px')}>
+                <div className="absolute inset-2 rounded-sm border pointer-events-none" style={{ borderColor: 'var(--color-bg)', opacity: 0.4 }} />
                 {coverArt}
               </div>
             </motion.div>
@@ -1553,9 +1752,8 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
                   </div>
                 </div>
                 <div className="flex justify-between items-center px-4 pb-2.5 pt-1.5 text-[14px] font-mono opacity-80" style={{ color: 'var(--color-text2)' }}>
-                  <span>Official Rulebook</span>
-                  <span>005 / 005</span>
                   <span>Campaign Sequence ↗</span>
+                  <span>002</span>
                 </div>
               </div>
               {/* Back face — the book's backside with the info buttons */}

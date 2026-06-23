@@ -244,7 +244,9 @@ export function SeasonBand({ seasonAddress, seasonName, className = '' }: Season
           {/* Faction anchors + title */}
           <div className="px-6 pt-5 pb-4 flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <Carlo className="w-10 h-auto text-purple" viewBox="0 0 600 800" />
+              {/* Top-padded viewBox adds empty space equal to Regardo's hat so the
+                  bare-headed Carlo reads the same size as the hatted Regardo. */}
+              <Carlo className="w-10 h-auto text-purple" viewBox="0 -141.18 600 941.18" />
               <div className="flex flex-col">
                 <span className="gini-label">Proletarian Target</span>
                 <span className="font-mono text-sm font-black text-purple">

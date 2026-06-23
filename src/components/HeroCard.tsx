@@ -310,9 +310,11 @@ export default function HeroCard({
       <div className="w-32 h-32 rounded-full flex items-center justify-center border-4 relative overflow-hidden" style={{ backgroundColor: '#2B2544', borderColor: '#4C3F7A' }}>
         <div className="absolute w-28 h-28 rounded-full border border-dashed opacity-25" style={{ borderColor: '#9E97BD' }} />
         
-        <a 
-          href={backInfoLink} 
-          onClick={(e) => e.stopPropagation()} 
+        <a
+          href={backInfoLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
           className="w-16 h-16 rounded-full flex items-center justify-center border-2 z-10 hover:scale-110 active:scale-95 transition-all duration-300 shadow-md"
           style={{ backgroundColor: '#161322', borderColor: themeColor, color: highlightColor }}
         >

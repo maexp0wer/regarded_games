@@ -1,77 +1,109 @@
 /* ── PAGE ─────────────────────────────────────────────────────── */
+/* overflow-x clipped so the blurred glow never spills into a horizontal
+   scrollbar. overflow-y stays visible so the hero's tall glow can reach down
+   behind the cards. */
 .page {
   position:        relative;
+  overflow-x:      clip;
   display:         flex;
   flex-direction:  column;
   flex:            1 0 auto;
 }
 
 /* ── HERO ─────────────────────────────────────────────────────── */
+/* No overflow clip here — the glow is centered on the hero but taller than it,
+   so its lower half must spill out of the hero and over the cards below. */
 .hero {
   position:   relative;
-  padding:    5.5rem 1.5rem 2.5rem;
+  flex:       1 0 auto;
+  padding:    6rem 1.5rem 5rem;
   text-align: center;
   display:    flex;
   align-items: center;
   justify-content: center;
 }
 
+/* Sunset glow — a large blurred radial of the --sunset gradient. Mirrors the
+   app's main landing "Background Light" (w-[50rem] h-[25rem] rounded-full
+   [background:var(--sunset)] blur-[100px] @ 0.25 opacity). Its CENTER is pinned
+   to the hero's vertical middle (as originally placed); only the height grows
+   so the lower half reaches down through the card grid instead of being cut
+   off. */
+.heroGlow {
+  position:       absolute;
+  top:            50%;
+  left:           50%;
+  transform:      translate(-50%, -50%);
+  width:          50rem;
+  height:         44rem;
+  max-width:      120vw;
+  border-radius:  50%;
+  background:     var(--sunset);
+  filter:         blur(110px);
+  opacity:        0.25;
+  pointer-events: none;
+  z-index:        0;
+}
+
 .heroInner {
+  position:  relative;
+  z-index:   1;
   max-width: 760px;
   width:     100%;
 }
 
-/* Mono eyebrow — section-label with a gold dot, roots the hero in the
-   terminal aesthetic without leaning on the faction palette. */
-.heroEyebrow {
-  display:         inline-flex;
-  align-items:     center;
-  gap:             0.5rem;
-  font-family:     'JetBrains Mono', monospace;
-  font-size:       0.7rem;
-  font-weight:     900;
-  letter-spacing:  0.18em;
-  text-transform:  uppercase;
-  color:           var(--color-text2);
-  margin-bottom:   1.25rem;
-}
-
-.heroEyebrow::before {
-  content:       '';
-  width:         6px;
-  height:        6px;
-  border-radius: 50%;
-  background:    var(--color-gold);
-}
-
-/* Main title */
-.heroTitle {
-  font-family:    'Exo 2', system-ui, sans-serif !important;
-  font-weight:    900 !important;
-  font-size:      clamp(2.6rem, 7vw, 4.5rem) !important;
+/* Soft-launch marker above the headline, mirroring the app's landing hero
+   (font-mono font-black uppercase tracking-[0.35em] mb-4 text-text2). */
+.heroBadge {
+  display:        block;
+  font-family:    'JetBrains Mono', monospace;
+  font-size:      clamp(1rem, 1.4vw, 1.125rem);
+  font-weight:    900;
   text-transform: uppercase;
-  letter-spacing: -0.03em;
-  line-height:    1.0;
-  background:     var(--sunset);
+  letter-spacing: 0.35em;
+  color:          var(--color-text2);
+  margin:         0 0 1rem;
+}
+
+/* Main title — the "Class War / The Game" wordmark, mirroring the app's
+   landing hero (.hero-title + .hero-gradient-text in src/app/globals.css). */
+.heroTitle {
+  font-family:    'Exo 2', system-ui, sans-serif;
+  font-size:      clamp(2.5rem, 6vw, 4.5rem);
+  font-weight:    900;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  line-height:    1.05;
+  color:          var(--color-text);
+  margin:         0 0 1.5rem;
+}
+
+/* "The Game" — sunset gradient clipped to the text, gold fallback. */
+.heroTitleGradient {
+  display:                 inline-block;
+  color:                   var(--color-gold);
+  background-image:        var(--sunset);
+  background-clip:         text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom:  1rem;
 }
 
-/* Subtitle */
+/* Subtitle — Exo 2 muted text, matching the app's .hero-subtitle. */
 .heroSubtitle {
-  font-family:   'Space Grotesk', system-ui, sans-serif;
-  font-size:     clamp(1rem, 2.5vw, 1.2rem);
+  font-family:   'Exo 2', system-ui, sans-serif;
+  font-size:     clamp(1.1rem, 2vw, 1.35rem);
+  font-weight:   400;
   color:         var(--color-text2);
   line-height:   1.6;
-  max-width:     540px;
+  max-width:     42rem;
   margin:        0 auto;
 }
 
 /* ── DOC CARDS ────────────────────────────────────────────────── */
 .cardsSection {
-  padding: 1rem 1.5rem 5rem;
+  position: relative;
+  z-index:  1;
+  padding:  1rem 1.5rem 5rem;
 }
 
 .cardsGrid {
@@ -82,8 +114,7 @@
   margin:         0 auto;
 }
 
-/* landing-card archetype: a flat card with a solid left accent bar that
-   lifts and grows the bar on hover. Flat surface — no glow, no backdrop. */
+/* Flat card that lifts on hover — no colored left accent bar. */
 .card {
   position:        relative;
   overflow:        hidden;
@@ -102,47 +133,6 @@
 .card:hover {
   transform:    translateY(-6px);
   border-color: var(--color-border2);
-}
-
-/* Left accent strip — solid faction-color bar that thickens on hover. */
-.cardAccent {
-  position:   absolute;
-  left:       0;
-  top:        0;
-  bottom:     0;
-  width:      3px;
-  transition: width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.card:hover .cardAccent {
-  width: 5px;
-}
-
-.accentPurple { background: var(--color-purple); }
-.accentGreen  { background: var(--color-green); }
-.accentGold   { background: var(--color-gold); }
-
-.cardHead {
-  display:         flex;
-  align-items:     center;
-  justify-content: space-between;
-}
-
-.cardEyebrow {
-  font-family:    'JetBrains Mono', monospace;
-  font-size:      0.6rem;
-  font-weight:    700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color:          var(--color-text2);
-}
-
-.cardIndex {
-  font-family:          'JetBrains Mono', monospace;
-  font-size:            0.75rem;
-  font-weight:          700;
-  color:                var(--color-text2);
-  font-variant-numeric: tabular-nums;
 }
 
 .cardTitle {

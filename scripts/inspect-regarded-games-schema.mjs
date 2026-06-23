@@ -17,7 +17,7 @@ const { rows: tables } = await c.query(`
   ORDER BY tablename;
 `);
 
-console.log(`Tables in ritardo_games (${tables.length}):\n`);
+console.log(`Tables in regarded_games (${tables.length}):\n`);
 
 for (const { tablename } of tables) {
   const cols = await c.query(

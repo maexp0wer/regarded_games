@@ -6,6 +6,17 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Carlo from '@/components/icons/Carlo.svg';
 import Regardo from '@/components/icons/Regardo.svg';
 
+/* Faction-character dock geometry. The icons render at h-16 (64px) and perch
+   centered over their goal lines. Centering is baked into the dock's `left`
+   (via calc, subtracting half the icon's rendered width) rather than a CSS
+   transform — the landing-page flight measures these boxes with `settledRect`,
+   which reads offsetLeft and so IGNORES transforms; a translateX(-50%) would
+   make the flight land half a width off and then snap. Widths derive from each
+   icon's intrinsic viewBox aspect at the fixed 64px height. */
+const ICON_H = 80; // h-20
+const CARLO_HALF_W = (ICON_H * (579.04352 / 919.01)) / 2;
+const REGARDO_HALF_W = (ICON_H * (491.52783 / 788.49512)) / 2;
+
 interface AnimatedGiniCardProps {
   /** Mock Proletarian target BPS. Defaults to 3500 */
   socTargetBps?: number;
@@ -141,39 +152,62 @@ export default function AnimatedGiniCard({
       onMouseEnter={() => setIsInternalHovered(true)}
       onMouseLeave={() => setIsInternalHovered(false)}
     >
-      {/* Top Header Row */}
-      <div className="w-full px-2 pb-4 flex justify-between items-end flex-shrink-0">
-
-        {/* Left Faction Block (Carlo / Marx) — the w-12 h-14 box is always present
-            to preserve centering even while the traveling character is elsewhere. */}
-        <div className="w-12 h-14 flex items-end justify-start">
-          {leftIcon === undefined ? (
-            <Carlo className="w-auto h-12" style={{ color: '#9D4EDD' }} viewBox="0 0 579.04352 781.15955" />
-          ) : (
-            leftIcon
-          )}
-        </div>
-
-        {/* Central Title */}
+      {/* Top Header Row — title only; the faction characters now perch directly
+          above their own goal lines inside the gauge below (see icon overlay). */}
+      <div className="w-full px-2 pb-4 flex justify-center items-end flex-shrink-0">
         <div className="flex flex-col items-center pb-1">
           <span className="font-display text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9E97BD' }}>
             GINI COEFFICIENT
           </span>
         </div>
-
-        {/* Right Faction Block (Regardo) — same dock contract as the left. */}
-        <div className="w-12 h-14 flex items-end text-right justify-end">
-          {rightIcon === undefined ? (
-            <Regardo className="w-auto h-12" style={{ color: '#FFC300' }} viewBox="0 0 491.52783 788.49512" />
-          ) : (
-            rightIcon
-          )}
-        </div>
       </div>
 
       {/* Full-width gauge viewport container with explicit height to prevent clipping */}
       <div className="relative w-full h-24 flex items-center">
-        
+
+        {/* Faction characters, centered over their goal lines and sitting in the
+            header band above the goal-pin badges. Carlo (purple) marks the
+            Proletarian target; Regardo (gold) the Capitalist target. The docks
+            share the gauge's `left-4 right-4` coordinate space so each centers on
+            its goal-line percentage — and the landing-page flight aims here, since
+            it measures these dock boxes' settled positions. */}
+        <div className="absolute left-4 right-4 top-0 bottom-0 pointer-events-none z-30">
+          {/* Left Faction Block (Carlo / Marx) — the dock box is always present to
+              preserve placement even while the traveling character is elsewhere.
+              Top-padded viewBox adds empty space equal to Regardo's hat so the
+              bare-headed Carlo reads the same size as the hatted Regardo. */}
+          {/* Anchored by the TOP edge so the box rests cleanly ABOVE the gauge
+              centre line and its goal-pin badge, leaving gauge + labels fully
+              visible. Top = centre (50%) − 3rem gap − ICON_H (5rem) = 50% − 8rem,
+              i.e. the icon's foot sits 3rem above the centre line, which clears
+              the pin badge (tops out ~1.75rem above centre).
+              `top` (not `bottom`): the landing-page flight measures these docks
+              with settledRect → offsetTop, and a `bottom`-anchored offsetTop reads
+              a few px off the real render, causing a visible handoff jump. */}
+          <div
+            className="absolute flex items-end justify-center"
+            style={{ left: `calc(${socPct}% - ${CARLO_HALF_W}px)`, top: 'calc(50% - 8rem)', height: ICON_H }}
+          >
+            {leftIcon === undefined ? (
+              <Carlo className="w-auto h-20" style={{ color: '#9D4EDD' }} viewBox="0 -137.85 579.04352 919.01" />
+            ) : (
+              leftIcon
+            )}
+          </div>
+
+          {/* Right Faction Block (Regardo) — same dock contract as the left. */}
+          <div
+            className="absolute flex items-end justify-center"
+            style={{ left: `calc(${capPct}% - ${REGARDO_HALF_W}px)`, top: 'calc(50% - 8rem)', height: ICON_H }}
+          >
+            {rightIcon === undefined ? (
+              <Regardo className="w-auto h-20" style={{ color: '#FFC300' }} viewBox="0 0 491.52783 788.49512" />
+            ) : (
+              rightIcon
+            )}
+          </div>
+        </div>
+
         {/* 1. Underlying Track Rail */}
         <div 
           className="absolute left-4 right-4 h-2 rounded-full border border-bg" 
@@ -292,10 +326,11 @@ export default function AnimatedGiniCard({
 
           {/* --- Target pins and Labels (Moved ABOVE Rail to clear bracket distances) --- */}
 
-          {/* Proletarian target goal indicator */}
+          {/* Proletarian target goal indicator — value badge above the pin,
+              horizontally centered on the goal line */}
           <div className="absolute top-1/2 -translate-y-1/2" style={{ left: `${toScalePct(socTargetBps)}%`, transform: 'translateX(-50%)' }}>
             <div style={{ width: '4px', height: '1.2rem', backgroundColor: '#9D4EDD', border: '1px solid #0D0B14' }} />
-            <span className="absolute bottom-full mb-1 z-40 font-mono font-black text-[9px] px-1 py-0.5 rounded shadow whitespace-nowrap" style={{ backgroundColor: '#9D4EDD', color: '#251F3D' }}>
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-40 font-mono font-black text-[9px] px-1 py-0.5 rounded shadow whitespace-nowrap" style={{ backgroundColor: '#9D4EDD', color: '#251F3D' }}>
               {Math.round(socTargetBps).toLocaleString()}
             </span>
           </div>
@@ -308,10 +343,11 @@ export default function AnimatedGiniCard({
             </div>
           )}
 
-          {/* Capitalist target goal indicator */}
+          {/* Capitalist target goal indicator — value badge above the pin,
+              horizontally centered on the goal line */}
           <div className="absolute top-1/2 -translate-y-1/2" style={{ left: `${toScalePct(capTargetBps)}%`, transform: 'translateX(-50%)' }}>
             <div style={{ width: '4px', height: '1.2rem', backgroundColor: '#FFC300', border: '1px solid #0D0B14' }} />
-            <span className="absolute bottom-full mb-1 z-40 font-mono font-black text-[9px] px-1 py-0.5 rounded shadow whitespace-nowrap" style={{ backgroundColor: '#FFC300', color: '#251F3D' }}>
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-40 font-mono font-black text-[9px] px-1 py-0.5 rounded shadow whitespace-nowrap" style={{ backgroundColor: '#FFC300', color: '#251F3D' }}>
               {Math.round(capTargetBps).toLocaleString()}
             </span>
           </div>

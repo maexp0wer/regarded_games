@@ -23,7 +23,7 @@ Three layers in one repo:
 | **Community** | Self-hosted Discourse (via SSO) | `http://community.localhost` | Faction forum & chat |
 | **Docs** | Docusaurus | `docs/` | Whitepaper & documentation site |
 
-Contracts live in a sibling repo (`../ritardo_contracts`); ABIs are vendored into
+Contracts live in a sibling repo (`../regarded_contracts`); ABIs are vendored into
 `src/deployments/abis/` and `indexer/abis/`.
 
 ## Prerequisites

@@ -8,7 +8,13 @@ import { useTheme } from '@/context/ThemeContext';
 import { Logo, MoonIcon, SunIcon } from '@/components/icons/svg';
 import Regardo from '@/components/icons/Regardo.svg';
 import Carlo from '@/components/icons/Carlo.svg';
-import FIM1 from '@/components/icons/FIM1.svg';
+import {
+  DaoEmblem,
+  YieldEmblem,
+  ParadigmEmblem,
+  AuctionEmblem,
+  QuestEmblem,
+} from '@/components/icons/CardEmblems';
 import { useDocNavigation } from '@/hooks/useDocNavigation';
 import Rulebook from '@/components/Rulebook';
 import CyclingSubheading from '@/components/CyclingSubheading';
@@ -37,6 +43,21 @@ const SECTIONS: { id: string; cards: number; pages?: number }[] = [
 /* The Gini card ("Enforce Ideology") is the characters' final home. */
 const GINI_SECTION_ID = 'sectionPlay';
 const GINI_CARD_INDEX = 2;
+
+/* Soft-launch flag — cosmetic only (the real gate is the server-only APP_LIVE
+   check in middleware.ts). NEXT_PUBLIC_ so this client component can read it:
+   when gated we show a "Coming Soon" banner and the Secure-Your-Stake cards'
+   action buttons read "Coming Soon" and are inert. Defaults to live; set to the
+   literal "false" (and redeploy) to gate before the app subdomains open. */
+const APP_LIVE = process.env.NEXT_PUBLIC_APP_LIVE !== 'false';
+
+/* Docs subdomain base, derived the same way useDocNavigation + docusaurus.config
+   build it: the main domain with a `docs.` prefix (e.g. http://docs.localhost:3000
+   locally, https://docs.<domain> in prod). The HeroCard info buttons render as
+   raw <a href> on the main app domain, so a bare "intro#..." would resolve against
+   the app domain and 404 — these must be absolute docs URLs. */
+const MAIN_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN || '';
+const DOCS_URL = MAIN_DOMAIN.replace('://', '://docs.');
 
 /* Where Carlo & Regardo currently live: giant ghosts behind the headline, inside
    their hero cards, or docked on the Gini card. Exactly one home mounts each
@@ -156,8 +177,14 @@ function CardThrow({
      sections) must not drag parked cards across the screen. */
   const [exitDir, setExitDir] = useState<1 | -1>(1);
   const [prevActive, setPrevActive] = useState(active);
+  /* Cards that mount already-inactive (every off-screen section on first load)
+     must NOT play an exit: the exit keyframes start from the on-screen slot, so
+     animating one flickers the parked cards across the viewport before they
+     leave. Snap straight to the parked pose until the section is first shown. */
+  const [hasBeenActive, setHasBeenActive] = useState(active);
   if (active !== prevActive) {
     setPrevActive(active);
+    if (active) setHasBeenActive(true);
     if (!active) setExitDir(dir);
   }
 
@@ -168,7 +195,18 @@ function CardThrow({
   let throwAnim: TargetAndTransition;
   let foldAnim: TargetAndTransition;
 
-  if (active && dir === 1) {
+  if (!active && !hasBeenActive) {
+    // Never shown: jump to the final parked pose with no animation so nothing
+    // sweeps across the screen on load. Matches exitDir's settled end state.
+    if (exitDir === 1) {
+      const t = exitTimeline(index, total, spacing, screenW);
+      throwAnim = { x: t.xs[t.xs.length - 1] as number, y: 0, rotate: 0, opacity: 1, transition: { duration: 0 } };
+      foldAnim = { rotateY: FOLD_DEG, transition: { duration: 0 } };
+    } else {
+      throwAnim = { x: splitX + 520, y: -560, rotate: 70 + index * 8, opacity: 0, transition: { duration: 0 } };
+      foldAnim = { rotateY: 0, transition: { duration: 0 } };
+    }
+  } else if (active && dir === 1) {
     // Enter-down: all cards share one launch point (slot offset + throw
     // offset) and diverge immediately — one continuous fan-out, no hold.
     throwAnim = {
@@ -292,9 +330,17 @@ function CardThrow({
    so overlay flights can measure launch and landing spots while the real
    icons are unmounted. */
 const CARD_ICON_H = 250;
-const GINI_ICON_H = 48; // h-12 docks on the Gini card
+const GINI_ICON_H = 80; // h-20 docks on the Gini card
 const REGARDO_ASPECT = 491.52783 / 788.49512;
-const CARLO_ASPECT = 579.04352 / 781.15955;
+/* Regardo wears a hat (~15% of his total height); Carlo is bare-headed and
+   reaches the top of his own frame, so at equal render height his body reads
+   larger. We pad empty space above Carlo equal to Regardo's hat so the two
+   bodies match: Carlo's content (781.15955) becomes the 85% body of a taller
+   frame, extended upward by ~138 units. Every Carlo render uses CARLO_VIEWBOX
+   (and the matching CARLO_ASPECT) so the headline→cards→gini flights stay in
+   register. */
+const CARLO_VIEWBOX = '0 -137.85 579.04352 919.01';
+const CARLO_ASPECT = 579.04352 / 919.01;
 
 type FlightRect = { x: number; y: number; w: number; h: number };
 
@@ -541,6 +587,12 @@ export default function Home() {
     carlo: { from: FlightRect; to: FlightRect };
     duration: number;
     fromOpacity: number;
+    /* Descent into Choose Your Hero only: render Carlo's flight beneath the
+       card layer so he tucks behind the Regardo icon and the Regardo card his
+       path crosses, instead of riding over them. The real on-card icon takes
+       over at landing, so passing under the cards mid-flight is invisible at
+       the end. */
+    carloBehindCards?: boolean;
   } | null>(null);
   const ghostRegardoRef = useRef<HTMLDivElement>(null);
   const ghostCarloRef = useRef<HTMLDivElement>(null);
@@ -550,10 +602,14 @@ export default function Home() {
   const giniCarloSlotRef = useRef<HTMLDivElement>(null);
   const prevTargetRef = useRef<CharacterHome>(targetHome);
   const flipTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /* Fires mid-descent to retarget the gini flight onto the now-settled dock's
+     true viewport rect (see the cards→gini branch); cleared alongside flipTimer. */
+  const giniRetargetTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
     const prevTarget = prevTargetRef.current;
     prevTargetRef.current = targetHome;
     clearTimeout(flipTimerRef.current);
+    clearTimeout(giniRetargetTimerRef.current);
 
     if (prevTarget === 'headline' && targetHome === 'cards') {
       const gR = ghostRegardoRef.current;
@@ -572,6 +628,7 @@ export default function Home() {
           /* Hero-card throws fire with enterDelay 0 and land at ~1.0s. */
           duration: 1.0,
           fromOpacity: HOME_OPACITY.headline,
+          carloBehindCards: true,
         });
       }
       /* Hand off once the slowest card has landed (1.0s flight + index
@@ -597,10 +654,30 @@ export default function Home() {
           duration: 1.66,
           fromOpacity: 1,
         });
+        /* settledRect sums per-level offsetLeft/offsetTop, which round to whole
+           px at each ancestor — over the gauge-card chain that compounds to a
+           ~2px constant error vs. the icon's true sub-pixel render, so the
+           overlay lands ~2px off and the in-place handoff visibly pops. Once the
+           primary flight has fully LANDED (~1.66s, velocity ≈ 0) and the gini
+           card is settled (transform identity, scroll 0), re-read the dock's true
+           viewport rect — matching the fixed-overlay coordinate space — and ease
+           the small residual into the exact spot. Retargeting only after the
+           primary stops avoids the velocity discontinuity (a visible bob) that
+           re-aiming mid-flight caused; handoff waits for this correction. */
+        giniRetargetTimerRef.current = setTimeout(() => {
+          const liveR = dR.getBoundingClientRect();
+          const liveC = dC.getBoundingClientRect();
+          const rectOf = (r: DOMRect): FlightRect => ({ x: r.left, y: r.top, w: r.width, h: r.height });
+          setCharOverlay((prev) =>
+            prev
+              ? { ...prev, duration: 0.25, regardo: { ...prev.regardo, to: rectOf(liveR) }, carlo: { ...prev.carlo, to: rectOf(liveC) } }
+              : prev,
+          );
+        }, 1680);
         flipTimerRef.current = setTimeout(() => {
           setCharacterHome('gini');
           setCharOverlay(null);
-        }, 1700);
+        }, 1980);
       } else {
         setCharacterHome('gini');
       }
@@ -633,7 +710,10 @@ export default function Home() {
       setCharOverlay(null);
       setCharacterHome(targetHome);
     }
-    return () => clearTimeout(flipTimerRef.current);
+    return () => {
+      clearTimeout(flipTimerRef.current);
+      clearTimeout(giniRetargetTimerRef.current);
+    };
   }, [targetHome]);
 
   /* Previous home, read during the render where the home flips so each new
@@ -692,6 +772,40 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [playActive]);
 
+  /* One flying character copy: launches at its previous home's rect/opacity and
+     animates to the receiving slot. Shared by the detached overlay (Regardo, and
+     Carlo on non-descent flights) and the in-grid Carlo flight on the Choose
+     Your Hero descent, so both stay in lockstep. */
+  const renderCharFlight = (key: 'regardo' | 'carlo', flight: { from: FlightRect; to: FlightRect }) =>
+    charOverlay && (
+      <motion.div
+        key={key}
+        className="absolute"
+        style={{
+          left: flight.from.x,
+          top: flight.from.y,
+          width: flight.from.w,
+          height: flight.from.h,
+          transformOrigin: 'top left',
+        }}
+        initial={{ x: 0, y: 0, scale: 1, opacity: charOverlay.fromOpacity }}
+        animate={{
+          x: flight.to.x - flight.from.x,
+          y: flight.to.y - flight.from.y,
+          /* Uniform scale: every home renders the same SVG aspect. */
+          scale: flight.to.h / flight.from.h,
+          opacity: 1,
+        }}
+        transition={{ duration: charOverlay.duration, ease: 'easeOut' }}
+      >
+        {key === 'regardo' ? (
+          <Regardo className="w-full h-full text-gold" viewBox="0 0 491.52783 788.49512" />
+        ) : (
+          <Carlo className="w-full h-full text-purple" viewBox={CARLO_VIEWBOX} />
+        )}
+      </motion.div>
+    );
+
   /* ---- Cards (shared between the lg grid and the below-lg deck) ---- */
 
   const regardoCard = (
@@ -714,11 +828,11 @@ export default function Home() {
         { name: "Concentrate Capital", desc: "accumulate wealth to push the economy toward perfect inequality." },
         { name: "BAILOUT", desc: "Split the entire prize pool. Proletarians get nothing." }
       ]}
-      footerLeftText="Faction 01"
+      footerLeftText="Class 01"
       footerMiddleText='001 / 002'
       footerRightText="Doc. Reference ↗"
       footerTextColor="rgba(7, 7, 9, 0.65)"
-      backInfoLink="/learn-more-regardo"
+      backInfoLink={`${DOCS_URL}/intro#the-two-classes`}
       backgroundSlot={
         <svg viewBox="0 0 800 450" preserveAspectRatio="none" style={{ display: 'block', width: '100%', height: '100%' }}>
           <defs>
@@ -797,11 +911,11 @@ export default function Home() {
         { name: "Distribute Capital", desc: "coordinate with your class to push the economy toward perfect equality." },
         { name: "Wealth Tax", desc: "Capitalist payouts are capped and the surplus flows to you." }
       ]}
-      footerLeftText="Faction 02"
+      footerLeftText="Class 02"
       footerMiddleText='002 / 002'
       footerRightText="Doc. Reference ↗ "
       footerTextColor="rgba(255, 255, 255, 0.65)"
-      backInfoLink="/learn-more-carlo"
+      backInfoLink={`${DOCS_URL}/intro#the-two-classes`}
       backgroundSlot={
         <svg viewBox="0 0 800 450" preserveAspectRatio="none" style={{ display: 'block', width: '100%', height: '100%' }}>
           <defs>
@@ -849,7 +963,7 @@ export default function Home() {
           <div ref={cardCarloSlotRef} style={{ height: CARD_ICON_H, width: CARD_ICON_H * CARLO_ASPECT }}>
             {characterHome === 'cards' && !charOverlay && (
               <TravelIcon id="char-carlo" fromOpacity={cardIconFromOpacity} duration={charFlightDuration}>
-                <Carlo className="w-auto" style={{ height: CARD_ICON_H }} viewBox="0 0 579.04352 781.15955" />
+                <Carlo className="w-auto" style={{ height: CARD_ICON_H }} viewBox={CARLO_VIEWBOX} />
               </TravelIcon>
             )}
           </div>
@@ -879,10 +993,10 @@ export default function Home() {
       abilities={[
         { name: "Seed the Prize Pool", desc: "Buy Fake Internet Money ($FIM) with $USDC." }
       ]}
-      footerLeftText="Phase 01 Guide"
+      footerLeftText="Phase 01"
       footerMiddleText='001 / 003'
       footerRightText="Doc. Reference ↗"
-      backInfoLink="intro#phase-1-auction"
+      backInfoLink={`${DOCS_URL}/intro#phase-1-auction`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-magenta) 0%, transparent 70%)' }} />
       }
@@ -914,12 +1028,12 @@ export default function Home() {
       classDesc="A gated and fair marketplace for $FIM/$USDC."
       abilities={[
         { name: "Trade", desc: "Exchange $FIM and $USDC with other players." },
-        { name: "Outplay", desc: "Coordinate with your faction to influence wealth distribution. Who you trade with is more important than the price." }
+        { name: "Outplay", desc: "Coordinate with your class to influence wealth distribution. Who you trade with is more important than the price." }
       ]}
-      footerLeftText="Phase 02 Guide"
+      footerLeftText="Phase 02"
       footerMiddleText='002 / 003'
       footerRightText="Doc. Reference ↗"
-      backInfoLink="intro#phase-2-trading"
+      backInfoLink={`${DOCS_URL}/intro#phase-2-trading`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-magenta) 0%, transparent 70%)' }} />
       }
@@ -950,13 +1064,13 @@ export default function Home() {
       classSymbol="✦"
       classDesc="The final prize pool distribution."
       abilities={[
-        { name: "TAKEOVER", desc: "Shift the game economies' wealth distribution in favor of your faction." },
+        { name: "TAKEOVER", desc: "Shift the game economies' wealth distribution in favor of your class." },
         { name: "Dictate", desc: "Set the payout rules: Bailout or Wealth Tax" }
       ]}
-      footerLeftText="Phase 03 Guide"
+      footerLeftText="Phase 03"
       footerMiddleText='003 / 003'
       footerRightText="Doc. Reference ↗"
-      backInfoLink="intro#phase-3-victory-and-payouts"
+      backInfoLink={`${DOCS_URL}/intro#phase-3-victory-and-payouts`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-magenta) 0%, transparent 70%)' }} />
       }
@@ -971,7 +1085,7 @@ export default function Home() {
               <div ref={giniCarloSlotRef} style={{ height: GINI_ICON_H, width: GINI_ICON_H * CARLO_ASPECT }}>
                 {characterHome === 'gini' && !charOverlay && (
                   <TravelIcon id="char-carlo" fromOpacity={giniIconFromOpacity} duration={giniFlightDuration}>
-                    <Carlo className="w-auto h-12 text-purple" viewBox="0 0 579.04352 781.15955" />
+                    <Carlo className="w-auto h-20 text-purple" viewBox={CARLO_VIEWBOX} />
                   </TravelIcon>
                 )}
               </div>
@@ -980,7 +1094,7 @@ export default function Home() {
               <div ref={giniRegardoSlotRef} style={{ height: GINI_ICON_H, width: GINI_ICON_H * REGARDO_ASPECT }}>
                 {characterHome === 'gini' && !charOverlay && (
                   <TravelIcon id="char-regardo" fromOpacity={giniIconFromOpacity} duration={giniFlightDuration}>
-                    <Regardo className="w-auto h-12 text-gold" viewBox="0 0 491.52783 788.49512" />
+                    <Regardo className="w-auto h-20 text-gold" viewBox="0 0 491.52783 788.49512" />
                   </TravelIcon>
                 )}
               </div>
@@ -1008,20 +1122,20 @@ export default function Home() {
       classSymbol={<span className="font-sans text-xs">✦</span>}
       classDesc="Player Ownership. No company. No rigged outcomes."
       abilities={[
-        { name: "Join", desc: " get the governance token: Regarded Token ($RGD)" },
+        { name: "Join", desc: " buy and stake the governance token: Regarded Token ($RGD)" },
         { name: "Control", desc: "Define the game rules and govern the DAO treasury." }
       ]}
-      footerLeftText="Ownership Guide"
+      footerLeftText="Ownership"
       footerMiddleText='001 / 003'
       footerRightText="Doc. Reference ↗"
       footerTextColor="rgba(255, 255, 255, 0.6)"
-      backInfoLink="intro#5-governance"
+      backInfoLink={`${DOCS_URL}/intro#governance`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-orange) 0%, transparent 70%)' }} />
       }
       illustrationSlot={
-        <div className="w-full h-full flex justify-center items-center pointer-events-none drop-shadow-[0_8px_8px_rgba(22,18,36,0.35)] absolute z-20">
-          <FIM1 viewBox="0 0 850 850" className="w-[60%] h-auto max-w-[140px]" />
+        <div className="w-full h-full flex justify-center items-center pointer-events-none drop-shadow-[0_8px_8px_rgba(22,18,36,0.45)] absolute z-20">
+          <DaoEmblem accent="#e65c00" deep="#b34a00" uid="dao" className="w-[72%] h-auto max-w-44" />
         </div>
       }
     />
@@ -1046,16 +1160,16 @@ export default function Home() {
       abilities={[
         { name: "Payback", desc: "Value flows via deflationary buybacks, liquidity injections, or Prize Pool Bonuses." }
       ]}
-      footerLeftText="Economics Guide"
+      footerLeftText="Economics"
       footerMiddleText='002 / 003'
       footerRightText="Doc. Reference ↗"
-      backInfoLink="intro#revenue-allocation"
+      backInfoLink={`${DOCS_URL}/intro#revenue-allocation`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-orange) 0%, transparent 70%)' }} />
       }
       illustrationSlot={
-        <div className="w-full h-full flex justify-center items-center pointer-events-none drop-shadow-[0_8px_8px_rgba(22,18,36,0.35)] absolute z-20">
-          <FIM1 viewBox="0 0 850 850" className="w-[60%] h-auto max-w-[140px]" />
+        <div className="w-full h-full flex justify-center items-center pointer-events-none drop-shadow-[0_8px_8px_rgba(22,18,36,0.45)] absolute z-20">
+          <YieldEmblem accent="#e65c00" deep="#b34a00" uid="yield" className="w-[72%] h-auto max-w-44" />
         </div>
       }
     />
@@ -1076,21 +1190,21 @@ export default function Home() {
       symbol={<span className="font-sans text-xs">∞</span>}
       classTitle="Type: Experiment"
       classSymbol="✦"
-      classDesc="A grand experiment about game theory, human coordination and markets 3.0"
+      classDesc="Shape the future of human coordination and markets in the era of web3"
       abilities={[
         { name: "Challenge", desc: "Challenge the status quo of web3, finance and markets in general." },
         { name: "Build the Future", desc: "Define a new paradigm for people-owned, people-governed economies." }
       ]}
-      footerLeftText="Vision Guide"
+      footerLeftText="Vision"
       footerMiddleText='003 / 003'
       footerRightText="Doc. Reference ↗"
-      backInfoLink="mission"
+      backInfoLink={`${DOCS_URL}/mission`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-orange) 0%, transparent 70%)' }} />
       }
       illustrationSlot={
-        <div className="w-full h-full flex justify-center items-center pointer-events-none drop-shadow-[0_8px_8px_rgba(22,18,36,0.35)] absolute z-20">
-          <FIM1 viewBox="0 0 850 850" className="w-[60%] h-auto max-w-[140px]" />
+        <div className="w-full h-full flex justify-center items-center pointer-events-none drop-shadow-[0_8px_8px_rgba(22,18,36,0.45)] absolute z-20">
+          <ParadigmEmblem accent="#e65c00" deep="#b34a00" uid="paradigm" className="w-[72%] h-auto max-w-44" />
         </div>
       }
     />
@@ -1109,33 +1223,42 @@ export default function Home() {
       headerTag="Launch"
       title="CAPITAL AUCTION"
       symbol="$"
-      classTitle="Launch: ICO"
+      classTitle="Launch: TGE"
       classSymbol="✦"
-      classDesc="Secure early alignment with the ecosystem."
+      classDesc="Regarded Tokens are minted and distributed"
       abilities={[
-        { name: "Acquisition", desc: "The Regarded Token will be launched in a fair capital auction." },
-        { name: "Supporters", desc: "Early alignment enables deep participation in future governance." }
+        { name: "Acquire", desc: "Buy Regarded Tokens at a single market-clearing price set by collective demand. Everyone buys in on equal terms." },
       ]}
       footerLeftText="Auction Phase"
-      footerMiddleText='002 / 003'
+      footerMiddleText='001 / 002'
       footerRightText="Doc. Reference ↗"
-      backInfoLink="http://app.localhost:3000/ico"
+      backInfoLink={`${DOCS_URL}/intro#capital-auction`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-sunset, #ff5e62) 0%, transparent 70%)' }} />
       }
       illustrationSlot={
-        <div className="w-full h-full flex justify-center items-center pointer-events-none drop-shadow-[0_8px_8px_rgba(22,18,36,0.35)] absolute z-20">
-          <FIM1 viewBox="0 0 850 850" className="w-[60%] h-auto max-w-[140px]" />
+        <div className="w-full h-full flex justify-center items-center pointer-events-none drop-shadow-[0_8px_8px_rgba(22,18,36,0.45)] absolute z-20">
+          <AuctionEmblem accent="#ff5e62" deep="#b83b5e" uid="auction" className="w-[72%] h-auto max-w-44" />
         </div>
       }
       actionButtonSlot={
-        <button
-          onClick={() => window.open('http://app.localhost:3000/ico')}
-          className="w-full py-2.5 px-4 rounded font-black text-[11px] uppercase tracking-widest text-center transition-all duration-300 hover:scale-[1.03] active:scale-95 text-black hover:opacity-90 shadow-md"
-          style={{ backgroundColor: 'var(--color-sunset, #ff5e62)' }}
-        >
-          Capital Auction
-        </button>
+        APP_LIVE ? (
+          <button
+            onClick={() => window.open('http://app.localhost:3000/ico')}
+            className="w-full py-2.5 px-4 rounded font-black text-[11px] uppercase tracking-widest text-center transition-all duration-300 hover:scale-[1.03] active:scale-95 text-black hover:opacity-90 shadow-md"
+            style={{ backgroundColor: 'var(--color-sunset, #ff5e62)' }}
+          >
+            Capital Auction
+          </button>
+        ) : (
+          <button
+            disabled
+            className="w-full py-2.5 px-4 rounded font-black text-[11px] uppercase tracking-widest text-center cursor-not-allowed opacity-60 text-black shadow-md"
+            style={{ backgroundColor: 'var(--color-sunset, #ff5e62)' }}
+          >
+            Coming Soon
+          </button>
+        )
       }
     />
   );
@@ -1155,31 +1278,40 @@ export default function Home() {
       symbol="⚒"
       classTitle="Campaign: Quests"
       classSymbol="✦"
-      classDesc="Ecosystem deployment trials and testing."
+      classDesc="Ecosystem deployment trial and game testing."
       abilities={[
-        { name: "Activity", desc: "Complete quests and play on Testnet to accumulate campaign score." },
-        { name: "TGE Conversion", desc: "Campaign points translate to utility tokens on TGE." }
+        { name: "Activity", desc: "Complete quests and play on the testnet to earn campaign points that translate to $RGD at TGE." },
       ]}
-      footerLeftText="Campaign Phase"
-      footerMiddleText='002 / 003'
+      footerLeftText="Testnet Phase"
+      footerMiddleText='002 / 002'
       footerRightText="Doc. Reference ↗"
-      backInfoLink="http://app.sepolia.localhost:3000/quests"
+      backInfoLink={`${DOCS_URL}/intro#testnet-quests`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-sunset, #ff5e62) 0%, transparent 70%)' }} />
       }
       illustrationSlot={
-        <div className="w-full h-full flex justify-center items-center pointer-events-none drop-shadow-[0_8px_8px_rgba(22,18,36,0.35)] absolute z-20">
-          <FIM1 viewBox="0 0 850 850" className="w-[60%] h-auto max-w-[140px]" />
+        <div className="w-full h-full flex justify-center items-center pointer-events-none drop-shadow-[0_8px_8px_rgba(22,18,36,0.45)] absolute z-20">
+          <QuestEmblem accent="#ff5e62" deep="#b83b5e" uid="quest" className="w-[72%] h-auto max-w-44" />
         </div>
       }
       actionButtonSlot={
-        <button
-          onClick={() => window.open('http://app.sepolia.localhost:3000/quests')}
-          className="w-full py-2.5 px-4 rounded font-black text-[11px] uppercase tracking-widest text-center transition-all duration-300 hover:scale-[1.03] active:scale-95 text-black hover:opacity-90 shadow-md"
-          style={{ backgroundColor: 'var(--color-sunset, #ff5e62)' }}
-        >
-          Quest Board
-        </button>
+        APP_LIVE ? (
+          <button
+            onClick={() => window.open('http://app.sepolia.localhost:3000/quests')}
+            className="w-full py-2.5 px-4 rounded font-black text-[11px] uppercase tracking-widest text-center transition-all duration-300 hover:scale-[1.03] active:scale-95 text-black hover:opacity-90 shadow-md"
+            style={{ backgroundColor: 'var(--color-sunset, #ff5e62)' }}
+          >
+            Quest Board
+          </button>
+        ) : (
+          <button
+            disabled
+            className="w-full py-2.5 px-4 rounded font-black text-[11px] uppercase tracking-widest text-center cursor-not-allowed opacity-60 text-black shadow-md"
+            style={{ backgroundColor: 'var(--color-sunset, #ff5e62)' }}
+          >
+            Coming Soon
+          </button>
+        )
       }
     />
   );
@@ -1235,18 +1367,11 @@ export default function Home() {
               className="hero-section absolute inset-0 flex items-center justify-center overflow-hidden"
               style={{ zIndex: heroActive ? 10 : 0, pointerEvents: heroActive ? 'auto' : 'none' }}
             >
-              {/* Background Light */}
-              <motion.div
-                initial={false}
-                animate={{ opacity: heroActive ? 0.25 : 0 }}
-                transition={{ duration: 0.5 }}
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50rem] h-[25rem] rounded-full [background:var(--sunset)] blur-[100px] pointer-events-none z-0"
-              />
-
               {/* Character home 1: giant near-transparent ghosts behind the headline.
                   Oversized and pushed past each edge, top-anchored so the heads stay
-                  visible and the feet are clipped by the section's overflow-hidden. */}
-              <div className="absolute inset-0 pointer-events-none z-10 flex items-start justify-between">
+                  visible and the feet are clipped by the section's overflow-hidden.
+                  Sits below the gradient glow (z-0) so the sunset effect reads on top. */}
+              <div className="absolute inset-0 pointer-events-none z-0 flex items-start justify-between">
                 <div ref={ghostRegardoRef} className="flex items-start -ml-[8vw] lg:-ml-[12vw]">
                   <AnimatePresence>
                     {characterHome === 'headline' && !charOverlay && (
@@ -1265,7 +1390,7 @@ export default function Home() {
                       <TravelIcon id="char-carlo" opacity={0.07} fromOpacity={charFromOpacity}>
                         <Carlo
                           className="h-[70vh] lg:h-[140vh] w-auto text-purple"
-                          viewBox="0 0 579.04352 781.15955"
+                          viewBox={CARLO_VIEWBOX}
                         />
                       </TravelIcon>
                     )}
@@ -1279,6 +1404,13 @@ export default function Home() {
                 transition={{ duration: 0.5 }}
                 className="relative flex flex-col items-center justify-center text-center pt-32 px-6 pb-24 max-w-5xl mx-auto z-20"
               >
+                {/* Soft-launch marker above the headline (cosmetic; the real
+                    gate is the middleware APP_LIVE check). */}
+                {!APP_LIVE && (
+                  <span className="font-mono text-base md:text-lg font-black uppercase tracking-[0.35em] mb-4 text-text2">
+                    Coming Soon
+                  </span>
+                )}
                 <h1 className="hero-title">
                   Class War<br />
                   <span className="hero-gradient-text">The Game</span>
@@ -1289,17 +1421,39 @@ export default function Home() {
 
                 
 
-                <div className="flex flex-wrap items-center justify-center gap-4 z-30 relative">
-                  <button onClick={() => goToSection('sectionHero')} className="btn-secondary">
-                    Learn More
-                  </button>
-                  <button onClick={() => navigateToDocs('intro')} className="btn-secondary">
-                    Read Docs
+                {/* `dark`: the header buttons render with dark-mode tokens in
+                    both themes, so they look identical in light and dark (matching
+                    the cards + rulebook below). */}
+                <div className="dark flex flex-wrap items-center justify-center gap-4 z-30 relative">
+                  <button onClick={() => navigateToDocs('')} className="btn-secondary">
+                    Docs
                   </button>
                   <button onClick={() => goToSection('sectionSecureYourStake')} className="btn-primary">
                     Secure Your Stake
                   </button>
                 </div>
+
+                {/* Scroll affordance: in place of a "Learn More" button, a
+                    static chevron that deals on to the first section below
+                    (Choose Your Hero). */}
+                <button
+                  type="button"
+                  aria-label="Scroll to next section"
+                  onClick={() => goToSection('sectionHero')}
+                  className="mt-24 z-30 relative text-text2 hover:text-text transition-colors cursor-pointer"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="32"
+                    height="32"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2}
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </button>
               </motion.div>
             </section>
 
@@ -1312,7 +1466,9 @@ export default function Home() {
               <motion.h2
                 initial={false}
                 animate={{ opacity: heroCardsActive ? 1 : 0 }}
-                transition={{ duration: 0.5, delay: heroCardsActive ? 0.2 : 0 }}
+                /* Sequential, no overlap: the incoming heading waits the full
+                   0.9s fade-out before fading in, so the two never cross-fade. */
+                transition={{ duration: 0.9, ease: 'easeInOut', delay: heroCardsActive ? 0.9 : 0 }}
                 className="h2-app mb-16 text-center text-[2.5rem] font-bold"
                 style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)', position: 'relative', zIndex: 0 }}
               >
@@ -1322,7 +1478,7 @@ export default function Home() {
               {/* Entered from the header, which has no outgoing cards to clear —
                   so the throw fires immediately (enterDelay 0) and the header
                   ghost icons fly down to land with it. */}
-              <div style={{ position: 'relative', zIndex: 10 }}>
+              <div className="dark" style={{ position: 'relative', zIndex: 10 }}>
                 {belowLg ? (
                   <CardThrow active={heroCardsActive} dir={throwDir} cardMaxWidth="425px" enterDelay={0}>
                     <CardDeck activeIndex={cardIndices['sectionHero'] ?? 0} height="675px" maxWidth="425px">
@@ -1332,10 +1488,21 @@ export default function Home() {
                   </CardThrow>
                 ) : (
                   <div className="grid md:grid-cols-2 gap-8 justify-items-center relative w-full max-w-5xl mx-auto">
-                    <div className="relative w-full max-w-106.25">
+                    {/* Three explicit stacking levels in one context so Carlo's
+                        descent flight can sit between the cards: Regardo card on
+                        top (z-20), Carlo's flying copy in the middle (z-10), Carlo
+                        card beneath (z-0). The cards don't overlap, so demoting
+                        Carlo's card is invisible — it only opens the gap the flight
+                        slots into (behind the Regardo card, in front of his own). */}
+                    <div className="relative w-full max-w-106.25 z-20">
                       <CardThrow active={heroCardsActive} dir={throwDir} index={0} total={2} spacing={562} cardMaxWidth="425px" enterDelay={0}>{regardoCard}</CardThrow>
                     </div>
-                    <div className="relative w-full max-w-106.25">
+                    {charOverlay?.carloBehindCards && (
+                      <div className="fixed inset-0 z-10 pointer-events-none">
+                        {renderCharFlight('carlo', charOverlay.carlo)}
+                      </div>
+                    )}
+                    <div className="relative w-full max-w-106.25 z-0">
                       <CardThrow active={heroCardsActive} dir={throwDir} index={1} total={2} spacing={562} cardMaxWidth="425px" enterDelay={0}>{carloCard}</CardThrow>
                     </div>
                   </div>
@@ -1352,14 +1519,14 @@ export default function Home() {
               <motion.h2
                 initial={false}
                 animate={{ opacity: playActive ? 1 : 0 }}
-                transition={{ duration: 0.5, delay: playActive ? 0.2 : 0 }}
+                transition={{ duration: 0.9, ease: 'easeInOut', delay: playActive ? 0.9 : 0 }}
                 className="h2-app mb-16 text-center text-[2.5rem] font-bold"
                 style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)', position: 'relative', zIndex: 0 }}
               >
                 Play the Game
               </motion.h2>
 
-              <div style={{ position: 'relative', zIndex: 10 }}>
+              <div className="dark" style={{ position: 'relative', zIndex: 10 }}>
                 {belowLg ? (
                   <CardThrow active={playActive} dir={throwDir} cardMaxWidth="425px">
                     <CardDeck activeIndex={cardIndices['sectionPlay'] ?? 0} height="675px" maxWidth="425px">
@@ -1389,14 +1556,14 @@ export default function Home() {
               <motion.h2
                 initial={false}
                 animate={{ opacity: ownActive ? 1 : 0 }}
-                transition={{ duration: 0.5, delay: ownActive ? 0.2 : 0 }}
+                transition={{ duration: 0.9, ease: 'easeInOut', delay: ownActive ? 0.9 : 0 }}
                 className="h2-app mb-16 text-center text-[2.5rem] font-bold"
                 style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)', position: 'relative', zIndex: 0 }}
               >
                 Own the Project
               </motion.h2>
 
-              <div style={{ position: 'relative', zIndex: 10 }}>
+              <div className="dark" style={{ position: 'relative', zIndex: 10 }}>
                 {belowLg ? (
                   <CardThrow active={ownActive} dir={throwDir} cardMaxWidth="425px">
                     <CardDeck activeIndex={cardIndices['sectionOwnMarket'] ?? 0} height="675px" maxWidth="425px">
@@ -1428,7 +1595,7 @@ export default function Home() {
                 <motion.h2
                   initial={false}
                   animate={{ opacity: distributionActive && (cardIndices['sectionDistribution'] ?? 0) === 0 ? 1 : 0 }}
-                  transition={{ duration: 0.5, delay: distributionActive && (cardIndices['sectionDistribution'] ?? 0) === 0 ? 0.2 : 0 }}
+                  transition={{ duration: 0.9, ease: 'easeInOut', delay: distributionActive && (cardIndices['sectionDistribution'] ?? 0) === 0 ? 0.9 : 0 }}
                   className="h2-app text-center text-2xl lg:text-[2.5rem] font-bold"
                   style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)' }}
                 >
@@ -1437,7 +1604,7 @@ export default function Home() {
                 <motion.h2
                   initial={false}
                   animate={{ opacity: distributionActive && (cardIndices['sectionDistribution'] ?? 0) === 1 ? 1 : 0 }}
-                  transition={{ duration: 0.5, delay: distributionActive && (cardIndices['sectionDistribution'] ?? 0) === 1 ? 0.2 : 0 }}
+                  transition={{ duration: 0.9, ease: 'easeInOut', delay: distributionActive && (cardIndices['sectionDistribution'] ?? 0) === 1 ? 0.9 : 0 }}
                   className="h2-app text-center text-2xl lg:text-[2.5rem] font-bold absolute inset-0"
                   style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)' }}
                 >
@@ -1448,7 +1615,9 @@ export default function Home() {
                 initial={false}
                 animate={{ opacity: distributionActive ? 1 : 0 }}
                 transition={{ duration: 0.5, delay: distributionActive ? 0.2 : 0 }}
-                className="w-full max-w-7xl mx-auto"
+                /* `dark`: the rulebook renders with dark-mode tokens in both
+                   themes, so it looks identical in light and dark. */
+                className="dark w-full max-w-7xl mx-auto"
                 style={{ height: '675px' }}
               >
                 <Rulebook
@@ -1468,14 +1637,14 @@ export default function Home() {
               <motion.h2
                 initial={false}
                 animate={{ opacity: stakeActive ? 1 : 0 }}
-                transition={{ duration: 0.5, delay: stakeActive ? 0.2 : 0 }}
+                transition={{ duration: 0.9, ease: 'easeInOut', delay: stakeActive ? 0.9 : 0 }}
                 className="h2-app text-center mb-16 text-[2.5rem] font-bold"
                 style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)', position: 'relative', zIndex: 0 }}
               >
                 Secure Your Stake
               </motion.h2>
 
-              <div style={{ position: 'relative', zIndex: 10 }}>
+              <div className="dark" style={{ position: 'relative', zIndex: 10 }}>
                 {belowLg ? (
                   <CardThrow active={stakeActive} dir={throwDir} cardMaxWidth="425px">
                     <CardDeck activeIndex={cardIndices['sectionSecureYourStake'] ?? 0} height="675px" maxWidth="425px">
@@ -1496,40 +1665,19 @@ export default function Home() {
 
           {/* Overlay flights: free copies of the characters fly from their
               previous home onto the receiving card's settled icon slots while
-              that card is still being thrown, landing together. */}
+              that card is still being thrown, landing together. This detached
+              z-50 layer sits above the whole card grid. On the Choose Your Hero
+              descent Carlo is omitted here and rendered inside the grid instead
+              (carloBehindCards), interleaved between the two card wrappers so he
+              reads behind the Regardo card yet in front of his own. */}
           {charOverlay && (
             <div className="fixed inset-0 z-50 pointer-events-none">
-              {([
-                { key: 'regardo', flight: charOverlay.regardo },
-                { key: 'carlo', flight: charOverlay.carlo },
-              ] as const).map(({ key, flight }) => (
-                <motion.div
-                  key={key}
-                  className="absolute"
-                  style={{
-                    left: flight.from.x,
-                    top: flight.from.y,
-                    width: flight.from.w,
-                    height: flight.from.h,
-                    transformOrigin: 'top left',
-                  }}
-                  initial={{ x: 0, y: 0, scale: 1, opacity: charOverlay.fromOpacity }}
-                  animate={{
-                    x: flight.to.x - flight.from.x,
-                    y: flight.to.y - flight.from.y,
-                    /* Uniform scale: every home renders the same SVG aspect. */
-                    scale: flight.to.h / flight.from.h,
-                    opacity: 1,
-                  }}
-                  transition={{ duration: charOverlay.duration, ease: 'easeOut' }}
-                >
-                  {key === 'regardo' ? (
-                    <Regardo className="w-full h-full text-gold" viewBox="0 0 491.52783 788.49512" />
-                  ) : (
-                    <Carlo className="w-full h-full text-purple" viewBox="0 0 579.04352 781.15955" />
-                  )}
-                </motion.div>
-              ))}
+              {renderCharFlight('regardo', charOverlay.regardo)}
+              {/* On the Choose Your Hero descent Carlo flies inside the card grid
+                  instead (between the two card wrappers) so he reads behind the
+                  Regardo card and in front of his own; here he only flies on the
+                  other flights, where there is no such card to tuck behind. */}
+              {!charOverlay.carloBehindCards && renderCharFlight('carlo', charOverlay.carlo)}
             </div>
           )}
         </main>

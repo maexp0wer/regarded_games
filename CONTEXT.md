@@ -47,6 +47,15 @@ name modifies another noun, use the adjective:
 Capitalist** and **Carlo the Socialist** keep their proper names; "Socialist"
 survives only as Carlo's archetype descriptor, not as a faction label.)
 
+**The two *philosophies* are a separate axis from the faction labels.** Lowercase
+**capitalism** (capital concentration) and **socialism** (redistribution) are the
+permitted names for the *ideologies the game stages* — distinct from who's
+playing. So: the philosophies are "capitalism vs. socialism"; the factions and
+players are "Capitalist / Proletariat / Proletarian". Do **not** "correct" a
+deliberate lowercase "socialism" (the ideology) into "Proletariat" (the faction).
+The Whitepaper Introduction and Part I §3 use "socialism/capitalism" in exactly
+this ideological sense.
+
 **"Oligarchy" and "Masses" are NOT faction labels** — they are the precise names
 of the supply-share *coalitions* at settlement (the set of holders ≥50% / ≤50% of
 supply; see below). Use them only when naming the cut or the payout coalition,
