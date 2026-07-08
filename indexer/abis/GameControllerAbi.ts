@@ -16,9 +16,34 @@ export const GameControllerAbi = [
         "name": "_staking",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "_factory",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "acceptOwnership",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "factory",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -71,6 +96,19 @@ export const GameControllerAbi = [
   {
     "type": "function",
     "name": "owner",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "pendingOwner",
     "inputs": [],
     "outputs": [
       {
@@ -145,7 +183,7 @@ export const GameControllerAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "_gameDuration",
+        "name": "_tradingDuration",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -188,6 +226,46 @@ export const GameControllerAbi = [
         "name": "_rgdWeiLockedPerFim",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "_bondAmountUsdc",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_tradeFeeBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_triageWindowSeconds",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_investigationWindowSeconds",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_settlementTimeoutSeconds",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_buybackRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_liquidityRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_daoRecipient",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -231,6 +309,25 @@ export const GameControllerAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "OwnershipTransferStarted",
+    "inputs": [
+      {
+        "name": "previousOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",

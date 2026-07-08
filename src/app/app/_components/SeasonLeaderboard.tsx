@@ -52,6 +52,20 @@ const CATEGORIES: Category[] = [
 
 const truncate = (addr: string) => `${addr.slice(0, 5)}…${addr.slice(-3)}`;
 
+// Council sybil flag for THIS season. Neutral, factual wording (ADR-0008): the
+// flag is a season-scoped record, not a verdict on the player.
+function FlaggedTag() {
+  return (
+    <span
+      className="font-mono text-[8px] font-black uppercase tracking-wider px-1 py-px rounded shrink-0"
+      style={{ background: 'var(--color-red-15)', color: 'var(--color-red)', border: '1px solid var(--color-red-35)' }}
+      title="Flagged by the Council this season — payout forfeited; the season settles as a draw."
+    >
+      Flagged
+    </span>
+  );
+}
+
 // ---- Preview table (top-10 in the card, clickable to open modal) ----
 
 interface PreviewTableProps {
@@ -107,6 +121,7 @@ function PreviewTable({ category, entries, names, connectedAddress, onOpen }: Pr
                   <span className={`font-sans text-xs font-semibold shrink-0 ${isYou ? 'text-bg' : 'text-text'}`}>
                     {names.get(entry.address) ?? 'Regarded Anon'}
                   </span>
+                  {entry.isFlagged && <FlaggedTag />}
                   <span className={`ledger-cell-secondary truncate min-w-0 ${isYou ? 'text-bg!' : ''}`}>
                     {truncate(entry.address)}
                   </span>
@@ -288,6 +303,7 @@ function LeaderboardModal({
                             >
                               {names.get(entry.address) ?? 'Regarded Anon'}
                             </span>
+                            {entry.isFlagged && <FlaggedTag />}
                             <span
                               className={`ledger-cell-secondary shrink-0 ${isYou ? 'text-bg!' : ''}`}
                             >

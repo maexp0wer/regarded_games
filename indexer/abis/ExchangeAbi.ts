@@ -23,7 +23,17 @@ export const ExchangeAbi = [
         "internalType": "address"
       },
       {
+        "name": "_staking",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
         "name": "_tradeFeeBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_rgdLockedPerFim",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -38,6 +48,19 @@ export const ExchangeAbi = [
         "name": "orderId",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "cancelOrders",
+    "inputs": [
+      {
+        "name": "orderIds",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
       }
     ],
     "outputs": [],
@@ -138,13 +161,6 @@ export const ExchangeAbi = [
   },
   {
     "type": "function",
-    "name": "openSettlement",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "orders",
     "inputs": [
       {
@@ -189,7 +205,7 @@ export const ExchangeAbi = [
   },
   {
     "type": "function",
-    "name": "settleCursor",
+    "name": "rgdLockedPerFim",
     "inputs": [],
     "outputs": [
       {
@@ -202,26 +218,13 @@ export const ExchangeAbi = [
   },
   {
     "type": "function",
-    "name": "settleOrders",
-    "inputs": [
-      {
-        "name": "maxCount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "settlementOpen",
+    "name": "staking",
     "inputs": [],
     "outputs": [
       {
         "name": "",
-        "type": "bool",
-        "internalType": "bool"
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"

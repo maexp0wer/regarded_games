@@ -13,27 +13,7 @@
         "internalType": "address"
       },
       {
-        "name": "_router",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
         "name": "_reg",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_buybackRecipient",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_liquidityRecipient",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_daoRecipient",
         "type": "address",
         "internalType": "address"
       }
@@ -55,8 +35,33 @@
   },
   {
     "type": "function",
-    "name": "buybackRecipient",
-    "inputs": [],
+    "name": "accruedYield",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "accruingSeasons",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
     "outputs": [
       {
         "name": "",
@@ -83,19 +88,6 @@
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "daoRecipient",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -140,6 +132,44 @@
     "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "hasRetired",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isAccruing",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -200,19 +230,6 @@
   },
   {
     "type": "function",
-    "name": "liquidityRecipient",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "owner",
     "inputs": [],
     "outputs": [
@@ -264,6 +281,25 @@
   },
   {
     "type": "function",
+    "name": "seasonDaoRecipient",
+    "inputs": [
+      {
+        "name": "_s",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "seasonPolicies",
     "inputs": [
       {
@@ -292,6 +328,21 @@
         "name": "daoBps",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "buybackRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "liquidityRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "daoRecipient",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -335,32 +386,6 @@
   },
   {
     "type": "function",
-    "name": "setBuybackRecipient",
-    "inputs": [
-      {
-        "name": "_r",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setDaoRecipient",
-    "inputs": [
-      {
-        "name": "_r",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "setExchangeApproval",
     "inputs": [
       {
@@ -372,19 +397,6 @@
         "name": "_status",
         "type": "bool",
         "internalType": "bool"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setLiquidityRecipient",
-    "inputs": [
-      {
-        "name": "_r",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -418,6 +430,21 @@
         "name": "_d",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "_buybackRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_liquidityRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_daoRecipient",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -425,26 +452,8 @@
   },
   {
     "type": "function",
-    "name": "swapRouter",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "sweepSeasonPrincipal",
     "inputs": [
-      {
-        "name": "_season",
-        "type": "address",
-        "internalType": "address"
-      },
       {
         "name": "_to",
         "type": "address",
@@ -453,6 +462,19 @@
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "totalAccruedYield",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -552,25 +574,6 @@
   },
   {
     "type": "event",
-    "name": "RecipientUpdated",
-    "inputs": [
-      {
-        "name": "kind",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "recipient",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "SeasonPolicySet",
     "inputs": [
       {
@@ -608,7 +611,70 @@
   },
   {
     "type": "event",
+    "name": "SeasonRecipientsSet",
+    "inputs": [
+      {
+        "name": "season",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "buyback",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "liquidity",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "dao",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SeasonRetired",
+    "inputs": [
+      {
+        "name": "season",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "TradingFeeCollected",
+    "inputs": [
+      {
+        "name": "season",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "YieldAttributed",
     "inputs": [
       {
         "name": "season",

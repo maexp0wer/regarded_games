@@ -3,6 +3,7 @@
 import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { Order, useOrderBook } from '@/hooks/useOrderBook';
 import { useBatchPlayerClass } from '@/hooks/useBatchPlayerClass';
+import { useFlaggedWallets } from '@/hooks/useFlaggedWallets';
 import { PercentileCircle } from './PercentileCircle';
 import PercentRangeSlider from './PercentRangeSlider';
 
@@ -56,6 +57,7 @@ export function OrderBook({
   }, [data]);
 
   const { data: classMap } = useBatchPlayerClass(seasonAddress, uniqueMakers);
+  const { data: flaggedMap } = useFlaggedWallets();
 
   const priceRows = useMemo(() => {
     const bidsRaw = data?.bids || [];
@@ -183,15 +185,34 @@ export function OrderBook({
     }
   };
 
+  // Cross-season flag history (display only, ADR-0008): a dot on makers flagged
+  // in a PRIOR season. Neutral, season-scoped wording — a record, not a verdict.
+  const renderFlagDot = (makerAddress: string) => {
+    const flaggedSeasons = flaggedMap?.get(makerAddress.toLowerCase());
+    if (!flaggedSeasons || flaggedSeasons.length === 0) return null;
+    const label = flaggedSeasons.length === 1
+      ? `Flagged — Season ${flaggedSeasons[0]}`
+      : `Flagged — Seasons ${flaggedSeasons.join(', ')}`;
+    return (
+      <span
+        className="h-1.5 w-1.5 rounded-full shrink-0 mx-0.5"
+        style={{ background: 'var(--color-red)' }}
+        title={`${label}. Flags are per-season history and carry no penalty here.`}
+      />
+    );
+  };
+
   const renderRank = (makerAddress: string, align: 'start' | 'end') => {
     const stats = classMap?.[makerAddress.toLowerCase()];
     if (!stats) return (
       <div className={`flex w-full items-center ${align === 'end' ? 'justify-end' : 'justify-start'}`}>
+        {renderFlagDot(makerAddress)}
         <span className="font-mono text-[10px] opacity-20 text-text2">—</span>
       </div>
     );
     return (
       <div className={`flex w-full items-center ${align === 'end' ? 'justify-end' : 'justify-start'}`}>
+        {renderFlagDot(makerAddress)}
         <span className="sm:hidden">
           <PercentileCircle percentage={stats.classPercentile} isCapitalist={stats.isCapitalist} size="xxs" />
         </span>

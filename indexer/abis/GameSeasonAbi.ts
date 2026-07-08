@@ -18,7 +18,7 @@ export const GameSeasonAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "_gameDuration",
+        "name": "_tradingDuration",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -28,7 +28,7 @@ export const GameSeasonAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "_beta",
+        "name": "_baseMultiplierBps",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -56,22 +56,29 @@ export const GameSeasonAbi = [
         "name": "_existentialThresholdFim",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "BOND_AMOUNT",
-    "inputs": [],
-    "outputs": [
+      },
       {
-        "name": "",
+        "name": "_bondAmountUsdc",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_triageWindowSeconds",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_investigationWindowSeconds",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_settlementTimeoutSeconds",
         "type": "uint256",
         "internalType": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -114,7 +121,33 @@ export const GameSeasonAbi = [
   },
   {
     "type": "function",
-    "name": "beta",
+    "name": "auctionStartTime",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "baseMultiplierBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "bondAmountUsdc",
     "inputs": [],
     "outputs": [
       {
@@ -147,8 +180,14 @@ export const GameSeasonAbi = [
   },
   {
     "type": "function",
-    "name": "createdAt",
-    "inputs": [],
+    "name": "computePayout",
+    "inputs": [
+      {
+        "name": "player",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
     "outputs": [
       {
         "name": "",
@@ -157,6 +196,13 @@ export const GameSeasonAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "concludeInvestigation",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -174,6 +220,19 @@ export const GameSeasonAbi = [
   {
     "type": "function",
     "name": "daoBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "distributionStartTime",
     "inputs": [],
     "outputs": [
       {
@@ -212,6 +271,19 @@ export const GameSeasonAbi = [
   },
   {
     "type": "function",
+    "name": "exchange",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "existentialThresholdFim",
     "inputs": [],
     "outputs": [
@@ -219,6 +291,19 @@ export const GameSeasonAbi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "fim",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -244,14 +329,8 @@ export const GameSeasonAbi = [
   },
   {
     "type": "function",
-    "name": "finalPayoutUSDC",
-    "inputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
+    "name": "finalPoolSize",
+    "inputs": [],
     "outputs": [
       {
         "name": "",
@@ -290,6 +369,32 @@ export const GameSeasonAbi = [
   },
   {
     "type": "function",
+    "name": "flagWallets",
+    "inputs": [
+      {
+        "name": "wallets",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "forcedDraw",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "g_current",
     "inputs": [],
     "outputs": [
@@ -316,19 +421,6 @@ export const GameSeasonAbi = [
   },
   {
     "type": "function",
-    "name": "gameDuration",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getConfig",
     "inputs": [],
     "outputs": [
@@ -338,7 +430,7 @@ export const GameSeasonAbi = [
         "internalType": "struct GameSeason.SeasonConfig",
         "components": [
           {
-            "name": "createdAt",
+            "name": "auctionStartTime",
             "type": "uint256",
             "internalType": "uint256"
           },
@@ -348,7 +440,7 @@ export const GameSeasonAbi = [
             "internalType": "uint256"
           },
           {
-            "name": "gameDuration",
+            "name": "tradingDuration",
             "type": "uint256",
             "internalType": "uint256"
           },
@@ -358,7 +450,7 @@ export const GameSeasonAbi = [
             "internalType": "uint256"
           },
           {
-            "name": "beta",
+            "name": "baseMultiplierBps",
             "type": "uint256",
             "internalType": "uint256"
           },
@@ -420,7 +512,26 @@ export const GameSeasonAbi = [
   },
   {
     "type": "function",
-    "name": "giniAccumulator",
+    "name": "hasClaimed",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "investigationWindowSeconds",
     "inputs": [],
     "outputs": [
       {
@@ -448,6 +559,25 @@ export const GameSeasonAbi = [
     "type": "function",
     "name": "isDraw",
     "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isFlagged",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
     "outputs": [
       {
         "name": "",
@@ -549,6 +679,13 @@ export const GameSeasonAbi = [
   },
   {
     "type": "function",
+    "name": "openDistribution",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "owner",
     "inputs": [],
     "outputs": [
@@ -581,6 +718,19 @@ export const GameSeasonAbi = [
   },
   {
     "type": "function",
+    "name": "prizePoolBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "processBatch",
     "inputs": [
       {
@@ -607,7 +757,14 @@ export const GameSeasonAbi = [
   },
   {
     "type": "function",
-    "name": "prizePoolBps",
+    "name": "raiseSuspicion",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "regAccumulator",
     "inputs": [],
     "outputs": [
       {
@@ -627,20 +784,20 @@ export const GameSeasonAbi = [
   },
   {
     "type": "function",
-    "name": "seasonDuration",
-    "inputs": [],
-    "outputs": [
+    "name": "resetSettlement",
+    "inputs": [
       {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "newStarter",
+        "type": "address",
+        "internalType": "address"
       }
     ],
-    "stateMutability": "view"
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
-    "name": "seasonStartTime",
+    "name": "reviewPhaseStart",
     "inputs": [],
     "outputs": [
       {
@@ -666,6 +823,45 @@ export const GameSeasonAbi = [
   },
   {
     "type": "function",
+    "name": "setExchange",
+    "inputs": [
+      {
+        "name": "_exchange",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setFim",
+    "inputs": [
+      {
+        "name": "_fim",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "settlementDeadline",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "settlementStarter",
     "inputs": [],
     "outputs": [
@@ -679,7 +875,7 @@ export const GameSeasonAbi = [
   },
   {
     "type": "function",
-    "name": "solidarityFundTokens",
+    "name": "settlementTimeoutSeconds",
     "inputs": [],
     "outputs": [
       {
@@ -719,7 +915,40 @@ export const GameSeasonAbi = [
   },
   {
     "type": "function",
-    "name": "totalPositiveNetContrib",
+    "name": "sweepUnclaimed",
+    "inputs": [
+      {
+        "name": "to",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "swept",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "takeOverSettlement",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "totalPositiveNetContribution",
     "inputs": [],
     "outputs": [
       {
@@ -733,6 +962,32 @@ export const GameSeasonAbi = [
   {
     "type": "function",
     "name": "totalSupply",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "tradingDuration",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "tradingStartTime",
     "inputs": [],
     "outputs": [
       {
@@ -765,6 +1020,19 @@ export const GameSeasonAbi = [
         "name": "",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "triageWindowSeconds",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -835,6 +1103,25 @@ export const GameSeasonAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "DistributionOpened",
+    "inputs": [
+      {
+        "name": "finalPoolSize",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "InvestigationConcluded",
+    "inputs": [],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -938,6 +1225,25 @@ export const GameSeasonAbi = [
   },
   {
     "type": "event",
+    "name": "SettlementTakenOver",
+    "inputs": [
+      {
+        "name": "previousStarter",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newStarter",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "StateChanged",
     "inputs": [
       {
@@ -945,6 +1251,31 @@ export const GameSeasonAbi = [
         "type": "uint8",
         "indexed": false,
         "internalType": "enum GameSeason.State"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SuspicionRaised",
+    "inputs": [],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "UnclaimedSwept",
+    "inputs": [
+      {
+        "name": "to",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -975,6 +1306,19 @@ export const GameSeasonAbi = [
     "anonymous": false
   },
   {
+    "type": "event",
+    "name": "WalletFlagged",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
     "type": "error",
     "name": "OwnableInvalidOwner",
     "inputs": [
@@ -1000,6 +1344,17 @@ export const GameSeasonAbi = [
     "type": "error",
     "name": "ReentrancyGuardReentrantCall",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SafeCastOverflowedIntToUint",
+    "inputs": [
+      {
+        "name": "value",
+        "type": "int256",
+        "internalType": "int256"
+      }
+    ]
   },
   {
     "type": "error",

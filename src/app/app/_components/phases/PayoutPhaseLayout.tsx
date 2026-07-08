@@ -114,7 +114,7 @@ export function PayoutPhaseLayout({
     </>
   );
   const leaderboard = <SeasonLeaderboard seasonAddress={seasonAddress} seasonName={formattedName} />;
-  const payoutMask = <PayoutMask seasonAddress={seasonAddress} className="h-full max-h-none" />;
+  const payoutMask = <PayoutMask seasonAddress={seasonAddress} exchangeAddress={exchangeAddress} className="h-full max-h-none" />;
 
   return (
     // Root fills at least the viewport (minus the AppShell's pb-6 = 1.5rem). No

@@ -28,7 +28,7 @@ export const AuctionAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "_rgdWeiLockedPerFim",
+        "name": "_rgdLockedPerFim",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -76,26 +76,13 @@ export const AuctionAbi = [
   },
   {
     "type": "function",
-    "name": "rgdWeiLockedPerFim",
+    "name": "deployer",
     "inputs": [],
     "outputs": [
       {
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "duration",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -141,6 +128,19 @@ export const AuctionAbi = [
   },
   {
     "type": "function",
+    "name": "rgdLockedPerFim",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "setFim",
     "inputs": [
       {
@@ -161,19 +161,6 @@ export const AuctionAbi = [
         "name": "",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "startTime",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"

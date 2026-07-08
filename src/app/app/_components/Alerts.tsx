@@ -9,12 +9,15 @@ import Link from 'next/link';
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import type { Abi } from 'abitype';
+import ExchangeAbi from '@/deployments/abis/Exchange.json';
 import { usePayout } from '@/hooks/usePayout';
 import { useOpenOrders } from '@/hooks/useOpenOrders';
+import { useSeasonEndgame } from '@/hooks/useSeasonEndgame';
 import { useDiscourseAlerts, type PendingPoll, type ReplyGroup } from '@/hooks/useDiscourseAlerts';
 import { forumLoginUrl } from '@/utils/discourseForum';
 import { isUserRejection, isInsufficientGas } from '@/utils/revertReason';
 import { TxModal } from './TxModal';
+import { CountdownTicker } from './CountdownTicker';
 
 const CONTROLLER_ABI = [{
   type: 'function', name: 'seasons',
@@ -133,12 +136,8 @@ function ClaimableCard({
   const publicClient = usePublicClient({ chainId });
   const { writeContractAsync } = useWriteContract();
 
-  const { payout, pnl, hasClaimed: hasClaimedChain, loading, refetch } = usePayout(season.season, playerAddress as Address);
-
-  // Open sell orders escrow FIM; claimPayout() reverts until they're cancelled
-  // or settled — mirror PayoutMask and block the claim with an explanation.
-  const { data: openOrders = [] } = useOpenOrders(season.season, playerAddress, 'open');
-  const hasSellOrders = openOrders.some((o) => !o.isBuy);
+  const { payout, pnl, hasClaimed: hasClaimedChain, hasBalance, loading, refetch } = usePayout(season.season, playerAddress as Address);
+  const { claimDeadline, swept } = useSeasonEndgame(season.season);
 
   const [status, setStatus] = useState<ClaimStatus>('idle');
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -150,7 +149,9 @@ function ClaimableCard({
   // Already-claimed seasons must not surface as "Claimable". Note `payout` is
   // still positive after a claim — usePayout swaps in the realized amount for
   // display — so `hasClaimed` is the authoritative gate, not the amount.
-  const isClaimable = !loading && !hasClaimed && payout > 0;
+  // After a sweep the payout is legitimately $0, but claiming still releases the
+  // staked collateral — keep warning the dormant user while they hold a stake.
+  const isClaimable = !loading && !hasClaimed && (payout > 0 || (swept && hasBalance));
 
   // Report this season's claimable state up so the parent's count / pill /
   // whole-pane visibility match what actually renders (not the raw PAYOUT scan).
@@ -170,7 +171,7 @@ function ClaimableCard({
     // The card body is a Link to the season page; keep the button from navigating.
     e.preventDefault();
     e.stopPropagation();
-    if (!publicClient || hasSellOrders || isBusy || status !== 'idle') return;
+    if (!publicClient || isBusy || status !== 'idle') return;
     setTxHash(null);
 
     try {
@@ -209,17 +210,17 @@ function ClaimableCard({
   return (
     <>
       <Link href={`/season_${season.id}`} className="block">
-        <AlertItem accentVar="--color-gold">
+        <AlertItem accentVar={swept ? '--color-red' : '--color-gold'}>
           <div className="flex flex-col gap-2 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-2xl shrink-0">
               S<em className="not-italic font-medium text-text2 tabular-nums">{String(season.id).padStart(2, '0')}</em>
             </p>
-              
+
               <span
-                className='font-mono text-[10px] bg-gold px-2 py-0.5 rounded text-[var(--color-bg)] uppercase tracking-wider font-bold'
+                className={`font-mono text-[10px] ${swept ? 'bg-red' : 'bg-gold'} px-2 py-0.5 rounded text-[var(--color-bg)] uppercase tracking-wider font-bold`}
               >
-                Claim Ready
+                {swept ? 'Claim Expired' : 'Claim Ready'}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-sans text-xs text-text">
@@ -237,18 +238,20 @@ function ClaimableCard({
                 </strong>
               </span>
             </div>
-            {hasSellOrders && (
+            {swept ? (
               <span className="font-mono text-[10px] text-red uppercase tracking-wider">
-                Cancel open sell orders before claiming
+                Unclaimed payouts were swept — claiming still releases your staked collateral
               </span>
-            )}
+            ) : claimDeadline > 0 ? (
+              <CountdownTicker targetTimestamp={claimDeadline} label="Claim Window Ends" inline />
+            ) : null}
           </div>
 
           <button
             type="button"
             onClick={handleClaim}
-            disabled={hasSellOrders || isBusy}
-            className={`btn-game-primary text-xs font-black tracking-wider uppercase py-2 px-4 h-fit shrink-0 ${hasSellOrders || isBusy ? 'opacity-60 cursor-not-allowed!' : ''}`}
+            disabled={isBusy}
+            className={`btn-game-primary text-xs font-black tracking-wider uppercase py-2 px-4 h-fit shrink-0 ${isBusy ? 'opacity-60 cursor-not-allowed!' : ''}`}
           >
             {isBusy ? 'Confirming…' : 'Claim'}
           </button>
@@ -270,6 +273,256 @@ function ClaimableCard({
           },
         ]}
         onClose={handleCloseModal}
+      />
+    </>
+  );
+}
+
+// ─── Review window: TRIAGE / INVESTIGATION (Purple) ──────────────────────────
+
+function ReviewCard({
+  season,
+  playerAddress,
+  onVisibleChange,
+}: {
+  season: { id: number; season: string; phase: string };
+  playerAddress: string;
+  onVisibleChange: (seasonAddress: string, visible: boolean) => void;
+}) {
+  const chainId = useTenantChainId();
+  const publicClient = usePublicClient({ chainId });
+  const queryClient = useQueryClient();
+  const { writeContractAsync } = useWriteContract();
+
+  const { payout, hasBalance, loading } = usePayout(season.season, playerAddress as Address);
+  const { reviewWindowEnd, reviewExpired, forcedDraw, refetch } = useSeasonEndgame(season.season);
+
+  const [status, setStatus] = useState<ClaimStatus>('idle');
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const isBusy = status === 'executing' || status === 'mining';
+
+  const isTriage = season.phase === 'TRIAGE';
+  // Only participants care that their payout is pending review.
+  const isVisible = !loading && (hasBalance || payout > 0);
+
+  useEffect(() => {
+    onVisibleChange(season.season, isVisible);
+    return () => onVisibleChange(season.season, false);
+  }, [season.season, isVisible, onVisibleChange]);
+
+  // openDistribution() is permissionless once the window lapses (§1). After it
+  // lands the season is in PAYOUT — refresh the scan so the claim card takes over.
+  const handleOpen = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!publicClient || isBusy || status !== 'idle') return;
+    setTxHash(null);
+    try {
+      setStatus('executing');
+      const hash = await writeContractAsync({
+        address: season.season as `0x${string}`,
+        abi: GameSeasonAbi as Abi,
+        functionName: 'openDistribution',
+        args: [],
+      });
+      setTxHash(hash);
+      setStatus('mining');
+      await publicClient.waitForTransactionReceipt({ hash: hash as `0x${string}` });
+      setStatus('success');
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['claimable-scan'] });
+    } catch (err: unknown) {
+      if (isUserRejection(err)) {
+        setStatus('canceled');
+        setTimeout(() => setStatus('idle'), 2000);
+      } else if (isInsufficientGas(err)) {
+        setStatus('no_gas');
+      } else {
+        setStatus('failed');
+      }
+    }
+  };
+
+  if (!isVisible) return null;
+
+  return (
+    <>
+      <Link href={`/season_${season.id}`} className="block">
+        <AlertItem accentVar="--color-purple">
+          <div className="flex flex-col gap-2 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-2xl shrink-0">
+              S<em className="not-italic font-medium text-text2 tabular-nums">{String(season.id).padStart(2, '0')}</em>
+            </p>
+              <span className="font-mono text-[10px] bg-purple px-2 py-0.5 rounded text-[var(--color-bg)] uppercase tracking-wider font-bold">
+                {isTriage ? 'Triage' : 'Under Investigation'}
+              </span>
+            </div>
+            <p className="font-sans text-xs text-text">
+              {isTriage
+                ? 'Post-settlement triage — payouts open when the window lapses.'
+                : 'The Council is investigating suspected sybil play — payouts are on hold.'}
+              {forcedDraw && (
+                <strong className="text-red"> A wallet was flagged: the season settles as a draw.</strong>
+              )}
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 shrink-0">
+            {reviewExpired ? (
+              <button
+                type="button"
+                onClick={handleOpen}
+                disabled={isBusy}
+                className={`btn-game-primary text-xs font-black tracking-wider uppercase py-2 px-4 h-fit shrink-0 ${isBusy ? 'opacity-60 cursor-not-allowed!' : ''}`}
+              >
+                {isBusy ? 'Confirming…' : 'Open Distribution'}
+              </button>
+            ) : (
+              <CountdownTicker targetTimestamp={reviewWindowEnd} label="Payouts Open In" inline />
+            )}
+          </div>
+        </AlertItem>
+      </Link>
+
+      <TxModal
+        status={status}
+        txHashes={[txHash]}
+        title="Opening Distribution"
+        successTitle="Distribution Opened"
+        successMessage="Payouts are live — all players can claim now."
+        steps={[
+          {
+            label: 'Open Distribution',
+            description: 'Snapshot the pool and unlock claims',
+            activeStatuses: ['executing', 'mining'],
+            completeStatuses: ['success'],
+          },
+        ]}
+        onClose={() => { setStatus('idle'); setTxHash(null); }}
+      />
+    </>
+  );
+}
+
+// ─── Stranded escrow (Red) ────────────────────────────────────────────────────
+
+function EscrowCard({
+  season,
+  playerAddress,
+  onVisibleChange,
+}: {
+  season: { id: number; season: string; exchange: string };
+  playerAddress: string;
+  onVisibleChange: (seasonAddress: string, visible: boolean) => void;
+}) {
+  const chainId = useTenantChainId();
+  const publicClient = usePublicClient({ chainId });
+  const { writeContractAsync } = useWriteContract();
+
+  const { data: openOrders = [], refetch } = useOpenOrders(season.season, playerAddress, 'open');
+
+  const [status, setStatus] = useState<ClaimStatus>('idle');
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const isBusy = status === 'executing' || status === 'mining';
+
+  const isVisible = openOrders.length > 0;
+
+  useEffect(() => {
+    onVisibleChange(season.season, isVisible);
+    return () => onVisibleChange(season.season, false);
+  }, [season.season, isVisible, onVisibleChange]);
+
+  let usdcLocked = 0;
+  let fimLocked = 0;
+  for (const o of openOrders) {
+    if (o.isBuy) usdcLocked += o.remainingAmount * o.price;
+    else fimLocked += o.remainingAmount;
+  }
+
+  // One-click cancelOrders over the Ponder-derived id list — stale/filled ids
+  // are skipped on-chain, so a mid-refetch list is safe (§4).
+  const handleReclaim = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!publicClient || isBusy || status !== 'idle' || openOrders.length === 0) return;
+    setTxHash(null);
+    try {
+      setStatus('executing');
+      const hash = await writeContractAsync({
+        address: season.exchange as `0x${string}`,
+        abi: ExchangeAbi as Abi,
+        functionName: 'cancelOrders',
+        args: [openOrders.map((o) => o.orderId)],
+      });
+      setTxHash(hash);
+      setStatus('mining');
+      await publicClient.waitForTransactionReceipt({ hash: hash as `0x${string}` });
+      setStatus('success');
+      refetch();
+    } catch (err: unknown) {
+      if (isUserRejection(err)) {
+        setStatus('canceled');
+        setTimeout(() => setStatus('idle'), 2000);
+      } else if (isInsufficientGas(err)) {
+        setStatus('no_gas');
+      } else {
+        setStatus('failed');
+      }
+    }
+  };
+
+  if (!isVisible) return null;
+
+  const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  return (
+    <>
+      <Link href={`/season_${season.id}`} className="block">
+        <AlertItem accentVar="--color-red">
+          <div className="flex flex-col gap-2 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-2xl shrink-0">
+              S<em className="not-italic font-medium text-text2 tabular-nums">{String(season.id).padStart(2, '0')}</em>
+            </p>
+              <span className="font-mono text-[10px] bg-red px-2 py-0.5 rounded text-[var(--color-bg)] uppercase tracking-wider font-bold">
+                Escrowed Funds
+              </span>
+            </div>
+            <p className="font-sans text-xs text-text">
+              {usdcLocked > 0 && <strong className="font-mono font-bold tabular-nums">{fmt(usdcLocked)} USDC</strong>}
+              {usdcLocked > 0 && fimLocked > 0 && ' + '}
+              {fimLocked > 0 && <strong className="font-mono font-bold tabular-nums">{fmt(fimLocked)} FIM</strong>}
+              {' '}still locked in {openOrders.length} open order{openOrders.length === 1 ? '' : 's'} — reclaimable any time.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleReclaim}
+            disabled={isBusy}
+            className={`btn-game-primary text-xs font-black tracking-wider uppercase py-2 px-4 h-fit shrink-0 ${isBusy ? 'opacity-60 cursor-not-allowed!' : ''}`}
+          >
+            {isBusy ? 'Confirming…' : 'Reclaim'}
+          </button>
+        </AlertItem>
+      </Link>
+
+      <TxModal
+        status={status}
+        txHashes={[txHash]}
+        title="Reclaiming Escrow"
+        successTitle="Escrow Reclaimed"
+        successMessage="All open orders were cancelled and their escrow returned to your wallet."
+        steps={[
+          {
+            label: 'Cancel Orders',
+            description: 'Cancel all open orders and return escrow',
+            activeStatuses: ['executing', 'mining'],
+            completeStatuses: ['success'],
+          },
+        ]}
+        onClose={() => { setStatus('idle'); setTxHash(null); }}
       />
     </>
   );
@@ -393,7 +646,12 @@ export function Alerts({ playerAddress }: { playerAddress: string }) {
         try {
           const data = await publicClient.readContract({ address: controllerAddress, abi: CONTROLLER_ABI, functionName: 'seasons', args: [BigInt(i)] });
           const phase = await publicClient.readContract({ address: data[0], abi: GameSeasonAbi as Abi, functionName: 'getPhase' });
-          if (phase === 'PAYOUT') list.push({ id: i + 1, season: data[0], phase: phase as string });
+          // Every post-trading phase matters here: PAYOUT feeds the claim card,
+          // TRIAGE/INVESTIGATION the review card, and all of them (plus SETTLING)
+          // the stranded-escrow card.
+          if (['PAYOUT', 'TRIAGE', 'INVESTIGATION', 'SETTLING'].includes(phase as string)) {
+            list.push({ id: i + 1, season: data[0], exchange: data[2], phase: phase as string });
+          }
         } catch { break; }
       }
       return list;
@@ -413,38 +671,75 @@ export function Alerts({ playerAddress }: { playerAddress: string }) {
     );
   }
 
-  // The PAYOUT-phase scan only tells us which seasons *could* be claimable.
-  // Whether a season is actually claimable (unclaimed + owed) is decided per
-  // season inside ClaimableCard via usePayout. Each card reports its result
-  // here so the count / pill / whole-pane visibility match what renders.
+  // The phase scan only tells us which seasons *could* have something pending.
+  // Whether a card actually renders (claimable payout / pending review /
+  // stranded escrow) is decided per season inside each card via its own hooks.
+  // Each card reports its result here so the count / pill / whole-pane
+  // visibility match what actually renders.
   const [claimableMap, setClaimableMap] = useState<Record<string, boolean>>({});
   const handleClaimableChange = React.useCallback((seasonAddress: string, claimable: boolean) => {
     setClaimableMap((prev) =>
       prev[seasonAddress] === claimable ? prev : { ...prev, [seasonAddress]: claimable },
     );
   }, []);
+  const [reviewMap, setReviewMap] = useState<Record<string, boolean>>({});
+  const handleReviewChange = React.useCallback((seasonAddress: string, visible: boolean) => {
+    setReviewMap((prev) =>
+      prev[seasonAddress] === visible ? prev : { ...prev, [seasonAddress]: visible },
+    );
+  }, []);
+  const [escrowMap, setEscrowMap] = useState<Record<string, boolean>>({});
+  const handleEscrowChange = React.useCallback((seasonAddress: string, visible: boolean) => {
+    setEscrowMap((prev) =>
+      prev[seasonAddress] === visible ? prev : { ...prev, [seasonAddress]: visible },
+    );
+  }, []);
 
-  const payouts = concludedSeasons ?? [];
+  const scanned = concludedSeasons ?? [];
+  const payouts = scanned.filter((s) => s.phase === 'PAYOUT');
+  const reviews = scanned.filter((s) => s.phase === 'TRIAGE' || s.phase === 'INVESTIGATION');
   const polls = discourseAlerts?.pendingPolls ?? [];
   const replies = discourseAlerts?.replies ?? [];
 
   const claimableCount = payouts.reduce((n, s) => n + (claimableMap[s.season] ? 1 : 0), 0);
-  const totalCount = claimableCount + polls.length + replies.length;
+  const reviewCount = reviews.reduce((n, s) => n + (reviewMap[s.season] ? 1 : 0), 0);
+  const escrowCount = scanned.reduce((n, s) => n + (escrowMap[s.season] ? 1 : 0), 0);
+  const totalCount = claimableCount + reviewCount + escrowCount + polls.length + replies.length;
 
   if (!isOwner) return null;
 
-  // The ClaimableCards must stay mounted whenever there are scanned PAYOUT
-  // seasons — their usePayout hooks are what populate claimableMap. When the
+  // The cards must stay mounted whenever there are scanned post-trading
+  // seasons — their hooks are what populate the visibility maps. When the
   // visible pane is hidden (nothing actually pending), keep the probes mounted
-  // off-screen so they can report in and flip the pane on if one is claimable.
-  const probes = payouts.map((s) => (
-    <ClaimableCard
-      key={s.season}
-      season={s}
-      playerAddress={playerAddress}
-      onClaimableChange={handleClaimableChange}
-    />
-  ));
+  // off-screen so they can report in and flip the pane on if one lights up.
+  const probes = (
+    <>
+      {payouts.map((s) => (
+        <ClaimableCard
+          key={`claim-${s.season}`}
+          season={s}
+          playerAddress={playerAddress}
+          onClaimableChange={handleClaimableChange}
+        />
+      ))}
+      {reviews.map((s) => (
+        <ReviewCard
+          key={`review-${s.season}`}
+          season={s}
+          playerAddress={playerAddress}
+          onVisibleChange={handleReviewChange}
+        />
+      ))}
+      {scanned.map((s) => (
+        <EscrowCard
+          key={`escrow-${s.season}`}
+          season={s}
+          playerAddress={playerAddress}
+          onVisibleChange={handleEscrowChange}
+        />
+      ))}
+    </>
+  );
 
   if (totalCount === 0) {
     return <div className="hidden">{probes}</div>;

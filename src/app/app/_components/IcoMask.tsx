@@ -17,7 +17,7 @@ import { isUserRejection, isInsufficientGas } from '@/utils/revertReason';
 
 type DepositStatus = 'idle' | 'approving' | 'mining_approval' | 'depositing' | 'mining_deposit' | 'success' | 'canceled' | 'failed' | 'no_gas';
 type ClaimStatus   = 'idle' | 'claiming' | 'mining_claim' | 'success' | 'canceled' | 'failed';
-type AuctionPhase  = 'loading' | 'pending' | 'live' | 'awaiting_finalization' | 'claimable' | 'no_deposit' | 'already_claimed';
+type AuctionPhase  = 'loading' | 'pending' | 'live' | 'awaiting_finalization' | 'claimable' | 'no_deposit' | 'already_claimed' | 'aborted' | 'refunded';
 
 const ZERO_ADDR = '0x0000000000000000000000000000000000000000';
 
@@ -37,6 +37,8 @@ export function IcoMask() {
   const [errorReason,   setErrorReason]   = useState<string | null>(null);
   const [depositTxHashes, setDepositTxHashes] = useState<(string | null)[]>([null, null]);
   const [claimTxHashes,   setClaimTxHashes]   = useState<(string | null)[]>([null]);
+  const [refundStatus,    setRefundStatus]    = useState<ClaimStatus>('idle');
+  const [refundTxHashes,  setRefundTxHashes]  = useState<(string | null)[]>([null]);
 
   // ── Chain time (block-anchored, advanced by real elapsed time) ──
   const { data: blockData } = useBlock({ chainId, query: { refetchInterval: 10000 } });
@@ -72,6 +74,13 @@ export function IcoMask() {
     address: capitalAuctionAddr, abi: CapitalAuctionAbi, functionName: 'auctionEnd',
     chainId,
     query: { refetchInterval: 15000 },
+  });
+  // Owner emergency stop (§7): once aborted, deposit/finalize are gone for good
+  // and every depositor self-serves a full refund with no deadline.
+  const { data: abortedRaw } = useReadContract({
+    address: capitalAuctionAddr, abi: CapitalAuctionAbi, functionName: 'aborted',
+    chainId,
+    query: { refetchInterval: 5000 },
   });
   const { data: finalizedRaw } = useReadContract({
     address: capitalAuctionAddr, abi: CapitalAuctionAbi, functionName: 'finalized',
@@ -114,6 +123,7 @@ export function IcoMask() {
   const rgdAddress      = ((rgdRaw as string | undefined) ?? ZERO_ADDR).toLowerCase();
   const isRgdSet        = rgdAddress !== ZERO_ADDR;
   const auctionEnd      = (auctionEndRaw      as bigint  | undefined) ?? 0n;
+  const aborted         = (abortedRaw         as boolean | undefined) ?? false;
   const finalized       = (finalizedRaw       as boolean | undefined) ?? false;
   const saleBps         = (saleBpsRaw         as bigint  | undefined) ?? 0n;
   const lpBps           = (lpBpsRaw           as bigint  | undefined) ?? 0n;
@@ -159,13 +169,15 @@ export function IcoMask() {
 
   const phase: AuctionPhase = useMemo(() => {
     if (chainTs === 0 || auctionEnd === 0n) return 'loading';
+    // Abort trumps everything: deposits and finalization are dead, refunds only.
+    if (aborted) return userDeposit > 0n ? 'aborted' : 'refunded';
     if (!isRgdSet) return 'pending';
     if (chainTs < Number(auctionEnd) && !finalized) return 'live';
     if (!finalized) return 'awaiting_finalization';
     if (userDeposit === 0n && hasClaimed) return 'already_claimed';
     if (userDeposit === 0n) return 'no_deposit';
     return 'claimable';
-  }, [chainTs, auctionEnd, isRgdSet, finalized, userDeposit, hasClaimed]);
+  }, [chainTs, auctionEnd, aborted, isRgdSet, finalized, userDeposit, hasClaimed]);
 
   const secondsToEnd = Math.max(0, Number(auctionEnd) - chainTs);
 
@@ -287,6 +299,35 @@ export function IcoMask() {
     }
   };
 
+  // ── Refund flow (aborted auction only) ─────────────────────────────────────
+  const handleRefund = async () => {
+    if (!publicClient || !address) return;
+    setErrorReason(null);
+    setRefundTxHashes([null]);
+    try {
+      setRefundStatus('claiming');
+      const refundHash = await writeContractAsync({
+        address: capitalAuctionAddr, abi: CapitalAuctionAbi, functionName: 'refund',
+      });
+      setRefundStatus('mining_claim');
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: refundHash });
+      if (receipt.status === 'reverted') throw new Error('Refund reverted');
+      setRefundTxHashes([refundHash]);
+      setRefundStatus('success');
+      refetchUserDeposit();
+      refetchUsdcBalance();
+    } catch (err: unknown) {
+      console.error('Refund error:', err);
+      if (isUserRejection(err)) {
+        setRefundStatus('canceled');
+        setTimeout(() => setRefundStatus('idle'), 2000);
+      } else {
+        setErrorReason(extractRevertReason(err));
+        setRefundStatus('failed');
+      }
+    }
+  };
+
   // ── Button state helpers ───────────────────────────────────────────────────
   const depositIsBusy    = ['approving', 'mining_approval', 'depositing', 'mining_deposit'].includes(depositStatus);
   const depositIsSuccess = depositStatus === 'success';
@@ -307,6 +348,8 @@ export function IcoMask() {
     claimable:             { label: 'CLAIMABLE', color: 'var(--color-gold)',  bg: 'var(--color-gold-35)' },
     no_deposit:            { label: 'ENDED',     color: 'var(--color-text2)', bg: 'var(--color-card2)' },
     already_claimed:       { label: 'CLAIMED',   color: 'var(--color-green)', bg: 'var(--color-green-15)' },
+    aborted:               { label: 'ABORTED',   color: 'var(--color-red)',   bg: 'var(--color-red-15)' },
+    refunded:              { label: 'ABORTED',   color: 'var(--color-text2)', bg: 'var(--color-card2)' },
   }[phase];
 
   // ── Disconnected ───────────────────────────────────────────────────────────
@@ -455,8 +498,41 @@ export function IcoMask() {
         <div className="terminal-pane p-0 overflow-hidden flex flex-col">
           <div className="p-4 flex flex-col flex-1">
 
+            {/* ABORT PANEL — emergency stop: refunds only, no deadline (§7) */}
+            {(phase === 'aborted' || phase === 'refunded') && (
+              <div className="flex flex-col gap-4 flex-1">
+                <div>
+                  <span className="terminal-pane-title block mb-1">Auction Aborted</span>
+                  <div className="font-mono text-xs font-bold uppercase flex items-center gap-2"
+                    style={{ color: 'var(--color-red)' }}>
+                    <span className="h-2 w-2 rounded-full"
+                      style={{ background: 'var(--color-red)' }} />
+                    Emergency Stop — Deposits Refundable
+                  </div>
+                </div>
+                <p className="font-mono text-xs" style={{ color: 'var(--color-text2)' }}>
+                  The Council halted this auction after discovering a flaw. Deposits and
+                  finalization are permanently disabled; every depositor can reclaim their
+                  full USDC deposit — self-service, with no deadline.
+                </p>
+                <button
+                  disabled={phase !== 'aborted' || ['claiming', 'mining_claim', 'success'].includes(refundStatus)}
+                  onClick={handleRefund}
+                  className="btn-game-primary mt-auto"
+                >
+                  {refundStatus === 'success'
+                    ? 'Refunded'
+                    : phase === 'refunded'
+                    ? 'Nothing to Refund'
+                    : ['claiming', 'mining_claim'].includes(refundStatus)
+                    ? 'Confirming on Chain…'
+                    : 'Refund My Deposit'}
+                </button>
+              </div>
+            )}
+
             {/* COMMIT PANEL */}
-            {!['awaiting_finalization', 'claimable', 'no_deposit', 'already_claimed'].includes(phase) && (
+            {!['awaiting_finalization', 'claimable', 'no_deposit', 'already_claimed', 'aborted', 'refunded'].includes(phase) && (
               <div className="flex flex-col gap-4 flex-1">
                 {phase !== 'live' ? (
                   <div className="text-center py-6">
@@ -636,6 +712,25 @@ export function IcoMask() {
           },
         ]}
         onClose={() => { setClaimStatus('idle'); setErrorReason(null); setClaimTxHashes([null]); }}
+      />
+
+      {/* ── Refund Modal ── */}
+      <TxModal
+        status={refundStatus}
+        txHashes={refundTxHashes}
+        title="Refunding Deposit"
+        successTitle="Refund Confirmed"
+        successMessage="Your USDC deposit has been returned to your wallet."
+        errorReason={errorReason}
+        steps={[
+          {
+            label: 'Confirm Refund',
+            description: 'Sign the refund transaction',
+            activeStatuses: ['claiming', 'mining_claim'],
+            completeStatuses: ['success'],
+          },
+        ]}
+        onClose={() => { setRefundStatus('idle'); setErrorReason(null); setRefundTxHashes([null]); }}
       />
     </>
   );

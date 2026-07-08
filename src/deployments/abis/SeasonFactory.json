@@ -87,6 +87,21 @@
         "name": "tradeFeeBps",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "triageWindowSeconds",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "investigationWindowSeconds",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "settlementTimeoutSeconds",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [

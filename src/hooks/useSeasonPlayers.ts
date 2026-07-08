@@ -18,6 +18,8 @@ export interface SeasonPlayer {
   realizedPayout: string;
   netContribution: string;
   totalFeesPaid: string;
+  /** Council sybil flag for THIS season (WalletFlagged, irreversible). */
+  isFlagged: boolean;
 }
 
 const QUERY = `
@@ -30,6 +32,7 @@ const QUERY = `
       items {
         playerAddress fimBalance fimBurned
         totalPotentialPayout realizedPayout netContribution totalFeesPaid
+        isFlagged
       }
       pageInfo { endCursor hasNextPage }
     }

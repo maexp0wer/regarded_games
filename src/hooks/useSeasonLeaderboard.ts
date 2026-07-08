@@ -7,6 +7,7 @@ import { useSeasonProjectedPnl } from './useSeasonProjectedPnl';
 export interface LeaderboardEntry {
   address: string;   // lowercased wallet
   value: number;     // category metric (USDC, or % for relative P&L)
+  isFlagged: boolean; // Council sybil flag for this season (WalletFlagged)
 }
 
 const TOP_N = 10;
@@ -53,14 +54,14 @@ export function useSeasonLeaderboard(seasonAddress: string | undefined): SeasonL
         const pnl = projectedPnlByAddr.get(addr) ?? -contrib;
         const efficiency = contrib > 0 ? (pnl / contrib) * 100 : -Infinity;
         const fees = Number(formatUnits(BigInt(stat.totalFeesPaid || '0'), 6));
-        return { addr, pnl, efficiency, contrib, fees };
+        return { addr, pnl, efficiency, contrib, fees, isFlagged: stat.isFlagged === true };
       });
 
     const sorted = (
       sort: (a: typeof base[number], b: typeof base[number]) => number,
       value: (p: typeof base[number]) => number,
     ): LeaderboardEntry[] =>
-      [...base].sort(sort).map((p) => ({ address: p.addr, value: value(p) }));
+      [...base].sort(sort).map((p) => ({ address: p.addr, value: value(p), isFlagged: p.isFlagged }));
 
     const allAbsolute = sorted((a, b) => b.pnl - a.pnl, (p) => p.pnl);
     const allRelative = sorted((a, b) => b.efficiency - a.efficiency, (p) => p.efficiency);

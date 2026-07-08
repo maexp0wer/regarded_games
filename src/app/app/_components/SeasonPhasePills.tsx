@@ -12,7 +12,13 @@ export function SeasonPhasePills({
   const isPayout = phase === 'PAYOUT' || phase === 'DISTRIBUTION';
   const isAuction = phase === 'AUCTION';
   const isTrading = phase === 'TRADING';
-  const isOnHold = isBootstrap || isVictoryPending;
+  // Hold states that now last hours-to-weeks: on-chain settlement crank, then the
+  // two-stage sybil review (ADR-0008). Red = "nothing tradeable, wait it out",
+  // matching the existing On Hold treatment.
+  const isSettling = phase === 'SETTLING' || phase === 'CALCULATING';
+  const isTriage = phase === 'TRIAGE';
+  const isInvestigation = phase === 'INVESTIGATION';
+  const isOnHold = isBootstrap || (isVictoryPending && isTrading);
 
   // Solid pill: the per-phase accent fills the background, text drops to the
   // page canvas color so it reads against the saturated fill.
@@ -27,6 +33,17 @@ export function SeasonPhasePills({
       <div className={className}>
         <span className={pill} style={pillStyle('var(--color-red)')}>
           On Hold: {reason}
+        </span>
+      </div>
+    );
+  }
+
+  if (isSettling || isTriage || isInvestigation) {
+    const label = isSettling ? 'Settling' : isTriage ? 'Triage' : 'Under Review';
+    return (
+      <div className={className}>
+        <span className={pill} style={pillStyle('var(--color-red)')}>
+          {label}
         </span>
       </div>
     );

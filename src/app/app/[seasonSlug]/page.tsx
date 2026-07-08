@@ -68,7 +68,7 @@ export default function SeasonDetailPage() {
     currentPhase,
     isAuctionOrBootstrap,
     isTrading,
-    isPayout,
+    isPostTrading,
     tradingStart,
     seasonEnd,
     config,
@@ -188,7 +188,11 @@ export default function SeasonDetailPage() {
         />
       )}
 
-      {isPayout && (
+      {/* SETTLING, TRIAGE, INVESTIGATION and PAYOUT all share the end-of-season
+          layout — the PayoutMask inside swaps its action card per phase. Before
+          the two-stage review (ADR-0008) this branch was PAYOUT-only and the
+          in-between states (minutes back then, now up to weeks) rendered blank. */}
+      {isPostTrading && (
         <PayoutPhaseLayout
           seasonAddress={seasonAddress}
           auctionAddress={auctionAddress}

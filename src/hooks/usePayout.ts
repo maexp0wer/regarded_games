@@ -21,7 +21,8 @@ export interface PayoutData {
   payout: number;           // Projected/realized USDC payout (pool-proportional)
   yieldPayout: number;      // Portion of payout attributable to the Aave yield bonus (pure P/L upside)
   pnl: number;              // payout − net contribution
-  userFim: number;          // Live FIM Balance (from RPC)
+  userFim: number;          // Live FIM Balance (from RPC; season ledger — zeroed at claim)
+  finalFim: number;         // Finalized season holdings (from Ponder; survives the claim)
   userNetContrib: number;   // Raw Net Contribution in USDC (from Ponder)
   contribution: number;     // netContrib − fimHeld: 0 when all trades at 1 USDC/FIM
   fimBurned: number;        // FIM Burned (from Ponder)
@@ -45,6 +46,7 @@ export function usePayout(seasonAddress: string | undefined, userAddress: string
       { address: seasonAddress as `0x${string}`, abi: GameSeasonAbi, functionName: 'computePayout', args: [userAddress!], chainId },
       { address: seasonAddress as `0x${string}`, abi: GameSeasonAbi, functionName: 'hasClaimed', args: [userAddress!], chainId },
       { address: seasonAddress as `0x${string}`, abi: GameSeasonAbi, functionName: 'existentialThresholdFim', chainId },
+      { address: seasonAddress as `0x${string}`, abi: GameSeasonAbi, functionName: 'forcedDraw', chainId },
     ],
     query: { enabled: !!seasonAddress && !!userAddress }
   });
@@ -66,6 +68,9 @@ export function usePayout(seasonAddress: string | undefined, userAddress: string
   const dustThresholdFim = rpcData?.[3]?.result
     ? Number(formatUnits(rpcData[3].result as bigint, 18))
     : 0;
+  // Any Council flag (ADR-0008) forces the whole season to settle as a draw —
+  // every player is repriced to the draw distribution, not just the flagged one.
+  const isForcedDraw = rpcData?.[4]?.result === true;
   const basePool = giniData?.prizePool ?? 0;
   const yieldBonus = Number(formatUnits(BigInt(yieldTotals?.reinvest || '0'), 6));
   const poolSize = basePool + yieldBonus;
@@ -109,18 +114,18 @@ export function usePayout(seasonAddress: string | undefined, userAddress: string
       poolSize,
       totalFimSupply,
       dustThresholdFim,
-      isOligarchyWin: winningSide === 'cap',
-      hasWinner: winningSide !== 'none',
+      isOligarchyWin: !isForcedDraw && winningSide === 'cap',
+      hasWinner: !isForcedDraw && winningSide !== 'none',
       progress: progressPercent / 100,
     });
-  }, [userAddress, players, activeOrders, poolSize, dustThresholdFim, winningSide, progressPercent]);
+  }, [userAddress, players, activeOrders, poolSize, dustThresholdFim, winningSide, progressPercent, isForcedDraw]);
 
   // --- MERGE LOGIC ---
   const isLoading = rpcLoading || playersLoading;
   const refetch = () => { refetchRpc(); refetchPlayers(); };
 
   if (isLoading || !rpcData) {
-    return { payout: 0, yieldPayout: 0, pnl: 0, userFim: 0, userNetContrib: 0, contribution: 0, fimBurned: 0, hasBalance: false, hasClaimed: false, realizedPayout: 0, loading: true, error: null, refetch };
+    return { payout: 0, yieldPayout: 0, pnl: 0, userFim: 0, finalFim: 0, userNetContrib: 0, contribution: 0, fimBurned: 0, hasBalance: false, hasClaimed: false, realizedPayout: 0, loading: true, error: null, refetch };
   }
 
   // RPC Data Access
@@ -132,12 +137,13 @@ export function usePayout(seasonAddress: string | undefined, userAddress: string
   // Source priority for the displayed payout:
   //   1. Claimed → realized amount (from Ponder PayoutClaimed).
   //   2. In DISTRIBUTION → the contract's exact computePayout (authoritative;
-  //      already includes yield + fees + Net-Contribution weighting).
-  //   3. Otherwise (TRADING/ACTIVE) → the client-side projection.
-  // All three are pool-proportional and yield-inclusive, so they are consistent.
+  //      already includes yield + fees + Net-Contribution weighting). Its zeros
+  //      are real (swept season, flagged wallet, dust) — never fall back to the
+  //      projection here, DISTRIBUTION only starts once everything is final.
+  //   3. Otherwise (TRADING through INVESTIGATION) → the client-side projection.
   const resolvePayout = (realized: number) =>
     hasClaimedOnChain ? realized
-      : isPayout ? (pendingPayout || projectedPayout)
+      : isPayout ? pendingPayout
       : projectedPayout;
 
   // Handle case where Ponder data is not yet available (game not finalized or player never interacted).
@@ -149,6 +155,7 @@ export function usePayout(seasonAddress: string | undefined, userAddress: string
           yieldPayout: payout * yieldFraction,
           pnl: 0,
           userFim: Number(formatUnits(balanceRaw, 18)),
+          finalFim: 0,
           userNetContrib: 0,
           contribution: 0,
           fimBurned: 0,
@@ -180,6 +187,7 @@ export function usePayout(seasonAddress: string | undefined, userAddress: string
         yieldPayout: effectivePayout * yieldFraction,
         pnl: effectivePayout - contribUsdc,
         userFim: fimBal,
+        finalFim: Number(formatUnits(BigInt(ponderData.fimBalance || '0'), 18)),
         userNetContrib: contribUsdc,
         contribution: contribUsdc - fimBal,
         fimBurned: burned,
@@ -192,6 +200,6 @@ export function usePayout(seasonAddress: string | undefined, userAddress: string
     };
   } catch (e) {
     console.error("Error processing payout data:", e);
-    return { payout: 0, yieldPayout: 0, pnl: 0, userFim: 0, userNetContrib: 0, contribution: 0, fimBurned: 0, hasBalance: false, hasClaimed: false, realizedPayout: 0, loading: false, error: 'Failed to process payout data', refetch };
+    return { payout: 0, yieldPayout: 0, pnl: 0, userFim: 0, finalFim: 0, userNetContrib: 0, contribution: 0, fimBurned: 0, hasBalance: false, hasClaimed: false, realizedPayout: 0, loading: false, error: 'Failed to process payout data', refetch };
   }
 }

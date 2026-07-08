@@ -6,7 +6,9 @@ canonical vocabulary; code, comments, and docs should match these definitions.
 > **Scope of the collateral-gating work (this pass):** collateral pre-checks +
 > phase-correct enable/disable of *player* actions (buy/bid/fill/sell, stake/
 > unstake). **Out of scope:** keeper/crank UI (`startBootstrap`, `processBatch`,
-> `finalizeGame`, `settleOrders`, …) and indexing the `Collateral*` events.
+> `finalizeGame`, …) and indexing the `Collateral*` events. (`settleOrders` and
+> the whole Exchange settlement drain were later **removed from the contracts** —
+> see *Escrow reclaim*.)
 
 ## Glossary
 
@@ -205,10 +207,58 @@ elsewhere, not just to its own stake/unstake.
 ### Phase
 The lifecycle stage of a season, surfaced by `GameSeason.getPhase()` as a
 string. Canonical phases: `AUCTION`, `BOOTSTRAP`, `TRADING`, `SETTLING`,
-`PAYOUT`. Partly time-driven — see *isActive*. **`ENDED` no longer exists** —
-`endSeason()` was removed; a season stays in `PAYOUT` indefinitely (until the
-Council sweeps stale funds, which does *not* change the phase). `PAYOUT` is the
-terminal player-facing phase.
+`TRIAGE`, `INVESTIGATION`, `PAYOUT`. Partly time-driven — see *isActive*.
+**`ENDED` no longer exists** — `endSeason()` was removed; a season stays in
+`PAYOUT` indefinitely (until the Council sweeps stale funds, which does *not*
+change the phase). `PAYOUT` is the terminal player-facing phase, and it only
+begins at `openDistribution()` (see *Review window*), not at `finalizeGame()`.
+The numeric `currentState()` enum is `BOOTSTRAP(0) ACTIVE(1) CALCULATING(2)
+TRIAGE(3) INVESTIGATION(4) DISTRIBUTION(5)` — never compare it numerically in
+the frontend; use the `getPhase()` strings.
+
+### Review window (TRIAGE → INVESTIGATION, ADR-0008)
+Two-stage sybil review between settlement and payout. After `finalizeGame()` the
+season sits in **TRIAGE** for `triageWindowSeconds()` (manifest default 24h),
+timestamped by `reviewPhaseStart()`. The Council may `raiseSuspicion()`
+(owner-only) to escalate to **INVESTIGATION** (`investigationWindowSeconds()`,
+default 14d, `reviewPhaseStart()` restarts). During INVESTIGATION the Council may
+`flagWallets(address[])` (irreversible). Once the active window lapses,
+`openDistribution()` is **permissionless** (the Council can also
+`concludeInvestigation()` early) — it snapshots `finalPoolSize()` and starts
+`PAYOUT`. Throughout TRIAGE/INVESTIGATION `computePayout()` returns 0, so the UI
+shows the client-side projection labeled as projected. Frontend reads live in
+`useSeasonEndgame`.
+
+### forcedDraw (any flag voids the outcome)
+A flag asserts the outcome itself was manufactured, so **one flagged wallet
+flips `forcedDraw()` for the whole season**: every player is repriced to the
+draw distribution (pro-rata of final holdings), and the flagged wallet's payout
+is **zero**. No RGD is burned or slashed — collateral is always released at
+claim. `computePayout()` reflects all of it; the client projection mirrors it by
+projecting with `hasWinner: false` when `forcedDraw()` is true (`usePayout`).
+Flags are **per-season on-chain state** (`isFlagged(addr)` on that season).
+Cross-season display is UI-only history via the indexer's `flaggedWallets`
+table — present it as neutral, season-scoped fact ("Flagged — Season 3"), never
+a verdict; the protocol never carries a flag forward.
+
+### Escrow reclaim (settlement drain removed)
+`settleOrders` / `settlementOpen` / `settleCursor` / `openSettlement` are
+**gone from the Exchange**. Escrow (USDC in bids, FIM in asks) belongs to the
+order owner and is reclaimable only by them, forever — post-season fills are
+impossible. `cancelOrders(uint256[])` is the one-click reclaim: invalid, filled,
+or foreign ids are *skipped, not reverted on*, so a Ponder-derived id list is
+safe and the call is repeatable. Post-season, the value at stake is mostly **bid
+USDC** — `claimPayout()` pays from `season.fimBalances` (which already includes
+escrowed ask-FIM) and never touches the Exchange, so claiming and reclaiming are
+fully independent actions.
+
+### Settlement deadman switch
+`startSettlement()`/`startBootstrap()` start `settlementDeadline()` (= start +
+`settlementTimeoutSeconds()`, default 24h). If the starter hasn't finalized by
+then, **anyone** may `takeOverSettlement()` by posting the `bondAmountUsdc()`
+USDC bond (approve the season contract first); the stalled starter's bond is
+forfeited to the season's DAO recipient and the batch restarts. Surfaced in the
+SETTLING state of `PayoutMask` (countdown → takeover CTA after expiry).
 
 ### Contract revert reasons (player-facing)
 Canonical revert strings the UI translates to friendly copy (via the pure
@@ -264,10 +314,14 @@ The only post-PAYOUT event is the Council sweep, which leaves the phase `PAYOUT`
 `GameSeason.sweepUnclaimed(to)` — `onlyOwner` (Council multisig); recovers the
 remaining prize-pool USDC ≥365 days after `distributionStartTime` (reverts
 `"Too early"` before). Does **not** flip the phase (stays `PAYOUT`). After a
-sweep, `computePayout` returns 0 but `claimPayout` still works to burn FIM /
-release collateral. Pure ops action — **no player button**; only a Council admin
-panel (if one exists) would surface it. Players hitting a swept PAYOUT screen see
-a "claim window closed" banner but can still claim to recover locked RGD.
+sweep (`swept()` true), `computePayout` returns 0 but `claimPayout` still works
+to zero the ledger and release collateral (**claiming burns no FIM** — the
+season's FIM token is decorative once the season ends, and post-season wallet
+balances no longer go to zero). Pure ops action — **no player button**; the UI
+shows a claim-deadline countdown (`distributionStartTime + 365d`, hardcoded in
+the contract, mirrored as `CLAIM_WINDOW_SECONDS` in `useSeasonEndgame`) and,
+once swept, a "claim window expired" banner with the claim still enabled to
+recover locked RGD.
 
 ### Bid-fill collateral revert (RESOLVED)
 Previously open: would a taker selling into a maker's bid get reverted by the

@@ -597,10 +597,39 @@ ponder.on("GameSeason:PlayerSeasonStatsFinalized", async ({ event, context }) =>
     }));
 });
 
+ponder.on("GameSeason:WalletFlagged", async ({ event, context }) => {
+  const seasonAddress = event.log.address.toLowerCase() as `0x${string}`;
+  const walletAddress = event.args.wallet.toLowerCase() as `0x${string}`;
+
+  // Per-season flag on the player's stats row. flagWallets() requires an indexed
+  // player, so the row exists on-chain — upsert anyway to stay total.
+  await context.db
+    .insert(playerSeasonStats)
+    .values({ seasonAddress, playerAddress: walletAddress, isFlagged: true })
+    .onConflictDoUpdate(() => ({ isFlagged: true }));
+
+  // Cross-season registry (display only, no protocol enforcement): lets later
+  // seasons show "Flagged — Season N" as neutral, season-scoped history.
+  const season = await context.db.find(seasons, { address: seasonAddress });
+  const seasonNumber = Number(season?.seasonId ?? 0n) + 1;
+  await context.db
+    .insert(schema.flaggedWallets)
+    .values({
+      walletAddress,
+      seasonAddress,
+      seasonNumber,
+      timestamp: event.block.timestamp,
+    })
+    .onConflictDoNothing();
+});
+
 ponder.on("Treasury:YieldHarvested", async ({ event, context }) => {
-  // 1. Destructure using the EXACT names from your ABI
-  const { season, totalYield, buyback, liquidity, reinvest, daoShare } = event.args;
-  
+  // 1. Destructure using the EXACT names from your ABI. The audit-fix release
+  //    renamed the event arg `reinvest` → `prizePool` (same value: the yield
+  //    slice reinvested into the season prize pool); the column keeps its name
+  //    so downstream readers (useYieldTotals) are unaffected.
+  const { season, totalYield, buyback, liquidity, prizePool, daoShare } = event.args;
+
   // 2. Format addresses and IDs
   const seasonAddress = season.toLowerCase() as `0x${string}`;
   const id = `${event.transaction.hash}:${event.log.logIndex}`;
@@ -614,7 +643,7 @@ ponder.on("Treasury:YieldHarvested", async ({ event, context }) => {
     totalYield: totalYield,
     buybackAmt: buyback,
     liquidityAmt: liquidity,
-    reinvestAmt: reinvest,
+    reinvestAmt: prizePool,
     daoAmt: daoShare,
     timestamp: event.block.timestamp,
   });

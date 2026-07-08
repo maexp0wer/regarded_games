@@ -236,6 +236,36 @@
         "name": "_tradeFeeBps",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "_triageWindowSeconds",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_investigationWindowSeconds",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_settlementTimeoutSeconds",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_buybackRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_liquidityRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_daoRecipient",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],

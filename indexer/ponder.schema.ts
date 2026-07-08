@@ -23,8 +23,28 @@ export const playerSeasonStats = onchainTable("player_season_stats", (t) => ({
   // settled season (counts toward lifetime PnL, even at a $0 payout) from an
   // in-progress one where the row only exists from trading/auction activity.
   finalized: t.boolean().default(false).notNull(),
+  // Set true by WalletFlagged (Council sybil flag during INVESTIGATION,
+  // irreversible). The contract zeroes this wallet's payout and forces the
+  // season to settle as a draw — computePayout() already reflects both.
+  isFlagged: t.boolean().default(false).notNull(),
 }), (table) => ({
   pk: primaryKey({ columns: [table.seasonAddress, table.playerAddress] }),
+}));
+
+// Cross-season flag registry — display only, no protocol enforcement. Flags are
+// per-season on-chain (each GameSeason has its own isFlagged mapping); this table
+// is the union across seasons so later-season views (order book) can show a
+// wallet's prior-season flags as neutral, season-scoped history.
+export const flaggedWallets = onchainTable("flagged_wallets", (t) => ({
+  walletAddress: t.hex().notNull(),
+  seasonAddress: t.hex().notNull(),
+  // 1-based display number (seasons.seasonId + 1) so the frontend can render
+  // "Flagged — Season 3" without a join.
+  seasonNumber: t.integer().notNull(),
+  timestamp: t.bigint().notNull(),
+}), (table) => ({
+  pk: primaryKey({ columns: [table.walletAddress, table.seasonAddress] }),
+  walletIdx: index("flagged_wallets_wallet_idx").on(table.walletAddress),
 }));
 
 export const auctionMints = onchainTable("auction_mints", (t) => ({

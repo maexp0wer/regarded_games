@@ -13,12 +13,7 @@ export const TreasuryAbi = [
         "internalType": "address"
       },
       {
-        "name": "_router",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_gini",
+        "name": "_reg",
         "type": "address",
         "internalType": "address"
       }
@@ -40,8 +35,33 @@ export const TreasuryAbi = [
   },
   {
     "type": "function",
-    "name": "daoRecipient",
-    "inputs": [],
+    "name": "accruedYield",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "accruingSeasons",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
     "outputs": [
       {
         "name": "",
@@ -53,15 +73,33 @@ export const TreasuryAbi = [
   },
   {
     "type": "function",
-    "name": "depositPrincipal",
+    "name": "collectTradingFee",
     "inputs": [
       {
-        "name": "_amount",
+        "name": "_amt",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "_forSeason",
+        "name": "_s",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "depositPrincipal",
+    "inputs": [
+      {
+        "name": "_amt",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_s",
         "type": "address",
         "internalType": "address"
       }
@@ -74,7 +112,7 @@ export const TreasuryAbi = [
     "name": "getSeasonPoolSize",
     "inputs": [
       {
-        "name": "_season",
+        "name": "_s",
         "type": "address",
         "internalType": "address"
       }
@@ -97,7 +135,7 @@ export const TreasuryAbi = [
   },
   {
     "type": "function",
-    "name": "isApprovedSeason",
+    "name": "hasRetired",
     "inputs": [
       {
         "name": "",
@@ -116,13 +154,76 @@ export const TreasuryAbi = [
   },
   {
     "type": "function",
-    "name": "liquidityRecipient",
-    "inputs": [],
-    "outputs": [
+    "name": "isAccruing",
+    "inputs": [
       {
         "name": "",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isApprovedAuction",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isApprovedExchange",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isApprovedSeason",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
@@ -145,12 +246,12 @@ export const TreasuryAbi = [
     "name": "payWinner",
     "inputs": [
       {
-        "name": "_winner",
+        "name": "_w",
         "type": "address",
         "internalType": "address"
       },
       {
-        "name": "_amount",
+        "name": "_amt",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -167,13 +268,32 @@ export const TreasuryAbi = [
   },
   {
     "type": "function",
-    "name": "gini",
+    "name": "rgd",
     "inputs": [],
     "outputs": [
       {
         "name": "",
         "type": "address",
         "internalType": "contract IERC20"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "seasonDaoRecipient",
+    "inputs": [
+      {
+        "name": "_s",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -208,6 +328,21 @@ export const TreasuryAbi = [
         "name": "daoBps",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "buybackRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "liquidityRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "daoRecipient",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -233,12 +368,17 @@ export const TreasuryAbi = [
   },
   {
     "type": "function",
-    "name": "setDaoRecipient",
+    "name": "setAuctionApproval",
     "inputs": [
       {
-        "name": "_newRecipient",
+        "name": "_auction",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "_status",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "outputs": [],
@@ -246,23 +386,10 @@ export const TreasuryAbi = [
   },
   {
     "type": "function",
-    "name": "setLiquidityRecipient",
+    "name": "setExchangeApproval",
     "inputs": [
       {
-        "name": "_newRecipient",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setSeasonApproval",
-    "inputs": [
-      {
-        "name": "_season",
+        "name": "_exchange",
         "type": "address",
         "internalType": "address"
       },
@@ -280,29 +407,44 @@ export const TreasuryAbi = [
     "name": "setSeasonPolicy",
     "inputs": [
       {
-        "name": "_season",
+        "name": "_s",
         "type": "address",
         "internalType": "address"
       },
       {
-        "name": "_buyback",
+        "name": "_bb",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "_liq",
+        "name": "_l",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "_reinvest",
+        "name": "_ri",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "_dao",
+        "name": "_d",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "_buybackRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_liquidityRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_daoRecipient",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -310,13 +452,26 @@ export const TreasuryAbi = [
   },
   {
     "type": "function",
-    "name": "swapRouter",
+    "name": "sweepSeasonPrincipal",
+    "inputs": [
+      {
+        "name": "_to",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "totalAccruedYield",
     "inputs": [],
     "outputs": [
       {
         "name": "",
-        "type": "address",
-        "internalType": "address"
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -362,26 +517,38 @@ export const TreasuryAbi = [
   },
   {
     "type": "event",
-    "name": "DaoRecipientUpdated",
+    "name": "AuctionApprovalSet",
     "inputs": [
       {
-        "name": "newRecipient",
+        "name": "auction",
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      },
+      {
+        "name": "status",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
       }
     ],
     "anonymous": false
   },
   {
     "type": "event",
-    "name": "LiquidityRecipientUpdated",
+    "name": "ExchangeApprovalSet",
     "inputs": [
       {
-        "name": "newRecipient",
+        "name": "exchange",
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      },
+      {
+        "name": "status",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
       }
     ],
     "anonymous": false
@@ -407,44 +574,6 @@ export const TreasuryAbi = [
   },
   {
     "type": "event",
-    "name": "PayoutExecuted",
-    "inputs": [
-      {
-        "name": "winner",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "PrincipalDeposited",
-    "inputs": [
-      {
-        "name": "season",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "SeasonPolicySet",
     "inputs": [
       {
@@ -454,25 +583,25 @@ export const TreasuryAbi = [
         "internalType": "address"
       },
       {
-        "name": "buyback",
+        "name": "buybackBps",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
       },
       {
-        "name": "liquidity",
+        "name": "liquidityBps",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
       },
       {
-        "name": "reinvest",
+        "name": "prizePoolBps",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
       },
       {
-        "name": "dao",
+        "name": "daoBps",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -482,7 +611,70 @@ export const TreasuryAbi = [
   },
   {
     "type": "event",
+    "name": "SeasonRecipientsSet",
+    "inputs": [
+      {
+        "name": "season",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "buyback",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "liquidity",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "dao",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SeasonRetired",
+    "inputs": [
+      {
+        "name": "season",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "TradingFeeCollected",
+    "inputs": [
+      {
+        "name": "season",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "YieldAttributed",
     "inputs": [
       {
         "name": "season",
@@ -528,7 +720,7 @@ export const TreasuryAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "reinvest",
+        "name": "prizePool",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -563,6 +755,11 @@ export const TreasuryAbi = [
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "ReentrancyGuardReentrantCall",
+    "inputs": []
   },
   {
     "type": "error",

@@ -27,7 +27,13 @@ export interface SeasonPhaseState {
   isAuctionOrBootstrap: boolean;
   isTrading: boolean;
   isSettling: boolean;
+  isTriage: boolean;
+  isInvestigation: boolean;
+  /** TRIAGE or INVESTIGATION — the post-settlement review window (ADR-0008). */
+  isUnderReview: boolean;
   isPayout: boolean;
+  /** Any phase after trading: SETTLING, TRIAGE, INVESTIGATION, or PAYOUT. */
+  isPostTrading: boolean;
 
   tradingStart: number;
   seasonEnd: number;
@@ -109,8 +115,16 @@ export function useSeasonPhase(seasonAddress: Address | string | undefined): Sea
   // anyone cranks. Exposed for labels / gating completeness only. See CONTEXT.md
   // "effectiveVictoryPending vs. SETTLING".
   const isSettling = currentPhase === 'SETTLING' || currentPhase === 'CALCULATING';
+  // Two-stage review between settlement and payout (ADR-0008): TRIAGE (short,
+  // automatic) escalates to INVESTIGATION only if the Council raises suspicion.
+  // computePayout() returns 0 throughout; distribution opens permissionlessly
+  // once the active window lapses.
+  const isTriage        = currentPhase === 'TRIAGE';
+  const isInvestigation = currentPhase === 'INVESTIGATION';
+  const isUnderReview   = isTriage || isInvestigation;
   // `ENDED` was removed — getPhase() never returns it; PAYOUT is terminal.
   const isPayout  = currentPhase === 'PAYOUT' || currentPhase === 'DISTRIBUTION';
+  const isPostTrading = isSettling || isUnderReview || isPayout;
 
   const scheduledTradingStart = (config?.auctionStartTime || 0) + (config?.auctionDuration || 0);
   const actualTradingStart    = tradingStartTimeRaw ? Number(tradingStartTimeRaw) : 0;
@@ -127,7 +141,11 @@ export function useSeasonPhase(seasonAddress: Address | string | undefined): Sea
     isAuctionOrBootstrap,
     isTrading,
     isSettling,
+    isTriage,
+    isInvestigation,
+    isUnderReview,
     isPayout,
+    isPostTrading,
     tradingStart,
     seasonEnd,
     isTradingTimeExpired,

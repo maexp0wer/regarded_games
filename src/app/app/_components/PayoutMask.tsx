@@ -1,60 +1,354 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract, usePublicClient } from 'wagmi';
+import { formatUnits } from 'viem';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
+import ExchangeAbi from '@/deployments/abis/Exchange.json';
+import ERC20Abi from '@/deployments/abis/FakeUSDC.json';
 import type { Abi } from 'abitype';
 import { usePayout } from '@/hooks/usePayout';
 import { useOpenOrders } from '@/hooks/useOpenOrders';
 import { useSeasonVictory } from '@/hooks/useSeasonVictory';
-import { useTenantChainId } from '@/context/TenantContext';
+import { useSeasonPhase } from '@/hooks/useSeasonPhase';
+import { useSeasonEndgame } from '@/hooks/useSeasonEndgame';
+import { useTenantChainId, useTenantDeployment } from '@/context/TenantContext';
 import { TxModal } from './TxModal';
 import { WalletButton } from './WalletButton';
-import { isUserRejection, isInsufficientGas } from '@/utils/revertReason';
+import { CountdownTicker } from './CountdownTicker';
+import { friendlyRevertReason, isUserRejection, isInsufficientGas } from '@/utils/revertReason';
 
-type TxStatus = 'idle' | 'executing' | 'mining' | 'success' | 'canceled' | 'failed' | 'no_gas';
+type TxStatus =
+  | 'idle' | 'approving' | 'mining_approval' | 'executing' | 'mining'
+  | 'success' | 'canceled' | 'failed' | 'no_gas';
 
 interface PayoutMaskProps {
   seasonAddress: string;
+  exchangeAddress: string;
   className?: string;
 }
 
-export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
+/** Shared tx-error → status mapping for every flow in this mask. */
+function statusFromError(err: unknown, setStatus: (s: TxStatus) => void, setReason: (r: string | null) => void) {
+  if (isUserRejection(err)) {
+    setStatus('canceled');
+    setTimeout(() => setStatus('idle'), 2000);
+  } else if (isInsufficientGas(err)) {
+    setStatus('no_gas');
+  } else {
+    setReason(friendlyRevertReason(err));
+    setStatus('failed');
+  }
+}
+
+/**
+ * SETTLING: the settlement starter has `settlementDeadline` to finalize. Once it
+ * lapses, anyone may take over the batch by posting the USDC bond (§6) — the
+ * stalled starter's bond is forfeited.
+ */
+function SettlementActions({ seasonAddress }: { seasonAddress: string }) {
+  const chainId = useTenantChainId();
+  const core = useTenantDeployment();
+  const publicClient = usePublicClient({ chainId });
+  const { address } = useAccount();
+  const { writeContractAsync } = useWriteContract();
+  const { settlementDeadline, settlementExpired, takeoverBondUsdc, refetch } = useSeasonEndgame(seasonAddress);
+
+  const [status, setStatus] = useState<TxStatus>('idle');
+  const [txHashes, setTxHashes] = useState<(string | null)[]>([null, null]);
+  const [errorReason, setErrorReason] = useState<string | null>(null);
+
+  const bondUsdc = Number(formatUnits(takeoverBondUsdc, 6));
+  const isBusy = status !== 'idle' && status !== 'success' && status !== 'canceled';
+
+  const handleTakeover = async () => {
+    if (!address || !publicClient || isBusy) return;
+    setTxHashes([null, null]);
+    setErrorReason(null);
+    try {
+      const usdcAddr = core.USDC as `0x${string}`;
+      const liveAllowance = (await publicClient.readContract({
+        address: usdcAddr, abi: ERC20Abi as Abi, functionName: 'allowance',
+        args: [address, seasonAddress as `0x${string}`],
+      })) as bigint;
+
+      let approveHash: string | null = null;
+      if (liveAllowance < takeoverBondUsdc) {
+        setStatus('approving');
+        approveHash = await writeContractAsync({
+          address: usdcAddr, abi: ERC20Abi as Abi, functionName: 'approve',
+          args: [seasonAddress as `0x${string}`, takeoverBondUsdc],
+        });
+        setTxHashes([approveHash, null]);
+        setStatus('mining_approval');
+        await publicClient.waitForTransactionReceipt({ hash: approveHash as `0x${string}` });
+      }
+
+      setStatus('executing');
+      const hash = await writeContractAsync({
+        address: seasonAddress as `0x${string}`, abi: GameSeasonAbi as Abi,
+        functionName: 'takeOverSettlement', args: [],
+      });
+      setTxHashes([approveHash, hash]);
+      setStatus('mining');
+      await publicClient.waitForTransactionReceipt({ hash: hash as `0x${string}` });
+      setStatus('success');
+      refetch();
+    } catch (err: unknown) {
+      statusFromError(err, setStatus, setErrorReason);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <CountdownTicker targetTimestamp={settlementDeadline} label="Settlement Deadline" />
+      {settlementExpired ? (
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={handleTakeover}
+            disabled={isBusy || !address}
+            className={`btn-game-primary w-full py-3 text-sm font-black tracking-widest ${isBusy ? 'opacity-60 cursor-not-allowed!' : ''}`}
+          >
+            {isBusy ? 'Confirming on Chain…' : 'Take Over Settlement'}
+          </button>
+          <p className="font-mono text-[10px] text-text2 text-center opacity-70">
+            The starter stalled. Post the {bondUsdc.toLocaleString()} USDC bond to restart the
+            settlement batch — their bond is forfeited, yours is returned when you finalize.
+          </p>
+        </div>
+      ) : (
+        <p className="font-mono text-[10px] text-text2 text-center opacity-70">
+          Settlement is being finalized on-chain. If the starter stalls past the deadline,
+          anyone may take over.
+        </p>
+      )}
+      <TxModal
+        status={status}
+        txHashes={txHashes}
+        title="Taking Over Settlement"
+        successTitle="Settlement Taken Over"
+        successMessage="You are now the settlement starter. Finalize the batch to reclaim your bond."
+        errorReason={errorReason}
+        steps={[
+          { label: 'Approve USDC', description: 'Approve the settlement bond', activeStatuses: ['approving', 'mining_approval'], completeStatuses: ['executing', 'mining', 'success'] },
+          { label: 'Take Over', description: 'Post the bond and restart the batch', activeStatuses: ['executing', 'mining'], completeStatuses: ['success'] },
+        ]}
+        onClose={() => { setStatus('idle'); setTxHashes([null, null]); }}
+      />
+    </div>
+  );
+}
+
+/**
+ * TRIAGE / INVESTIGATION (ADR-0008): payouts are frozen while the Council may
+ * flag sybil clusters. Once the active window lapses, `openDistribution()` is
+ * permissionless — surface the button to whoever is impatient.
+ */
+function ReviewActions({ seasonAddress }: { seasonAddress: string }) {
+  const chainId = useTenantChainId();
+  const publicClient = usePublicClient({ chainId });
+  const { isConnected } = useAccount();
+  const { writeContractAsync } = useWriteContract();
+  const { isTriage } = useSeasonPhase(seasonAddress);
+  const { reviewWindowEnd, reviewExpired, refetch } = useSeasonEndgame(seasonAddress);
+
+  const [status, setStatus] = useState<TxStatus>('idle');
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [errorReason, setErrorReason] = useState<string | null>(null);
+  const isBusy = status === 'executing' || status === 'mining';
+
+  const handleOpen = async () => {
+    if (!publicClient || isBusy) return;
+    setTxHash(null);
+    setErrorReason(null);
+    try {
+      setStatus('executing');
+      const hash = await writeContractAsync({
+        address: seasonAddress as `0x${string}`, abi: GameSeasonAbi as Abi,
+        functionName: 'openDistribution', args: [],
+      });
+      setTxHash(hash);
+      setStatus('mining');
+      await publicClient.waitForTransactionReceipt({ hash: hash as `0x${string}` });
+      setStatus('success');
+      refetch();
+    } catch (err: unknown) {
+      statusFromError(err, setStatus, setErrorReason);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <CountdownTicker
+        targetTimestamp={reviewWindowEnd}
+        label={isTriage ? 'Triage Window' : 'Investigation Window'}
+      />
+      {reviewExpired ? (
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={handleOpen}
+            disabled={isBusy || !isConnected}
+            className={`btn-game-primary w-full py-3 text-sm font-black tracking-widest ${isBusy ? 'opacity-60 cursor-not-allowed!' : ''}`}
+          >
+            {isBusy ? 'Confirming on Chain…' : 'Open Distribution'}
+          </button>
+          <p className="font-mono text-[10px] text-text2 text-center opacity-70">
+            The review window has lapsed. Anyone may open distribution — this unlocks claims
+            for every player.
+          </p>
+        </div>
+      ) : (
+        <p className="font-mono text-[10px] text-text2 text-center opacity-70">
+          {isTriage
+            ? 'Post-settlement triage: the Council may raise suspicion of sybil play. If it stays quiet, payouts open when the window lapses.'
+            : 'The season is under investigation — the Council may flag sybil wallets. Payouts open when the window lapses or the investigation concludes.'}
+        </p>
+      )}
+      <TxModal
+        status={status}
+        txHashes={[txHash]}
+        title="Opening Distribution"
+        successTitle="Distribution Opened"
+        successMessage="Payouts are live — all players can claim now."
+        errorReason={errorReason}
+        steps={[
+          { label: 'Open Distribution', description: 'Snapshot the pool and unlock claims', activeStatuses: ['executing', 'mining'], completeStatuses: ['success'] },
+        ]}
+        onClose={() => { setStatus('idle'); setTxHash(null); }}
+      />
+    </div>
+  );
+}
+
+/**
+ * Escrow reclaim (§4): open bids hold USDC, open asks hold FIM. Escrow belongs to
+ * the order owner and is reclaimable forever; post-season it can only flow back.
+ * One click cancels everything via `cancelOrders` — stale ids are skipped
+ * on-chain, so the Ponder-derived list is safe even mid-refetch.
+ */
+function ReclaimEscrowBlock({ seasonAddress, exchangeAddress }: { seasonAddress: string; exchangeAddress: string }) {
+  const chainId = useTenantChainId();
+  const publicClient = usePublicClient({ chainId });
+  const { address } = useAccount();
+  const { writeContractAsync } = useWriteContract();
+  const { data: openOrders = [], refetch: refetchOrders } = useOpenOrders(seasonAddress, address, 'open');
+
+  const [status, setStatus] = useState<TxStatus>('idle');
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [errorReason, setErrorReason] = useState<string | null>(null);
+  const isBusy = status === 'executing' || status === 'mining';
+
+  const { usdcLocked, fimLocked } = useMemo(() => {
+    let usdc = 0;
+    let fim = 0;
+    for (const o of openOrders) {
+      if (o.isBuy) usdc += o.remainingAmount * o.price;
+      else fim += o.remainingAmount;
+    }
+    return { usdcLocked: usdc, fimLocked: fim };
+  }, [openOrders]);
+
+  if (openOrders.length === 0) return null;
+
+  const handleReclaim = async () => {
+    if (!publicClient || isBusy || openOrders.length === 0) return;
+    setTxHash(null);
+    setErrorReason(null);
+    try {
+      setStatus('executing');
+      const hash = await writeContractAsync({
+        address: exchangeAddress as `0x${string}`, abi: ExchangeAbi as Abi,
+        functionName: 'cancelOrders', args: [openOrders.map((o) => o.orderId)],
+      });
+      setTxHash(hash);
+      setStatus('mining');
+      await publicClient.waitForTransactionReceipt({ hash: hash as `0x${string}` });
+      setStatus('success');
+      refetchOrders();
+    } catch (err: unknown) {
+      statusFromError(err, setStatus, setErrorReason);
+    }
+  };
+
+  const fmt = (n: number, d = 2) => n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+
+  return (
+    <div
+      className="px-5 py-4 rounded-lg flex flex-col gap-2"
+      style={{ background: 'var(--color-card2)', border: '1px dashed var(--color-border2)' }}
+    >
+      <p className="font-mono text-[11px] uppercase font-bold tracking-widest text-text2">Escrowed Funds</p>
+      <p className="font-mono text-[10px] text-text2">
+        {usdcLocked > 0 && <><strong className="text-text">{fmt(usdcLocked)} USDC</strong>{fimLocked > 0 ? ' + ' : ''}</>}
+        {fimLocked > 0 && <strong className="text-text">{fmt(fimLocked)} FIM</strong>}
+        {' '}locked in {openOrders.length} open order{openOrders.length === 1 ? '' : 's'}.
+        Escrow is yours and reclaimable any time — claiming your payout does not require it.
+      </p>
+      <button
+        onClick={handleReclaim}
+        disabled={isBusy}
+        className={`btn-game-secondary w-full py-2.5 text-xs font-black tracking-widest uppercase ${isBusy ? 'opacity-60 cursor-not-allowed!' : ''}`}
+      >
+        {isBusy ? 'Confirming on Chain…' : 'Reclaim Escrowed Funds'}
+      </button>
+      <TxModal
+        status={status}
+        txHashes={[txHash]}
+        title="Reclaiming Escrow"
+        successTitle="Escrow Reclaimed"
+        successMessage="All open orders were cancelled and their escrow returned to your wallet."
+        errorReason={errorReason}
+        steps={[
+          { label: 'Cancel Orders', description: 'Cancel all open orders and return escrow', activeStatuses: ['executing', 'mining'], completeStatuses: ['success'] },
+        ]}
+        onClose={() => { setStatus('idle'); setTxHash(null); }}
+      />
+    </div>
+  );
+}
+
+export function PayoutMask({ seasonAddress, exchangeAddress, className }: PayoutMaskProps) {
   const { address, isConnected } = useAccount();
   const chainId = useTenantChainId();
   const publicClient = usePublicClient({ chainId });
 
   const [status, setStatus] = useState<TxStatus>('idle');
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [errorReason, setErrorReason] = useState<string | null>(null);
   const [snapshotPnL, setSnapshotPnL] = useState<number | null>(null);
 
   const { writeContractAsync } = useWriteContract();
 
-  const { payout, yieldPayout, pnl: livePnL, userFim, contribution, fimBurned, realizedPayout, hasClaimed: hasClaimedChain, hasBalance, loading: calcLoading, error: payoutError, refetch: refetchPayout } =
+  const { payout, yieldPayout, pnl: livePnL, userFim, finalFim, contribution, realizedPayout, hasClaimed: hasClaimedChain, hasBalance, loading: calcLoading, error: payoutError, refetch: refetchPayout } =
     usePayout(seasonAddress, address);
   const { winningSide } = useSeasonVictory(seasonAddress);
-  const capsWin = winningSide === 'cap';
+  const { isSettling, isUnderReview, isPayout } = useSeasonPhase(seasonAddress);
+  const { forcedDraw, claimDeadline, swept } = useSeasonEndgame(seasonAddress);
+  const capsWin = !forcedDraw && winningSide === 'cap';
 
-  // Open sell orders escrow FIM; claimPayout() reverts (insufficient FIM to burn)
-  // until they're cancelled or settled. Block the claim and tell the user why.
-  const { data: openOrders = [] } = useOpenOrders(seasonAddress, address, 'open');
-  const hasSellOrders = openOrders.some(o => !o.isBuy);
+  // Council sybil flag on the connected wallet (this season). Zeroes the payout
+  // on-chain; collateral is still released at claim.
+  const { data: isFlaggedRaw } = useReadContract({
+    address: seasonAddress as `0x${string}`, abi: GameSeasonAbi as Abi,
+    functionName: 'isFlagged', args: address ? [address] : undefined, chainId,
+    query: { enabled: !!address, refetchInterval: 15000 },
+  });
+  const isFlaggedUser = isFlaggedRaw === true;
 
   // hasClaimed from the contract; optimistically true the instant a claim tx confirms.
   const hasClaimed = hasClaimedChain || status === 'success';
 
-  // Every participant can claim to release their RGD collateral & burn FIM —
-  // even with a $0 USDC payout. Gate only on having a stake and no escrow lock.
-  const canClaim = !hasClaimed && !hasSellOrders && (payout > 0 || hasBalance);
+  // Every participant can claim to release their staked RGD collateral — even at
+  // a $0 payout (flagged, swept, or dust). Open orders no longer block claiming:
+  // claimPayout() doesn't touch the Exchange, and the ledger balance already
+  // includes escrowed FIM.
+  const canClaim = isPayout && !hasClaimed && (payout > 0 || hasBalance);
 
   const displayPnL = useMemo(() => {
     if (snapshotPnL !== null && livePnL < snapshotPnL) return snapshotPnL;
     return livePnL;
   }, [snapshotPnL, livePnL]);
 
-  // `payout` (from usePayout) is already pool-proportional and yield-inclusive —
-  // it sums the base prize pool (auction USDC + trading fees) and the reinvested
-  // Aave yield bonus. No further yield adjustment here.
   const displayPayout = hasClaimed ? realizedPayout : payout;
 
   useEffect(() => {
@@ -65,6 +359,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
     if (!canClaim || !publicClient || status !== 'idle') return;
     setSnapshotPnL(livePnL);
     setTxHash(null);
+    setErrorReason(null);
 
     try {
       setStatus('executing');
@@ -79,20 +374,14 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
       await publicClient.waitForTransactionReceipt({ hash: hash as `0x${string}` });
       setStatus('success');
     } catch (err: unknown) {
-      if (isUserRejection(err)) {
-        setStatus('canceled');
-        setTimeout(() => setStatus('idle'), 2000);
-      } else if (isInsufficientGas(err)) {
-        setStatus('no_gas');
-      } else {
-        setStatus('failed');
-      }
+      statusFromError(err, setStatus, setErrorReason);
     }
   };
 
   const handleClose = () => {
     setStatus('idle');
     setTxHash(null);
+    setErrorReason(null);
     setSnapshotPnL(null);
   };
 
@@ -115,7 +404,18 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
   const pnlPositive = displayPnL >= 0;
   const contribPositive = capsWin ? contribution <= 0 : contribution >= 0;
   const yieldHasValue = yieldPayout > 0.005; // ignore sub-cent rounding
-  const displayFim = hasClaimed ? fimBurned : userFim;
+  const displayFim = hasClaimed ? finalFim : userFim;
+
+  const statusPill = isSettling ? 'Settling'
+    : isUnderReview ? 'Under Review'
+    : hasClaimed ? 'Settled'
+    : 'Active';
+  const statusDotLive = !hasClaimed && !isSettling && !isUnderReview;
+
+  const vaultLabel = hasClaimed ? 'Total Claimed'
+    : !isPayout ? 'Projected Payout'
+    : payout > 0 ? 'Claimable'
+    : 'No Payout Due';
 
   return (
     <>
@@ -125,15 +425,15 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
       <div className="terminal-pane-header mb-0!">
         <span className="terminal-pane-title">Payout Settlement</span>
         <span className="font-mono text-[10px] bg-[var(--color-card2)] border border-[var(--color-border)] px-2 py-0.5 rounded text-text2 uppercase tracking-wider flex items-center gap-1.5">
-          <span className={`h-1.5 w-1.5 rounded-full ${hasClaimed ? 'bg-[var(--color-text2)]' : 'bg-[var(--color-green)] animate-pulse'}`} />
-          {hasClaimed ? 'Settled' : 'Active'}
+          <span className={`h-1.5 w-1.5 rounded-full ${statusDotLive ? 'bg-[var(--color-green)] animate-pulse' : 'bg-[var(--color-text2)]'}`} />
+          {statusPill}
         </span>
       </div>
 
       {/* Audit Matrix */}
       <div className="grid grid-cols-2 gap-5">
         <div className="terminal-pane bg-transparent!">
-          <span className="terminal-pane-title block mb-0.5">{hasClaimed ? 'FIM Burned' : 'Your Holdings'}</span>
+          <span className="terminal-pane-title block mb-0.5">{hasClaimed ? 'Final Holdings' : 'Your Holdings'}</span>
           <span className="font-mono text-sm font-bold text-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
             {displayFim.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             <span className="ml-1 text-[10px] text-text2">FIM</span>
@@ -157,7 +457,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
         <div className="terminal-pane">
           <div className="flex justify-between items-center mb-0.5">
             <span className="terminal-pane-title">Season P / L</span>
-            
+
           </div>
           {calcLoading ? (
             <div className="h-4 w-28 rounded animate-pulse mt-1" style={{ background: 'var(--color-border)' }} />
@@ -194,7 +494,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
       <div className="rounded-md p-0.5" style={{ background: 'var(--sunset-35)' }}>
         <div className={`${hasClaimed ? 'bg-card' : 'bg-card2'} rounded-sm p-4 flex flex-col items-center justify-center text-center`}>
           <span className="font-mono text-[10px] font-bold text-text2 uppercase tracking-widest mb-1">
-            {hasClaimed ? 'Total Claimed' : payout > 0 ? 'Claimable' : 'No Payout Due'}
+            {vaultLabel}
           </span>
           {calcLoading ? (
             <div className="h-9 w-36 rounded animate-pulse" style={{ background: 'var(--color-border)' }} />
@@ -214,18 +514,43 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
         <p className="text-red-500 font-mono text-[11px] text-center">{payoutError}</p>
       )}
 
-      {/* CTA */}
-      {hasClaimed ? null : hasSellOrders ? (
-        <div
-          className="px-5 py-4 rounded-lg text-center"
-          style={{ background: 'var(--color-card2)', border: '1px dashed var(--color-red-35)' }}
-        >
-          <p className="font-mono text-[11px] uppercase font-bold tracking-widest text-red">Open Sell Orders</p>
+      {/* Season-wide draw notice: any Council flag reprices every player. */}
+      {forcedDraw && !hasClaimed && (
+        <div className="surface-pink-warn px-4 py-3 rounded-lg text-center">
+          <p className="font-mono text-[11px] uppercase font-bold tracking-widest text-red">Season Settles As Draw</p>
           <p className="font-mono text-[10px] text-text2 mt-1">
-            Cancel your open sell orders in the Open Orders tab before claiming — escrowed FIM blocks settlement.
+            A wallet was flagged during the investigation, so the outcome is voided — all
+            payouts are repriced to the draw distribution.
           </p>
         </div>
-      ) : payout > 0 || hasBalance ? (
+      )}
+
+      {isFlaggedUser && !hasClaimed && (
+        <div className="surface-pink-warn px-4 py-3 rounded-lg text-center">
+          <p className="font-mono text-[11px] uppercase font-bold tracking-widest text-red">Wallet Flagged</p>
+          <p className="font-mono text-[10px] text-text2 mt-1">
+            This wallet was flagged as part of a sybil cluster — its payout is forfeited.
+            Your staked RGD collateral is still released at claim.
+          </p>
+        </div>
+      )}
+
+      {swept && !hasClaimed && (
+        <div className="surface-pink-warn px-4 py-3 rounded-lg text-center">
+          <p className="font-mono text-[11px] uppercase font-bold tracking-widest text-red">Claim Window Expired</p>
+          <p className="font-mono text-[10px] text-text2 mt-1">
+            Unclaimed payouts were swept. Claiming now pays $0 but still releases your
+            staked RGD collateral.
+          </p>
+        </div>
+      )}
+
+      {/* Phase actions */}
+      {isSettling ? (
+        <SettlementActions seasonAddress={seasonAddress} />
+      ) : isUnderReview ? (
+        <ReviewActions seasonAddress={seasonAddress} />
+      ) : hasClaimed ? null : canClaim ? (
         <div className="flex flex-col gap-2">
           <button
             onClick={handleClaim}
@@ -239,6 +564,9 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
               No USDC payout due, but claiming releases your staked RGD.
             </p>
           )}
+          {!swept && claimDeadline > 0 && (
+            <CountdownTicker targetTimestamp={claimDeadline} label="Claim Window Ends" inline />
+          )}
         </div>
       ) : (
         <div
@@ -250,6 +578,9 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
         </div>
       )}
 
+      {/* Escrow reclaim — independent of claiming, shown while open orders exist. */}
+      <ReclaimEscrowBlock seasonAddress={seasonAddress} exchangeAddress={exchangeAddress} />
+
     </div>
 
     <TxModal
@@ -258,6 +589,7 @@ export function PayoutMask({ seasonAddress, className }: PayoutMaskProps) {
       title="Claiming Payout"
       successTitle="Payout Claimed"
       successMessage="Your USDC has been sent to your wallet."
+      errorReason={errorReason}
       steps={[
         {
           label: 'Claim Payout',
