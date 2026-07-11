@@ -93,6 +93,19 @@ export const trades = onchainTable("trades", (t) => ({
   buyerIsCapitalist: t.boolean().notNull().default(false),
   sellerIsCapitalist: t.boolean().notNull().default(false),
   giniBps: t.integer().notNull().default(0),
+  // Gini AFTER this fill is applied (giniBps is the pre-fill value). Lets a
+  // multi-leg tx's net Gini move be read from stamped data alone: first leg's
+  // giniBps → any leg's giniBpsAfter. 0 = no meaningful sample (same sentinel
+  // as giniBps), which also covers rows indexed before this column existed.
+  giniBpsAfter: t.integer().notNull().default(0),
+  // Same pre-/post-fill Gini pair as giniBps/giniBpsAfter but in PPM
+  // (parts-per-million, BPS ×100), i.e. 100× the resolution. Whole-BPS
+  // truncates a sub-BPS fill's impact to 0; PPM keeps it, so direction-of-move
+  // consumers (the shuffle quest) don't lose genuine moves as trades shrink
+  // relative to supply. Contract-exact whole BPS is always trunc(ppm/100).
+  // Same 0 = no-meaningful-sample sentinel (also covers pre-column rows).
+  giniPpm: t.integer().notNull().default(0),
+  giniPpmAfter: t.integer().notNull().default(0),
   // The taker (msg.sender) for this fill — the side that pays the fee, regardless
   // of buy/sell. Lets the frontend show fees to whoever actually paid them.
   taker: t.hex().notNull().default('0x0000000000000000000000000000000000000000'),

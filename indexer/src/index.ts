@@ -9,7 +9,12 @@ import sepoliaCore from "../../src/deployments/sepolia/core.json";
 // Single source of truth for Gini — the exact integer replay of the contract's
 // _calculateReg(). Shared with the frontend so candle/chart Gini, the live
 // headline Gini, and the on-chain value are byte-for-byte identical.
-import { giniBpsFromBalances } from "../../src/utils/gini";
+import { giniBpsFromBalances, giniPpmFromBalances } from "../../src/utils/gini";
+// Event-driven quest crediting — writes provable on-chain completions straight to
+// the quest DB the instant the event is indexed, so quests conclude without the
+// user ever opening the board. See src/questCredits.ts.
+import { creditQuest, creditWinScore } from "./questCredits";
+import { relativePnl, computeWinScoreForSeason } from "../../src/utils/quests";
 
 const TENANT: "mainnet" | "sepolia" =
   (process.env.PONDER_DEPLOYMENT ?? "mainnet").toLowerCase() === "sepolia" ? "sepolia" : "mainnet";
@@ -169,6 +174,9 @@ ponder.on("Auction:FimPurchased", async ({ event, context }) => {
       .update(schema.seasons, { address: season.address })
       .set((row) => ({ prizePool: row.prizePool + fimMinted / 1_000_000_000_000n }));
 
+    // Quest: bought FIM in the auction.
+    await creditQuest(buyer, "buy_fim_auction");
+
 });
 
 // 3. Track Net Contribution (Wealth shift via EVENT)
@@ -214,12 +222,15 @@ ponder.on("Exchange:OrderCreated", async ({ event, context }) => {
   const { id, owner, isBuy, fimAmount, usdcPrice } = event.args; 
   
   // 1. Lookup Season Address (Keep your existing logic)
+  // exchangeAddress is stored lowercased (SeasonDeployed handler), but
+  // event.log.address arrives EIP-55 checksummed — lowercase it or this
+  // case-sensitive eq() never matches and every order is silently dropped.
   const season = await context.db.sql
     .select()
     .from(schema.seasons)
-    .where(eq(schema.seasons.exchangeAddress, event.log.address))
+    .where(eq(schema.seasons.exchangeAddress, event.log.address.toLowerCase() as `0x${string}`))
     .limit(1);
-  
+
   if (!season[0]) return;
   const seasonAddress = season[0].address;
 
@@ -250,6 +261,10 @@ ponder.on("Exchange:OrderCreated", async ({ event, context }) => {
       .values({ seasonAddress, playerAddress: owner.toLowerCase() as `0x${string}`, fimBalance: -fimAmount, netContribution: 0n })
       .onConflictDoUpdate((row) => ({ fimBalance: row.fimBalance - fimAmount }));
   }
+
+  // Quest: placed a maker order (buy or sell). Later fills/cancellations don't
+  // matter — creating the order is the qualifying act.
+  await creditQuest(owner, "create_order");
 });
 
 // 2. Order Filled (Fixing all issues)
@@ -258,12 +273,13 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
   const { id, buyer, seller, fimAmount, usdcPrice } = event.args; 
   
   // 2. Find the season array from DB
+  // exchangeAddress stored lowercased; event.log.address is checksummed — match casing.
   const seasonResult = await context.db.sql
     .select()
     .from(schema.seasons)
-    .where(eq(schema.seasons.exchangeAddress, event.log.address))
+    .where(eq(schema.seasons.exchangeAddress, event.log.address.toLowerCase() as `0x${string}`))
     .limit(1);
-    
+
   // Extract the single object from the array!
   if (!seasonResult[0]) return;
   const currentSeason = seasonResult[0];
@@ -377,7 +393,27 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
   // Contract-exact Gini: raw-wei balances + the season's existential threshold,
   // replayed through the same integer math as GameSeason._calculateReg().
   const existentialThreshold = await getExistentialThreshold(context.client, seasonAddress as `0x${string}`);
-  const giniBps = giniBpsFromBalances(Array.from(effectiveBals.values()), existentialThreshold);
+  const preFillBals = Array.from(effectiveBals.values());
+  const giniBps = giniBpsFromBalances(preFillBals, existentialThreshold);
+  // PPM (BPS ×100) of the same pre-fill distribution — finer resolution so a
+  // sub-BPS shuffle isn't truncated to a tie. trunc(giniPpm/100) === giniBps.
+  const giniPpm = giniPpmFromBalances(preFillBals, existentialThreshold);
+
+  // Post-fill Gini: the distribution with THIS fill applied. The buyer gains
+  // fimAmount; on a resting BUY the taker-seller loses it, while on a resting
+  // SELL the maker's side was already reflected via the step-5 remainingAmount
+  // reduction. Stamped on the trade row (giniBpsAfter) so the net Gini move of
+  // a multi-leg tx is readable from stamped data alone.
+  const postFillBals = new Map(effectiveBals);
+  const buyerKey = trueBuyer.toLowerCase();
+  postFillBals.set(buyerKey, (postFillBals.get(buyerKey) ?? 0n) + fimAmount);
+  if (order.isBuy) {
+    const sellerKey = trueSeller.toLowerCase();
+    postFillBals.set(sellerKey, (postFillBals.get(sellerKey) ?? 0n) - fimAmount);
+  }
+  const postFillVals = Array.from(postFillBals.values());
+  const giniBpsAfter = giniBpsFromBalances(postFillVals, existentialThreshold);
+  const giniPpmAfter = giniPpmFromBalances(postFillVals, existentialThreshold);
 
   // 6c. Buyer-pays trading fee for THIS fill (fee = usdcPrice × tradeFeeBps / 10_000).
   // Computed here so it can be stamped on the trade row below; reused at step 9b.
@@ -405,9 +441,65 @@ ponder.on("Exchange:OrderFilled", async ({ event, context }) => {
     buyerIsCapitalist,
     sellerIsCapitalist,
     giniBps,
+    giniBpsAfter,
+    giniPpm,
+    giniPpmAfter,
     taker,
     feePaid,
   });
+
+  // Quest: executed a class-aligned shuffle. A mixed taker queue settles through
+  // ONE fillBatch transaction, so every leg's OrderFilled shares this txHash with
+  // the same taker (msg.sender): the taker is trueBuyer on legs that hit resting
+  // sells and trueSeller on legs that hit resting buys. It qualifies when, at a
+  // leg by which both roles have appeared, the Gini has net-moved from its
+  // pre-shuffle value (first leg's giniBps) toward the taker's class pole — up
+  // for a Capitalist, down for a Proletarian (class read from the first leg,
+  // i.e. as the wallet entered the shuffle). This runs on every leg and
+  // creditQuest is idempotent, so the last leg's pass evaluates the completed
+  // batch; strict inequality also rules out self-fills (no net Gini move).
+  const txTrades = await context.db.sql
+    .select({
+      id: schema.trades.id,
+      buyer: schema.trades.buyer,
+      seller: schema.trades.seller,
+      taker: schema.trades.taker,
+      giniPpm: schema.trades.giniPpm,
+      giniPpmAfter: schema.trades.giniPpmAfter,
+      buyerIsCapitalist: schema.trades.buyerIsCapitalist,
+      sellerIsCapitalist: schema.trades.sellerIsCapitalist,
+    })
+    .from(schema.trades)
+    .where(eq(schema.trades.txHash, event.transaction.hash));
+  const takerLc = taker.toLowerCase();
+  const legs = txTrades
+    .filter((t) => t.taker.toLowerCase() === takerLc)
+    .sort((a, b) => Number(a.id.split('-')[1]) - Number(b.id.split('-')[1]));
+  const first = legs[0];
+  if (first) {
+    // PPM (BPS ×100) so a sub-BPS shuffle still resolves as a real move rather
+    // than truncating to a whole-BPS tie and silently failing the strict-<>.
+    const preShuffleGini = first.giniPpm;
+    const takerIsCapitalist = first.buyer.toLowerCase() === takerLc
+      ? first.buyerIsCapitalist
+      : first.sellerIsCapitalist;
+    let takerBought = false;
+    let takerSold = false;
+    for (const leg of legs) {
+      if (leg.buyer.toLowerCase() === takerLc) takerBought = true;
+      if (leg.seller.toLowerCase() === takerLc) takerSold = true;
+      if (!(takerBought && takerSold)) continue;
+      // 0 is the "no meaningful sample" sentinel — never judge direction on it.
+      if (preShuffleGini <= 0 || leg.giniPpmAfter <= 0) continue;
+      const movedTowardClassPole = takerIsCapitalist
+        ? leg.giniPpmAfter > preShuffleGini
+        : leg.giniPpmAfter < preShuffleGini;
+      if (movedTowardClassPole) {
+        await creditQuest(taker, "execute_shuffle");
+        break;
+      }
+    }
+  }
 
   // 8. Upsert pre-computed candle buckets for all timeframes
   const tradePrice = fimAmount > 0n ? (usdcPrice * 10n ** 18n) / fimAmount : 0n;
@@ -519,7 +611,8 @@ ponder.on("Exchange:OrderCancelled", async ({ event, context }) => {
   const { id } = event.args; // Order ID
   
   // 1. Find seasonAddress (Dependency)
-  const season = await context.db.sql.select().from(schema.seasons).where(eq(schema.seasons.exchangeAddress, event.log.address)).limit(1);
+  // exchangeAddress stored lowercased; event.log.address is checksummed — match casing.
+  const season = await context.db.sql.select().from(schema.seasons).where(eq(schema.seasons.exchangeAddress, event.log.address.toLowerCase() as `0x${string}`)).limit(1);
   if (!season[0]) return;
   const seasonAddress = season[0].address;
 
@@ -546,25 +639,32 @@ ponder.on("Exchange:OrderCancelled", async ({ event, context }) => {
 
 ponder.on("GameSeason:PayoutClaimed", async ({ event, context }) => {
   const { user, amount } = event.args;
-  const seasonAddress = event.log.address;
-  const id = `${seasonAddress}:${user}`; // IMPORTANT: Must match the other handler's ID
+  // playerSeasonStats is keyed on the composite PK [seasonAddress, playerAddress]
+  // (there is no `id` column). Both must be lowercased so this row collides with
+  // the one written at finalization and the one the quests API queries by
+  // lowercase address — otherwise the claim lands on a divergent checksummed key
+  // and `realizedPayout` never surfaces (claim_payout quest never completes).
+  const seasonAddress = event.log.address.toLowerCase() as `0x${string}`;
+  const playerAddress = user.toLowerCase() as `0x${string}`;
 
   await context.db
     .insert(playerSeasonStats)
-    // You must provide the ID here so onConflictDoUpdate knows which row to update
-    .values({ 
-      id: id,
-      seasonAddress: seasonAddress,
-      playerAddress: user,
-      fimBalance: 0n, 
+    .values({
+      seasonAddress,
+      playerAddress,
+      fimBalance: 0n,
       netContribution: 0n,
       totalPotentialPayout: 0n, // Defaults
-      realizedPayout: amount, 
+      realizedPayout: amount,
     })
     .onConflictDoUpdate((row) => ({
       // Only update realizedPayout on claim
       realizedPayout: row.realizedPayout + amount,
     }));
+
+  // Quest: claimed a payout. Mirrors the app's `realizedPayout > 0` check —
+  // a zero-value claim (swept/flagged/dust) doesn't count.
+  if (amount > 0n) await creditQuest(playerAddress, "claim_payout");
 });
 
 ponder.on("GameSeason:PlayerSeasonStatsFinalized", async ({ event, context }) => {
@@ -595,6 +695,50 @@ ponder.on("GameSeason:PlayerSeasonStatsFinalized", async ({ event, context }) =>
       fimBalance: fimBalances,
       finalized: true,
     }));
+});
+
+// Quest: Win the Game (variable, 0–1000 pts by relative-PnL rank within a season).
+// DistributionOpened fires once, after every PlayerSeasonStatsFinalized for the
+// season — so the full final PnL distribution is now in Ponder and each player's
+// rank is fixed. We score every finalized participant here instead of lazily on a
+// board visit, so the credit concludes for everyone the moment the season settles.
+// creditWinScore only ever raises a wallet's score (best across seasons), matching
+// the app's `bestWin > existingWin` semantics.
+ponder.on("GameSeason:DistributionOpened", async ({ event, context }) => {
+  const seasonAddress = event.log.address.toLowerCase() as `0x${string}`;
+
+  const rows = await context.db.sql
+    .select({
+      playerAddress: schema.playerSeasonStats.playerAddress,
+      totalPotentialPayout: schema.playerSeasonStats.totalPotentialPayout,
+      netContribution: schema.playerSeasonStats.netContribution,
+    })
+    .from(schema.playerSeasonStats)
+    .where(
+      and(
+        eq(schema.playerSeasonStats.seasonAddress, seasonAddress),
+        eq(schema.playerSeasonStats.finalized, true),
+      ),
+    );
+
+  // Build the season's PnL vector (players with a defined relative PnL), then
+  // score each player against it. Fewer than 2 valid PnLs → no meaningful rank.
+  const pnlByPlayer = new Map<string, number>();
+  for (const r of rows) {
+    const pnl = relativePnl(BigInt(r.totalPotentialPayout), BigInt(r.netContribution));
+    if (pnl !== null) pnlByPlayer.set(r.playerAddress.toLowerCase(), pnl);
+  }
+  const allPnls = Array.from(pnlByPlayer.values());
+  if (allPnls.length < 2) {
+    console.log(`[Indexer] DistributionOpened ${seasonAddress}: <2 ranked players, skipping win scores.`);
+    return;
+  }
+
+  for (const [addr, pnl] of pnlByPlayer) {
+    const score = computeWinScoreForSeason(pnl, allPnls);
+    if (score > 0) await creditWinScore(addr, score);
+  }
+  console.log(`[Indexer] DistributionOpened ${seasonAddress}: scored ${pnlByPlayer.size} players for win_the_game.`);
 });
 
 ponder.on("GameSeason:WalletFlagged", async ({ event, context }) => {
@@ -739,6 +883,8 @@ if ((process.env.PONDER_DEPLOYMENT ?? "mainnet").toLowerCase() === "sepolia") {
       amount: event.args.amount as bigint,
       timestamp: event.block.timestamp,
     });
+    // Quest: used the faucet.
+    await creditQuest(event.args.user as string, "use_faucet");
   });
 }
 
@@ -751,6 +897,8 @@ ponder.on("Staking:Staked", async ({ event, context }: any) => {
     amount: event.args.amount as bigint,
     timestamp: event.block.timestamp,
   });
+  // Quest: staked RGD.
+  await creditQuest(event.args.user as string, "stake_rgd");
 });
 
 // MockUniswapV2Router has no Swap event, so we detect a USDC→RGD swap via
@@ -767,5 +915,7 @@ ponder.on("RgdToken:Transfer", async ({ event, context }: any) => {
     rgdOut: event.args.value as bigint,
     timestamp: event.block.timestamp,
   });
+  // Quest: swapped USDC → RGD (recipient of the router transfer is the user).
+  await creditQuest(event.args.to as string, "swap_usdc_rgd");
 });
 

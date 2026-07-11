@@ -27,7 +27,8 @@
     "swap_usdc_rgd": 50,
     "stake_rgd": 50,
     "buy_fim_auction": 50,
-    "trade_fim": 50,
+    "create_order": 50,
+    "execute_shuffle": 100,
     "claim_payout": 50,
     "win_the_game_max": 1000,
     "discussion_bonus_cap": 400

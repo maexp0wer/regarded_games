@@ -4,6 +4,7 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { useSeasonLeaderboard, LeaderboardEntry } from '@/hooks/useSeasonLeaderboard';
 import { usePlayerNames } from '@/hooks/usePlayerNames';
+import LedgerLoader from '@/components/LedgerLoader';
 
 interface SeasonLeaderboardProps {
   seasonAddress: string;
@@ -377,20 +378,7 @@ export const SeasonLeaderboard: React.FC<SeasonLeaderboardProps> = ({ seasonAddr
 
 
   if (board.loading) {
-    return (
-      <div className="w-full flex flex-col gap-6 p-6 rounded-xl bg-bg! border border-border">
-        <div className="h-7 w-56 rounded bg-border animate-pulse" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-          {CATEGORIES.map((c) => (
-            <div key={c.key} className="flex flex-col gap-3 animate-pulse">
-              <div className="h-4 w-32 rounded bg-border" />
-              <div className="h-48 w-full rounded bg-border" />
-            </div>
-          ))}
-        </div>
-        <p className="text-center text-xs text-text2 font-mono">Reading Ledger...</p>
-      </div>
-    );
+    return <LedgerLoader />;
   }
 
   if (board.totalPlayers < 1) return null;

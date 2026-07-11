@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useReadContract } from 'wagmi';
 import { Address } from 'viem';
 import type { Abi } from 'abitype';
 
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { useTenantChainId } from '@/context/TenantContext';
+import { useChainTime } from './useChainTime';
 
 export interface SeasonConfig {
   auctionStartTime: number;
@@ -80,11 +81,11 @@ export function useSeasonPhase(seasonAddress: Address | string | undefined): Sea
     query: { enabled, staleTime: Infinity },
   });
 
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
-  useEffect(() => {
-    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
-    return () => clearInterval(id);
-  }, []);
+  // Chain clock (see useChainTime): the expiry check below compares against the
+  // on-chain seasonEnd, which is anchored to block.timestamp. In fork mode the
+  // chain lags real time, so a Date.now() comparison would flag trading as
+  // expired days early.
+  const now = useChainTime();
 
   const config = useMemo<SeasonConfig | null>(() => {
     if (!rawConfig) return null;

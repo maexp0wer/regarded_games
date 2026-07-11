@@ -111,6 +111,9 @@ export function useSeasonFimDistribution(
 
     // Proletarians: sorted ascending (index 0 = poorest). Bucket 0–9.
     // Divide by (totalSoc - 1) so the last player lands exactly in bucket 9.
+    // A lone socialist falls in the poorest bucket (0, "SOC 100%"), matching the
+    // "Expected Class Rank" percentile, which also resolves the single-member case
+    // to 100% (furthest into the Masses).
     socialists.forEach((p, idx) => {
       const bucket = totalSoc > 1 ? Math.min(9, Math.floor((idx / (totalSoc - 1)) * 9)) : 0;
       result[bucket].fimAmount += Number(formatUnits(p.balanceRaw, 18));
@@ -119,8 +122,11 @@ export function useSeasonFimDistribution(
 
     // Capitalists: sorted ascending (index 0 = closest to threshold). Bucket 10–19.
     // Divide by (totalCap - 1) so the last player lands exactly in bucket 19.
+    // A lone capitalist is BOTH the poorest and richest of the class; place it in
+    // the richest bucket (19) so it matches the "Expected Class Rank" percentile,
+    // which resolves the same single-member degenerate case to 100% (richest).
     capitalists.forEach((p, idx) => {
-      const bucket = totalCap > 1 ? Math.min(19, 10 + Math.floor((idx / (totalCap - 1)) * 9)) : 10;
+      const bucket = totalCap > 1 ? Math.min(19, 10 + Math.floor((idx / (totalCap - 1)) * 9)) : 19;
       result[bucket].fimAmount += Number(formatUnits(p.balanceRaw, 18));
       result[bucket].playerCount += 1;
     });

@@ -245,13 +245,15 @@ html, body {
   gap: 6px;
   padding: 5px 10px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  border: 2px solid color-mix(in srgb, currentColor 35%, transparent);
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
+  line-height: 1;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
 @keyframes pill-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
@@ -648,6 +650,43 @@ html, body {
 
 .btn-game-secondary:active {
   transform: scale(0.98);
+}
+
+/* --- TERTIARY BUTTON ---
+   Same shape as btn-game-secondary but seated on the deepest well (card3),
+   lightening one notch further on hover. Flat by design (no shadow). */
+.btn-game-3 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.75rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  color: var(--color-text);
+  background-color: var(--color-card3);
+  border: 1px solid var(--color-border2);
+  border-radius: 0.5rem;
+  cursor: pointer;
+
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-game-3:hover {
+  background-color: color-mix(in srgb, var(--color-card3) 60%, var(--color-border2));
+  border-color: var(--color-purple-70);
+}
+
+.btn-game-3:active {
+  transform: scale(0.98);
+}
+
+.btn-game-3:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
 }
 
 /* Micro stepper — btn-game-secondary at minimum size, for stacked ▲/▼ controls */
@@ -1616,21 +1655,23 @@ a:hover .season-ledger-row {
 .quest-category-pane {
   padding: 1.5rem;
   background-color: var(--color-card);
-  border: 1px solid var(--color-border2);
+  border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  transition: border-color 0.3s ease;
 }
 
-.quest-category-pane:hover {
-  border-color: var(--color-purple);
-}
-
-/* Individual Quest Row — extends ledger-row */
+/* Individual Quest Row — extends ledger-row.
+   Mobile: two columns — the reward stacks under the description, the action
+   button gets its own column and spans both rows.
+   Desktop (≥768px): the classic three-column single row. */
 .quest-task-row {
   display: grid;
-  grid-template-columns: 1fr auto auto; /* Content | Points | Button */
-  gap: 1rem;
+  grid-template-columns: 1fr auto;      /* Content(+reward) | Button */
+  grid-template-areas:
+    "meta   action"
+    "reward action";
+  column-gap: 1rem;
+  row-gap: 0.25rem;
   padding: 0.5rem 1.25rem;
   background-color: var(--color-card2);
   border: 1px solid var(--color-border);
@@ -1639,6 +1680,18 @@ a:hover .season-ledger-row {
   margin-bottom: 0;
   align-items: center;
   cursor: default;
+}
+
+.quest-task-row > .quest-cell-meta   { grid-area: meta; }
+.quest-task-row > .quest-cell-reward { grid-area: reward; }
+.quest-task-row > .quest-cell-action { grid-area: action; }
+
+@media (min-width: 768px) {
+  .quest-task-row {
+    grid-template-columns: 1fr auto auto; /* Content | Points | Button */
+    grid-template-areas: "meta reward action";
+    gap: 1rem;
+  }
 }
 
 .quest-task-row:first-child {
@@ -1660,29 +1713,35 @@ a:hover .season-ledger-row {
   background-color: var(--color-card2);
 }
 
-/* Hover: gold left-accent bar */
+/* Hover: subtle surface lift (no accent bar) */
 .quest-task-row:hover:not(.quest-completed):not(.locked-task) {
   background-color: var(--color-card3);
-  box-shadow: inset 4px 0 0 0 var(--color-gold);
 }
 
 /* Quest meta column */
 
 /* Button sizing for tight row slots */
 .quest-action .btn-game-primary,
-.quest-action .btn-game-secondary {
+.quest-action .btn-game-secondary,
+.quest-action .btn-game-3 {
   padding: 0.55rem 1.1rem;
   font-size: 0.75rem;
   white-space: nowrap;
 }
 
+/* Pin the action column to the button's rendered height so completed rows
+   (which render a smaller checkmark circle instead of a button) match the
+   height of uncompleted rows. */
+.quest-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 2.125rem;
+}
+
 /* STATE: Completed */
 .quest-completed {
   opacity: 0.55;
-}
-
-.quest-completed:hover {
-  box-shadow: inset 4px 0 0 0 var(--color-green);
 }
 
 

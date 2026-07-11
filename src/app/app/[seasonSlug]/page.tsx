@@ -18,6 +18,7 @@ import { useSeasonChart } from '@/hooks/useSeasonChart';
 import { AuctionPhaseLayout } from '../_components/phases/AuctionPhaseLayout';
 import { TradingPhaseLayout } from '../_components/phases/TradingPhaseLayout';
 import { PayoutPhaseLayout } from '../_components/phases/PayoutPhaseLayout';
+import LedgerLoader from '@/components/LedgerLoader';
 
 export default function SeasonDetailPage() {
   const { seasonSlug } = useParams() as { seasonSlug: string };
@@ -38,6 +39,9 @@ export default function SeasonDetailPage() {
   const [isMaker, setIsMaker] = useState(false);
   const [buyTargetAmount, setBuyTargetAmount] = useState('');
   const [sellTargetAmount, setSellTargetAmount] = useState('');
+  // Maker limit price (USDC per FIM), lifted so the phase layout can gate the
+  // scroll pin on *both* amount and price being filled (see makerComposing).
+  const [makerPrice, setMakerPrice] = useState('1.00');
   const [selectedAsks, setSelectedAsks] = useState<Order[]>([]);
   const [selectedBids, setSelectedBids] = useState<Order[]>([]);
 
@@ -118,11 +122,7 @@ export default function SeasonDetailPage() {
 
   // 5. Loading / error states
   if (isMetaLoading || isGiniLoading || phase.isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gold animate-pulse font-mono text-sm uppercase tracking-widest">
-        Reading Ledger…
-      </div>
-    );
+    return <LedgerLoader fullPage />;
   }
 
   if (!seasonAddress || !exchangeAddress || !fimAddress || !auctionAddress) {
@@ -178,6 +178,8 @@ export default function SeasonDetailPage() {
           setBuyTargetAmount={setBuyTargetAmount}
           sellTargetAmount={sellTargetAmount}
           setSellTargetAmount={setSellTargetAmount}
+          makerPrice={makerPrice}
+          setMakerPrice={setMakerPrice}
           selectedAsks={selectedAsks}
           selectedBids={selectedBids}
           onSelectOrder={handleSelectOrder}

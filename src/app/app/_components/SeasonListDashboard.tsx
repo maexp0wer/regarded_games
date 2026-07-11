@@ -372,7 +372,12 @@ function SeasonHoldingRowContent({ pos, playerAddress, payoutData }: { pos: Seas
             </span>
           </div>
         ) : showTimeStat ? (
-          <CountdownTicker targetTimestamp={countdownTarget} label={statusLabel} inline />
+          <CountdownTicker
+            targetTimestamp={countdownTarget}
+            label={statusLabel}
+            elapsedLabel={isTrading ? 'FINALIZED' : 'STARTING'}
+            inline
+          />
         ) : null}
 
         {/* Victory progress rail — grows to fill remaining space */}

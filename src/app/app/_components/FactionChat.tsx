@@ -5,6 +5,7 @@ import { useAccount } from 'wagmi';
 import { FactionDiscussionBoard } from './FactionDiscussionBoard';
 import { CommunitySignInGate } from './CommunitySignInGate';
 import { useCommunitySession } from '@/hooks/useCommunitySession';
+import LedgerLoader from '@/components/LedgerLoader';
 
 interface DiscourseMessage {
   id: number;
@@ -28,6 +29,15 @@ function formatTime(iso: string) {
 function shortAddr(addr: string) {
   if (addr.startsWith('0x') && addr.length > 10) return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
   return addr;
+}
+
+// The Discourse `name` holds the player's custom name, or the literal "Regarded Anon"
+// placeholder when they haven't set one (see /api/auth/discourse). Prefer the custom
+// name; fall back to the shortened wallet address (the Discourse username).
+function displayName(user: DiscourseMessage['user']): string {
+  const name = user.name?.trim();
+  if (name && name !== 'Regarded Anon') return name;
+  return shortAddr(user.username);
 }
 
 const DISCOURSE_URL = process.env.NEXT_PUBLIC_DISCOURSE_URL ?? '';
@@ -60,7 +70,7 @@ function ChatMessage({ msg, isOwn, isCapitalist }: { msg: DiscourseMessage; isOw
         />
         <div className="flex flex-col gap-0.5 px-2 pt-1.5 pb-1 min-w-0">
           <div className={`flex items-center justify-between gap-3 text-[10px] font-mono font-bold uppercase tracking-widest ${isOwn ? `text-${factionColor}` : 'text-text2'}`}>
-            <span>{isOwn ? 'YOU' : shortAddr(msg.user.username)}</span>
+            <span>{isOwn ? 'YOU' : displayName(msg.user)}</span>
             <span className="opacity-50 text-[9px] font-normal">{formatTime(msg.created_at)}</span>
           </div>
           <div className="text-[0.75rem] leading-relaxed text-text wrap-anywhere">{msg.message}</div>
@@ -340,7 +350,7 @@ export function FactionChat({ seasonSlug, isCapitalist = false, auctionMode = fa
           </div>
         ) : discovering && messages.length === 0 ? (
           <div className="m-auto flex flex-col items-center gap-2">
-            <span className="text-text2 text-sm animate-pulse">Reading Ledger…</span>
+            <LedgerLoader variant="inline" />
           </div>
         ) : !channelId && !discovering ? (
           <div className="m-auto flex flex-col items-center gap-3">

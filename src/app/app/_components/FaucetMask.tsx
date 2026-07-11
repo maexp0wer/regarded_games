@@ -142,10 +142,10 @@ export function FaucetMask({ initialReferrer }: { initialReferrer?: string } = {
 
   return (
     <>
-      <div className="w-full max-w-md mx-auto terminal-pane metric-bar-chassis">
+      <div className="w-full max-w-md mx-auto terminal-pane">
 
         {/* HEADER */}
-        <div className="terminal-pane-header border-b border-border2 pb-3">
+        <div className="terminal-pane-header">
           <span className="terminal-pane-title">FakeUSDC Faucet</span>
         </div>
 
@@ -181,7 +181,7 @@ export function FaucetMask({ initialReferrer }: { initialReferrer?: string } = {
         </div>
 
         {/* ROW 3: ACTION TERMINAL */}
-        <div className="border-t border-border2 pt-4 mt-1">
+        <div className="border-t border-border pt-4 mt-1">
           {!isConnected ? (
             <div className="flex flex-col items-center gap-3">
               <p className="font-mono text-[10px] text-text2 uppercase tracking-widest">
@@ -214,9 +214,9 @@ export function FaucetMask({ initialReferrer }: { initialReferrer?: string } = {
                 disabled={isBusy}
                 spellCheck={false}
                 autoComplete="off"
-                className={`w-full px-3 py-2 mb-2 font-mono text-xs bg-card2 border rounded
-                  focus:outline-none focus:ring-1 focus:ring-gold text-text placeholder-text2
-                  ${referrer && (!isReferrerValid || isSelfReferral) ? 'border-pink' : 'border-border2'}`}
+                className={`w-full px-3 py-3 mb-5 font-mono text-xs bg-card3  border-border2 border rounded
+                  focus:outline-none focus:ring-1 focus:ring-border2 text-text placeholder-text2
+                  ${referrer && (!isReferrerValid || isSelfReferral) ? 'border-pink' : 'border-border'}`}
               />
               {referrer && !isReferrerValid && (
                 <p className="font-mono text-[9px] text-pink mb-2 uppercase tracking-widest">Invalid address</p>

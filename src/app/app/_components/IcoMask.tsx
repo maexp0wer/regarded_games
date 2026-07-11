@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useAccount, useReadContract, useWriteContract, usePublicClient, useBlock } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract, usePublicClient } from 'wagmi';
 import { parseUnits, formatUnits, erc20Abi } from 'viem';
 
 import { WalletButton } from './WalletButton';
 import AmountInput from '@/components/AmountInput';
 import { sliderPctToAmount } from '@/utils/sliderAmount';
+import { useChainTime } from '@/hooks/useChainTime';
 
 import CapitalAuctionAbi from '@/deployments/abis/CapitalAuction.json';
 import { useTenantDeployment, useTenantChainId, useTenantPonderUrl } from '@/context/TenantContext';
@@ -41,28 +42,7 @@ export function IcoMask() {
   const [refundTxHashes,  setRefundTxHashes]  = useState<(string | null)[]>([null]);
 
   // ── Chain time (block-anchored, advanced by real elapsed time) ──
-  const { data: blockData } = useBlock({ chainId, query: { refetchInterval: 10000 } });
-  const [chainTs, setChainTs] = useState(0);
-  const blockAnchor = useRef<{ chain: number; real: number } | null>(null);
-
-  useEffect(() => {
-    if (blockData?.timestamp) {
-      const chain = Number(blockData.timestamp);
-      const real  = Math.floor(Date.now() / 1000);
-      blockAnchor.current = { chain, real };
-      setChainTs(chain);
-    }
-  }, [blockData?.timestamp]);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (blockAnchor.current) {
-        const elapsed = Math.floor(Date.now() / 1000) - blockAnchor.current.real;
-        setChainTs(blockAnchor.current.chain + elapsed);
-      }
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
+  const chainTs = useChainTime();
 
   // ── Contract reads ──────────────────────────────────────────────────────────
   const { data: rgdRaw } = useReadContract({

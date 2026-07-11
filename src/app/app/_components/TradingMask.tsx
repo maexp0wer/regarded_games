@@ -39,6 +39,8 @@ interface TradingMaskProps {
   setBuyTargetAmount: (v: string) => void;
   sellTargetAmount: string;
   setSellTargetAmount: (v: string) => void;
+  price: string;
+  setPrice: (v: string) => void;
   selectedAsks: Order[];
   selectedBids: Order[];
   onRemoveOrder: (id: string) => void;
@@ -52,6 +54,7 @@ export function TradingMask({
   seasonAddress, exchangeAddress, fimAddress,
   isBuy, setIsBuy, isMaker, setIsMaker,
   buyTargetAmount, setBuyTargetAmount, sellTargetAmount, setSellTargetAmount,
+  price, setPrice,
   selectedAsks, selectedBids, onRemoveOrder, onReorderAsks, onReorderBids,
   isOnHold = false,
   onOpenOrderBook,
@@ -59,7 +62,6 @@ export function TradingMask({
   const { address, isConnected } = useAccount();
   const core = useTenantDeployment();
   const chainId = useTenantChainId();
-  const [price, setPrice] = useState('1.00');
   const [draggedAskGroupIdx, setDraggedAskGroupIdx] = useState<number | null>(null);
   const [draggedBidGroupIdx, setDraggedBidGroupIdx] = useState<number | null>(null);
 
@@ -319,17 +321,27 @@ export function TradingMask({
 
   // For the single active input (non-mixed taker or maker)
   const activeTarget = directionIsBuy ? buyTargetAmount : sellTargetAmount;
+  // Live staked-RGD collateral for the connected wallet. Declared here (above
+  // makerBuyMaxFim) because the maker-buy input cap depends on the stake-backed
+  // FIM max; the post-queue collateral gate below reuses the same instance.
+  const collateral = useCollateral(seasonAddress, exchangeAddress);
   // The maker amount field is denominated in FIM in both directions. A maker buy
-  // is capped by how much FIM the USDC balance can afford at the chosen price; a
-  // maker sell is capped by the FIM balance directly.
+  // is capped by BOTH how much FIM the USDC balance can afford at the chosen
+  // price AND how much FIM the staked-RGD headroom can still collateralize
+  // (`collateral.maxBuyableFim`) — the tighter of the two. This mirrors the
+  // Auction, where the input max is likewise min(USDC-affordable, stake-backed);
+  // a maker sell is capped by the FIM balance directly (no collateral needed).
   const makerBuyMaxFim = useMemo(() => {
     const p = Number(price);
     if (!usdcBalance || !p || p <= 0) return 0n;
     try {
-      const affordable = Number(formatUnits(usdcBalance, 6)) / p;
-      return parseUnits(affordable.toFixed(18), 18);
+      const affordable = parseUnits((Number(formatUnits(usdcBalance, 6)) / p).toFixed(18), 18);
+      // Once collateral reads have resolved, clamp to the stake-backed max.
+      return collateral.isReady && collateral.maxBuyableFim < affordable
+        ? collateral.maxBuyableFim
+        : affordable;
     } catch { return 0n; }
-  }, [usdcBalance, price]);
+  }, [usdcBalance, price, collateral.isReady, collateral.maxBuyableFim]);
   const activeMaxForSlider = isMaker
     ? (isBuy ? makerBuyMaxFim : (fimBalance || 0n))
     : (directionIsBuy ? maxAskQueueFim : maxBidQueueFim);
@@ -376,6 +388,17 @@ export function TradingMask({
       try {
         if (parseUnits(val, 18) > maxAskQueueFim) {
           setBuyTargetAmount(formatUnits(maxAskQueueFim, 18));
+          return;
+        }
+      } catch { /* invalid parse, fall through */ }
+    }
+    // Maker buy: clamp to the stake-and-balance-backed max (see makerBuyMaxFim),
+    // mirroring the maker-sell clamp against fimBalance below. Guard on > 0n so a
+    // still-loading cap (0n) doesn't wipe the field.
+    if (isMaker && makerBuyMaxFim > 0n && val !== '') {
+      try {
+        if (parseUnits(val, 18) > makerBuyMaxFim) {
+          setBuyTargetAmount(formatUnits(makerBuyMaxFim, 18));
           return;
         }
       } catch { /* invalid parse, fall through */ }
@@ -445,7 +468,29 @@ export function TradingMask({
     }
   };
 
-  const walletBalanceDisplay = directionIsBuy
+  // For a maker BUY, makerBuyMaxFim is min(USDC-affordable, stake-collateralizable)
+  // FIM. Stake is the binding constraint when the stake-backed max is below what
+  // the USDC balance alone could afford — in which case the balance caption
+  // switches from WALLET to ELIGIBLE BY STAKE and shows the stake-eligible USDC
+  // (makerBuyMaxFim × price) instead of the raw wallet USDC. Mirrors AuctionMask.
+  const usdcAffordableFim = useMemo(() => {
+    const p = Number(price);
+    if (!usdcBalance || !p || p <= 0) return 0n;
+    try { return parseUnits((Number(formatUnits(usdcBalance, 6)) / p).toFixed(18), 18); }
+    catch { return 0n; }
+  }, [usdcBalance, price]);
+  const makerBuyStakeBinds =
+    isMaker && isBuy && collateral.isReady && makerBuyMaxFim < usdcAffordableFim;
+  const stakeEligibleUsdcDisplay = useMemo(() => {
+    const p = Number(price);
+    const eligible = Number(formatUnits(makerBuyMaxFim, 18)) * (p || 0);
+    return `${eligible.toLocaleString(undefined, { maximumFractionDigits: 2 })} USDC`;
+  }, [makerBuyMaxFim, price]);
+
+  const walletBalanceLabel = makerBuyStakeBinds ? 'ELIGIBLE BY STAKE' : 'WALLET';
+  const walletBalanceDisplay = makerBuyStakeBinds
+    ? stakeEligibleUsdcDisplay
+    : directionIsBuy
     ? `${Number(formatUnits(usdcBalance || 0n, 6)).toLocaleString()} USDC`
     : `${Number(formatUnits(fimBalance || 0n, 18)).toLocaleString()} FIM`;
 
@@ -501,7 +546,6 @@ export function TradingMask({
   // receiving FIM. For a mixed taker fill the requirement is NET (buy − sell),
   // because the executionPayload places sell legs first (releases land before
   // the buy-leg check). Asks and pure sells commit no FIM → no check.
-  const collateral = useCollateral(seasonAddress, exchangeAddress);
   const fimToCommit = useMemo(() => {
     if (isMaker) return isBuy ? parseUnits(makerTargetAmount || '0', 18) : 0n;
     return netFimToReceive(legsFim.buyFimRaw, legsFim.sellFimRaw);
@@ -698,7 +742,7 @@ export function TradingMask({
                   <span className="mask-label text-left pl-2">
                     {!isMaker && activeMaxForSlider > 0n
                       ? <>QUEUE&nbsp;<span className="text-text font-semibold">{Number(formatUnits(activeMaxForSlider, 18)).toLocaleString()} FIM</span></>
-                      : <>WALLET&nbsp;<span className="text-text font-semibold">{walletBalanceDisplay}</span></>
+                      : <>{walletBalanceLabel}&nbsp;<span className="text-text font-semibold">{walletBalanceDisplay}</span></>
                     }
                   </span>
                   <span className="mask-label text-right pr-9">SIZE</span>
@@ -995,14 +1039,21 @@ export function TradingMask({
                       {contributionDeltaRaw > 0n ? '+' : contributionDeltaRaw < 0n ? '-' : ''}${formatDynamicUsdc(contributionDeltaRaw >= 0n ? contributionDeltaRaw : -contributionDeltaRaw)}
                     </span>
                   </div>
-                  {giniImpact && (
-                    <div className="flex justify-between font-mono text-[11px]">
-                      <span style={{ color: 'var(--color-text2)' }}>Gini Impact</span>
-                      <span className="tabular-nums font-bold" style={{ color: giniImpact.deltaBps > 0 ? 'var(--color-gold)' : giniImpact.deltaBps < 0 ? 'var(--color-purple)' : 'var(--color-text2)' }}>
-                        {giniImpact.deltaBps > 0 ? '+' : giniImpact.deltaBps < 0 ? '−' : ''}{Math.abs(giniImpact.deltaBps)} bps
-                      </span>
-                    </div>
-                  )}
+                  {giniImpact && (() => {
+                    // Round to the displayed 2-decimal precision first, then drive
+                    // sign/color/text off THAT — so a sub-0.005 bps move reads as a
+                    // neutral "0.00 bps", never a coloured "+0.00".
+                    const shown = Math.round(giniImpact.deltaBps * 100) / 100;
+                    const magnitude = Math.abs(shown).toFixed(2);
+                    return (
+                      <div className="flex justify-between font-mono text-[11px]">
+                        <span style={{ color: 'var(--color-text2)' }}>Gini Impact</span>
+                        <span className="tabular-nums font-bold" style={{ color: shown > 0 ? 'var(--color-gold)' : shown < 0 ? 'var(--color-purple)' : 'var(--color-text2)' }}>
+                          {shown > 0 ? '+' : shown < 0 ? '−' : ''}{magnitude} bps
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

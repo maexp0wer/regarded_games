@@ -72,6 +72,15 @@ export async function POST(req: Request) {
       raw += `\n\n[poll name=${manifest.pollName} type=${manifest.pollType} results=${manifest.pollResults} public=true${manifest.closesAt ? ` close=${manifest.closesAt}` : ''}]\n- Ratify the Manifest as written\n- Reject — open a second draft round\n- Abstain\n[/poll]\n`;
     }
 
+    // Persist the poll name that Discourse actually registers — parse it out of
+    // `raw` (the exact markup we POST) rather than trusting manifest.pollName.
+    // The frontmatter pollName and the hardcoded [poll name=...] in the body are
+    // two independent sources that can silently drift; the body wins because
+    // that is what Discourse indexes. voters.json queried with the frontmatter
+    // name would then find no poll and detect zero votes.
+    const pollNameFromRaw = raw.match(/\[poll[^\]]*\bname=([^\s\]]+)/i)?.[1];
+    const registeredPollName = pollNameFromRaw ?? manifest.pollName;
+
     // Create the topic as 'system' so it doesn't depend on any particular wallet user.
     const createRes = await fetch(`${url}/posts.json`, {
       method: 'POST',
@@ -103,10 +112,10 @@ export async function POST(req: Request) {
     await query(
       `INSERT INTO quest_config (key, value) VALUES ($1, $2)
          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-      ['manifest_poll_name', manifest.pollName],
+      ['manifest_poll_name', registeredPollName],
     );
 
-    return NextResponse.json({ success: true, topicId, postId, pollName: manifest.pollName });
+    return NextResponse.json({ success: true, topicId, postId, pollName: registeredPollName });
   } catch (err) {
     console.error('POST /api/quests/admin/create-manifest-vote error:', err instanceof Error ? err.message : err);
     return NextResponse.json({ error: 'server_error' }, { status: 500 });

@@ -6,5 +6,5 @@
 export const LOGIN_FRESHNESS_MS = 5 * 60 * 1000; // reject signatures older than 5 min
 
 export function buildLoginMessage(address: string, issuedAt: number): string {
-  return `Sign in to the Regarded Games War Room.\n\nWallet: ${address.toLowerCase()}\nIssued: ${issuedAt}`;
+  return `Sign in to the Regarded Games Forum.\n\nWallet: ${address.toLowerCase()}\nIssued: ${issuedAt}`;
 }

@@ -9,16 +9,22 @@ import { Order } from './useOrderBook';
 import { useSeasonPlayers } from './useSeasonPlayers';
 import { useSeasonActiveOrders } from './useSeasonActiveOrders';
 import { useSeasonInfo } from './useSeasonInfo';
-import { giniBpsFromBalances } from '@/utils/gini';
+import { giniPpmFromBalances } from '@/utils/gini';
 
 const GameSeasonAbi = GameSeasonAbiJson as Abi;
 
 export interface TradeGiniImpact {
-  /** Live Gini over the current population, in BPS (0-10000). */
-  currentBps: number;
-  /** Gini after the hypothetical fill, in BPS. */
-  projectedBps: number;
-  /** projectedBps - currentBps. Negative = trade reduces inequality. */
+  /** Live Gini over the current population, in PPM (0-1_000_000 = BPS ×100). */
+  currentPpm: number;
+  /** Gini after the hypothetical fill, in PPM. */
+  projectedPpm: number;
+  /** projectedPpm - currentPpm, in PPM. Negative = trade reduces inequality. */
+  deltaPpm: number;
+  /**
+   * projectedPpm - currentPpm expressed in BPS as a float (PPM ÷ 100), so a
+   * sub-BPS move that whole-BPS truncation would flatten to 0 is still shown.
+   * Negative = trade reduces inequality.
+   */
   deltaBps: number;
 }
 
@@ -81,22 +87,23 @@ export function useGiniImpact(
         wealth.set(m, (wealth.get(m) || 0n) + BigInt(o.remainingAmount));
       });
 
-    const toBps = (w: Map<string, bigint>): number => {
+    const toPpm = (w: Map<string, bigint>): number => {
       const balances: bigint[] = [];
       w.forEach((total, player) => {
         if (player !== exchangeAddr) {
           balances.push(total);
         }
       });
-      // Raw wei + threshold → contract-exact integer Gini (filter happens inside).
-      return giniBpsFromBalances(balances, threshold);
+      // Raw wei + threshold → contract-exact integer Gini at PPM resolution
+      // (BPS ×100; filter happens inside). Sub-BPS moves stay visible.
+      return giniPpmFromBalances(balances, threshold);
     };
 
-    const currentBps = toBps(wealth);
+    const currentPpm = toPpm(wealth);
 
     // No fill queued → projected equals current.
     if (buyFimRaw === 0n && sellFimRaw === 0n) {
-      return { currentBps, projectedBps: currentBps, deltaBps: 0 };
+      return { currentPpm, projectedPpm: currentPpm, deltaPpm: 0, deltaBps: 0 };
     }
 
     // 2. Apply the hypothetical fill to a clone.
@@ -132,8 +139,9 @@ export function useGiniImpact(
     // USDC, not FIM), so the maker's counted wealth RISES.
     distribute(sellFimRaw, selectedBids, 1n);
 
-    const projectedBps = toBps(next);
-    return { currentBps, projectedBps, deltaBps: projectedBps - currentBps };
+    const projectedPpm = toPpm(next);
+    const deltaPpm = projectedPpm - currentPpm;
+    return { currentPpm, projectedPpm, deltaPpm, deltaBps: deltaPpm / 100 };
   }, [
     seasonAddress, players, activeOrders, seasonInfo, threshold,
     takerAddress, selectedAsks, selectedBids, buyFimRaw, sellFimRaw,

@@ -36,7 +36,7 @@ export function CommunitySignInGate({ feature = 'the War Room' }: CommunitySignI
       <button className="btn-game-secondary" onClick={() => signIn().catch(() => {})} disabled={isSigningIn}>
         {isSigningIn ? 'Awaiting signature…' : 'Sign in'}
       </button>
-      {signInError && (
+      {signInError && process.env.NEXT_PUBLIC_FRONTEND_DEBUG === 'true' && (
         <p className="font-mono text-[10px] text-red-500" style={{ color: 'var(--color-red)' }}>
           {signInError.slice(0, 140)}
         </p>

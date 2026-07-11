@@ -11,6 +11,7 @@ export default function AmountInput({
   sliderValue,
   onSliderChange,
   balance,
+  balanceLabel = 'WALLET',
   disabled,
   placeholder = '0.00',
   decimals = 18,
@@ -22,6 +23,10 @@ export default function AmountInput({
   sliderValue: number;
   onSliderChange: (pct: number) => void;
   balance?: string;
+  // Caption before the balance figure. Defaults to WALLET; callers whose max is
+  // constrained by something other than the wallet (e.g. staked-RGD headroom)
+  // pass an alternative like "ELIGIBLE BY STAKE".
+  balanceLabel?: string;
   disabled?: boolean;
   placeholder?: string;
   // Max fractional digits allowed, matching the token's on-chain precision
@@ -49,7 +54,7 @@ export default function AmountInput({
       <div className="flex justify-between items-center w-full">
         <span className="mask-label text-left pl-2">
           {balance ? (
-            <>WALLET&nbsp;<span className="text-text font-semibold">{balance}</span></>
+            <>{balanceLabel}&nbsp;<span className="text-text font-semibold">{balance}</span></>
           ) : (
             <>&nbsp;</>
           )}

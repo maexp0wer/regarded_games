@@ -200,23 +200,23 @@ export function StakeMask() {
             <div className="kv-row">
               <span className="font-mono text-[11px] text-text2">Total RGD</span>
               <span className="font-mono text-[13px] font-semibold text-text tabular-nums">
-                {fmtRgd(currentWallet)}<span className="text-text2 font-normal ml-1">RGD</span>
+                {fmtRgd(currentWallet + currentStaked)}<span className="text-text2 font-normal ml-1">RGD</span>
               </span>
             </div>
             <div className="kv-row">
-              <span className="font-mono text-[11px] text-text2">Total Staked (incl. locked)</span>
+              <span className="font-mono text-[11px] text-text2">Staked</span>
               <span className="font-mono text-[13px] font-semibold text-text tabular-nums">
                 {fmtRgd(currentStaked)}<span className="text-text2 font-normal ml-1">RGD</span>
               </span>
             </div>
             <div className="kv-row">
-              <span className="font-mono text-[11px] text-text2">Withdrawable Stake</span>
+              <span className="font-mono text-[11px] text-text2">Withdrawable</span>
               <span className="font-mono text-[13px] font-semibold text-green tabular-nums">
                 {fmtRgd(withdrawable)}<span className="text-text2 font-normal ml-1">RGD</span>
               </span>
             </div>
             <div className="kv-row">
-              <span className="font-mono text-[11px] text-text2">Vault Locked</span>
+              <span className="font-mono text-[11px] text-text2">Locked</span>
               <span className="font-mono text-[13px] font-semibold text-text tabular-nums">
                 {fmtRgd(currentLocked)}<span className="text-text2 font-normal ml-1">RGD</span>
               </span>
@@ -293,7 +293,7 @@ export function StakeMask() {
           {/* CTA pinned to the bottom of the mask */}
           <div className="mt-auto pt-3 flex flex-col gap-3">
             {isStakeMode && currentWallet === 0n ? (
-              <Link href="/app/swap" className="btn-game-primary text-center">
+              <Link href="/swap" className="btn-game-primary text-center">
                 Buy RGD
               </Link>
             ) : (

@@ -4,10 +4,14 @@ import { query } from '@/lib/db';
 import { fetchAllPonderItems } from '@/lib/ponder';
 import { loadQuestsConfig, type QuestsConfig } from '@/lib/quests';
 import {
-  computeTotalReferralPoints,
   computeWinScoreForSeason,
   relativePnl,
 } from '@/utils/quests';
+import {
+  upsertCompletion,
+  qualifyingReferralCount,
+  creditReferralPoints,
+} from '@/lib/questCompletions';
 import { getCommunitySession } from '@/lib/communitySession';
 import { TENANTS } from '@/config/tenants';
 
@@ -39,19 +43,7 @@ interface SubQuestOut {
 interface MainQuestOut {
   id: string;
   title: string;
-  description: string;
   subQuests: SubQuestOut[];
-}
-
-async function upsertCompletion(address: string, questId: string, points: number, note?: string) {
-  await query(
-    `INSERT INTO quest_completions (address, quest_id, points, note)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (address, quest_id) DO UPDATE
-       SET points = EXCLUDED.points,
-           note   = COALESCE(EXCLUDED.note, quest_completions.note)`,
-    [address, questId, points, note ?? null],
-  );
 }
 
 async function existing(address: string): Promise<Map<string, { points: number; note: string | null }>> {
@@ -114,18 +106,78 @@ async function ponderHasAuctionMint(addr: string) {
   return items.length > 0;
 }
 
-async function ponderHasTrade(addr: string) {
-  const q = (field: 'buyer' | 'seller') => `query($u: String!, $after: String, $limit: Int!) {
-    tradess(where: { ${field}: $u }, limit: $limit, after: $after) {
+// Any order row with this maker qualifies — open, cancelled, and filled orders
+// all live in the same `orders` table (state is just active/isCancelled/settledAt),
+// so a single maker filter covers every state.
+async function ponderHasOrderCreated(addr: string) {
+  const q = `query($u: String!, $after: String, $limit: Int!) {
+    orderss(where: { maker: $u }, limit: $limit, after: $after) {
       items { id }
       pageInfo { endCursor hasNextPage }
     }
   }`;
-  const [b, s] = await Promise.all([
-    fetchAllPonderItems<{ id: string }>(PONDER_URL, q('buyer'), { u: addr }, (d) => d.tradess),
-    fetchAllPonderItems<{ id: string }>(PONDER_URL, q('seller'), { u: addr }, (d) => d.tradess),
-  ]);
-  return b.length > 0 || s.length > 0;
+  const items = await fetchAllPonderItems<{ id: string }>(
+    PONDER_URL, q, { u: addr }, (d) => d.orderss,
+  );
+  return items.length > 0;
+}
+
+interface ShuffleFill {
+  id: string;
+  txHash: string;
+  buyer: string;
+  seller: string;
+  giniBps: number;
+  giniBpsAfter: number;
+  buyerIsCapitalist: boolean;
+  sellerIsCapitalist: boolean;
+}
+
+// A shuffle is a mixed taker queue: fillBatch settles every leg in ONE
+// transaction, so its trade rows share a txHash (the wallet is buyer on legs
+// that hit resting sells, seller on legs that hit resting buys). It qualifies
+// when, at a leg by which both roles have appeared, the Gini has net-moved from
+// its pre-shuffle value (first leg's giniBps, legs ordered by the logIndex in
+// the row id) toward the wallet's class pole — up for a Capitalist, down for a
+// Proletarian, class read from the first leg. Mirrors the indexer's
+// event-driven check in indexer/src/index.ts (Exchange:OrderFilled).
+async function ponderHasShuffle(addr: string) {
+  const q = `query($u: String!, $after: String, $limit: Int!) {
+    tradess(where: { taker: $u }, limit: $limit, after: $after) {
+      items { id txHash buyer seller giniBps giniBpsAfter buyerIsCapitalist sellerIsCapitalist }
+      pageInfo { endCursor hasNextPage }
+    }
+  }`;
+  const fills = await fetchAllPonderItems<ShuffleFill>(
+    PONDER_URL, q, { u: addr }, (d) => d.tradess,
+  );
+  const byTx = new Map<string, ShuffleFill[]>();
+  for (const f of fills) {
+    const legs = byTx.get(f.txHash);
+    if (legs) legs.push(f);
+    else byTx.set(f.txHash, [f]);
+  }
+  for (const unsorted of byTx.values()) {
+    const legs = unsorted.sort((a, b) => Number(a.id.split('-')[1]) - Number(b.id.split('-')[1]));
+    const first = legs[0];
+    const preShuffleGini = first.giniBps;
+    const isCapitalist = first.buyer.toLowerCase() === addr
+      ? first.buyerIsCapitalist
+      : first.sellerIsCapitalist;
+    let bought = false;
+    let sold = false;
+    for (const leg of legs) {
+      if (leg.buyer.toLowerCase() === addr) bought = true;
+      if (leg.seller.toLowerCase() === addr) sold = true;
+      if (!(bought && sold)) continue;
+      // 0 is the "no meaningful sample" sentinel — never judge direction on it.
+      if (preShuffleGini <= 0 || leg.giniBpsAfter <= 0) continue;
+      if (isCapitalist ? leg.giniBpsAfter > preShuffleGini : leg.giniBpsAfter < preShuffleGini) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 interface PlayerStatRow {
@@ -227,21 +279,6 @@ async function discourseHasVoted(addr: string): Promise<boolean> {
   return false;
 }
 
-async function qualifyingReferralCount(addr: string, threshold: number): Promise<number> {
-  const { rows } = await query<{ count: string }>(
-    `SELECT COUNT(*)::int AS count FROM (
-       SELECT fr.referee_address
-       FROM faucet_referrals fr
-       JOIN quest_completions qc ON qc.address = fr.referee_address
-       WHERE fr.referrer_address = $1
-       GROUP BY fr.referee_address
-       HAVING SUM(qc.points) >= $2
-     ) sub`,
-    [addr, threshold],
-  );
-  return Number(rows[0]?.count ?? 0);
-}
-
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function checkGalxe(_addr: string, _campaign: string): Promise<boolean> {
   // Galxe API integration is deferred. Always returns false in v1 so the
@@ -271,7 +308,6 @@ async function buildMainQuests(
     {
       id: 'join_community',
       title: 'Join the Community',
-      description: 'Plug into the Regarded Games signal network.',
       subQuests: [
         {
           id: 'follow_x', type: 'galxe',
@@ -289,7 +325,7 @@ async function buildMainQuests(
         },
         {
           id: 'login_discourse', type: 'internal',
-          title: 'Log into our Discourse',
+          title: 'Log into our Forum',
           points: P.login_discourse,
           isCompleted: isDone('login_discourse'),
           actionUrl: config.externalLinks.discourseUrl,
@@ -299,7 +335,6 @@ async function buildMainQuests(
           title: 'Strategic voice bonus — join the discussion',
           points: discussionRow?.points ?? 0,
           isCompleted: !!discussionRow,
-          note: `Determined at the end of the Testnet Phase.`,
         },
         {
           id: 'vote_manifest', type: 'internal',
@@ -313,7 +348,6 @@ async function buildMainQuests(
     {
       id: 'spread_word',
       title: 'Spread the Word',
-      description: 'Amplify the protocol signal beyond the inner circle.',
       subQuests: [
         {
           id: 'retweet_x', type: 'galxe',
@@ -327,23 +361,28 @@ async function buildMainQuests(
           title: 'Invite players via your referral link',
           points: pts('referrals', 0),
           isCompleted: pts('referrals', 0) > 0,
-          // The referral link is wallet-specific, so omit it for the
-          // anonymous catalogue.
           ...(address ? { copyUrl: `${config.internalRoutes.faucet}/${address}` } : {}),
-          note: `Tiers: 1–10 refs (50 pts each) · 11–35 (20 pts) · 36–100 (5 pts). Referee must reach ≥${config.referralQualifyingThreshold} quest points.`,
+          note: `Referee must reach ${config.referralQualifyingThreshold} quest points. Earn points per qualified referral: 1–10: 50 pts · 11–35: 20 pts · 36–100: 5 pts.`,
         },
       ],
     },
     {
       id: 'dominate_testnet',
       title: 'Dominate the Testnet',
-      description: 'Run the full loop — capital in, capital out.',
       subQuests: [
-        { id: 'use_faucet',      type: 'internal', title: 'Use the faucet to get FakeUSDC', points: P.use_faucet,      isCompleted: isDone('use_faucet'),      actionUrl: config.internalRoutes.faucet },
-        { id: 'swap_usdc_rgd',   type: 'internal', title: 'Exchange FakeUSDC for RGD',       points: P.swap_usdc_rgd,   isCompleted: isDone('swap_usdc_rgd'),   actionUrl: config.internalRoutes.swap },
+        { id: 'use_faucet',      type: 'internal', title: 'Use the faucet to get fUSDC', points: P.use_faucet,      isCompleted: isDone('use_faucet'),      actionUrl: config.internalRoutes.faucet },
+        { id: 'swap_usdc_rgd',   type: 'internal', title: 'Exchange fUSDC for RGD',       points: P.swap_usdc_rgd,   isCompleted: isDone('swap_usdc_rgd'),   actionUrl: config.internalRoutes.swap },
         { id: 'stake_rgd',       type: 'internal', title: 'Stake RGD',                       points: P.stake_rgd,       isCompleted: isDone('stake_rgd'),       actionUrl: config.internalRoutes.stake },
-        { id: 'buy_fim_auction', type: 'internal', title: 'Buy Fake Internet Money during the Auction',      points: P.buy_fim_auction, isCompleted: isDone('buy_fim_auction'), auctionGate: true },
-        { id: 'trade_fim',       type: 'internal', title: 'Buy or sell Fake Internet Money during Trading',  points: P.trade_fim,       isCompleted: isDone('trade_fim'),       tradingGate: true },
+        { id: 'buy_fim_auction', type: 'internal', title: 'Buy FIM during the Auction Phase',      points: P.buy_fim_auction, isCompleted: isDone('buy_fim_auction'), auctionGate: true },
+        { id: 'create_order',    type: 'internal', title: 'Create an Order during the Trading Phase', points: P.create_order,    isCompleted: isDone('create_order'),    tradingGate: true },
+        {
+          id: 'execute_shuffle', type: 'internal',
+          title: 'Execute a Shuffle Order that moves the gini in favor of your class',
+          points: P.execute_shuffle,
+          isCompleted: isDone('execute_shuffle'),
+          tradingGate: true,
+          note: "Execute a Buy and Sell taker Order in one transaction — it must push the Gini toward your class's pole: up for Capitalists, down for Proletarians.",
+        },
         { id: 'claim_payout',    type: 'internal', title: 'Claim your payout',                    points: P.claim_payout,    isCompleted: isDone('claim_payout'),    payoutGate: true },
         {
           id: 'win_the_game', type: 'internal',
@@ -422,19 +461,44 @@ export async function GET(req: Request) {
       // Single-shot Ponder probes, in parallel. Each is wrapped so one
       // unreachable service (Ponder sepolia, Discourse) does not 500 the route.
       const [
-        hasFaucet, hasSwap, hasStake, hasAuctionMint, hasTrade,
+        hasFaucet, hasSwap, hasStake, hasAuctionMint, hasOrderCreated, hasShuffle,
         userStats, discourseExists, hasVoted, existingMap,
       ] = await Promise.all([
         safe('ponderHasFaucet',      () => ponderHasFaucet(address),      false),
         safe('ponderHasSwap',        () => ponderHasSwap(address),        false),
         safe('ponderHasStake',       () => ponderHasStake(address),       false),
         safe('ponderHasAuctionMint', () => ponderHasAuctionMint(address), false),
-        safe('ponderHasTrade',       () => ponderHasTrade(address),       false),
+        safe('ponderHasOrderCreated', () => ponderHasOrderCreated(address), false),
+        safe('ponderHasShuffle',     () => ponderHasShuffle(address),     false),
         safe('ponderUserStats',      () => ponderUserStats(address),      [] as PlayerStatRow[]),
         safe('discourseAccountExists', () => discourseAccountExists(address), false),
         safe('discourseHasVoted',    () => discourseHasVoted(address),    false),
         existing(address),
       ]);
+
+      // Discourse-side credits are ungated: they depend only on state that
+      // lives on the forum (a provisioned account / a cast poll vote), which
+      // is verified server-to-server against Discourse. Both actions happen
+      // entirely on Discourse's side, so there is no community-session cookie
+      // to gate on when the board polls.
+      if (discourseExists && !existingMap.has('login_discourse')) {
+        await upsertCompletion(address, 'login_discourse', P.login_discourse);
+      }
+      if (hasVoted && !existingMap.has('vote_manifest')) {
+        await upsertCompletion(address, 'vote_manifest', P.vote_manifest);
+      }
+
+      // Referral credit is likewise ungated: it derives entirely from state
+      // that was verified when it was written — faucet_referrals rows are
+      // inserted only after an on-chain hasClaimed() check, and the referees'
+      // points passed through their own session/captcha gates. A caller can't
+      // forge any of it, and gating it on the REFERRER's session silently
+      // withheld earned points whenever their cookie was stale or belonged to
+      // another wallet.
+      const qualified = await qualifyingReferralCount(address, config.referralQualifyingThreshold);
+      if (qualified > 0) {
+        await creditReferralPoints(address, qualified, config.referralTiers);
+      }
 
       // ── Internal credit insertions (gated by canWrite) ─────────────────
       if (canWrite) {
@@ -450,18 +514,15 @@ export async function GET(req: Request) {
         if (hasAuctionMint && !existingMap.has('buy_fim_auction')) {
           await upsertCompletion(address, 'buy_fim_auction', P.buy_fim_auction);
         }
-        if (hasTrade && !existingMap.has('trade_fim')) {
-          await upsertCompletion(address, 'trade_fim', P.trade_fim);
+        if (hasOrderCreated && !existingMap.has('create_order')) {
+          await upsertCompletion(address, 'create_order', P.create_order);
+        }
+        if (hasShuffle && !existingMap.has('execute_shuffle')) {
+          await upsertCompletion(address, 'execute_shuffle', P.execute_shuffle);
         }
         const claimedAny = userStats.some((s) => BigInt(s.realizedPayout) > 0n);
         if (claimedAny && !existingMap.has('claim_payout')) {
           await upsertCompletion(address, 'claim_payout', P.claim_payout);
-        }
-        if (discourseExists && !existingMap.has('login_discourse')) {
-          await upsertCompletion(address, 'login_discourse', P.login_discourse);
-        }
-        if (hasVoted && !existingMap.has('vote_manifest')) {
-          await upsertCompletion(address, 'vote_manifest', P.vote_manifest);
         }
 
         // ── Win the Game (variable, lazy, best-across-seasons) ───────────
@@ -485,13 +546,6 @@ export async function GET(req: Request) {
         const existingWin = existingMap.get('win_the_game')?.points ?? 0;
         if (bestWin > existingWin) {
           await upsertCompletion(address, 'win_the_game', bestWin);
-        }
-
-        // ── Referrals (variable, gated by 500-pt threshold) ──────────────
-        const qualified = await qualifyingReferralCount(address, config.referralQualifyingThreshold);
-        const totalReferralPts = computeTotalReferralPoints(qualified, config.referralTiers);
-        if (totalReferralPts > 0) {
-          await upsertCompletion(address, 'referrals', totalReferralPts);
         }
       }
 

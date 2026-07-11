@@ -87,6 +87,11 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
       ? new Set<PanelId>(['chart-orders', 'orderbook'])
       : new Set<PanelId>(['chart-orders'])
   );
+  // Bumped every time "Select orders" is invoked, so the OrderBook re-steers its
+  // side filter to the trade direction even when it's already open (opening a
+  // closed book seeds the filter on mount; an open book would otherwise keep a
+  // stale side selected).
+  const [steerSignal, setSteerSignal] = useState(0);
 
   useEffect(() => {
     const xl = window.matchMedia('(min-width: 1280px)');
@@ -272,6 +277,7 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
             onRemoveOrder={props.onRemoveOrder}
             selectedOrderIds={props.selectedOrderIds}
             isOnHold={props.isOnHold}
+            steerSignal={steerSignal}
           />
         );
       case 'gini':
@@ -319,6 +325,9 @@ export function TradingPanelMenu(props: TradingPanelMenuProps) {
 
   if (props.openOrderBookRef) {
     props.openOrderBookRef.current = () => {
+      // Re-steer the book to the trade direction on every invocation, whether or
+      // not the panel was already open (see steerSignal).
+      setSteerSignal(n => n + 1);
       setOpen(prev => {
         if (prev.has('orderbook')) return prev;
         const next = new Set(prev);

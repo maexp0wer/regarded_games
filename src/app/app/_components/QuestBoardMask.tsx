@@ -6,6 +6,7 @@ import { Turnstile } from '@marsidev/react-turnstile';
 import { useQuests } from '@/hooks/useQuests';
 import { QuestBoard } from './QuestBoard';
 import { WalletButton } from './WalletButton';
+import LedgerLoader from '@/components/LedgerLoader';
 
 const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
@@ -39,11 +40,7 @@ export function QuestBoardMask() {
     return (
       <>
         {walletBanner}
-        <div className="w-full terminal-pane py-12 text-center animate-pulse">
-          <span className="font-mono text-xs uppercase text-text2 tracking-widest">
-            Reading Ledger...
-          </span>
-        </div>
+        <LedgerLoader />
       </>
     );
   }
@@ -53,7 +50,7 @@ export function QuestBoardMask() {
       <>
         {walletBanner}
         <div className="w-full terminal-pane py-12 text-center">
-          <span className="font-mono text-xs text-[--color-red]">
+          <span className="font-mono text-xs text-text2">
             Failed to load quests. Try refreshing.
           </span>
         </div>

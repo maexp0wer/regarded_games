@@ -5,6 +5,7 @@ import { usePlayerRank } from '@/hooks/usePlayerRank';
 import { useBatchPlayerClass } from '@/hooks/useBatchPlayerClass';
 import { usePayout } from '@/hooks/usePayout';
 import { useSeasonVictory } from '@/hooks/useSeasonVictory';
+import LedgerLoader from '@/components/LedgerLoader';
 
 interface SeasonStatsProps {
   seasonAddress: string;
@@ -58,17 +59,7 @@ export const SeasonStats: React.FC<SeasonStatsProps> = ({ seasonAddress, userAdd
   }
 
   if (loading) {
-    return (
-      <div className="card-app flex flex-col gap-4 border border-border2">
-        {[1, 2, 3, 4, 5].map(i => (
-          <div key={i} className="terminal-pane p-2.5 gap-2 animate-pulse">
-            <div className="h-3 w-40 rounded bg-border" />
-            <div className="h-5 w-full rounded bg-border" />
-          </div>
-        ))}
-        <p className="text-center text-xs text-text2 font-mono">Reading Ledger...</p>
-      </div>
-    );
+    return <LedgerLoader />;
   }
 
   if (!userAddress || rank === -1 || totalPlayers < 1 || !classData) return null;

@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useReadContracts } from 'wagmi';
 import type { Abi } from 'abitype';
 
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import { useTenantChainId } from '@/context/TenantContext';
 import { useSeasonPhase } from './useSeasonPhase';
+import { useChainTime } from './useChainTime';
 
 // Mirrors the contract's hardcoded sweep gate:
 // `require(block.timestamp >= distributionStartTime + 365 days)` — no getter.
@@ -67,11 +67,10 @@ export function useSeasonEndgame(seasonAddress: string | undefined): SeasonEndga
     query: { enabled: !!seasonAddress, refetchInterval: 5000 },
   });
 
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
-  useEffect(() => {
-    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
-    return () => clearInterval(id);
-  }, []);
+  // Chain clock (see useChainTime): the *expired gates below drive
+  // permissionless takeover / openDistribution and compare against on-chain
+  // deadlines. In fork mode a Date.now() comparison would flip them days early.
+  const now = useChainTime();
 
   const num = (i: number) => (data?.[i]?.result !== undefined ? Number(data[i].result as bigint) : 0);
 

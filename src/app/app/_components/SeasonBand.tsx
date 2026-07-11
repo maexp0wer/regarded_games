@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { formatUnits } from 'viem';
 import Carlo from '@/components/icons/Carlo.svg';
 import Regardo from '@/components/icons/Regardo.svg';
 
+import { useChainTime } from '@/hooks/useChainTime';
 import { useSeasonPhase } from '@/hooks/useSeasonPhase';
 import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
@@ -12,15 +13,17 @@ import { useYieldTotals } from '@/hooks/useYieldTotals';
 import { SeasonPhasePills } from './SeasonPhasePills';
 
 function SeasonCountdown({ targetTimestamp, label }: { targetTimestamp: number; label: string }) {
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
-  useEffect(() => {
-    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
-    return () => clearInterval(id);
-  }, []);
+  // Chain time, not Date.now(): targetTimestamp is an on-chain timestamp
+  // (trading start / season end). In fork mode the chain clock lags real time,
+  // so a Date.now() comparison would freeze the countdown at "FINALIZING" while
+  // the auction is still live on-chain. See useChainTime.
+  const now = useChainTime();
 
   const pad = (n: number) => String(n).padStart(2, '0');
 
-  if (!targetTimestamp) {
+  // Treat "chain time not yet known" the same as "no target": show SHORTLY
+  // rather than a target-length countdown computed against now === 0.
+  if (!targetTimestamp || !now) {
     return <span className="gini-label">SHORTLY</span>;
   }
 

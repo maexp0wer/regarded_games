@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useRecentTrades } from '@/hooks/useRecentTrades';
 import { PercentileCircle } from './PercentileCircle';
+import LedgerLoader from '@/components/LedgerLoader';
 
 // Fixed number of rows per page, independent of the pane height. A page's rows
 // scroll within the pane; once exhausted, the user jumps to the next page.
@@ -63,7 +64,7 @@ export function TradingActivityFeed({ seasonAddress, className }: { seasonAddres
 
           {isLoading ? (
             <div className="absolute inset-0 flex items-center justify-center">
-              <p className="section-label animate-pulse">Reading Ledger…</p>
+              <LedgerLoader variant="inline" />
             </div>
           ) : !trades || trades.length === 0 ? (
             <div className="flex items-center justify-center py-16">

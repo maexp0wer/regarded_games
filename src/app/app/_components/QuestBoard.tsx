@@ -1,26 +1,36 @@
 'use client';
 
-import React, { useState } from 'react';
-import { usePublicClient, useAccount } from 'wagmi';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useAccount, usePublicClient } from 'wagmi';
 import type { Abi } from 'abitype';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTenantChainId, useTenantPonderUrl } from '@/context/TenantContext';
-import { useCommunitySession } from '@/hooks/useCommunitySession';
+import { useReferrals } from '@/hooks/useReferrals';
+import LedgerLoader from '@/components/LedgerLoader';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 
 const VARIABLE_REWARD_CAPS: Record<string, number> = {
   discussion_bonus: 400,
   win_the_game: 1000,
+  // Max across all referral tiers: 10×50 + 25×20 + 65×5 = 1325.
+  referrals: 1325,
 };
 
+// Quests that keep accruing after their first award — they must never render as
+// a finished (greyed-out) task even once they have points, since the user can
+// still earn more.
+const OPEN_ENDED_QUESTS = new Set(['referrals']);
+
 const INTERNAL_BUTTON_LABELS: Record<string, string> = {
-  login_discourse: 'Discourse',
+  login_discourse: 'Open Forum',
   vote_manifest: 'Vote',
   use_faucet: 'Faucet',
   swap_usdc_rgd: 'Swap',
   stake_rgd: 'Stake',
   buy_fim_auction: 'Buy FIM',
-  trade_fim: 'Trade FIM',
+  create_order: 'Create Order',
+  execute_shuffle: 'Shuffle',
   claim_payout: 'Claim Payout',
 };
 
@@ -52,10 +62,131 @@ function CopyLinkButton({ url }: { url: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 border rounded font-bold transition-transform active:scale-95 whitespace-nowrap btn-game-primary"
+      className="font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 rounded font-bold whitespace-nowrap btn-game-3"
     >
       {copied ? 'Copied!' : 'Copy Link'}
     </button>
+  );
+}
+
+function ReferralsModal({ address, onClose }: { address: string; onClose: () => void }) {
+  const { data, isLoading, isError } = useReferrals(address);
+  const queryClient = useQueryClient();
+  const totalReferralPoints = data?.totalReferralPoints ?? 0;
+
+  // The endpoint settles any owed referral credit as a side effect — refresh
+  // the board so the +points appear without waiting for its next poll.
+  useEffect(() => {
+    if (totalReferralPoints > 0) {
+      queryClient.invalidateQueries({ queryKey: ['quests', address.toLowerCase()] });
+    }
+  }, [totalReferralPoints, address, queryClient]);
+
+  // Portal to <body> so the fixed overlay escapes the quest-row's transformed
+  // ancestors — otherwise backdrop-filter is clipped to the row instead of
+  // blurring the whole page (matches how TxModal renders at the layout root).
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="modal-overlay-blur"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-card3 border border-border2 rounded-xl p-6 flex flex-col gap-5 w-full max-w-md shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-display font-bold text-lg text-text uppercase">Your Referrals</h3>
+            <p className="text-sm text-text2 mt-1">
+              Referred wallets qualify once they reach {data?.threshold ?? 500} quest points.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="font-mono text-sm text-text2 hover:text-text leading-none shrink-0"
+          >
+            ✕
+          </button>
+        </div>
+
+        {isLoading && (
+          <div className="py-8 text-center">
+            <LedgerLoader variant="inline" />
+          </div>
+        )}
+        {isError && (
+          <span className="font-mono text-xs text-[--color-red]">Failed to load referrals. Try again.</span>
+        )}
+
+        {data && (
+          <>
+            <div className="flex flex-col gap-2">
+              <div className="kv-row">
+                <span className="text-sm text-text2">Qualified referrals</span>
+                <span className="font-mono text-[12px] font-semibold text-text tabular-nums">
+                  {data.qualifiedCount} / {data.referrals.length}
+                </span>
+              </div>
+              <div className="kv-row">
+                <span className="text-sm text-text2">Referral points earned</span>
+                <span className={`font-mono text-[12px] font-bold tabular-nums ${data.totalReferralPoints > 0 ? 'text-green' : 'text-text2'}`}>
+                  +{data.totalReferralPoints} PTS
+                </span>
+              </div>
+            </div>
+
+            {data.referrals.length === 0 ? (
+              <p className="font-mono text-xs text-text text-center py-4">
+                No referrals yet — share your link to start earning.
+              </p>
+            ) : (
+              <div className="border border-border2 rounded-lg divide-y divide-border2 max-h-110 overflow-y-auto custom-scrollbar">
+                {data.referrals.map((r) => (
+                  <div key={r.address} className="flex items-center gap-3 px-3 py-2.5">
+                    <code title={r.address} className="font-mono text-[11px] text-text select-all">
+                      {r.address.slice(0, 6)}…{r.address.slice(-4)}
+                    </code>
+                    <span className={`ml-auto font-mono text-[11px] tabular-nums ${r.qualified ? 'text-green' : 'text-text2'}`}>
+                      {r.points} / {data.threshold} PTS
+                    </span>
+                    {r.qualified ? (
+                      <div className="w-6 h-6 rounded-full bg-green/10 border border-green grid place-items-center text-green font-mono text-xs font-black shrink-0">
+                        ✓
+                      </div>
+                    ) : (
+                      <div className="w-6 h-6 rounded-full border border-border2 shrink-0" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p className="text-xs text-text2 leading-relaxed">
+              Per qualified referral: {data.tiers.map((t) => `${t.from}–${t.to}: ${t.perReferral} pts`).join(' · ')}.
+            </p>
+          </>
+        )}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function ViewReferralsButton() {
+  const [open, setOpen] = useState(false);
+  const { address } = useAccount();
+  if (!address) return null;
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 rounded font-bold whitespace-nowrap btn-game-3"
+      >
+        View Referrals
+      </button>
+      {open && <ReferralsModal address={address} onClose={() => setOpen(false)} />}
+    </>
   );
 }
 
@@ -89,6 +220,96 @@ async function findActiveSeasonSlug(
   return null;
 }
 
+// Shared hover tooltip. Render inside a `relative group` wrapper — it reveals
+// on hover of that group (a disabled button, or an active link).
+function HoverTooltip({ kicker, title, body }: { kicker: string; title: string; body: string }) {
+  return (
+    <div
+      role="tooltip"
+      className="absolute right-0 top-full mt-2 z-40 w-64 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+      style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.25))' }}
+    >
+      {/* Neutral accent bar — matches btn-game-3 */}
+      <div style={{ height: 2, background: 'var(--color-border2)', borderRadius: '3px 3px 0 0' }} />
+      <div className="bg-card3 border border-t-0 border-border2 rounded-b p-3 font-mono">
+        <span className="block text-[8px] uppercase tracking-widest text-text2 mb-1.5">
+          {kicker}
+        </span>
+        <h3 className="text-[11px] font-black text-text uppercase tracking-wide mb-2">
+          {title}
+        </h3>
+        <p className="text-[10px] text-text2 leading-snug">
+          {body}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Note badge + tooltip. A filled purple "i" pip that reveals the note. On
+// desktop it opens on hover; on touch (no hover) it toggles on tap. Visibility
+// is state-driven rather than CSS `group-hover` so it works on mobile, and it
+// dismisses on outside tap or Escape.
+function NoteBadge({ note }: { note: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(e: PointerEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <span
+      ref={ref}
+      className="relative inline-flex shrink-0"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        aria-label="Show note"
+        aria-expanded={open}
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        className="font-mono text-[9px] font-black w-4 h-4 rounded-full grid place-items-center leading-none cursor-help"
+        style={{
+          background: 'var(--color-purple)',
+          color: '#fff',
+        }}
+      >
+        i
+      </button>
+      <div
+        role="tooltip"
+        className={`absolute left-1/2 -translate-x-1/2 top-full mt-2 z-40 w-72 max-w-[90vw] transition-opacity duration-150 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.25))' }}
+      >
+        {/* Purple accent bar — matches the quest category accent */}
+        <div style={{ height: 2, background: 'var(--color-purple)', borderRadius: '3px 3px 0 0' }} />
+        <div className="bg-card3 border border-t-0 border-border2 rounded-b p-3 font-mono normal-case">
+          <span className="block text-[8px] uppercase tracking-widest text-text2 mb-1.5">
+            Note
+          </span>
+          <p className="text-[10px] text-text2 leading-snug">
+            {note}
+          </p>
+        </div>
+      </div>
+    </span>
+  );
+}
+
 function InactivePendingButton({ label, tooltipKicker, tooltipTitle, tooltipBody }: {
   label: string;
   tooltipKicker: string;
@@ -100,29 +321,11 @@ function InactivePendingButton({ label, tooltipKicker, tooltipTitle, tooltipBody
       <button
         type="button"
         disabled
-        className="font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 border rounded font-bold whitespace-nowrap btn-game-primary"
+        className="font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 rounded font-bold whitespace-nowrap btn-game-3"
       >
         {label}
       </button>
-      <div
-        role="tooltip"
-        className="absolute right-0 top-full mt-2 z-40 w-64 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150"
-        style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.25))' }}
-      >
-        {/* Gradient accent bar — matches btn-game-primary */}
-        <div style={{ height: 2, background: 'var(--sunset)', borderRadius: '3px 3px 0 0' }} />
-        <div className="bg-card3 border border-t-0 border-border2 rounded-b p-3 font-mono">
-          <span className="block text-[8px] uppercase tracking-widest text-text2 mb-1.5">
-            {tooltipKicker}
-          </span>
-          <h3 className="text-[11px] font-black text-text uppercase tracking-wide mb-2">
-            {tooltipTitle}
-          </h3>
-          <p className="text-[10px] text-text2 leading-snug">
-            {tooltipBody}
-          </p>
-        </div>
-      </div>
+      <HoverTooltip kicker={tooltipKicker} title={tooltipTitle} body={tooltipBody} />
     </div>
   );
 }
@@ -151,7 +354,7 @@ function PhaseGateButton({ phase, label, tooltipTitle, tooltipBody }: {
         href={`/${activeSlug}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 border rounded font-bold transition-transform active:scale-95 whitespace-nowrap btn-game-primary block"
+        className="font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 rounded font-bold whitespace-nowrap btn-game-3 block"
       >
         {label}
       </a>
@@ -182,7 +385,6 @@ const INACTIVE_PENDING_TOOLTIPS: Record<string, { title: string; body: string }>
 interface MainQuest {
   id: string;
   title: string;
-  description: string;
   subQuests: SubQuest[];
 }
 
@@ -190,51 +392,6 @@ interface QuestBoardProps {
   mainQuests: MainQuest[];
   userTotalPoints: number;
   tgeConversionRate?: string;
-}
-
-const ACTION_BTN_CLASS =
-  'font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 border rounded font-bold transition-transform active:scale-95 whitespace-nowrap btn-game-primary block';
-
-/**
- * Discourse login quest action. Quest credit requires a verified community session
- * (see canWrite in /api/quests) AND a provisioned Discourse account — and signing in
- * does both at once (the session POST runs ssoSync). So when the user has no session,
- * the button signs them in (creating the account), then forwards to Discourse to log
- * in. Once signed in it's a plain link to the forum.
- */
-function DiscourseQuestButton({ sub }: { sub: SubQuest }) {
-  const { address } = useAccount();
-  const { signedIn, signIn, isSigningIn } = useCommunitySession();
-  const queryClient = useQueryClient();
-
-  if (signedIn) {
-    return (
-      <a href={sub.actionUrl} target="_blank" rel="noopener noreferrer" className={ACTION_BTN_CLASS}>
-        Discourse
-      </a>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      disabled={isSigningIn || !address}
-      className={`${ACTION_BTN_CLASS} disabled:opacity-50`}
-      onClick={async () => {
-        try {
-          await signIn();
-          if (address) {
-            await queryClient.invalidateQueries({ queryKey: ['quests', address.toLowerCase()] });
-          }
-          if (sub.actionUrl) window.open(sub.actionUrl, '_blank', 'noopener,noreferrer');
-        } catch {
-          // useCommunitySession swallows the error; user can retry.
-        }
-      }}
-    >
-      {isSigningIn ? 'Signing…' : 'Discourse'}
-    </button>
-  );
 }
 
 function SubQuestAction({ sub, locked }: { sub: SubQuest; locked: boolean }) {
@@ -248,7 +405,14 @@ function SubQuestAction({ sub, locked }: { sub: SubQuest; locked: boolean }) {
       />
     );
   }
-  if (sub.copyUrl) return <CopyLinkButton url={sub.copyUrl} />;
+  if (sub.copyUrl) {
+    return (
+      <div className="flex flex-wrap items-center justify-end gap-1.5">
+        <ViewReferralsButton />
+        <CopyLinkButton url={sub.copyUrl} />
+      </div>
+    );
+  }
   if (sub.auctionGate && !sub.isCompleted) {
     return (
       <PhaseGateButton
@@ -263,7 +427,7 @@ function SubQuestAction({ sub, locked }: { sub: SubQuest; locked: boolean }) {
     return (
       <PhaseGateButton
         phase="TRADING"
-        label="Trade FIM"
+        label={INTERNAL_BUTTON_LABELS[sub.id] ?? 'Trade FIM'}
         tooltipTitle="No Active Trading Season"
         tooltipBody="There is currently no testnet season in the trading phase. Check back when the next season starts."
       />
@@ -286,18 +450,13 @@ function SubQuestAction({ sub, locked }: { sub: SubQuest; locked: boolean }) {
       </div>
     );
   }
-  if (sub.id === 'login_discourse') {
-    return <DiscourseQuestButton sub={sub} />;
-  }
   if (sub.actionUrl) {
     return (
       <a
         href={sub.actionUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className={`font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 border rounded font-bold transition-transform active:scale-95 whitespace-nowrap block ${
-          sub.type === 'galxe' ? 'btn-game-secondary' : 'btn-game-primary'
-        }`}
+        className="font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 rounded font-bold whitespace-nowrap block btn-game-3"
       >
         {sub.type === 'galxe' ? 'Launch' : (INTERNAL_BUTTON_LABELS[sub.id] ?? 'Execute')}
       </a>
@@ -312,38 +471,6 @@ function SubQuestAction({ sub, locked }: { sub: SubQuest; locked: boolean }) {
     />
   );
 }
-
-function SubQuestTypeChip({ type }: { type: 'galxe' | 'internal' }) {
-  return (
-    <span
-      className={`font-mono text-[8px] px-1 py-0.25 rounded border font-bold uppercase tracking-tight ${
-        type === 'galxe'
-          ? 'text-[var(--color-purple)] border-[var(--color-purple)]/30 bg-[var(--color-purple-15)]'
-          : 'text-[var(--color-gold)] border-[var(--color-gold)]/30 bg-[var(--color-gold-15)]'
-      }`}
-    >
-      {type === 'galxe' ? 'Galxe' : 'Internal'}
-    </span>
-  );
-}
-
-const DIRECTIVE_ACCENTS = [
-  {
-    factionBg: '',
-    pillClass: 'text-gold border-(--color-gold-35) bg-(--color-gold-15)',
-    progressStyle: {} as React.CSSProperties,
-  },
-  {
-    factionBg: '[background:radial-gradient(400px_200px_at_50%_100%,var(--color-purple-15),transparent_60%),linear-gradient(180deg,var(--color-card2),var(--color-card))]',
-    pillClass: 'text-purple border-(--color-purple-35) bg-(--color-purple-15)',
-    progressStyle: { background: 'linear-gradient(90deg, var(--color-purple) 0%, var(--color-magenta) 100%)' } as React.CSSProperties,
-  },
-  {
-    factionBg: '[background:radial-gradient(400px_200px_at_50%_100%,var(--color-gold-15),transparent_60%),linear-gradient(180deg,var(--color-card2),var(--color-card))]',
-    pillClass: 'text-gold border-(--color-gold-35) bg-(--color-gold-15)',
-    progressStyle: { background: 'linear-gradient(90deg, var(--color-gold) 0%, var(--color-orange) 100%)' } as React.CSSProperties,
-  },
-];
 
 export function QuestBoard({
   mainQuests,
@@ -367,7 +494,7 @@ export function QuestBoard({
           </p>
         </div>
 
-        <div className="grid gap-px bg-border rounded-[14px] overflow-hidden border border-border" style={{ maxWidth: 200, width: '100%', gridTemplateColumns: '1fr' }}>
+        <div className="grid gap-px rounded-md overflow-hidden border border-border" style={{ maxWidth: 200, width: '100%', gridTemplateColumns: '1fr' }}>
           <div className="bg-card px-4 py-3 in-[.dark]:bg-card2">
             <div className="font-mono text-[10px] font-semibold tracking-widest uppercase text-text2 mb-1.5">Secured Points</div>
             <div className="font-mono font-semibold text-[18px] tracking-[-0.01em] tabular-nums text-green">
@@ -378,49 +505,44 @@ export function QuestBoard({
         </div>
       </header>
 
-      {/* ── DIRECTIVES ──────────────────────────────────────────── */}
-      {mainQuests.map((mainQuest, idx) => {
+      {/* ── QUEST CATEGORIES ────────────────────────────────────── */}
+      {mainQuests.map((mainQuest) => {
         const completedCount = mainQuest.subQuests.filter(q => q.isCompleted).length;
         const totalCount = mainQuest.subQuests.length;
         const isFullyCleared = completedCount === totalCount && totalCount > 0;
         const showStepNumbers = mainQuest.id === 'dominate_testnet';
         const progressPct = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
-        const accent = DIRECTIVE_ACCENTS[idx] ?? DIRECTIVE_ACCENTS[0];
 
         return (
           <section
             key={mainQuest.id}
-            className={`terminal-pane quest-category-pane ${accent.factionBg}`}
-            style={isFullyCleared ? { boxShadow: '0 0 16px var(--color-green-15), 0 0 0 1px var(--color-green-35)' } : undefined}
+            className="terminal-pane quest-category-pane"
           >
             {/* Header row */}
             <div className="terminal-pane-header">
               <div>
-                <span className="font-mono text-[9px] uppercase text-text2 tracking-widest block mb-0.5">
-                  Directive {String.fromCharCode(65 + idx)}
-                </span>
                 <span className="terminal-pane-title" style={{ color: 'var(--color-text)', fontSize: '0.8rem' }}>
                   {mainQuest.title}
                 </span>
               </div>
-              <span className={`pill ${accent.pillClass}`} style={{ fontSize: '0.7rem' }}>
-                <span className={isFullyCleared ? 'text-green' : ''}>{completedCount}</span>
-                {' / '}{totalCount} Cleared
+              <span
+                className={`pill ${isFullyCleared ? 'text-green' : 'text-purple'}`}
+                style={{ fontSize: '0.7rem' }}
+              >
+                {completedCount} / {totalCount} Completed
               </span>
             </div>
-
-            {/* Description */}
-            {mainQuest.description && (
-              <p className="font-mono text-[11px] text-text2 mb-3 leading-relaxed">
-                {mainQuest.description}
-              </p>
-            )}
 
             {/* Progress rail */}
             <div className="progress-rail-container" style={{ height: '5px', marginBottom: '1rem', borderWidth: 0 }}>
               <div
                 className="progress-rail-fill"
-                style={{ width: `${progressPct}%`, ...accent.progressStyle }}
+                style={{
+                  width: `${progressPct}%`,
+                  background: isFullyCleared
+                    ? 'var(--color-green)'
+                    : 'linear-gradient(90deg, var(--color-purple) 0%, var(--color-magenta) 100%)',
+                }}
               />
             </div>
 
@@ -429,15 +551,18 @@ export function QuestBoard({
               {mainQuest.subQuests.map((sub, stepIdx) => {
                 const stepLabel = showStepNumbers ? String(stepIdx + 1).padStart(2, '0') : null;
                 const locked = false;
+                // Open-ended quests keep accepting new points, so they never
+                // render as a finished (greyed-out) task even with points banked.
+                const showAsCompleted = sub.isCompleted && !OPEN_ENDED_QUESTS.has(sub.id);
 
                 return (
                   <div
                     key={sub.id}
-                    className={`ledger-row quest-task-row${sub.isCompleted ? ' quest-completed' : ''}${locked ? ' locked-task' : ''}`}
+                    className={`ledger-row quest-task-row${showAsCompleted ? ' quest-completed' : ''}${locked ? ' locked-task' : ''}`}
                     style={{ backgroundColor: 'var(--color-card2)' }}
                   >
                     {/* Col 1: meta */}
-                    <div className="flex flex-col gap-[0.3rem] min-w-0">
+                    <div className="quest-cell-meta flex flex-col gap-[0.3rem] min-w-0">
                       <div className="font-display text-[0.9rem] font-bold text-text tracking-[0.02em] flex items-center gap-2 flex-wrap">
                         {stepLabel && (
                           <span className="font-mono text-[8px] font-black text-text2 tracking-widest uppercase shrink-0">
@@ -445,6 +570,7 @@ export function QuestBoard({
                           </span>
                         )}
                         {sub.title}
+                        {sub.note && <NoteBadge note={sub.note} />}
                         {locked && (
                           <span
                             className="font-mono text-[7px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0"
@@ -458,14 +584,10 @@ export function QuestBoard({
                           </span>
                         )}
                       </div>
-                      <div className="font-mono text-xs text-text2 leading-[1.4] flex items-center gap-2 flex-wrap">
-                        <SubQuestTypeChip type={sub.type} />
-                        {sub.note && <span>{sub.note}</span>}
-                      </div>
                     </div>
 
                     {/* Col 2: reward */}
-                    <div className="font-mono font-bold text-[0.85rem] text-right min-w-22.5 whitespace-nowrap">
+                    <div className="quest-cell-reward font-mono font-bold text-[0.85rem] text-left md:text-right md:min-w-22.5 whitespace-nowrap">
                       {sub.isCompleted ? (
                         <span className="text-green">+{sub.points} PTS</span>
                       ) : locked ? (
@@ -478,7 +600,7 @@ export function QuestBoard({
                     </div>
 
                     {/* Col 3: action */}
-                    <div className="quest-action">
+                    <div className="quest-cell-action quest-action">
                       <SubQuestAction sub={sub} locked={locked} />
                     </div>
                   </div>
@@ -490,7 +612,7 @@ export function QuestBoard({
       })}
 
       {/* ── FOOTER ADVISORY ─────────────────────────────────────── */}
-      <div className="font-mono text-[10px] text-text2 border-t border-border2 pt-3">
+      <div className="font-mono text-[10px] text-text2">
         
         <div className="sm:text-right text-text2/70 uppercase tracking-wider self-center">
           Points translate directly to Regarded Tokens you receive during the Token Generation Event.

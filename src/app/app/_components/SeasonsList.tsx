@@ -13,6 +13,7 @@ import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 import type { Abi } from 'abitype';
 import { SeasonPhasePills } from './SeasonPhasePills';
 import { CountdownTicker } from './CountdownTicker';
+import LedgerLoader from '@/components/LedgerLoader';
 
 // --- ABI Definitions ---
 const GAME_CONTROLLER_SEASONS_ABI = [
@@ -148,7 +149,12 @@ function SeasonCard({ season }: { season: SeasonRegistry }) {
 
         {/* Countdown */}
         {showTimeStat && (
-          <CountdownTicker targetTimestamp={countdownTarget} label={statusLabel} inline />
+          <CountdownTicker
+            targetTimestamp={countdownTarget}
+            label={statusLabel}
+            elapsedLabel={isTrading ? 'FINALIZED' : 'STARTING'}
+            inline
+          />
         )}
 
         {/* Victory progress rail — grows to fill remaining space */}
@@ -220,11 +226,7 @@ export function SeasonsList() {
     enabled: !!controllerAddress && !!publicClient,
   });
 
-  if (isLoading) return (
-    <div className="w-full p-12 text-center">
-      <span className="section-label animate-pulse">Reading Ledger…</span>
-    </div>
-  );
+  if (isLoading) return <LedgerLoader />;
 
   const display = [...(seasonsData || [])].reverse();
   const filtered = display.filter(s => showAll ? true : s.phase !== 'PAYOUT');

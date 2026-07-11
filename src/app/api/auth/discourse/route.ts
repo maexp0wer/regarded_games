@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { getCommunitySession } from '@/lib/communitySession';
+import { getCommunitySession, verifySsoConfirmToken } from '@/lib/communitySession';
 
 const debug = process.env.APP_DEBUG === 'true';
 
@@ -44,11 +44,25 @@ export async function GET(req: NextRequest) {
   const calculatedSig = hmac.update(sso).digest('hex');
   if (calculatedSig !== sig) return new NextResponse("Sig Mismatch", { status: 403 });
 
-  // 2. Identify wallet from the VERIFIED community session (a forged cookie can no
-  //    longer log a user into the forum as someone else — the session is HMAC-signed
-  //    and only issued after a wallet-signature check).
+  // Decode the one-time nonce Discourse minted for this login attempt. It scopes
+  // the confirmation token below to this specific SSO round-trip.
+  const payloadRaw = Buffer.from(sso, 'base64').toString();
+  const nonce = new URLSearchParams(payloadRaw).get('nonce');
+  if (!nonce) return new NextResponse('Missing nonce', { status: 400 });
+
+  // 2. Identify the wallet from the VERIFIED, HMAC-signed community session.
   const walletAddress = getCommunitySession(req);
-  if (!walletAddress) {
+
+  // A valid session cookie proves *some* wallet signed in at some point — NOT that
+  // that wallet is the one now driving this browser. On a shared browser a stale
+  // cookie for user A would otherwise log user B into the forum as A. So we only
+  // trust the cookie when /community-login has vouched, for THIS nonce, that the
+  // connected wallet equals the cookie's wallet (confirm token, bound to both).
+  // Missing cookie or missing/mismatched confirmation → bounce through login.
+  const confirmToken = searchParams.get('confirm');
+  const confirmed =
+    walletAddress !== null && verifySsoConfirmToken(confirmToken, walletAddress, nonce);
+  if (!confirmed || walletAddress === null) {
     const mainDomain = new URL(process.env.NEXT_PUBLIC_MAIN_DOMAIN ?? 'http://localhost:3000');
     mainDomain.hostname = `app.${mainDomain.hostname}`;
     const loginUrl = new URL('/community-login', mainDomain);
@@ -82,16 +96,12 @@ export async function GET(req: NextRequest) {
 
   if (debug) console.log(`[sso] syncing: ${walletAddress} | name: ${displayName}`);
 
-  // 5. Decode Nonce
-  const payloadRaw = Buffer.from(sso, 'base64').toString();
-  const nonce = new URLSearchParams(payloadRaw).get('nonce');
-
-  // 6. Build Return Payload
+  // 5. Build Return Payload
   // Note: do NOT include 'groups' for non-admins — group membership is managed
   // exclusively by init-season and sync-faction API routes. Including groups=""
   // with discourse_connect_overrides_groups would wipe faction memberships on login.
   const returnParams = new URLSearchParams({
-    nonce: nonce!,
+    nonce,
     external_id: walletAddress,
     email: `${walletAddress}@regarded.local`,
     username: walletAddress,

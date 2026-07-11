@@ -16,18 +16,52 @@ interface OrderBookProps {
   onRemoveOrder?: (id: string) => void;
   selectedOrderIds?: string[];
   isOnHold?: boolean;
+  // Bumped each time the mask's "Select orders" affordance is clicked. Steers the
+  // side filter to the current buy/sell direction even when the book is already
+  // open (opening it fresh seeds the filter, but a re-click on an open book
+  // otherwise leaves a stale side selected).
+  steerSignal?: number;
 }
 
 type AggregatedOrder = Order & { subOrders: Order[] };
 
 
 export function OrderBook({
-  seasonAddress, isMaker, userAddress, onSelectOrder, onRemoveOrder, selectedOrderIds = [], isOnHold = false,
+  seasonAddress, isBuy, isMaker, userAddress, onSelectOrder, onRemoveOrder, selectedOrderIds = [], isOnHold = false,
+  steerSignal,
 }: OrderBookProps) {
   const { data } = useOrderBook(seasonAddress);
 
-  const [sideFilter, setSideFilter] = useState<'ask' | 'bid' | null>(null);
+  // A taker buying fills asks; selling fills bids. Seed the side filter from the
+  // mask's buy/sell direction so opening the book lands on the relevant side.
+  const directionSide = isBuy ? 'ask' : 'bid';
+  const [sideFilter, setSideFilter] = useState<'ask' | 'bid' | null>(isMaker ? null : directionSide);
   const [factionFilter, setFactionFilter] = useState<'capitalist' | 'proletariat' | null>(null);
+
+  // Keep the side filter tracking the buy/sell toggle while the book is open.
+  // Makers see both sides (they post liquidity), so only takers are steered.
+  const prevDirectionSide = useRef(directionSide);
+  useEffect(() => {
+    if (isMaker) return;
+    if (prevDirectionSide.current !== directionSide) {
+      prevDirectionSide.current = directionSide;
+      setSideFilter(directionSide);
+    }
+  }, [directionSide, isMaker]);
+
+  // Clicking "Select orders" in the mask re-steers the book to the relevant side.
+  // When the book was closed this is redundant (mount seeds it), but when the book
+  // is already open — so nothing remounts and directionSide hasn't changed — this
+  // is the only thing that snaps a stale side filter back to the trade direction.
+  // The initial signal value is skipped so a fresh mount doesn't fight the seed.
+  const prevSteerSignal = useRef(steerSignal);
+  useEffect(() => {
+    if (isMaker) return;
+    if (steerSignal !== undefined && prevSteerSignal.current !== steerSignal) {
+      prevSteerSignal.current = steerSignal;
+      setSideFilter(directionSide);
+    }
+  }, [steerSignal, directionSide, isMaker]);
 
   // Each faction remembers its own percentile range independently.
   type Range = { min: number | ''; max: number | '' };
@@ -436,19 +470,19 @@ export function OrderBook({
           <div className="flex gap-1 mt-1.5">
             <button
               onClick={() => setSideFilter(v => v === 'bid' ? null : 'bid')}
-              className={`flex-1 px-2.5 py-1 text-[11px] font-dispaly font-bold uppercase tracking-[0.1rem]  rounded border border-border transition duration-150 active:scale-98 ${
-                sideFilter === 'bid' ? 'text-text' : 'bg-card3 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-green-15),var(--color-card2))]'
+              className={`flex-1 px-2.5 py-1 text-[11px] font-display font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
+                sideFilter === 'bid' ? 'text-text' : 'bg-card3 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-green)_30%,var(--color-card2))]'
               }`}
-              style={sideFilter === 'bid' ? { backgroundColor: 'color-mix(in srgb, var(--color-green) 30%, var(--color-card3))' } : undefined}
+              style={sideFilter === 'bid' ? { backgroundColor: 'color-mix(in srgb, var(--color-green) 50%, var(--color-card3))' } : undefined}
             >
               Bid
             </button>
             <button
               onClick={() => setSideFilter(v => v === 'ask' ? null : 'ask')}
               className={`flex-1 px-2.5 py-1 text-[11px] font-display font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
-                sideFilter === 'ask' ? 'text-text' : 'bg-card3 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-red),var(--color-card2))]'
+                sideFilter === 'ask' ? 'text-text' : 'bg-card3 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-red)_30%,var(--color-card2))]'
               }`}
-              style={sideFilter === 'ask' ? { backgroundColor: 'color-mix(in srgb, var(--color-red) 30%, var(--color-card3))' } : undefined}
+              style={sideFilter === 'ask' ? { backgroundColor: 'color-mix(in srgb, var(--color-red) 50%, var(--color-card3))' } : undefined}
             >
               Ask
             </button>
@@ -460,9 +494,9 @@ export function OrderBook({
               <button
                 onClick={() => setFactionFilter(v => v === 'proletariat' ? null : 'proletariat')}
                 className={`w-full px-2.5 py-1 text-[11px] font-display font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
-                  factionFilter === 'proletariat' ? 'text-text' : 'bg-card3 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-purple),var(--color-card2))]'
+                  factionFilter === 'proletariat' ? 'text-text' : 'bg-card3 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-purple)_30%,var(--color-card2))]'
                 }`}
-                style={factionFilter === 'proletariat' ? { backgroundColor: 'color-mix(in srgb, var(--color-purple) 30%, var(--color-card3))' } : undefined}
+                style={factionFilter === 'proletariat' ? { backgroundColor: 'color-mix(in srgb, var(--color-purple) 50%, var(--color-card3))' } : undefined}
               >
                 Proletarians
               </button>
@@ -473,9 +507,9 @@ export function OrderBook({
               <button
                 onClick={() => setFactionFilter(v => v === 'capitalist' ? null : 'capitalist')}
                 className={`w-full px-2.5 py-1 text-[11px] font-display font-bold uppercase tracking-widest rounded border border-border transition duration-150 active:scale-98 ${
-                  factionFilter === 'capitalist' ? 'text-text' : 'bg-card3 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-gold-15),var(--color-card2))]'
+                  factionFilter === 'capitalist' ? 'text-text' : 'bg-card3 text-text2 hover:text-text hover:bg-[color-mix(in_srgb,var(--color-gold)_30%,var(--color-card2))]'
                 }`}
-                style={factionFilter === 'capitalist' ? { backgroundColor: 'color-mix(in srgb, var(--color-gold) 30%, var(--color-card3))' } : undefined}
+                style={factionFilter === 'capitalist' ? { backgroundColor: 'color-mix(in srgb, var(--color-gold) 50%, var(--color-card3))' } : undefined}
               >
                 Capitalists
               </button>

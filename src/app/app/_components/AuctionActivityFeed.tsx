@@ -5,6 +5,7 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { formatUnits, isAddress } from 'viem';
 import { useTenantPonderUrl } from '@/context/TenantContext';
 import { fetchAllPonderItems } from '@/lib/ponder';
+import LedgerLoader from '@/components/LedgerLoader';
 
 const DEAD_ADDRESS = '0x0000000000000000000000000000000000000000';
 // Fixed number of rows per page, independent of the pane height. A page's rows
@@ -89,7 +90,7 @@ export function AuctionActivityFeed({ seasonAddress, className }: { seasonAddres
 
           {isLoading ? (
             <div className="absolute inset-0 flex items-center justify-center">
-              <p className="section-label animate-pulse">Reading Ledger…</p>
+              <LedgerLoader variant="inline" />
             </div>
           ) : !history || history.length === 0 ? (
             <div className="flex items-center justify-center py-16">

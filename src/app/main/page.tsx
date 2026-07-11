@@ -425,11 +425,58 @@ export default function Home() {
   useEffect(() => { belowLgRef.current = belowLg; }, [belowLg]);
 
   /* Jump target for the hero CTAs. A jump always enters the target from above
-     (throwDir resolves to 1), so decks open at their first card. */
+     (throwDir resolves to 1), so decks open at their first card.
+
+     A jump crosses several sections at once, skipping every intermediate
+     transition. Two bits of state are normally accumulated by passing through
+     those sections and are relied on by the *scroll-up* flights that play
+     afterwards:
+       1. throwDir / prevSectionIdx — resolved during render, so a jump that
+          moves the index forward already yields throwDir === 1 (enter from
+          above); nothing to seed there.
+       2. characterHome + its history refs — the traveling-character effect only
+          knows the IMMEDIATE previous home, so a jump straight from 'headline'
+          to a past-gini target lands in the effect's `else` (instant snap) with
+          prevTarget='headline'. That leaves the gini dock never established as a
+          *settled* home, so the first scroll-up into Choose Your Hero runs its
+          gini→cards reverse-descent flight from a home the characters only
+          teleported into — the icons fly in from the wrong origin.
+     Seed the character home to the jump target's settled home here (and align
+     the history refs so no stale flight fires), making the post-jump state
+     identical to having scrolled down: the subsequent scroll-up then plays the
+     same, correct reverse flights whether the user scrolled or jumped. */
   const goToSection = (id: string) => {
     const targetIndex = SECTIONS.findIndex((s) => s.id === id);
     if (targetIndex < 0) return;
     setCardIndices((prev) => ({ ...prev, [id]: 0 }));
+
+    /* Resolve the target's settled character home the same way the render does
+       (see the "Traveling character home" block), then snap directly to it and
+       record it as the settled history so the [targetHome] effect no-ops on the
+       arrival instead of flying a bogus headline→target flight. */
+    const cardsIdxLocal = SECTIONS.findIndex((s) => s.id === 'sectionHero');
+    const giniIdxLocal = SECTIONS.findIndex((s) => s.id === GINI_SECTION_ID);
+    let jumpHome: CharacterHome = 'headline';
+    if (targetIndex >= giniIdxLocal) {
+      /* Mirror the render derivation: below-lg the characters only dock at gini
+         once the Gini card is the top of its deck. A jump lands PAST gini (or,
+         on desktop, always) so giniOnTop holds; only a same-index jump to
+         sectionPlay itself could sit on an earlier deck card → 'cards'. */
+      const giniOnTop =
+        !belowLgRef.current ||
+        targetIndex > giniIdxLocal ||
+        (cardIndicesRef.current[GINI_SECTION_ID] ?? 0) === GINI_CARD_INDEX;
+      jumpHome = giniOnTop ? 'gini' : 'cards';
+    } else if (targetIndex >= cardsIdxLocal) {
+      jumpHome = 'cards';
+    }
+    clearTimeout(flipTimerRef.current);
+    clearTimeout(giniRetargetTimerRef.current);
+    setCharOverlay(null);
+    setCharacterHome(jumpHome);
+    prevTargetRef.current = jumpHome;
+    prevHomeRef.current = jumpHome;
+
     activeIdxRef.current = targetIndex;
     setActiveIdx(targetIndex);
   };

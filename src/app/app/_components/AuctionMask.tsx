@@ -19,6 +19,7 @@ import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
 import { TxModal } from './TxModal';
 import { friendlyRevertReason, isUserRejection, isInsufficientGas } from '@/utils/revertReason';
 import { useCollateral } from '@/hooks/useCollateral';
+import LedgerLoader from '@/components/LedgerLoader';
 
 const DEAD_ADDRESS = '0x0000000000000000000000000000000000000000';
 
@@ -68,11 +69,7 @@ export function AuctionMask({
   }
 
   if (!isFullyConfigured) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="section-label animate-pulse">Reading Ledger...</p>
-      </div>
-    );
+    return <LedgerLoader />;
   }
 
   return (
@@ -154,6 +151,16 @@ function AuctionMaskInner({
     const usdcNeeded = remainingFimAllowance / 1000000000000n;
     return usdcNeeded > currentUsdcInWallet ? currentUsdcInWallet : usdcNeeded;
   }, [remainingFimAllowance, currentUsdcInWallet]);
+
+  // When the staked-RGD headroom (expressed in USDC) is the binding constraint —
+  // i.e. lower than the wallet USDC — the balance caption switches from WALLET to
+  // ELIGIBLE BY STAKE and shows that lower figure, so the displayed max reflects
+  // what the user can actually buy. Only once reads are ready and stake exists.
+  const stakeEligibleUsdc = remainingFimAllowance / 1000000000000n;
+  const stakeIsBinding =
+    hasStakedAnything && collateral.isReady && stakeEligibleUsdc < currentUsdcInWallet;
+  const balanceLabel = stakeIsBinding ? 'ELIGIBLE BY STAKE' : 'WALLET';
+  const balanceValue = stakeIsBinding ? stakeEligibleUsdc : currentUsdcInWallet;
 
   const sliderPct = useMemo(() => {
     if (!buyAmount || maxUsdc === 0n) return 0;
@@ -285,7 +292,8 @@ function AuctionMaskInner({
                 sliderValue={sliderPct}
                 onSliderChange={handleSliderChange}
                 disabled={showModal}
-                balance={`${Number(formatUnits(currentUsdcInWallet, 6)).toLocaleString()} USDC`}
+                balanceLabel={balanceLabel}
+                balance={`${Number(formatUnits(balanceValue, 6)).toLocaleString()} USDC`}
               />
             </div>
           </>
@@ -293,6 +301,23 @@ function AuctionMaskInner({
 
         {/* ── CTA ── */}
         <div className="mt-auto pt-3 flex flex-col gap-3 border-t border-border">
+          {/* Over-limit warning — the typed USDC would buy more FIM than the
+              stake can collateralize. Mirrors the TradingMask collateral warning
+              (surface-pink-warn + /stake link). */}
+          {isAuctionPhase && isOverLimit && (
+            <Link
+              href="/stake"
+              className="rounded-md px-4 py-2 flex flex-col gap-1 surface-pink-warn transition-colors hover:brightness-110"
+            >
+              <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-red">
+                Stake more RGD to unlock
+              </span>
+              <span className="font-mono text-[11px] text-text2 tabular-nums">
+                You can buy up to {Number(formatUnits(remainingFimAllowance, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} FIM
+                {' '}on your {Number(formatUnits(currentStaked, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} staked RGD.
+              </span>
+            </Link>
+          )}
           {isAuctionPhase && (
             needsStaking ? (
               <Link href="/stake" className="btn-game-primary text-center">

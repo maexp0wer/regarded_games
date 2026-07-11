@@ -678,7 +678,9 @@ CS_p = S_community + S_spread + S_testnet
 
 - *Buy \$FIM during the Auction:* 50 pts
 
-- *Buy or sell \$FIM during the Trading Phase:* 50 pts
+- *Create an order to buy or sell \$FIM during the Trading Phase:* 50 pts
+
+- *Execute a shuffle order that Moves the Gini in favor of Your Class's pole — fill bids and asks in a single batch that leaves the Gini higher (Capitalist) or lower (Proletarian) than it started:* 100 pts
 
 - *Claim payout:* 50 pts
 

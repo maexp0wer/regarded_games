@@ -203,12 +203,12 @@ if /i "!APP_ENV!"=="fork" (
     :: --- Ponder A: mainnet contracts ---
     set "DB_URL_M=postgresql://%PONDER_USER%:%PONDER_PASS%@localhost:5432/!MAINNET_DB!"
     echo Starting Ponder ^(mainnet contracts, port !MAINNET_PONDER_PORT!^)...
-    start "Ponder (mainnet)" cmd /k "cd /d "%PATH_C%"&& set PONDER_DEPLOYMENT=mainnet&& set PONDER_CHAIN_ID=!MAINNET_CHAIN_ID!&& set PONDER_RPC_URL=http://127.0.0.1:!MAINNET_ANVIL_PORT!&& set DATABASE_URL=!DB_URL_M!&& set PONDER_START_BLOCK=!PONDER_START_BLOCK_MAINNET!&& npm run dev -- --port !MAINNET_PONDER_PORT!"
+    start "Ponder (mainnet)" cmd /k "cd /d "%PATH_C%"&& set PONDER_DEPLOYMENT=mainnet&& set PONDER_CHAIN_ID=!MAINNET_CHAIN_ID!&& set PONDER_RPC_URL=http://127.0.0.1:!MAINNET_ANVIL_PORT!&& set DATABASE_URL=!DB_URL_M!&& set QUEST_DATABASE_URL=%PG_APP_URL%&& set PONDER_START_BLOCK=!PONDER_START_BLOCK_MAINNET!&& npm run dev -- --port !MAINNET_PONDER_PORT!"
 
     :: --- Ponder B: sepolia contracts ---
     set "DB_URL_S=postgresql://%PONDER_USER%:%PONDER_PASS%@localhost:5432/!SEPOLIA_DB!"
     echo Starting Ponder ^(sepolia contracts, port !SEPOLIA_PONDER_PORT!^)...
-    start "Ponder (sepolia)" cmd /k "cd /d "%PATH_C%"&& set PONDER_DEPLOYMENT=sepolia&& set PONDER_CHAIN_ID=!SEPOLIA_CHAIN_ID!&& set PONDER_RPC_URL=http://127.0.0.1:!SEPOLIA_ANVIL_PORT!&& set DATABASE_URL=!DB_URL_S!&& set PONDER_START_BLOCK=!PONDER_START_BLOCK_SEPOLIA!&& npm run dev -- --port !SEPOLIA_PONDER_PORT!"
+    start "Ponder (sepolia)" cmd /k "cd /d "%PATH_C%"&& set PONDER_DEPLOYMENT=sepolia&& set PONDER_CHAIN_ID=!SEPOLIA_CHAIN_ID!&& set PONDER_RPC_URL=http://127.0.0.1:!SEPOLIA_ANVIL_PORT!&& set DATABASE_URL=!DB_URL_S!&& set QUEST_DATABASE_URL=%PG_APP_URL%&& set PONDER_START_BLOCK=!PONDER_START_BLOCK_SEPOLIA!&& npm run dev -- --port !SEPOLIA_PONDER_PORT!"
 
     goto done
 )

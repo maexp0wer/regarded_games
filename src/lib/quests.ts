@@ -27,6 +27,13 @@ export interface ManifestVote {
   body: string;
 }
 
+export interface ForumPost {
+  title: string;
+  categorySlug: string;
+  pinned: boolean;
+  body: string;
+}
+
 let _cachedConfig: QuestsConfig | null = null;
 
 export function loadQuestsConfig(): QuestsConfig {
@@ -52,6 +59,28 @@ export function loadManifestVote(): ManifestVote {
     pollType: fm.pollType ?? 'regular',
     pollResults: fm.pollResults ?? 'always',
     closesAt: fm.closesAt ?? '',
+    body: match[2].trim(),
+  };
+}
+
+/**
+ * Load a plain forum post (frontmatter + markdown body) from
+ * content/discourse/<slug>.md. Same file shape as loadManifestVote(), minus the
+ * poll fields — used to turn a .md file into a Discourse topic everyone can see.
+ */
+export function loadForumPost(slug: string): ForumPost {
+  const raw = readFileSync(join(process.cwd(), 'content', 'discourse', `${slug}.md`), 'utf-8');
+  const match = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!match) throw new Error(`${slug}.md missing frontmatter`);
+  const fm: Record<string, string> = {};
+  for (const line of match[1].split('\n')) {
+    const m = line.match(/^(\w+):\s*"?([^"]*)"?$/);
+    if (m) fm[m[1]] = m[2];
+  }
+  return {
+    title: fm.title ?? '',
+    categorySlug: fm.categorySlug ?? 'uncategorized',
+    pinned: fm.pinned === 'true',
     body: match[2].trim(),
   };
 }

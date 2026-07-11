@@ -61,6 +61,62 @@ export function verifySessionToken(token: string | undefined | null): string | n
   }
 }
 
+// ── SSO login confirmation token ──────────────────────────────────────────
+// Binds "the connected wallet has been confirmed present for THIS SSO attempt"
+// to a specific wallet + Discourse nonce, so the SSO endpoint can trust a
+// pre-existing session cookie only when /community-login vouches that the cookie
+// belongs to the wallet currently driving the browser. Prevents a stale/foreign
+// cookie from logging its owner in as the person actually at the keyboard.
+// Short-lived and single-attempt-scoped (bound to the one-time SSO nonce).
+
+const CONFIRM_TTL_MS = 5 * 60 * 1000; // 5 minutes — one SSO round-trip
+
+/** Mint a confirmation that `wallet` is present for the SSO attempt with `nonce`. */
+export function createSsoConfirmToken(wallet: string, nonce: string): string {
+  const secret = getSecret();
+  const exp = Date.now() + CONFIRM_TTL_MS;
+  const payloadB64 = Buffer.from(
+    JSON.stringify({ addr: wallet.toLowerCase(), nonce, exp }),
+    'utf8',
+  ).toString('base64url');
+  return `${payloadB64}.${sign(payloadB64, secret)}`;
+}
+
+/**
+ * Verify a confirmation token against the wallet and nonce it must be bound to.
+ * Returns true only if the signature is valid, unexpired, and both fields match.
+ */
+export function verifySsoConfirmToken(
+  token: string | undefined | null,
+  wallet: string,
+  nonce: string,
+): boolean {
+  if (!token) return false;
+  try {
+    const secret = getSecret();
+    const dot = token.lastIndexOf('.');
+    if (dot <= 0) return false;
+    const payloadB64 = token.slice(0, dot);
+    const providedSig = token.slice(dot + 1);
+    const expectedSig = sign(payloadB64, secret);
+    const a = Buffer.from(providedSig);
+    const b = Buffer.from(expectedSig);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return false;
+
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8')) as {
+      addr?: string;
+      nonce?: string;
+      exp?: number;
+    };
+    if (typeof payload.exp !== 'number' || Date.now() >= payload.exp) return false;
+    if (payload.addr !== wallet.toLowerCase()) return false;
+    if (payload.nonce !== nonce) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Read the verified wallet address from the request's session cookie, or null.
  * This is the single function every protected route calls to learn *who* is

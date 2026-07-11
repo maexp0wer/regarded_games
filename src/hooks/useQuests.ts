@@ -15,7 +15,6 @@ export interface QuestSubQuest {
 export interface QuestMainQuest {
   id: string;
   title: string;
-  description: string;
   subQuests: QuestSubQuest[];
 }
 

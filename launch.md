@@ -173,7 +173,40 @@ Start it again with `wsl -d Ubuntu -u root -- docker start app` (or just `start.
 
 ---
 
-## 6. Publish the Manifest Vote
+## 6. Publish a Forum Post (e.g. the Welcome Post)
+
+Turns a `content/discourse/<slug>.md` file (frontmatter + markdown body) into a public Discourse topic that everyone can see. Posts as `system`, auto-creates the target category from the file's `categorySlug` if it's missing, and pins the topic when the frontmatter sets `pinned: true`. Idempotent — a second run for the same slug is skipped (the post ID is recorded in `quest_config`).
+
+```powershell
+Invoke-RestMethod `
+  -Method POST `
+  -Uri "http://localhost:3000/api/quests/admin/create-forum-post" `
+  -Headers @{ "x-quests-admin-token" = "YOUR_DISCOURSE_INIT_SECRET" } `
+  -ContentType "application/json" `
+  -Body '{ "slug": "welcome" }'
+```
+
+**To publish a new copy anyway** (bypassing the idempotency guard), add `"force": true`:
+
+```powershell
+Invoke-RestMethod `
+  -Method POST `
+  -Uri "http://localhost:3000/api/quests/admin/create-forum-post" `
+  -Headers @{ "x-quests-admin-token" = "YOUR_DISCOURSE_INIT_SECRET" } `
+  -ContentType "application/json" `
+  -Body '{ "slug": "welcome", "force": true }'
+```
+
+A successful response looks like:
+```json
+{ "success": true, "slug": "welcome", "topicId": 2, "postId": 2, "pinned": true }
+```
+
+> Any file under `content/discourse/` works — pass its filename (without `.md`) as `slug`.
+
+---
+
+## 7. Publish the Manifest Vote
 
 Creates the Discourse topic + poll and registers its IDs in the database so the `vote_manifest` quest can detect voters.
 
@@ -194,7 +227,7 @@ Invoke-RestMethod `
   -Uri "http://localhost:3000/api/quests/admin/create-manifest-vote" `
   -Headers @{ "x-quests-admin-token" = "YOUR_DISCOURSE_INIT_SECRET" } `
   -ContentType "application/json" `
-  -Body '{ "existingPostId": 123, "pollName": "manifest_s1" }'
+  -Body '{ "existingPostId": 10, "pollName": "manifest_s1" }'
 ```
 
 A successful response looks like:
@@ -204,7 +237,7 @@ A successful response looks like:
 
 ---
 
-## 7. Award Strategic Voice (Discussion Bonus) Points
+## 8. Award Strategic Voice (Discussion Bonus) Points
 
 Posts all discussion grants in a single call. Run this **after** the vote is live and forum activity has been assessed.
 
@@ -233,7 +266,7 @@ Any invalid entries appear in `errors` — the rest are still awarded.
 
 ---
 
-## 8. Verify
+## 9. Verify
 
 - Visit `http://localhost:3000/app` and confirm the quest board loads.
 - Check a test wallet's quest state via `GET http://localhost:3000/api/quests?address=0x...`.
@@ -241,7 +274,7 @@ Any invalid entries appear in `errors` — the rest are still awarded.
 
 ---
 
-## 9. Pre-TGE: Sybil Review
+## 10. Pre-TGE: Sybil Review
 
 Run **before** distributing tokens. The script queries `session_fingerprints` and `quest_completions` and prints four flagging reports. Requires `POSTGRES_URL` in `.env`.
 

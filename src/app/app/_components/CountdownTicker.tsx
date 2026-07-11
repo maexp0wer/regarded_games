@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useChainTime } from '@/hooks/useChainTime';
 
 export function CountdownTicker({
   targetTimestamp,
@@ -9,6 +9,7 @@ export function CountdownTicker({
   alwaysShowSeconds = false,
   transparent = false,
   inline = false,
+  elapsedLabel = 'FINALIZED',
 }: {
   targetTimestamp: number;
   label?: string;
@@ -16,17 +17,25 @@ export function CountdownTicker({
   alwaysShowSeconds?: boolean;
   transparent?: boolean;
   inline?: boolean;
+  /**
+   * Text shown once a real, non-zero target has elapsed. Defaults to
+   * "FINALIZED" (correct for count-downs to an END). Count-downs to a START
+   * (e.g. "Trading Starts") should pass "STARTING" — an elapsed start timer
+   * means the phase is about to begin, not that it has finalized.
+   */
+  elapsedLabel?: string;
 }) {
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
-    return () => clearInterval(id);
-  }, []);
+  // Chain time, not Date.now(): every target passed here is an on-chain
+  // timestamp, and in fork mode the chain clock lags real time by days — a
+  // real-clock comparison would show every countdown as elapsed. See
+  // useChainTime.
+  const now = useChainTime();
 
   const pad = (n: number) => String(n).padStart(2, '0');
 
-  if (!targetTimestamp) {
+  // Until chain time is known (0), render the same "not yet scheduled" state
+  // rather than a bogus target-length countdown.
+  if (!targetTimestamp || !now) {
     if (inline) return (
       <div className="meta-data-group">
         <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">{label}</span>
@@ -49,14 +58,14 @@ export function CountdownTicker({
     if (inline) return (
       <div className="meta-data-group">
         <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">{label}</span>
-        <span className="font-mono text-[12px] font-bold text-text2">FINALIZED</span>
+        <span className="font-mono text-[12px] font-bold text-text2">{elapsedLabel}</span>
       </div>
     );
     return (
       <div className="terminal-countdown-wrapper">
         <div className="terminal-countdown-label">{label}</div>
         <div className="terminal-countdown-track">
-          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-text2">FINALIZED</span>
+          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-text2">{elapsedLabel}</span>
         </div>
       </div>
     );

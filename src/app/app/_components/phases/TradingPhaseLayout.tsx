@@ -52,6 +52,8 @@ interface TradingPhaseLayoutProps {
   setBuyTargetAmount: (v: string) => void;
   sellTargetAmount: string;
   setSellTargetAmount: (v: string) => void;
+  makerPrice: string;
+  setMakerPrice: (v: string) => void;
   selectedAsks: Order[];
   selectedBids: Order[];
   onSelectOrder: (order: Order) => void;
@@ -90,6 +92,8 @@ export function TradingPhaseLayout({
   setBuyTargetAmount,
   sellTargetAmount,
   setSellTargetAmount,
+  makerPrice,
+  setMakerPrice,
   selectedAsks,
   selectedBids,
   onSelectOrder,
@@ -127,12 +131,22 @@ export function TradingPhaseLayout({
   // queues side by side, so it claims a second column in the bundled grid.
   const maskWide = !isMaker && selectedAsks.length > 0 && selectedBids.length > 0;
 
-  // While the order execution queue holds orders, the panel + mask own the whole
-  // screen: pin the fold ladder to the "trading row only" stage (band folded,
-  // cards hidden) so neither can scroll into view. They only share the viewport
-  // with the band / cards when the queue is empty. Locked breakpoints only.
+  // The mask grows tall enough to need the whole trading row in two cases: a taker
+  // with orders queued, or a maker composing an order (the amount input drives a
+  // Buy/Sell breakdown + Net Contribution card to appear below). In either case the
+  // panel + mask own the whole screen: pin the fold ladder to the "trading row only"
+  // stage (band folded, cards hidden) so neither can scroll into view and the mask
+  // has the full height to display everything. They only share the viewport with the
+  // band / cards when idle. Locked breakpoints only.
   const hasQueuedOrders = selectedAsks.length > 0 || selectedBids.length > 0;
-  useChromePin(isLocked && hasQueuedOrders, rung);
+  // The maker breakdown card (Buy/Sell + Net Contribution) only appears once both
+  // the FIM amount *and* the USDC price are filled — so only then does the mask
+  // grow tall enough to need the whole trading row. Gate the pin on both; a bare
+  // amount (or a bare price) leaves the mask short and must not lock scrolling.
+  const makerAmountFilled = buyTargetAmount !== '' || sellTargetAmount !== '';
+  const makerPriceFilled = makerPrice !== '' && Number(makerPrice) > 0;
+  const makerComposing = isMaker && makerAmountFilled && makerPriceFilled;
+  useChromePin(isLocked && (hasQueuedOrders || makerComposing), rung);
 
   const mask = (
     <TradingMask
@@ -148,6 +162,8 @@ export function TradingPhaseLayout({
       setBuyTargetAmount={setBuyTargetAmount}
       sellTargetAmount={sellTargetAmount}
       setSellTargetAmount={setSellTargetAmount}
+      price={makerPrice}
+      setPrice={setMakerPrice}
       selectedAsks={selectedAsks}
       selectedBids={selectedBids}
       onRemoveOrder={onRemoveOrder}

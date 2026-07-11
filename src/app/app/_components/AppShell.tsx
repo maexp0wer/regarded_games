@@ -6,8 +6,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { Navbar } from './Navbar';
 import { DiscourseHandshake } from './DiscourseHandshake';
 import { installSeasonChromeReveal, useChromeRungVisible } from '@/lib/seasonChromeReveal';
-
-const KNOWN_APP_PAGES = new Set(['seasons', 'stake', 'swap', 'ico', 'dashboard']);
+import { KNOWN_APP_PAGES } from '@/config/appRoutes';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { darkMode } = useTheme();

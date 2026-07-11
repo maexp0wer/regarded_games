@@ -29,7 +29,11 @@
  * @param threshold existentialThresholdFim (raw wei). Balances `< threshold` are
  *                  dropped, mirroring the contract's `bal >= existentialThresholdFim`.
  */
-export function giniBpsFromBalances(balances: bigint[], threshold: bigint = 0n): number {
+export function giniScaledFromBalances(
+  balances: bigint[],
+  threshold: bigint = 0n,
+  scale: bigint = 10000n,
+): number {
   // Filter first (dust excluded), then sort ascending — both in raw wei.
   const sorted = balances
     .filter((b) => b >= threshold)
@@ -49,10 +53,29 @@ export function giniBpsFromBalances(balances: bigint[], threshold: bigint = 0n):
   }
   if (accumulatedSupply === 0n) return 0;
 
-  const term1 = (2n * regAccumulator * 10000n) / (effectivePopulation * accumulatedSupply);
-  const term2 = ((effectivePopulation + 1n) * 10000n) / effectivePopulation;
+  const term1 = (2n * regAccumulator * scale) / (effectivePopulation * accumulatedSupply);
+  const term2 = ((effectivePopulation + 1n) * scale) / effectivePopulation;
   const g = term1 > term2 ? term1 - term2 : 0n;
 
-  // Contract clamps overshoot so `10000 - g_initial` can never underflow.
-  return Number(g > 10000n ? 10000n : g);
+  // Contract clamps overshoot so `scale - g_initial` can never underflow.
+  return Number(g > scale ? scale : g);
+}
+
+/**
+ * Contract-exact Gini in whole BPS (0-10000). The truncation sites match
+ * `_calculateReg()` byte-for-byte — this is the value to use anywhere the
+ * on-chain figure must be reproduced exactly.
+ */
+export function giniBpsFromBalances(balances: bigint[], threshold: bigint = 0n): number {
+  return giniScaledFromBalances(balances, threshold, 10000n);
+}
+
+/**
+ * Higher-resolution Gini in PPM (parts-per-million, 0-1_000_000), i.e. BPS ×100.
+ * Same exact integer replay as `giniBpsFromBalances`, just read at 100× the
+ * resolution so sub-BPS moves (which whole-BPS truncates to 0) are visible.
+ * The contract's whole-BPS value is always `Math.trunc(ppm / 100)`.
+ */
+export function giniPpmFromBalances(balances: bigint[], threshold: bigint = 0n): number {
+  return giniScaledFromBalances(balances, threshold, 1_000_000n);
 }

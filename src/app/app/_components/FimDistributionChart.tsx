@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSeasonFimDistribution } from '@/hooks/useSeasonFimDistribution';
 import { useTheme } from '@/context/ThemeContext';
+import LedgerLoader from '@/components/LedgerLoader';
 
 interface FimDistributionChartProps {
   seasonAddress: string;
@@ -106,17 +107,8 @@ export function FimDistributionChart({ seasonAddress, exchangeAddress }: FimDist
       </div>
 
       {isLoading ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 animate-pulse px-4">
-          <div className="flex items-end gap-px h-24 w-full">
-            {Array.from({ length: 20 }).map((_, i) => (
-              <div
-                key={i}
-                className="flex-1 rounded-sm bg-border"
-                style={{ height: `${20 + Math.random() * 60}%` }}
-              />
-            ))}
-          </div>
-          <span className="text-text2 font-mono text-[11px] uppercase tracking-widest">Reading Ledger...</span>
+        <div className="flex flex-1 items-center justify-center px-4">
+          <LedgerLoader variant="inline" />
         </div>
       ) : (
         <div className="flex flex-1 flex-col min-h-0 px-3 pt-2 pb-1 relative">
