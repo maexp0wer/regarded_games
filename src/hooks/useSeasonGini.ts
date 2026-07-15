@@ -138,18 +138,3 @@ export function useSeasonGini(seasonAddress: string | undefined) {
 
   return { data, isLoading };
 }
-
-// --- Hook 3: Combined "By ID" Hook ---
-export function useGiniById(slug: string | undefined) {
-  // First, get the address
-  const { data: metadata, isLoading: loadingMeta } = useSeasonById(slug);
-
-  // Second, get the Gini using that address
-  const giniQuery = useSeasonGini(metadata?.address);
-
-  return {
-    ...giniQuery,
-    isLoading: loadingMeta || giniQuery.isLoading,
-    metadata
-  };
-}

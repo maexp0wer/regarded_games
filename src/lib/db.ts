@@ -86,10 +86,3 @@ export const query = async <T extends QueryResultRow = QueryResultRow>(
     }
   }
 };
-
-/**
- * Optional: Gracefully closes the connection pool.
- */
-export const closePool = async () => {
-    await pool.end();
-};

@@ -1,4 +1,3 @@
-// components/Icons.tsx
 import { SVGProps } from 'react';
 
 export const MoonIcon = (props: SVGProps<SVGSVGElement>) => (
@@ -10,16 +9,6 @@ export const MoonIcon = (props: SVGProps<SVGSVGElement>) => (
 export const SunIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
-  </svg>
-);
-
-export const ArrowIcon = (props: SVGProps<SVGSVGElement>) => (
-  <svg {...props} xmlns="http://www.w3.org/2000/svg" width="19.99" height="18"><path d="M10.029 5H0v7.967h10.029V18l9.961-9.048L10.029 0v5z" fill="currentColor"/></svg>
-);
-
-export const Bars3Icon = (props: SVGProps<SVGSVGElement>) => (
-  <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
   </svg>
 );
 
@@ -40,21 +29,6 @@ export const PopoutIcon = (props: SVGProps<SVGSVGElement>) => (
     />
   </svg>
 );
-
-export const ArrowRight = (props: SVGProps<SVGSVGElement>) => (
-  <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-  </svg>
-);
-
-export const ArrowLeft = (props: SVGProps<SVGSVGElement>) => (
-  <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-  </svg>
-);
-
-
-
 
 export const Logo = (props: SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 170 44" xmlns="http://www.w3.org/2000/svg" {...props}>

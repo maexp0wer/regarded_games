@@ -1117,7 +1117,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
         }
       ],
     };
-  }, [data, parentData, borderColor, border2Color, sweeping, bezelOpacity]);
+  }, [data, parentData, sweeping, bezelOpacity]);
 
   const onEvents = useMemo(() => ({
     mouseover: (params: { seriesIndex: number; name: string }) => {

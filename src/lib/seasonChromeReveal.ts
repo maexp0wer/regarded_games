@@ -91,11 +91,6 @@ export function setChromePin(level: number | null): void {
   }
 }
 
-/** Whether the ladder is currently pinned (scroll-locked). */
-export function isChromePinned(): boolean {
-  return pinnedFold !== null;
-}
-
 /**
  * Pin the ladder to `level` for the component's lifetime when `active`, releasing
  * on unmount or when `active` flips false. Convenience wrapper around
