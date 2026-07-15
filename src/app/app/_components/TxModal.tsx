@@ -1,4 +1,5 @@
 import { useTenant } from '@/context/TenantContext';
+import ModalCloseButton from '@/components/ModalCloseButton';
 
 function getExplorerUrl(hash: string, realChainId: number): string {
   if (realChainId === 84532)
@@ -52,9 +53,13 @@ export function TxModal({ status, steps, title, successTitle, successMessage, er
   return (
     <div className="modal-overlay-blur">
       <div className="bg-card3 border border-border2 rounded-xl p-6 flex flex-col gap-6 w-full max-w-sm shadow-2xl">
-        <div>
-          <h3 className="font-display font-bold text-lg text-text">{heading}</h3>
-          <p className="font-mono text-xs text-text2 mt-1">{subtext}</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-display font-bold text-lg text-text">{heading}</h3>
+            <p className="font-mono text-xs text-text2 mt-1">{subtext}</p>
+          </div>
+          {/* Dismiss only once the tx settles — no bailing mid-flight. */}
+          {isTerminal && <ModalCloseButton onClose={onClose} />}
         </div>
 
         <div className="flex flex-col gap-2">

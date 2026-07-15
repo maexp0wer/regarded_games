@@ -88,7 +88,7 @@ if exist "%PATH_A%\.env.local" (
 
 :: Fork block numbers — edit these directly to bump the fork point.
 :: Anvil forks at this block; Ponder starts indexing from this block.
-set "PONDER_START_BLOCK_MAINNET=45689000"
+set "PONDER_START_BLOCK_MAINNET=47800000"
 set "PONDER_START_BLOCK_SEPOLIA=42059900"
 
 ECHO Environment: !APP_ENV!

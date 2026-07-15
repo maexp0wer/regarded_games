@@ -12,6 +12,7 @@ import { useOpenOrders } from '@/hooks/useOpenOrders';
 import { useSeasonVictory } from '@/hooks/useSeasonVictory';
 import { useSeasonPhase } from '@/hooks/useSeasonPhase';
 import { useSeasonEndgame } from '@/hooks/useSeasonEndgame';
+import { useChainTime } from '@/hooks/useChainTime';
 import { useTenantChainId, useTenantDeployment } from '@/context/TenantContext';
 import { TxModal } from './TxModal';
 import { WalletButton } from './WalletButton';
@@ -221,10 +222,11 @@ function ReviewActions({ seasonAddress }: { seasonAddress: string }) {
 }
 
 /**
- * Escrow reclaim (§4): open bids hold USDC, open asks hold FIM. Escrow belongs to
- * the order owner and is reclaimable forever; post-season it can only flow back.
- * One click cancels everything via `cancelOrders` — stale ids are skipped
- * on-chain, so the Ponder-derived list is safe even mid-refetch.
+ * Escrow reclaim (§4): open bids hold USDC, open asks hold FIM. FIM has no use
+ * once the season concludes — its payout weight is already credited at settlement
+ * (the ledger balance counts escrowed sell FIM), so leaving asks open strands only
+ * dead-weight FIM. We therefore only surface and cancel USDC-bearing bids here.
+ * Stale ids are skipped on-chain, so the Ponder-derived list is safe mid-refetch.
  */
 function ReclaimEscrowBlock({ seasonAddress, exchangeAddress }: { seasonAddress: string; exchangeAddress: string }) {
   const chainId = useTenantChainId();
@@ -238,27 +240,25 @@ function ReclaimEscrowBlock({ seasonAddress, exchangeAddress }: { seasonAddress:
   const [errorReason, setErrorReason] = useState<string | null>(null);
   const isBusy = status === 'executing' || status === 'mining';
 
-  const { usdcLocked, fimLocked } = useMemo(() => {
-    let usdc = 0;
-    let fim = 0;
-    for (const o of openOrders) {
-      if (o.isBuy) usdc += o.remainingAmount * o.price;
-      else fim += o.remainingAmount;
-    }
-    return { usdcLocked: usdc, fimLocked: fim };
-  }, [openOrders]);
+  // Only open bids escrow USDC — asks hold FIM, which is worthless post-season.
+  const usdcBids = useMemo(() => openOrders.filter((o) => o.isBuy), [openOrders]);
 
-  if (openOrders.length === 0) return null;
+  const usdcLocked = useMemo(
+    () => usdcBids.reduce((sum, o) => sum + o.remainingAmount * o.price, 0),
+    [usdcBids],
+  );
+
+  if (usdcBids.length === 0) return null;
 
   const handleReclaim = async () => {
-    if (!publicClient || isBusy || openOrders.length === 0) return;
+    if (!publicClient || isBusy || usdcBids.length === 0) return;
     setTxHash(null);
     setErrorReason(null);
     try {
       setStatus('executing');
       const hash = await writeContractAsync({
         address: exchangeAddress as `0x${string}`, abi: ExchangeAbi as Abi,
-        functionName: 'cancelOrders', args: [openOrders.map((o) => o.orderId)],
+        functionName: 'cancelOrders', args: [usdcBids.map((o) => o.orderId)],
       });
       setTxHash(hash);
       setStatus('mining');
@@ -274,32 +274,29 @@ function ReclaimEscrowBlock({ seasonAddress, exchangeAddress }: { seasonAddress:
 
   return (
     <div
-      className="px-5 py-4 rounded-lg flex flex-col gap-2"
-      style={{ background: 'var(--color-card2)', border: '1px dashed var(--color-border2)' }}
+      className="px-5 py-4 rounded-lg flex flex-col gap-2 border border-border bg-card2"
     >
-      <p className="font-mono text-[11px] uppercase font-bold tracking-widest text-text2">Escrowed Funds</p>
+      <p className="font-mono text-[11px] uppercase font-bold tracking-widest text-text2">Escrowed USDC</p>
       <p className="font-mono text-[10px] text-text2">
-        {usdcLocked > 0 && <><strong className="text-text">{fmt(usdcLocked)} USDC</strong>{fimLocked > 0 ? ' + ' : ''}</>}
-        {fimLocked > 0 && <strong className="text-text">{fmt(fimLocked)} FIM</strong>}
-        {' '}locked in {openOrders.length} open order{openOrders.length === 1 ? '' : 's'}.
-        Escrow is yours and reclaimable any time — claiming your payout does not require it.
+        <strong className="text-text">{fmt(usdcLocked)} USDC</strong>
+        {' '}locked in {usdcBids.length} open bid{usdcBids.length === 1 ? '' : 's'}.
       </p>
       <button
         onClick={handleReclaim}
         disabled={isBusy}
-        className={`btn-game-secondary w-full py-2.5 text-xs font-black tracking-widest uppercase ${isBusy ? 'opacity-60 cursor-not-allowed!' : ''}`}
+        className={`btn-game-3 w-full py-2.5 text-xs font-black tracking-widest uppercase ${isBusy ? 'opacity-60 cursor-not-allowed!' : ''}`}
       >
-        {isBusy ? 'Confirming on Chain…' : 'Reclaim Escrowed Funds'}
+        {isBusy ? 'Confirming on Chain…' : 'Reclaim'}
       </button>
       <TxModal
         status={status}
         txHashes={[txHash]}
-        title="Reclaiming Escrow"
-        successTitle="Escrow Reclaimed"
-        successMessage="All open orders were cancelled and their escrow returned to your wallet."
+        title="Reclaiming USDC"
+        successTitle="USDC Reclaimed"
+        successMessage="Your open bids were cancelled and their escrowed USDC returned to your wallet."
         errorReason={errorReason}
         steps={[
-          { label: 'Cancel Orders', description: 'Cancel all open orders and return escrow', activeStatuses: ['executing', 'mining'], completeStatuses: ['success'] },
+          { label: 'Cancel Bids', description: 'Cancel open bids and return escrowed USDC', activeStatuses: ['executing', 'mining'], completeStatuses: ['success'] },
         ]}
         onClose={() => { setStatus('idle'); setTxHash(null); }}
       />
@@ -325,6 +322,18 @@ export function PayoutMask({ seasonAddress, exchangeAddress, className }: Payout
   const { isSettling, isUnderReview, isPayout } = useSeasonPhase(seasonAddress);
   const { forcedDraw, claimDeadline, swept } = useSeasonEndgame(seasonAddress);
   const capsWin = !forcedDraw && winningSide === 'cap';
+
+  // Only surface the "Claim Window Ends" countdown once it's imminent. The
+  // claim window opens ~a year wide, so a fresh timer reads as noise; show it
+  // only inside the final 90 days. Chain time — not Date.now() — to match the
+  // clock CountdownTicker uses (fork block time lags real time by days).
+  const CLAIM_WINDOW_WARN_SECONDS = 90 * 86400;
+  const chainNow = useChainTime();
+  const claimWindowClosing =
+    !swept &&
+    claimDeadline > 0 &&
+    chainNow > 0 &&
+    claimDeadline - chainNow <= CLAIM_WINDOW_WARN_SECONDS;
 
   // Council sybil flag on the connected wallet (this season). Zeroes the payout
   // on-chain; collateral is still released at claim.
@@ -564,7 +573,7 @@ export function PayoutMask({ seasonAddress, exchangeAddress, className }: Payout
               No USDC payout due, but claiming releases your staked RGD.
             </p>
           )}
-          {!swept && claimDeadline > 0 && (
+          {claimWindowClosing && (
             <CountdownTicker targetTimestamp={claimDeadline} label="Claim Window Ends" inline />
           )}
         </div>

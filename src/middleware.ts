@@ -45,17 +45,45 @@ export function middleware(req: NextRequest) {
     return NextResponse.rewrite(new URL(`/docsproxy${path}`, req.url));
   }
 
+  // 1b. SEO/METADATA FILES — served by host-aware handlers at the app-router
+  // root (src/app/robots.txt, sitemap.ts, llms.txt, opengraph-image.tsx).
+  // They must escape the tenant rewrites below, which would otherwise send
+  // /robots.txt to /main/robots.txt (404) on the bare domain.
+  if (
+    path === '/robots.txt' ||
+    path === '/sitemap.xml' ||
+    path === '/llms.txt' ||
+    path.startsWith('/opengraph-image') ||
+    path.startsWith('/twitter-image')
+  ) {
+    return NextResponse.next();
+  }
+
+  // 1c. www → apex 301 — without it the root-domain branch below serves the
+  // same landing on both hosts and search engines index duplicates.
+  if (hostname === `www.${PROD_ROOT_DOMAIN}`) {
+    const target = new URL(url);
+    target.host = PROD_ROOT_DOMAIN;
+    return NextResponse.redirect(target, 301);
+  }
+
   // 2. APP.SEPOLIA SUBDOMAIN — must be checked BEFORE app.* (prefix match)
   if (
     hostname === `app.sepolia.${PROD_ROOT_DOMAIN}` ||
     hostname === `app.sepolia.${DEV_ROOT_DOMAIN}`
   ) {
+    /* Testnet tenant is never indexed: same UI as mainnet (duplicate content)
+       pointed at Sepolia. Header applies to the gated coming-soon rewrite too;
+       /robots.txt (handled above) additionally serves Disallow for this host. */
     if (!TESTNET_APP_LIVE) {
-      return NextResponse.rewrite(new URL('/coming-soon', req.url));
+      const res = NextResponse.rewrite(new URL('/coming-soon', req.url));
+      res.headers.set('X-Robots-Tag', 'noindex, nofollow');
+      return res;
     }
     const res = NextResponse.rewrite(new URL(`/app${path}`, req.url));
     res.headers.set('x-tenant', 'sepolia');
     res.headers.set('x-app-path', path);
+    res.headers.set('X-Robots-Tag', 'noindex, nofollow');
     return res;
   }
 

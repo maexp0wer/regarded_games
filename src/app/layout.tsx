@@ -5,6 +5,7 @@ import { cookieToInitialState } from 'wagmi';
 import { config } from '@/config/wagmi';
 import Providers from '@/components/Providers';
 import { TENANTS, type TenantKey } from '@/config/tenants';
+import { SITE_NAME, SITE_DESCRIPTION, SITE_ORIGIN } from '@/config/seo';
 
 import './globals.css';
 import '@rainbow-me/rainbowkit/styles.css';
@@ -49,10 +50,26 @@ const blockingThemeScript = `(function() {
 })();`;
 
 export const metadata: Metadata = {
-  title: 'Regarded Games',
-  description: 'Economic Warfare - Fought on Chain',
+  metadataBase: new URL(SITE_ORIGIN),
+  title: {
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
   icons: {
     icon: '/Regardo_Head.svg',
+  },
+  openGraph: {
+    type: 'website',
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
   },
 };
 

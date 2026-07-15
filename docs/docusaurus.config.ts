@@ -11,7 +11,13 @@ generateWhitepaperPages();
 // Navbar external targets. "App" links to the running game app (the `app.`
 // subdomain locally, the deployed app in production); "Project" links to the
 // project/landing site (the bare Next.js root). Override via env in prod.
-const MAIN_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN;
+// NEXT_PUBLIC_MAIN_DOMAIN is authored as a full URL (see ../.env.example), so
+// normalize to a bare host before deriving subdomain URLs — without this the
+// prod canonical would read "https://docs.https://regarded.games".
+const MAIN_DOMAIN =
+  (process.env.NEXT_PUBLIC_MAIN_DOMAIN ?? '')
+    .replace(/^https?:\/\//, '')
+    .replace(/\/.*$/, '') || undefined;
 const APP_URL = MAIN_DOMAIN ? `https://app.${MAIN_DOMAIN}` : 'http://app.localhost:3000';
 const PROJECT_URL = MAIN_DOMAIN ? `https://${MAIN_DOMAIN}` : 'http://localhost:3000';
 
@@ -90,7 +96,34 @@ const config: Config = {
     ],
   ],
 
+  // Entity identity for the docs origin. Kept in sync by hand with
+  // src/config/seo.ts (the Next app's SEO source of truth) — the two projects
+  // don't share a module graph. sameAs profiles: fill alongside seo.ts.
+  headTags: [
+    {
+      tagName: 'script',
+      attributes: {type: 'application/ld+json'},
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        '@id': `${PROJECT_URL}/#organization`,
+        name: 'Regarded Games',
+        url: `${PROJECT_URL}/`,
+        logo: `${PROJECT_URL}/Regardo_Head.svg`,
+      }),
+    },
+  ],
+
   themeConfig: {
+    metadata: [
+      {
+        name: 'description',
+        content:
+          'Player documentation and the complete whitepaper for Regarded Games — ' +
+          'the perfect-information strategy game with real-money stakes on Base.',
+      },
+      {property: 'og:site_name', content: 'Regarded Games'},
+    ],
     colorMode: {
       respectPrefersColorScheme: true,
     },

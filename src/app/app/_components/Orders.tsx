@@ -13,6 +13,7 @@ import { useTenantChainId } from '@/context/TenantContext';
 import { useLastTradePrice } from '@/hooks/useLastTradePrice';
 import { usePayout } from '@/hooks/usePayout';
 import { isUserRejection } from '@/utils/revertReason';
+import ModalCloseButton from '@/components/ModalCloseButton';
 
 interface OrdersProps {
   seasonAddress: string;
@@ -164,17 +165,23 @@ export function Orders({ seasonAddress, userAddress, exchangeAddress, fimAddress
       {showModal && (
         <div className="modal-overlay-blur">
           <div className="bg-card3 border border-border2 rounded-xl p-6 flex flex-col gap-6 w-full max-w-sm shadow-2xl">
-            <div>
-              <h3 className="font-display font-bold text-lg text-text">
-                {cancelStatus === 'success' ? 'Order Cancelled' : cancelStatus === 'failed' ? 'Transaction Failed' : 'Cancelling Order'}
-              </h3>
-              <p className="font-mono text-xs text-text2 mt-1">
-                {cancelStatus === 'success'
-                  ? 'Your order has been cancelled on-chain.'
-                  : cancelStatus === 'failed'
-                  ? 'Something went wrong. Check your wallet and retry.'
-                  : 'Follow the steps in your connected wallet'}
-              </p>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-display font-bold text-lg text-text">
+                  {cancelStatus === 'success' ? 'Order Cancelled' : cancelStatus === 'failed' ? 'Transaction Failed' : 'Cancelling Order'}
+                </h3>
+                <p className="font-mono text-xs text-text2 mt-1">
+                  {cancelStatus === 'success'
+                    ? 'Your order has been cancelled on-chain.'
+                    : cancelStatus === 'failed'
+                    ? 'Something went wrong. Check your wallet and retry.'
+                    : 'Follow the steps in your connected wallet'}
+                </p>
+              </div>
+              {/* Dismiss only once the tx settles — no bailing mid-flight. */}
+              {['success', 'failed'].includes(cancelStatus) && (
+                <ModalCloseButton onClose={() => setCancelStatus('idle')} />
+              )}
             </div>
 
             <div className="flex flex-col gap-2">

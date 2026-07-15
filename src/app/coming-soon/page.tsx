@@ -1,4 +1,13 @@
+import type { Metadata } from 'next';
 import { headers } from 'next/headers';
+
+/* Gated placeholder pages carry no content worth indexing, and pre-launch
+   crawls of app.* would otherwise compete with the landing for the brand
+   query. */
+export const metadata: Metadata = {
+  title: 'Coming Soon',
+  robots: { index: false, follow: false },
+};
 
 /* Soft-launch placeholder. The middleware rewrites every gated app.* /
    app.sepolia.* request here while APP_LIVE / TESTNET_APP_LIVE are unset, so the

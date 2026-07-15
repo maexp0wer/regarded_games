@@ -10,6 +10,7 @@ export function CountdownTicker({
   transparent = false,
   inline = false,
   elapsedLabel = 'FINALIZED',
+  nowOverride,
 }: {
   targetTimestamp: number;
   label?: string;
@@ -24,12 +25,21 @@ export function CountdownTicker({
    * means the phase is about to begin, not that it has finalized.
    */
   elapsedLabel?: string;
+  /**
+   * Live unix-second clock to count down against, overriding the default chain
+   * clock. Pass this ONLY for real-world deadlines that don't come from the
+   * chain (e.g. a Discourse poll close time), which must be measured against
+   * wall-clock `Date.now()` rather than fork-lagged chain time. See useChainTime.
+   */
+  nowOverride?: number;
 }) {
   // Chain time, not Date.now(): every target passed here is an on-chain
   // timestamp, and in fork mode the chain clock lags real time by days — a
   // real-clock comparison would show every countdown as elapsed. See
-  // useChainTime.
-  const now = useChainTime();
+  // useChainTime. A caller may pass `nowOverride` for real-world (non-chain)
+  // deadlines; the hook still runs (rules-of-hooks) but the override wins.
+  const chainNow = useChainTime();
+  const now = nowOverride ?? chainNow;
 
   const pad = (n: number) => String(n).padStart(2, '0');
 

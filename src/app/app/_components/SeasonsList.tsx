@@ -224,6 +224,9 @@ export function SeasonsList() {
       return allSeasons;
     },
     enabled: !!controllerAddress && !!publicClient,
+    // Slow data: keeps the row set + Active/All filter phase live so new seasons
+    // appear and phase transitions (e.g. TRADING → PAYOUT) move rows without a reload.
+    refetchInterval: 15000,
   });
 
   if (isLoading) return <LedgerLoader />;

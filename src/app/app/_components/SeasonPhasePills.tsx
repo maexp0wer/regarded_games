@@ -20,9 +20,9 @@ export function SeasonPhasePills({
   const isInvestigation = phase === 'INVESTIGATION';
   const isOnHold = isBootstrap || (isVictoryPending && isTrading);
 
-  // Solid pill: the per-phase accent fills the background, text drops to the
-  // page canvas color so it reads against the saturated fill.
-  const pill = 'font-mono text-[10px] px-2 py-0.5 rounded text-[var(--color-bg)] uppercase tracking-wider font-bold';
+  // Solid pill: the per-phase accent fills the background (see `.pill-solid` in
+  // globals.css for the shared shape + typography); the accent is set per-phase.
+  const pill = 'pill-solid';
   const pillStyle = (accent: string) => ({
     backgroundColor: accent,
   } as const);

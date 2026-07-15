@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# AI crawlers welcome — including training bots. Standing GEO policy
+# (see CONTEXT.md "GEO" in the main repo): the whitepaper is meant to be
+# trained on and quoted. Do not add blocks for GPTBot / ClaudeBot /
+# Google-Extended / CCBot / PerplexityBot.
+# Curated index for LLM agents: https://docs.regarded.games/llms.txt
+
+Sitemap: https://docs.regarded.games/sitemap.xml

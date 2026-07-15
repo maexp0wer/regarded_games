@@ -154,9 +154,17 @@ function frontmatter(fields: Record<string, string | number>): string {
   return `---\n${body}\n---\n`;
 }
 
+// The full whitepaper as one plain-markdown file, served at /llms-full.txt on
+// the docs origin for LLM agents (llmstxt.org convention; indexed from both
+// origins' llms.txt). Regenerated together with the split pages. Gitignored.
+const LLMS_FULL_TARGET = path.resolve(__dirname, 'static', 'llms-full.txt');
+
 export function generateWhitepaperPages(): Part[] {
   const raw = fs.readFileSync(WHITEPAPER_SOURCE, 'utf8');
   const {content} = matter(raw);
+
+  fs.mkdirSync(path.dirname(LLMS_FULL_TARGET), {recursive: true});
+  fs.writeFileSync(LLMS_FULL_TARGET, content.trimStart());
   const segments = splitOnH1(content);
   const slugger = new GithubSlugger();
 

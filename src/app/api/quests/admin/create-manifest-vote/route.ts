@@ -21,6 +21,36 @@ export async function POST(req: Request) {
       const manifest = loadManifestVote();
       const existingPostId = String(body.existingPostId);
       const pollName = body.pollName ?? manifest.pollName;
+
+      // Derive the topic ID from the post. The quest board's "Vote" button links
+      // to /t/<manifest_topic_id>; without this row the URL falls back to the
+      // forum root and the button never reaches the vote post. Prefer an
+      // explicitly supplied existingTopicId, else resolve it from the post.
+      let topicId = body.existingTopicId != null ? String(body.existingTopicId) : undefined;
+      if (!topicId) {
+        const postRes = await fetch(`${url}/posts/${existingPostId}.json`, {
+          headers: { 'Api-Key': apiKey, 'Api-Username': 'system' },
+        });
+        if (!postRes.ok) {
+          return NextResponse.json(
+            { error: `Failed to resolve topic_id for post ${existingPostId} (${postRes.status})` },
+            { status: postRes.status },
+          );
+        }
+        const resolvedTopicId = (await postRes.json())?.topic_id;
+        if (resolvedTopicId == null) {
+          return NextResponse.json(
+            { error: `Post ${existingPostId} response missing topic_id` },
+            { status: 500 },
+          );
+        }
+        topicId = String(resolvedTopicId);
+      }
+
+      await query(
+        `INSERT INTO quest_config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+        ['manifest_topic_id', topicId],
+      );
       await query(
         `INSERT INTO quest_config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
         ['manifest_post_id', existingPostId],
@@ -29,7 +59,7 @@ export async function POST(req: Request) {
         `INSERT INTO quest_config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
         ['manifest_poll_name', pollName],
       );
-      return NextResponse.json({ success: true, registered: true, postId: existingPostId, pollName });
+      return NextResponse.json({ success: true, registered: true, topicId, postId: existingPostId, pollName });
     }
 
     const manifest = loadManifestVote();

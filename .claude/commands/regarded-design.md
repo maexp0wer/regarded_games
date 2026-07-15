@@ -244,7 +244,9 @@ Reach for these before inventing a new small piece:
 - **Inline countdown** — `flex items-baseline gap-2` of value blocks, each a mono
   `tabular-nums` value plus a `text-[11px]` uppercase unit micro-label (D/H/M/S).
   Ref: the `SeasonCountdown` helper in `src/app/app/_components/SeasonBand.tsx`.
-- **`.pill`** — rounded status tag (mono, uppercase) for phase/status badges.
+- **`.pill-solid`** — solid status tag (mono, uppercase) for phase/status badges: the
+  accent fills the background, text drops to the page canvas (`--color-bg`) to read against
+  it. Set the fill per-use via a `bg-*` utility or inline `background`.
 
 ---
 
@@ -321,7 +323,7 @@ CLAUDE.md → Styling.**
   `btn-game-primary`, `btn-terminal-action action-buy|action-sell`, `btn-stepper`, `mask-label`.
   Panel Menu → `terminal-view-selector-bar`, `terminal-view-btn` (`.active`). Band →
   `live-rail-container`, `track-absolute-pin`, `dial-knob current`, `gini-label`. Status →
-  `.pill`. Loading → `animate-pulse` + the text `Reading Ledger…`.
+  `.pill-solid`. Loading → `animate-pulse` + the text `Reading Ledger…`.
 
 ---
 

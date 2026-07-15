@@ -239,19 +239,23 @@ html, body {
    STATUS PILLS
    ================================================================ */
 
-.pill {
+/* Solid status pill: the accent fills the background, text drops to the page
+   canvas so it reads against the saturated fill. Shape + typography only —
+   set the fill per-use via a `bg-*` utility or an inline `background`.
+   Used for season phase tags (LIVE / Auction / Payout), alert badges, and the
+   quest-board completion count. */
+.pill-solid {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 999px;
-  border: 2px solid color-mix(in srgb, currentColor 35%, transparent);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
+  color: var(--color-bg);
 }
 
 @keyframes pill-pulse {
@@ -1816,3 +1820,58 @@ a:hover .season-ledger-row {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
 }
+
+/* ==========================================================================
+   RAINBOWKIT WALLET MODALS — align the close control to our modal blueprint
+   --------------------------------------------------------------------------
+   The Connect / Chain / Account dialogs are themed via the Theme object in
+   src/components/Providers.tsx, which already covers the three surface axes
+   (blurred backdrop, card3 background, border2 frame). The close control is
+   the exception: RainbowKit renders it as an SVG "X" on a filled circle, which
+   the Theme object can only recolor, not reshape. Here we flatten that circle
+   into the same muted mono "✕" affordance as <ModalCloseButton> — transparent
+   background, no ring, text2 → text on hover.
+
+   The CloseButton is a <Box as="button"> that always carries, on ONE element:
+     .ju367va0 / .ju367va1  → closeButtonBackground (base / hover)
+     .ju367vc6              → border-color (actionButtonBorder)  ← the 1px ring
+     .ju367vs               → border-radius: 9999px             ← the circle
+     .ju367v9x / .ju367v9y  → close icon color (base / hover)
+   The border/radius classes are SHARED with wallet-row action buttons, so we
+   strip them only where they co-occur with the close background class (compound
+   selectors below) — never globally — to avoid flattening the wallet list rows.
+   Re-verify these hashes against dist/index.css after bumping @rainbow-me/rainbowkit.
+   ========================================================================== */
+[data-rk] .ju367va0,
+[data-rk] .ju367va1 {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+/* Kill the ring + circle, but only on the close button itself. */
+[data-rk] .ju367va0.ju367vc6,
+[data-rk] .ju367va1.ju367vc6 {
+  border-color: transparent !important;
+  border-width: 0 !important;
+}
+[data-rk] .ju367va0.ju367vs,
+[data-rk] .ju367va1.ju367vs {
+  border-radius: 0 !important;
+}
+[data-rk] .ju367v9x {
+  color: var(--color-text2) !important;
+}
+[data-rk] .ju367v9y {
+  color: var(--color-text) !important;
+}
+/* Drop the grow-on-hover / shrink-on-press scale animation on the close button
+   only — its feedback is the text2 → text color shift above, not a transform.
+   touchableStyles drives scale via two CSS vars (--_12cbo8i0 hover, --_12cbo8i1
+   press); pinning both to 1 on the close-bg element keeps scale(1) throughout.
+   These vars are shared across all RK touchable buttons, hence the compound
+   scope so wallet-row buttons keep their grow/shrink. */
+[data-rk] .ju367va0 {
+  --_12cbo8i0: 1 !important;
+  --_12cbo8i1: 1 !important;
+}
+/* Selected option styling removed at source (Providers.tsx: selectedOptionBorder='transparent',
+   selectedOption/selectedWallet shadows set to 'none'). No CSS overrides needed. */

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef, type ReactNode } from 'react';
-import Head from 'next/head';
 import { motion, LayoutGroup, AnimatePresence, type TargetAndTransition } from 'framer-motion';
 import '@/app/globals.css';
 import { useTheme } from '@/context/ThemeContext';
@@ -1365,11 +1364,9 @@ export default function Home() {
 
   return (
     <div className={`flex font-display overflow-x-clip ${darkMode ? 'dark bg-bg' : 'bg-bg'}`}>
-      <Head>
-        <title>Regarded Games</title>
-        <link rel="icon" href="/logo.png" />
-        <meta name="viewport" content="width=device-width, initial-scale=1"></meta>
-      </Head>
+      {/* Titles/icons/viewport come from the App Router metadata exports in
+          src/app/layout.tsx + src/app/main/layout.tsx (the old next/head block
+          here was a silent no-op in the App Router). */}
 
       <style jsx global>{`
         html, body {
@@ -1451,6 +1448,9 @@ export default function Home() {
                   </span>
                 )}
                 <h1 className="hero-title">
+                  {/* Entity name for crawlers/screen readers only — the visual
+                      hero stays the slogan. See CONTEXT.md "Entity". */}
+                  <span className="sr-only">Regarded Games — </span>
                   Class War<br />
                   <span className="hero-gradient-text">The Game</span>
                 </h1>
@@ -1467,6 +1467,11 @@ export default function Home() {
                   <button onClick={() => navigateToDocs('')} className="btn-secondary">
                     Docs
                   </button>
+                  {/* Plain <a> (same origin, server-rendered page) so crawlers
+                      get a real link into the FAQ from the strongest URL. */}
+                  <a href="/faq" className="btn-secondary">
+                    FAQ
+                  </a>
                   <button onClick={() => goToSection('sectionSecureYourStake')} className="btn-primary">
                     Secure Your Stake
                   </button>

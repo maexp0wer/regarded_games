@@ -5,6 +5,7 @@ import { useAccount } from 'wagmi';
 import { useSeasonLeaderboard, LeaderboardEntry } from '@/hooks/useSeasonLeaderboard';
 import { usePlayerNames } from '@/hooks/usePlayerNames';
 import LedgerLoader from '@/components/LedgerLoader';
+import ModalCloseButton from '@/components/ModalCloseButton';
 
 interface SeasonLeaderboardProps {
   seasonAddress: string;
@@ -228,18 +229,13 @@ function LeaderboardModal({
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="bg-bg border border-border rounded-2xl flex flex-col shadow-2xl w-full"
+        className="bg-card3 border border-border2 rounded-xl flex flex-col shadow-2xl w-full"
         style={{ maxWidth: 'min(96vw, 1400px)', maxHeight: '90vh' }}
       >
         {/* Modal header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border2 shrink-0">
           <p className="terminal-pane-title">Leaderboard</p>
-          <button
-            className="btn-game-secondary px-3 py-1 text-xs"
-            onClick={onClose}
-          >
-            Close
-          </button>
+          <ModalCloseButton onClose={onClose} />
         </div>
 
         {/* Category tabs */}

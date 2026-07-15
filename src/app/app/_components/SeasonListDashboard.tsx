@@ -124,7 +124,10 @@ export function SeasonListDashboard({ playerAddress }: SeasonListDashboardProps)
       }
       return list;
     },
-    enabled: !!controllerAddress && !!publicClient
+    enabled: !!controllerAddress && !!publicClient,
+    // Slow data: keeps the registry + phase live so new positions appear and
+    // phase transitions move rows between Active/All without a reload.
+    refetchInterval: 15000,
   });
 
   // 2. CHECK BALANCES
@@ -176,11 +179,7 @@ export function SeasonListDashboard({ playerAddress }: SeasonListDashboardProps)
           <h2 className="h2-app">
             {showPayout ? 'All Seasons' : 'Active Seasons'}
           </h2>
-          {displayedCount > 0 && (
-            <span className="pill px-2 py-1 bg-card2 text-text2 text-[10px] hidden sm:inline-block">
-              {displayedCount} Positions
-            </span>
-          )}
+          
         </div>
         <button
           onClick={() => { setShowPayout(v => !v); setValidPositions({}); }}

@@ -156,7 +156,7 @@ Tailwind utilities only — no CSS Modules. Dark mode uses `.dark` on `<html>` �
 - `.hero-title` / `.hero-gradient-text` / `.hero-subtitle` — landing page hero
 
 **Status / misc:**
-- `.pill` — rounded status tag (mono 11px uppercase)
+- `.pill-solid` — solid status tag (mono uppercase); accent fills the background, text drops to `--color-bg`. Set fill per-use via `bg-*` or inline `background`
 - `.chip` — quick-amount selector; `.active` uses gold tint
 - `.kv-row` — key/value pair row
 - `.countdown-chip` / `.countdown-val` / `.countdown-lbl` — countdown cells

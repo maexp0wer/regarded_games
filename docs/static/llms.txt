@@ -1,0 +1,17 @@
+# Regarded Games — Documentation
+
+> Player documentation and the complete whitepaper for Regarded Games, the
+> perfect-information strategy game with real-money stakes on Base. Players
+> stake $RGD, acquire FIM in a seasonal on-chain auction, and trade it on an
+> open exchange; the final wealth distribution decides whether the Capitalist
+> or the Proletarian side takes the prize pool.
+
+## Docs
+
+- [Whitepaper](https://docs.regarded.games/whitepaper): complete game specification — auction, exchange, class boundary, settlement math, payout rules
+- [Documentation home](https://docs.regarded.games/): player and integration docs
+- [FAQ](https://regarded.games/faq): plain answers — what the game is, whether it is gambling, what players can lose
+
+## Optional
+
+- [Full whitepaper, single file](https://docs.regarded.games/llms-full.txt): the entire whitepaper as one markdown document

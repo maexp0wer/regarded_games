@@ -7,6 +7,8 @@
 # Generated files
 .docusaurus
 .cache-loader
+# Full-whitepaper mirror regenerated from content/Whitepaper.md at build (whitepaperSplit.ts)
+static/llms-full.txt
 
 # Misc
 .DS_Store

@@ -642,9 +642,9 @@ The first goal is to reach people who can grasp the game theory and economic des
 **The DAO's ownership is first spread out through the Genesis Airdrop**, drawn from the two community tranches of the Market Formation allocation—the 3% Testnet Quests share (handed out trustlessly through the `TestnetRewardDistributor`) and the 2% Airdrops share. *This is a targeted distribution, designed to find and reward the protocol's founding participants. Each person's allocation is calculated directly from a Contribution Score (CS), earned through a structured Testnet Quest Program that spans community participation, spreading the word, and playing live seasons.*
 
 **The Contribution Scoring Function**
-CS_p = S_community + S_spread + S_testnet
+A player's Contribution Score (CS) is simply the sum of the points they earn across every quest below.
 
-**S_community — Join the Community**
+**Join the Community**
 
 - *Follow on X:* 50 pts (Galxe Quest)
 
@@ -658,7 +658,7 @@ CS_p = S_community + S_spread + S_testnet
 
   - *Vote on the Mainnet Season 1 Season Manifest (Discourse):* 200 pts
 
-**S_spread — Spread the Word**
+**Spread the Word**
 
 - *Retweet on X:* 200 pts (Galxe Quest)
 
@@ -668,7 +668,7 @@ CS_p = S_community + S_spread + S_testnet
 
 - *Referrals 36–100:* 5 pts each
 
-**S_testnet — Dominate the Testnet**
+**Dominate the Testnet**
 
 - *Use the faucet to claim fakeUSDC:* 50 pts
 

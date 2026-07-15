@@ -323,6 +323,25 @@ the contract, mirrored as `CLAIM_WINDOW_SECONDS` in `useSeasonEndgame`) and,
 once swept, a "claim window expired" banner with the claim still enabled to
 recover locked RGD.
 
+### GEO (Generative Engine Optimization) — canonical term
+The discipline of getting content retrieved, quoted, and cited by LLM-backed
+answer engines (ChatGPT, Perplexity, Google AI Overviews). **Canonical term:
+GEO.** "AISO" and "AEO" are deprecated synonyms — do not introduce them in
+copy, code, or docs. Distinct from **SEO**, the classical search-crawler
+discipline; the two are separate tracks of the same discoverability effort.
+**Standing policy (deliberate, 2026-07-13):** all AI crawlers — including
+training bots (GPTBot, Google-Extended, CCBot) — are *allowed* on the public
+origins; the Whitepaper is meant to be trained on and quoted. Do not "fix"
+robots rules to block them.
+
+### Entity (the brand, for search)
+"Regarded Games" as a machine-recognizable identity (Knowledge Graph /
+Wikidata sense), distinct from the generic phrase "highly regarded games" it
+collides with in search. The canonical name string is exactly **"Regarded
+Games"** everywhere; the canonical origin is **regarded.games**. "Entity
+establishment" = teaching crawlers and LLMs that this name resolves to this
+project, via consistent naming + structured data + cross-site sameAs links.
+
 ### Bid-fill collateral revert (RESOLVED)
 Previously open: would a taker selling into a maker's bid get reverted by the
 maker's under-collateralization? **Resolved** — the backend now reserves the

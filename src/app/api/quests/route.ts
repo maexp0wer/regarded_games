@@ -4,10 +4,6 @@ import { query } from '@/lib/db';
 import { fetchAllPonderItems } from '@/lib/ponder';
 import { loadQuestsConfig, type QuestsConfig } from '@/lib/quests';
 import {
-  computeWinScoreForSeason,
-  relativePnl,
-} from '@/utils/quests';
-import {
   upsertCompletion,
   qualifyingReferralCount,
   creditReferralPoints,
@@ -38,6 +34,8 @@ interface SubQuestOut {
   tradingGate?: boolean;
   payoutGate?: boolean;
   note?: string;
+  forumUrl?: string;
+  discordUrl?: string;
 }
 
 interface MainQuestOut {
@@ -180,35 +178,22 @@ async function ponderHasShuffle(addr: string) {
   return false;
 }
 
+// Only `realizedPayout` is consumed here — it gates the claim_payout credit.
+// win_the_game scoring lives in the indexer (it needs contract reads), so this
+// route no longer needs the season-wide finalized field.
 interface PlayerStatRow {
-  seasonAddress: string;
-  playerAddress: string;
-  totalPotentialPayout: string;
-  netContribution: string;
   realizedPayout: string;
 }
 
 async function ponderUserStats(addr: string): Promise<PlayerStatRow[]> {
   const q = `query($p: String!, $after: String, $limit: Int!) {
     playerSeasonStatss(where: { playerAddress: $p }, limit: $limit, after: $after) {
-      items { seasonAddress playerAddress totalPotentialPayout netContribution realizedPayout }
+      items { realizedPayout }
       pageInfo { endCursor hasNextPage }
     }
   }`;
   return fetchAllPonderItems<PlayerStatRow>(
     PONDER_URL, q, { p: addr }, (d) => d.playerSeasonStatss,
-  );
-}
-
-async function ponderSeasonStats(seasonAddr: string): Promise<PlayerStatRow[]> {
-  const q = `query($s: String!, $after: String, $limit: Int!) {
-    playerSeasonStatss(where: { seasonAddress: $s }, limit: $limit, after: $after) {
-      items { seasonAddress playerAddress totalPotentialPayout netContribution realizedPayout }
-      pageInfo { endCursor hasNextPage }
-    }
-  }`;
-  return fetchAllPonderItems<PlayerStatRow>(
-    PONDER_URL, q, { s: seasonAddr }, (d) => d.playerSeasonStatss,
   );
 }
 
@@ -297,6 +282,7 @@ async function buildMainQuests(
   config: QuestsConfig,
   finalMap: CompletionMap,
   manifestActionUrl: string,
+  forumRootLoginUrl: string,
   address: string | null,
 ): Promise<MainQuestOut[]> {
   const P = config.points;
@@ -328,13 +314,16 @@ async function buildMainQuests(
           title: 'Log into our Forum',
           points: P.login_discourse,
           isCompleted: isDone('login_discourse'),
-          actionUrl: config.externalLinks.discourseUrl,
+          actionUrl: forumRootLoginUrl,
         },
         {
           id: 'discussion_bonus', type: 'internal',
-          title: 'Strategic voice bonus — join the discussion',
+          title: 'Join the discussion',
           points: discussionRow?.points ?? 0,
           isCompleted: !!discussionRow,
+          note: 'Awarded at the end of the Testnet Phase based on the quality and engagement of your participation on the Forum and Discord.',
+          forumUrl: forumRootLoginUrl,
+          discordUrl: config.externalLinks.discordInvite,
         },
         {
           id: 'vote_manifest', type: 'internal',
@@ -389,7 +378,7 @@ async function buildMainQuests(
           title: 'Win the Game',
           points: pts('win_the_game', 0),
           isCompleted: isDone('win_the_game'),
-          note: `0–${P.win_the_game_max} pts based on your best season's relative PnL rank.`,
+          note: `Points are awarded at the end of each season based on your relative P&L (USDC earned / USDC spent), up to ${P.win_the_game_max} for the highest % gain.`,
         },
       ],
     },
@@ -450,10 +439,18 @@ export async function GET(req: Request) {
       const msg = e instanceof Error ? e.message : String(e);
       console.warn(`[quests] manifest_topic_id lookup failed: ${msg}`);
     }
-    const discourseBase = process.env.NEXT_PUBLIC_DISCOURSE_URL ?? config.externalLinks.discourseUrl;
-    const manifestActionUrl = manifestTopicId
-      ? `${discourseBase}/t/${manifestTopicId}`
-      : config.externalLinks.discourseUrl;
+    // Wrap a forum path in the app's forum-login flow so clicking it carries the
+    // exact destination through login: /community-login establishes the session
+    // FIRST, then fires the Discourse SSO warm — the only order in which
+    // Discourse's return_path binding reliably survives. Canonical `app.` host on
+    // purpose: that's where the session cookie lives. Mirrors the client-side
+    // forumLoginUrl() in utils/discourseForum.ts.
+    const mainDomain = new URL(process.env.NEXT_PUBLIC_MAIN_DOMAIN ?? 'http://localhost:3000');
+    const forumLoginUrl = (returnPath: string) => {
+      const path = returnPath.startsWith('/') ? returnPath : `/${returnPath}`;
+      return `${mainDomain.protocol}//app.${mainDomain.host}/community-login?return_path=${encodeURIComponent(path)}`;
+    };
+    const manifestActionUrl = forumLoginUrl(manifestTopicId ? `/t/${manifestTopicId}` : '/');
 
     let finalMap: CompletionMap = new Map();
 
@@ -525,28 +522,17 @@ export async function GET(req: Request) {
           await upsertCompletion(address, 'claim_payout', P.claim_payout);
         }
 
-        // ── Win the Game (variable, lazy, best-across-seasons) ───────────
-        let bestWin = 0;
-        for (const stat of userStats) {
-          if (BigInt(stat.realizedPayout) <= 0n) continue;
-          const userPnl = relativePnl(BigInt(stat.totalPotentialPayout), BigInt(stat.netContribution));
-          if (userPnl === null) continue;
-          const allStats = await safe(
-            `ponderSeasonStats(${stat.seasonAddress})`,
-            () => ponderSeasonStats(stat.seasonAddress),
-            [] as PlayerStatRow[],
-          );
-          const pnls = allStats
-            .map((s) => relativePnl(BigInt(s.totalPotentialPayout), BigInt(s.netContribution)))
-            .filter((v): v is number => v !== null);
-          if (pnls.length < 2) continue;
-          const score = computeWinScoreForSeason(userPnl, pnls);
-          if (score > bestWin) bestWin = score;
-        }
-        const existingWin = existingMap.get('win_the_game')?.points ?? 0;
-        if (bestWin > existingWin) {
-          await upsertCompletion(address, 'win_the_game', bestWin);
-        }
+        // ── Win the Game ─────────────────────────────────────────────────
+        // NOT scored here. It ranks a wallet against the season's FULL player
+        // field using the same relative-PnL basis as the Season Stats
+        // leaderboard, which requires reading each player's live/settled payout
+        // straight from the GameSeason contract (computePayout / netContributions)
+        // — the indexer's finalized snapshots lag until every player settles.
+        // That contract read needs the chain RPC, which the indexer already has
+        // (context.client) but this route does not on the Sepolia tenant in
+        // production (its rpcUrl is a relative proxy). So the indexer is the sole
+        // writer — see scoreWinForClaimer in indexer/src/index.ts, credited on
+        // GameSeason:PayoutClaimed. This route just surfaces whatever it wrote.
       }
 
       // Re-read after any upserts (also serves as the read-only path).
@@ -554,7 +540,8 @@ export async function GET(req: Request) {
     }
 
     // ── Build response ─────────────────────────────────────────────────
-    const mainQuests = await buildMainQuests(config, finalMap, manifestActionUrl, address);
+    const forumRootLoginUrl = forumLoginUrl('/');
+    const mainQuests = await buildMainQuests(config, finalMap, manifestActionUrl, forumRootLoginUrl, address);
     const totalPoints = Array.from(finalMap.values()).reduce((s, v) => s + v.points, 0);
     return NextResponse.json({
       success: true,

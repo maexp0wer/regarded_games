@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTenantChainId, useTenantPonderUrl } from '@/context/TenantContext';
 import { useReferrals } from '@/hooks/useReferrals';
 import LedgerLoader from '@/components/LedgerLoader';
+import ModalCloseButton from '@/components/ModalCloseButton';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
 
 const VARIABLE_REWARD_CAPS: Record<string, number> = {
@@ -46,6 +47,8 @@ interface SubQuest {
   tradingGate?: boolean;
   payoutGate?: boolean;
   note?: string;
+  forumUrl?: string;
+  discordUrl?: string;
 }
 
 function CopyLinkButton({ url }: { url: string }) {
@@ -96,17 +99,11 @@ function ReferralsModal({ address, onClose }: { address: string; onClose: () => 
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="font-display font-bold text-lg text-text uppercase">Your Referrals</h3>
-            <p className="text-sm text-text2 mt-1">
+            <p className="text-sm text-text2 mt-3">
               Referred wallets qualify once they reach {data?.threshold ?? 500} quest points.
             </p>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="font-mono text-sm text-text2 hover:text-text leading-none shrink-0"
-          >
-            ✕
-          </button>
+          <ModalCloseButton onClose={onClose} />
         </div>
 
         {isLoading && (
@@ -371,16 +368,10 @@ function PhaseGateButton({ phase, label, tooltipTitle, tooltipBody }: {
   );
 }
 
-const INACTIVE_PENDING_TOOLTIPS: Record<string, { title: string; body: string }> = {
-  discussion_bonus: {
-    title: 'Strategic Voice Bonus',
-    body: "Awarded at the end of the Testnet Phase based on the quality and engagement of your participation in Discourse discussions.",
-  },
-  win_the_game: {
-    title: 'Win the Game',
-    body: "Points are awarded at the end of each season based on your relative PnL rank — the higher your rank versus other players, the more points you earn (up to the cap).",
-  },
-};
+// Per-quest overrides for the generic "Pending" award button's tooltip. Win the
+// Game no longer renders that button (its explanation moved into the row note),
+// so this is empty until another passive quest needs a bespoke tooltip.
+const INACTIVE_PENDING_TOOLTIPS: Record<string, { title: string; body: string }> = {};
 
 interface MainQuest {
   id: string;
@@ -394,7 +385,32 @@ interface QuestBoardProps {
   tgeConversionRate?: string;
 }
 
+function ExternalLinkButton({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 rounded font-bold whitespace-nowrap block btn-game-3"
+    >
+      {label}
+    </a>
+  );
+}
+
 function SubQuestAction({ sub, locked }: { sub: SubQuest; locked: boolean }) {
+  // Win the Game is a passive, rank-based award with no user action — it shows
+  // no button. Its explanation lives in the row's info note instead.
+  if (sub.id === 'win_the_game') {
+    if (sub.isCompleted) {
+      return (
+        <div className="w-6 h-6 rounded-full bg-[var(--color-green)]/10 border border-[var(--color-green)] grid place-items-center text-[var(--color-green)] font-mono text-xs font-black">
+          ✓
+        </div>
+      );
+    }
+    return null;
+  }
   if (locked) {
     return (
       <InactivePendingButton
@@ -441,6 +457,14 @@ function SubQuestAction({ sub, locked }: { sub: SubQuest; locked: boolean }) {
         tooltipTitle="No Active Payout"
         tooltipBody="There is currently no testnet season in the payout phase. Check back when the current season concludes."
       />
+    );
+  }
+  if ((sub.forumUrl || sub.discordUrl) && !sub.isCompleted) {
+    return (
+      <div className="flex flex-wrap items-center justify-end gap-1.5">
+        {sub.forumUrl && <ExternalLinkButton href={sub.forumUrl} label="Open Forum" />}
+        {sub.discordUrl && <ExternalLinkButton href={sub.discordUrl} label="Open Discord" />}
+      </div>
     );
   }
   if (sub.isCompleted) {
@@ -526,8 +550,10 @@ export function QuestBoard({
                 </span>
               </div>
               <span
-                className={`pill ${isFullyCleared ? 'text-green' : 'text-purple'}`}
-                style={{ fontSize: '0.7rem' }}
+                className="pill-solid"
+                style={{
+                  backgroundColor: isFullyCleared ? 'var(--color-green)' : 'var(--color-purple)',
+                }}
               >
                 {completedCount} / {totalCount} Completed
               </span>

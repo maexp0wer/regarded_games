@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { SunIcon, MoonIcon, PopoutIcon } from '@/components/icons/svg';
 import { WalletButton } from './WalletButton';
+import ModalCloseButton from '@/components/ModalCloseButton';
 import { useRgdPrice } from '@/hooks/useRgdPrice';
 import { useState, MouseEvent } from 'react';
 import { useAccount } from 'wagmi';
@@ -129,24 +130,19 @@ export function Navbar() {
       {/* Mobile overlay nav */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-200 sm:hidden bg-bg bg-opacity-70 flex justify-center items-center"
+          className="modal-overlay-blur sm:hidden"
           onClick={() => setIsModalOpen(false)}
           role="dialog"
           aria-modal="true"
         >
           <div
-            className="bg-card rounded-lg shadow-xl p-6 w-11/12 max-w-xs relative mx-auto flex flex-col max-h-[85vh]"
+            className="bg-card3 border border-border2 rounded-xl shadow-2xl p-6 w-11/12 max-w-xs relative mx-auto flex flex-col max-h-[85vh]"
             onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
           >
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-2 right-2 text-text hover:[background:var(--sunset-35)] p-1 rounded-full"
-              aria-label="Close navigation menu"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <ModalCloseButton
+              onClose={() => setIsModalOpen(false)}
+              className="absolute top-4 right-4"
+            />
 
             <nav className="mt-4 mb-4 grow overflow-y-auto custom-scrollbar">
               <ul className="space-y-3 pr-2">

@@ -89,10 +89,15 @@ export async function creditQuest(
 
 /**
  * Upsert the variable-value `win_the_game` credit. Unlike the fixed quests this
- * is a whole-season relative-PnL ranking, so it's scored once per season (when
- * DISTRIBUTION opens and every player's stats are finalized) and only raised,
- * never lowered — a player keeps their best score across seasons. Mirrors the
- * `bestWin > existingWin` logic in the app's /api/quests route.
+ * is a whole-season relative-PnL ranking scored against every player in the
+ * season (median rank → 500, top → 1000). It's credited when a wallet CLAIMS a
+ * payout — claiming is what concludes the quest — using the wallet's best score
+ * across the seasons it claimed in.
+ *
+ * The row is written even at a score of 0 so a bottom-ranked wallet that claimed
+ * still shows the quest completed (at +0 pts). Points are only ever raised,
+ * never lowered, so a later worse season can't knock down a banked best.
+ * Mirrors the `claimedAny` write in the app's /api/quests route.
  */
 export async function creditWinScore(
   address: string,
@@ -102,7 +107,6 @@ export async function creditWinScore(
   if (!pool) return;
   const addr = address.toLowerCase();
   const pts = Math.max(0, Math.round(score));
-  if (pts <= 0) return;
   try {
     await pool.query(
       `INSERT INTO quest_completions (address, quest_id, points)

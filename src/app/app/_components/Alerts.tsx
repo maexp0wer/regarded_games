@@ -13,6 +13,7 @@ import ExchangeAbi from '@/deployments/abis/Exchange.json';
 import { usePayout } from '@/hooks/usePayout';
 import { useOpenOrders } from '@/hooks/useOpenOrders';
 import { useSeasonEndgame } from '@/hooks/useSeasonEndgame';
+import { useChainTime } from '@/hooks/useChainTime';
 import { useDiscourseAlerts, type PendingPoll, type ReplyGroup } from '@/hooks/useDiscourseAlerts';
 import { forumLoginUrl } from '@/utils/discourseForum';
 import { isUserRejection, isInsufficientGas } from '@/utils/revertReason';
@@ -42,9 +43,10 @@ function timeAgo(isoStr: string): string {
   return `${d} day${d !== 1 ? 's' : ''} ago`;
 }
 
-const pad = (n: number) => String(n).padStart(2, '0');
-
-// ─── Inline poll countdown (D/H/M boxes, purple unit labels) ─────────────────
+// ─── Inline poll countdown ───────────────────────────────────────────────────
+// Same inline formatting as the season dashboard (CountdownTicker), but measured
+// against wall-clock time: a Discourse poll close is a real-world timestamp, not
+// an on-chain one, so it must not use chain time (which lags in fork mode).
 
 function PollCountdown({ targetTimestamp }: { targetTimestamp: number | null }) {
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
@@ -56,44 +58,21 @@ function PollCountdown({ targetTimestamp }: { targetTimestamp: number | null }) 
 
   if (!targetTimestamp) {
     return (
-      <span className="font-mono text-[10px] font-bold text-text uppercase tracking-wider">
-        No deadline
-      </span>
+      <div className="meta-data-group">
+        <span className="font-mono text-[10px] uppercase text-text2 tracking-wider">Closes</span>
+        <span className="font-mono text-[12px] font-bold text-text2">NO DEADLINE</span>
+      </div>
     );
   }
-
-  const remaining = Math.max(0, targetTimestamp - now);
-
-  if (remaining === 0) {
-    return (
-      <span className="font-mono text-[10px] font-bold text-text uppercase tracking-wider">
-        Closed
-      </span>
-    );
-  }
-
-  const days = Math.floor(remaining / 86400);
-  const hours = Math.floor((remaining % 86400) / 3600);
-  const minutes = Math.floor((remaining % 3600) / 60);
 
   return (
-    <div className="flex items-center gap-1 font-mono text-[11px] text-text">
-      <span className="text-[9px] tracking-wider uppercase mr-1">Closes:</span>
-      <div className="flex items-center gap-1 bg-card border border-border rounded px-1.5 py-0.5">
-        <span className="font-bold text-text tabular-nums">{pad(days)}</span>
-        <span className="text-[9px] text-purple">D</span>
-      </div>
-      <span className="animate-pulse font-bold text-border2">:</span>
-      <div className="flex items-center gap-1 bg-card border border-border rounded px-1.5 py-0.5">
-        <span className="font-bold text-text tabular-nums">{pad(hours)}</span>
-        <span className="text-[9px] text-purple">H</span>
-      </div>
-      <span className="animate-pulse font-bold text-border2">:</span>
-      <div className="flex items-center gap-1 bg-card border border-border rounded px-1.5 py-0.5">
-        <span className="font-bold text-text tabular-nums">{pad(minutes)}</span>
-        <span className="text-[9px] text-purple">M</span>
-      </div>
-    </div>
+    <CountdownTicker
+      targetTimestamp={targetTimestamp}
+      nowOverride={now}
+      label="Closes"
+      elapsedLabel="CLOSED"
+      inline
+    />
   );
 }
 
@@ -138,6 +117,17 @@ function ClaimableCard({
 
   const { payout, pnl, hasClaimed: hasClaimedChain, hasBalance, loading, refetch } = usePayout(season.season, playerAddress as Address);
   const { claimDeadline, swept } = useSeasonEndgame(season.season);
+
+  // Match the PayoutMask rule: the claim window opens ~a year wide, so a fresh
+  // timer reads as noise. Only surface the countdown inside the final 90 days,
+  // measured on the chain clock (fork block time lags real time by days).
+  const CLAIM_WINDOW_WARN_SECONDS = 90 * 86400;
+  const chainNow = useChainTime();
+  const claimWindowClosing =
+    !swept &&
+    claimDeadline > 0 &&
+    chainNow > 0 &&
+    claimDeadline - chainNow <= CLAIM_WINDOW_WARN_SECONDS;
 
   const [status, setStatus] = useState<ClaimStatus>('idle');
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -218,7 +208,7 @@ function ClaimableCard({
             </p>
 
               <span
-                className={`font-mono text-[10px] ${swept ? 'bg-red' : 'bg-gold'} px-2 py-0.5 rounded text-[var(--color-bg)] uppercase tracking-wider font-bold`}
+                className={`pill-solid ${swept ? 'bg-red' : 'bg-gold'}`}
               >
                 {swept ? 'Claim Expired' : 'Claim Ready'}
               </span>
@@ -242,7 +232,7 @@ function ClaimableCard({
               <span className="font-mono text-[10px] text-red uppercase tracking-wider">
                 Unclaimed payouts were swept — claiming still releases your staked collateral
               </span>
-            ) : claimDeadline > 0 ? (
+            ) : claimWindowClosing ? (
               <CountdownTicker targetTimestamp={claimDeadline} label="Claim Window Ends" inline />
             ) : null}
           </div>
@@ -354,7 +344,7 @@ function ReviewCard({
               <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-2xl shrink-0">
               S<em className="not-italic font-medium text-text2 tabular-nums">{String(season.id).padStart(2, '0')}</em>
             </p>
-              <span className="font-mono text-[10px] bg-purple px-2 py-0.5 rounded text-[var(--color-bg)] uppercase tracking-wider font-bold">
+              <span className="pill-solid bg-purple">
                 {isTriage ? 'Triage' : 'Under Investigation'}
               </span>
             </div>
@@ -485,7 +475,7 @@ function EscrowCard({
               <p className="font-display font-extrabold leading-none tracking-[-0.04em] text-text text-2xl shrink-0">
               S<em className="not-italic font-medium text-text2 tabular-nums">{String(season.id).padStart(2, '0')}</em>
             </p>
-              <span className="font-mono text-[10px] bg-red px-2 py-0.5 rounded text-[var(--color-bg)] uppercase tracking-wider font-bold">
+              <span className="pill-solid bg-red">
                 Escrowed Funds
               </span>
             </div>
@@ -531,6 +521,10 @@ function EscrowCard({
 // ─── Governance Poll (Purple) ─────────────────────────────────────────────────
 
 function PollAlertRow({ poll }: { poll: PendingPoll }) {
+  // Route through /session/sso so the return_path carries the exact poll topic
+  // through login. A signed-in wallet lands straight on the poll; a cold login
+  // bounces via /community-login and still returns here, because Discourse holds
+  // the return_path keyed by its login nonce across that round-trip.
   const href = forumLoginUrl(`/t/${poll.topicSlug}/${poll.topicId}`);
 
   return (
@@ -538,25 +532,20 @@ function PollAlertRow({ poll }: { poll: PendingPoll }) {
       <AlertItem accentVar="--color-purple">
         <div className="flex flex-col gap-2 flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="h4-app text-purple truncate max-w-xs" title={poll.title}>
+            <span className="font-display font-extrabold text-base leading-tight tracking-tight text-text" title={poll.title}>
               {poll.title}
             </span>
-            <span
-              className="font-mono text-[10px] bg-purple border-0 px-2 py-0.5 rounded text-card2 uppercase tracking-wider shrink-0"
-            >
+            <span className="pill-solid bg-purple shrink-0">
               Active Proposal
             </span>
           </div>
-          <p className="font-sans text-xs text-text">
+          <p className="font-sans text-xs text-text2">
             Governance vote · Your voice hasn&rsquo;t been cast yet
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 shrink-0">
+        <div className="flex items-center shrink-0">
           <PollCountdown targetTimestamp={poll.pollCloseAt} />
-          <span className="btn-game-secondary text-xs font-bold tracking-wider uppercase py-2 px-4 h-fit">
-            Cast Vote
-          </span>
         </div>
       </AlertItem>
     </a>

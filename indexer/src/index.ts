@@ -1,6 +1,6 @@
 import { ponder } from "ponder:registry";
 import { seasons, playerSeasonStats, yieldEvents, protocolStats, capitalAuctionParticipant, faucetClaims } from "ponder:schema";
-import { eq, and } from "ponder";
+import { eq, and, gt } from "ponder";
 import * as schema from "../ponder.schema";
 import { ExchangeAbi } from "../abis/ExchangeAbi";
 import { GameSeasonAbi } from "../abis/GameSeasonAbi";
@@ -14,7 +14,7 @@ import { giniBpsFromBalances, giniPpmFromBalances } from "../../src/utils/gini";
 // the quest DB the instant the event is indexed, so quests conclude without the
 // user ever opening the board. See src/questCredits.ts.
 import { creditQuest, creditWinScore } from "./questCredits";
-import { relativePnl, computeWinScoreForSeason } from "../../src/utils/quests";
+import { scoreWinAgainstField, type SeasonFieldEntry } from "../../src/utils/quests";
 
 const TENANT: "mainnet" | "sepolia" =
   (process.env.PONDER_DEPLOYMENT ?? "mainnet").toLowerCase() === "sepolia" ? "sepolia" : "mainnet";
@@ -637,6 +637,120 @@ ponder.on("Exchange:OrderCancelled", async ({ event, context }) => {
     .onConflictDoUpdate((row) => ({ fimBalance: row.fimBalance + order.remainingAmount }));
 });
 
+// Build a season's full ranking field — the same relative-PnL basis the
+// frontend's Season Stats leaderboard uses, over EVERY player. The GameSeason
+// contract is the source of truth for the player set, net contributions, and the
+// live payout; Ponder is used only to recover an already-claimed wallet's payout.
+//
+// Per-player potential payout (the pre-claim settlement value):
+//   • unclaimed → computePayout(addr) live from the contract (authoritative).
+//   • claimed   → computePayout returns 0 (a claim zeroes the claimable), so we
+//     use the wallet's claimed amount, stored durably as realizedPayout by the
+//     PayoutClaimed handler. realizedPayout == the potential payout, and unlike
+//     totalPotentialPayout it's populated on the CLAIM (not on finalization,
+//     which lags until each player separately settles).
+async function buildSeasonField(
+  client: { readContract: (args: any) => Promise<unknown> },
+  db: { sql: any },
+  seasonAddress: `0x${string}`,
+): Promise<SeasonFieldEntry[]> {
+  const count = (await client.readContract({
+    address: seasonAddress,
+    abi: GameSeasonAbi,
+    functionName: "getPlayerCount",
+  })) as bigint;
+
+  // Claimed amounts for this season (used for wallets that already claimed).
+  const claimRows: { playerAddress: string; realizedPayout: bigint }[] = await db.sql
+    .select({
+      playerAddress: schema.playerSeasonStats.playerAddress,
+      realizedPayout: schema.playerSeasonStats.realizedPayout,
+    })
+    .from(schema.playerSeasonStats)
+    .where(eq(schema.playerSeasonStats.seasonAddress, seasonAddress));
+  const claimedAmountByAddr = new Map(
+    claimRows.map((s) => [s.playerAddress.toLowerCase(), BigInt(s.realizedPayout)]),
+  );
+
+  const field: SeasonFieldEntry[] = [];
+  for (let i = 0n; i < count; i++) {
+    const addr = (await client.readContract({
+      address: seasonAddress,
+      abi: GameSeasonAbi,
+      functionName: "players",
+      args: [i],
+    })) as `0x${string}`;
+    const key = addr.toLowerCase();
+
+    const netContribution = (await client.readContract({
+      address: seasonAddress,
+      abi: GameSeasonAbi,
+      functionName: "netContributions",
+      args: [addr],
+    })) as bigint;
+
+    const claimed = (await client.readContract({
+      address: seasonAddress,
+      abi: GameSeasonAbi,
+      functionName: "hasClaimed",
+      args: [addr],
+    })) as boolean;
+
+    const potentialPayout = claimed
+      ? (claimedAmountByAddr.get(key) ?? 0n)
+      : ((await client.readContract({
+          address: seasonAddress,
+          abi: GameSeasonAbi,
+          functionName: "computePayout",
+          args: [addr],
+        })) as bigint);
+
+    field.push({ address: key, potentialPayout, netContribution });
+  }
+  return field;
+}
+
+// Score `win_the_game` for a wallet that just claimed a payout. Claiming is what
+// concludes this quest: we compute the wallet's best relative-PnL rank across
+// EVERY season it has claimed in (realizedPayout > 0), each ranked against that
+// season's full contract-derived field (see buildSeasonField). The row is written
+// even at a 0 score so a bottom-ranked claimer still shows the quest completed;
+// creditWinScore only ever raises the banked points.
+async function scoreWinForClaimer(
+  client: { readContract: (args: any) => Promise<unknown> },
+  db: { sql: any },
+  claimer: `0x${string}`,
+): Promise<void> {
+  // Seasons this wallet has actually claimed in — a claim is the trigger.
+  const claimedSeasons: { seasonAddress: string }[] = await db.sql
+    .select({ seasonAddress: schema.playerSeasonStats.seasonAddress })
+    .from(schema.playerSeasonStats)
+    .where(
+      and(
+        eq(schema.playerSeasonStats.playerAddress, claimer),
+        gt(schema.playerSeasonStats.realizedPayout, 0n),
+      ),
+    );
+
+  const claimerKey = claimer.toLowerCase();
+  let bestWin = 0;
+  let scoredAny = false;
+  for (const s of claimedSeasons) {
+    const seasonAddress = s.seasonAddress.toLowerCase() as `0x${string}`;
+    const field = await buildSeasonField(client, db, seasonAddress);
+    const me = field.find((e) => e.address === claimerKey);
+    if (!me) continue;
+    const score = scoreWinAgainstField(me, field);
+    if (score === null) continue;
+    scoredAny = true;
+    if (score > bestWin) bestWin = score;
+  }
+
+  // Only write once at least one season was rankable — otherwise leave the quest
+  // open so the next claim / retry can resolve it.
+  if (scoredAny) await creditWinScore(claimer, bestWin);
+}
+
 ponder.on("GameSeason:PayoutClaimed", async ({ event, context }) => {
   const { user, amount } = event.args;
   // playerSeasonStats is keyed on the composite PK [seasonAddress, playerAddress]
@@ -664,7 +778,13 @@ ponder.on("GameSeason:PayoutClaimed", async ({ event, context }) => {
 
   // Quest: claimed a payout. Mirrors the app's `realizedPayout > 0` check —
   // a zero-value claim (swept/flagged/dust) doesn't count.
-  if (amount > 0n) await creditQuest(playerAddress, "claim_payout");
+  if (amount > 0n) {
+    await creditQuest(playerAddress, "claim_payout");
+    // Quest: Win the Game. Claiming is the trigger — score the wallet's best
+    // relative-PnL rank across the seasons it claimed in (writes even at 0 pts
+    // so a bottom-ranked claimer still completes the quest).
+    await scoreWinForClaimer(context.client, context.db, playerAddress);
+  }
 });
 
 ponder.on("GameSeason:PlayerSeasonStatsFinalized", async ({ event, context }) => {
@@ -697,49 +817,12 @@ ponder.on("GameSeason:PlayerSeasonStatsFinalized", async ({ event, context }) =>
     }));
 });
 
-// Quest: Win the Game (variable, 0–1000 pts by relative-PnL rank within a season).
-// DistributionOpened fires once, after every PlayerSeasonStatsFinalized for the
-// season — so the full final PnL distribution is now in Ponder and each player's
-// rank is fixed. We score every finalized participant here instead of lazily on a
-// board visit, so the credit concludes for everyone the moment the season settles.
-// creditWinScore only ever raises a wallet's score (best across seasons), matching
-// the app's `bestWin > existingWin` semantics.
-ponder.on("GameSeason:DistributionOpened", async ({ event, context }) => {
-  const seasonAddress = event.log.address.toLowerCase() as `0x${string}`;
-
-  const rows = await context.db.sql
-    .select({
-      playerAddress: schema.playerSeasonStats.playerAddress,
-      totalPotentialPayout: schema.playerSeasonStats.totalPotentialPayout,
-      netContribution: schema.playerSeasonStats.netContribution,
-    })
-    .from(schema.playerSeasonStats)
-    .where(
-      and(
-        eq(schema.playerSeasonStats.seasonAddress, seasonAddress),
-        eq(schema.playerSeasonStats.finalized, true),
-      ),
-    );
-
-  // Build the season's PnL vector (players with a defined relative PnL), then
-  // score each player against it. Fewer than 2 valid PnLs → no meaningful rank.
-  const pnlByPlayer = new Map<string, number>();
-  for (const r of rows) {
-    const pnl = relativePnl(BigInt(r.totalPotentialPayout), BigInt(r.netContribution));
-    if (pnl !== null) pnlByPlayer.set(r.playerAddress.toLowerCase(), pnl);
-  }
-  const allPnls = Array.from(pnlByPlayer.values());
-  if (allPnls.length < 2) {
-    console.log(`[Indexer] DistributionOpened ${seasonAddress}: <2 ranked players, skipping win scores.`);
-    return;
-  }
-
-  for (const [addr, pnl] of pnlByPlayer) {
-    const score = computeWinScoreForSeason(pnl, allPnls);
-    if (score > 0) await creditWinScore(addr, score);
-  }
-  console.log(`[Indexer] DistributionOpened ${seasonAddress}: scored ${pnlByPlayer.size} players for win_the_game.`);
-});
+// Note: `win_the_game` is NOT scored at DistributionOpened. The quest concludes
+// on the CLAIM, not on season settlement — a player who never claims their
+// payout hasn't "won" for quest purposes — so scoring lives in the
+// PayoutClaimed handler (scoreWinForClaimer). By the time a claim can happen the
+// season is fully finalized, so the PnL field the claimer is ranked against is
+// already complete in Ponder.
 
 ponder.on("GameSeason:WalletFlagged", async ({ event, context }) => {
   const seasonAddress = event.log.address.toLowerCase() as `0x${string}`;
