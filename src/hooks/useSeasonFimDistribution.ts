@@ -111,7 +111,7 @@ export function useSeasonFimDistribution(
 
     // Proletarians: sorted ascending (index 0 = poorest). Bucket 0–9.
     // Divide by (totalProl - 1) so the last player lands exactly in bucket 9.
-    // A lone proletarian falls in the poorest bucket (0, "SOC 100%"), matching the
+    // A lone proletarian falls in the poorest bucket (0, "PROL 100%"), matching the
     // "Expected Class Rank" percentile, which also resolves the single-member case
     // to 100% (furthest into the Masses).
     proletarians.forEach((p, idx) => {

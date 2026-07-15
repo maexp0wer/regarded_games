@@ -176,7 +176,7 @@ export function FimDistributionChart({ seasonAddress, exchangeAddress }: FimDist
 
           {/* X-axis labels */}
           <div className="flex justify-between pt-1 pb-0.5">
-            <span className="mask-label text-text2">SOC 100%</span>
+            <span className="mask-label text-text2">PROL 100%</span>
             <span className="mask-label text-text2">50%</span>
             <span className="mask-label text-text2">CAP 100%</span>
           </div>
