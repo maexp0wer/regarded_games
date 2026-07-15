@@ -679,7 +679,9 @@ function useFoldLeaf(
 
 const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }) => {
   const data = TABLE_DATA;
-  const { darkMode } = useTheme();
+  // Subscribe to theme changes: the re-render lets render-time resolveColor()
+  // calls pick up the flipped CSS palette (no field of the context is read).
+  useTheme();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [hoveredParent, setHoveredParent] = useState<string | null>(null);
 
@@ -881,25 +883,6 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
     [groups]
   );
 
-  const borderColor = useMemo(() => {
-    const c1 = resolveColor('var(--color-border)');
-    if (c1 !== '#888888') return c1;
-    const c2 = resolveColor('var(--border)');
-    if (c2 !== '#888888') return c2;
-    return '#3f3f46';
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [darkMode]);
-
-  const border2Color = useMemo(() => {
-    const c1 = resolveColor('var(--color-border-2)');
-    if (c1 !== '#888888') return c1;
-    const c2 = resolveColor('var(--border-2)');
-    if (c2 !== '#888888') return c2;
-    const c3 = resolveColor('var(--color-border2)');
-    if (c3 !== '#888888') return c3;
-    return '#27272a';
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [darkMode]);
 
   /* Mobile overlay swap — slice hover, falling back to the inner (parent) ring
      so the inner pie reveals its group details just like the outer slices. */
