@@ -43,10 +43,19 @@ const nextConfig: NextConfig = {
   // 2. ADD THIS: Webpack rules (for production build)
   // This ensures Webpack converts SVGs to components just like Turbopack does
   webpack(config) {
+    // Minimal structural type for the fields we read/write on the SVG rule —
+    // webpack's own types aren't resolvable here (Next bundles webpack).
+    type SvgLoaderRule = {
+      test?: RegExp;
+      issuer?: unknown;
+      resourceQuery: { not: RegExp[] };
+      exclude?: RegExp;
+    };
+
     // Grab the existing rule that handles SVG imports
-    const fileLoaderRule = config.module.rules.find((rule: any) =>
+    const fileLoaderRule = config.module.rules.find((rule: SvgLoaderRule) =>
       rule.test?.test?.('.svg'),
-    );
+    ) as SvgLoaderRule;
 
     config.module.rules.push(
       // Re-apply the existing rule, but only for svg imports ending in ?url
