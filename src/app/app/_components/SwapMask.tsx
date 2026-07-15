@@ -6,7 +6,7 @@ import { parseUnits, formatUnits, erc20Abi } from 'viem';
 import { useQuery } from '@tanstack/react-query';
 
 import { WalletButton } from './WalletButton';
-import PercentSlider from '@/app/app/_components/PercentSlider';
+import PercentSlider from '@/components/PercentSlider';
 import { sliderPctToAmount } from '@/utils/sliderAmount';
 import { clampDecimals } from '@/utils/clampDecimals';
 import { useButtonHold } from '@/hooks/useButtonHold';

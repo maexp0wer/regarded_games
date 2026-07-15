@@ -5,7 +5,7 @@ import { Order, useOrderBook } from '@/hooks/useOrderBook';
 import { useBatchPlayerClass } from '@/hooks/useBatchPlayerClass';
 import { useFlaggedWallets } from '@/hooks/useFlaggedWallets';
 import { PercentileCircle } from './PercentileCircle';
-import PercentRangeSlider from './PercentRangeSlider';
+import { PercentRangeSlider } from './PercentRangeSlider';
 
 interface OrderBookProps {
   seasonAddress: string;

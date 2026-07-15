@@ -2,7 +2,7 @@
 
 import { useButtonHold } from '@/hooks/useButtonHold';
 import { clampDecimals } from '@/utils/clampDecimals';
-import PercentSlider from '../app/app/_components/PercentSlider';
+import PercentSlider from './PercentSlider';
 
 export default function AmountInput({
   label,

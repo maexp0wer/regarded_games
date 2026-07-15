@@ -14,7 +14,7 @@ interface PercentRangeSliderProps {
 // Dual-thumb range slider. Two overlapping native range inputs share one visual
 // track; the active fill spans [min, max]. A span of at least 1 is preserved
 // between the thumbs to match the stepper collision logic in OrderBook.
-export default function PercentRangeSlider({
+export function PercentRangeSlider({
   min, max, onChangeMin, onChangeMax, faction = 'proletariat', disabled = false,
 }: PercentRangeSliderProps) {
   const clampedMin = Math.max(0, Math.min(100, min));

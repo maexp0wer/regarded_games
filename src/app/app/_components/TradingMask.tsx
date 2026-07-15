@@ -21,7 +21,7 @@ const ExchangeAbi = ExchangeAbiJson as Abi;
 import { PercentileCircle } from './PercentileCircle';
 import { GroupedOrder, OrderQueueItem } from './OrderQueueItem';
 import { WalletButton } from './WalletButton';
-import PercentSlider from '@/app/app/_components/PercentSlider';
+import PercentSlider from '@/components/PercentSlider';
 import { sliderPctToAmount } from '@/utils/sliderAmount';
 import { clampDecimals } from '@/utils/clampDecimals';
 import { TxModal } from './TxModal';
