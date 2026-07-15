@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { formatUnits } from "viem";
 import { useTenantPonderUrl } from '@/context/TenantContext';
+import { fetchAllPonderItems } from '@/lib/ponder';
 import { useSeasonActiveOrders } from './useSeasonActiveOrders';
 
 export type OrderFilter = 'open' | 'filled' | 'cancelled';
@@ -24,16 +25,18 @@ export interface MyOrder {
 // History (active: false) orders are NOT held by the shared active-orders
 // primitive, so the filled/cancelled variants keep their own fetch.
 const HISTORY_QUERY = `
-  query GetMyHistoryOrders($season: String!, $maker: String!, $cancelled: Boolean!) {
+  query GetMyHistoryOrders($season: String!, $maker: String!, $cancelled: Boolean!, $after: String, $limit: Int!) {
     orderss(
       where: { seasonAddress: $season, maker: $maker, active: false, isCancelled: $cancelled }
       orderBy: "timestamp"
       orderDirection: "desc"
-      limit: 50
+      after: $after
+      limit: $limit
     ) {
       items {
         id orderId isBuy price initialAmount remainingAmount isCancelled timestamp settledAt feePaid
       }
+      pageInfo { endCursor hasNextPage }
     }
   }
 `;
@@ -111,14 +114,10 @@ export function useOpenOrders(
         cancelled: filter === 'cancelled',
       };
       try {
-        const response = await fetch(PONDER_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: HISTORY_QUERY, variables }),
-        });
-        const res = await response.json();
-        const items = res.data?.orderss?.items || [];
-        return items.map(mapOrder) as MyOrder[];
+        const items = await fetchAllPonderItems<RawOrder>(
+          PONDER_URL, HISTORY_QUERY, variables, (d) => d.orderss,
+        );
+        return items.map(mapOrder);
       } catch (e) {
         console.error("useOpenOrders fetch failed", e);
         return [];

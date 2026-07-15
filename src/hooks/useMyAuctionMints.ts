@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { formatUnits } from 'viem';
 import { useTenantPonderUrl } from '@/context/TenantContext';
+import { fetchAllPonderItems } from '@/lib/ponder';
 
 export interface AuctionMint {
   id: string;
@@ -12,16 +13,26 @@ export interface AuctionMint {
 }
 
 const QUERY = `
-  query GetMyAuctionMints($season: String!, $player: String!) {
+  query GetMyAuctionMints($season: String!, $player: String!, $after: String, $limit: Int!) {
     auctionMintss(
       where: { seasonAddress: $season, playerAddress: $player }
       orderBy: "timestamp"
       orderDirection: "desc"
+      after: $after
+      limit: $limit
     ) {
       items { id fimAmount usdcAmount timestamp }
+      pageInfo { endCursor hasNextPage }
     }
   }
 `;
+
+interface RawMint {
+  id: string;
+  fimAmount: string;
+  usdcAmount: string;
+  timestamp: string;
+}
 
 export function useMyAuctionMints(
   seasonAddress: string | undefined,
@@ -31,19 +42,15 @@ export function useMyAuctionMints(
   return useQuery({
     queryKey: ['myAuctionMints', seasonAddress?.toLowerCase(), userAddress?.toLowerCase(), PONDER_URL],
     queryFn: async () => {
-      const res = await fetch(PONDER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: QUERY,
-          variables: {
-            season: seasonAddress!.toLowerCase(),
-            player: userAddress!.toLowerCase(),
-          },
-        }),
-      });
-      const json = await res.json();
-      const items: { id: string; fimAmount: string; usdcAmount: string; timestamp: string }[] = json.data?.auctionMintss?.items ?? [];
+      const items = await fetchAllPonderItems<RawMint>(
+        PONDER_URL,
+        QUERY,
+        {
+          season: seasonAddress!.toLowerCase(),
+          player: userAddress!.toLowerCase(),
+        },
+        (d) => d.auctionMintss,
+      );
       return items.map((m): AuctionMint => ({
         id: m.id,
         fimAmount: Number(formatUnits(BigInt(m.fimAmount), 18)),

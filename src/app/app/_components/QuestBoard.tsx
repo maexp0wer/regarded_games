@@ -7,6 +7,7 @@ import type { Abi } from 'abitype';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTenantChainId, useTenantPonderUrl } from '@/context/TenantContext';
 import { useReferrals } from '@/hooks/useReferrals';
+import { fetchAllPonderItems } from '@/lib/ponder';
 import LedgerLoader from '@/components/LedgerLoader';
 import ModalCloseButton from '@/components/ModalCloseButton';
 import GameSeasonAbi from '@/deployments/abis/GameSeason.json';
@@ -192,15 +193,17 @@ async function findActiveSeasonSlug(
   ponderUrl: string,
   publicClient: NonNullable<ReturnType<typeof usePublicClient>>,
 ): Promise<string | null> {
-  const res = await fetch(ponderUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      query: `query { seasonss(limit: 10) { items { address seasonId } } }`,
-    }),
-  });
-  const json = await res.json();
-  const seasons: { address: string; seasonId: string }[] = json?.data?.seasonss?.items ?? [];
+  const seasons = await fetchAllPonderItems<{ address: string; seasonId: string }>(
+    ponderUrl,
+    `query AllSeasons($after: String, $limit: Int!) {
+      seasonss(after: $after, limit: $limit) {
+        items { address seasonId }
+        pageInfo { endCursor hasNextPage }
+      }
+    }`,
+    {},
+    (d) => d.seasonss,
+  );
   for (const season of seasons) {
     const currentPhase = await publicClient.readContract({
       address: season.address as `0x${string}`,
