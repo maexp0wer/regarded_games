@@ -350,7 +350,7 @@ export function OrderBook({
     return (
       <div className="flex items-center gap-2 w-full mt-1.5 animate-in fade-in duration-200">
         {/* MINIMUM PERCENTILE */}
-        <div className="flex items-center bg-card3 shrink-0 rounded border border-transparent h-[26px] focus-within:border-border2 focus-within:ring-1 focus-within:ring-purple-500/20 transition-all">
+        <div className="flex items-center bg-card3 shrink-0 rounded border border-transparent h-6.5 focus-within:border-border2 focus-within:ring-1 focus-within:ring-purple-500/20 transition-all">
           <div className="flex-1 flex justify-center items-center h-full pl-2">
             <input
               type="number" 
@@ -370,7 +370,7 @@ export function OrderBook({
           </div>
           
           {/* Minimalist Stepper (Right) */}
-          <div className="flex flex-col gap-[2px] pl-1 pr-2 justify-center shrink-0 select-none">
+          <div className="flex flex-col gap-0.5 pl-1 pr-2 justify-center shrink-0 select-none">
             <button
               type="button"
               tabIndex={-1}
@@ -379,7 +379,7 @@ export function OrderBook({
               onMouseLeave={stopStepping}
               onTouchStart={(e) => { e.preventDefault(); startStepping('up', 'min'); }}
               onTouchEnd={stopStepping}
-              className="text-[8px] leading-[1] text-text2 hover:text-text transition-colors"
+              className="text-[8px] leading-none text-text2 hover:text-text transition-colors"
             >
               ▲
             </button>
@@ -391,7 +391,7 @@ export function OrderBook({
               onMouseLeave={stopStepping}
               onTouchStart={(e) => { e.preventDefault(); startStepping('down', 'min'); }}
               onTouchEnd={stopStepping}
-              className="text-[8px] leading-[1] text-text2 hover:text-text transition-colors"
+              className="text-[8px] leading-none text-text2 hover:text-text transition-colors"
             >
               ▼
           </button>
@@ -408,7 +408,7 @@ export function OrderBook({
 
 
         {/* MAXIMUM PERCENTILE */}
-        <div className="flex items-center bg-card3 shrink-0 rounded border border-transparent h-[26px] focus-within:border-border2 focus-within:ring-1 focus-within:ring-purple-500/20 transition-all">
+        <div className="flex items-center bg-card3 shrink-0 rounded border border-transparent h-6.5 focus-within:border-border2 focus-within:ring-1 focus-within:ring-purple-500/20 transition-all">
           <div className="flex-1 flex justify-center items-center h-full pl-2">
             <input
               type="number" 
@@ -427,7 +427,7 @@ export function OrderBook({
           </div>
 
           {/* Minimalist Stepper (Right) */}
-          <div className="flex flex-col gap-[2px] pl-1 pr-2 justify-center shrink-0 select-none">
+          <div className="flex flex-col gap-0.5 pl-1 pr-2 justify-center shrink-0 select-none">
             <button
               type="button"
               tabIndex={-1}
@@ -436,7 +436,7 @@ export function OrderBook({
               onMouseLeave={stopStepping}
               onTouchStart={(e) => { e.preventDefault(); startStepping('up', 'max'); }}
               onTouchEnd={stopStepping}
-              className="text-[8px] leading-[1] text-text2 hover:text-text transition-colors"
+              className="text-[8px] leading-none text-text2 hover:text-text transition-colors"
             >
               ▲
             </button>
@@ -448,7 +448,7 @@ export function OrderBook({
               onMouseLeave={stopStepping}
               onTouchStart={(e) => { e.preventDefault(); startStepping('down', 'max'); }}
               onTouchEnd={stopStepping}
-              className="text-[8px] leading-[1] text-text2 hover:text-text transition-colors"
+              className="text-[8px] leading-none text-text2 hover:text-text transition-colors"
             >
               ▼
             </button>

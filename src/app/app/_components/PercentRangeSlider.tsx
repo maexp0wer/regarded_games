@@ -58,7 +58,7 @@ export function PercentRangeSlider({
 
   return (
     <div
-      className={`relative flex-1 h-[26px] flex items-center select-none px-1.5 ${disabled ? 'opacity-40 pointer-events-none' : ''}`}
+      className={`relative flex-1 h-6.5 flex items-center select-none px-1.5 ${disabled ? 'opacity-40 pointer-events-none' : ''}`}
       style={{ '--thumb-accent': accentColor } as CSSProperties}
     >
 
