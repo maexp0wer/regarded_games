@@ -74,7 +74,7 @@ export function TradingActivityFeed({ seasonAddress, className }: { seasonAddres
             pageItems.map((trade) => {
               // A seller always had FIM to sell; a buyer always spent USDC. Neither is
               // ever truly anonymous. A balance of '0' just means the player previously
-              // sold everything → 0 FIM = 100 % Socialist (percentile 100, not capitalist).
+              // sold everything → 0 FIM = 100 % proletarian (percentile 100, not capitalist).
               const sellerPercentile = trade.sellerBalance !== '0' ? trade.sellerPercentile : 100;
               const sellerIsCapitalist = trade.sellerBalance !== '0' ? trade.sellerIsCapitalist : false;
               const buyerPercentile = trade.buyerBalance !== '0' ? trade.buyerPercentile : 100;

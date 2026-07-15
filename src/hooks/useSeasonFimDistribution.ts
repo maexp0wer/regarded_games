@@ -12,7 +12,7 @@ import { useSeasonActiveOrders } from './useSeasonActiveOrders';
 const GameSeasonAbi = GameSeasonAbiJson as Abi;
 
 export interface FimDistributionBar {
-  bucket: number;       // 0–19 (0 = poorest socialist, 19 = richest capitalist)
+  bucket: number;       // 0–19 (0 = poorest proletarian, 19 = richest capitalist)
   fimAmount: number;    // total effective FIM held in this 10-percentile bracket
   playerCount: number;  // number of players in this bracket
   isCapitalist: boolean;
@@ -20,7 +20,7 @@ export interface FimDistributionBar {
 
 /**
  * Computes FIM distribution across 20 rank buckets (10-percentile intervals).
- * Buckets 0–9 are socialist (poorest→closest to threshold),
+ * Buckets 0–9 are proletarian (poorest→closest to threshold),
  * buckets 10–19 are capitalist (just above threshold→richest).
  *
  * Reuses the shared useSeasonPlayers + useSeasonActiveOrders fetches — no new
@@ -79,7 +79,7 @@ export function useSeasonFimDistribution(
     // contract's `bal >= existentialThresholdFim`, so the population fed into the
     // 50% mass threshold + bucketing is the eligible set only. Raw-wei compare;
     // never float-convert before filtering. When the threshold is 0n, still drop
-    // empty wallets so they can't pad the socialist axis.
+    // empty wallets so they can't pad the proletarian axis.
     const economy = Array.from(playerBalances.entries())
       .filter(([, balanceRaw]) => balanceRaw >= existentialThreshold && balanceRaw > 0n)
       .map(([address, balanceRaw]) => ({ address, balanceRaw }))
@@ -96,7 +96,7 @@ export function useSeasonFimDistribution(
     }
     const thresholdNum = Number(formatUnits(thresholdRaw, 18));
 
-    const socialists = economy.filter((p) => Number(formatUnits(p.balanceRaw, 18)) <= thresholdNum);
+    const proletarians = economy.filter((p) => Number(formatUnits(p.balanceRaw, 18)) <= thresholdNum);
     const capitalists = economy.filter((p) => Number(formatUnits(p.balanceRaw, 18)) > thresholdNum);
 
     const result: FimDistributionBar[] = Array.from({ length: 20 }, (_, i) => ({
@@ -106,16 +106,16 @@ export function useSeasonFimDistribution(
       isCapitalist: i >= 10,
     }));
 
-    const totalSoc = socialists.length;
+    const totalProl = proletarians.length;
     const totalCap = capitalists.length;
 
     // Proletarians: sorted ascending (index 0 = poorest). Bucket 0–9.
-    // Divide by (totalSoc - 1) so the last player lands exactly in bucket 9.
-    // A lone socialist falls in the poorest bucket (0, "SOC 100%"), matching the
+    // Divide by (totalProl - 1) so the last player lands exactly in bucket 9.
+    // A lone proletarian falls in the poorest bucket (0, "SOC 100%"), matching the
     // "Expected Class Rank" percentile, which also resolves the single-member case
     // to 100% (furthest into the Masses).
-    socialists.forEach((p, idx) => {
-      const bucket = totalSoc > 1 ? Math.min(9, Math.floor((idx / (totalSoc - 1)) * 9)) : 0;
+    proletarians.forEach((p, idx) => {
+      const bucket = totalProl > 1 ? Math.min(9, Math.floor((idx / (totalProl - 1)) * 9)) : 0;
       result[bucket].fimAmount += Number(formatUnits(p.balanceRaw, 18));
       result[bucket].playerCount += 1;
     });

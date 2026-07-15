@@ -80,7 +80,7 @@ const PLAYER_COUNTS_20: number[] = Array.from({ length: 20 }, () => 1 + Math.flo
 
 const getTopConnections = (matrix: number[][]) => {
   const capitalists: { r: number; c: number; target: number }[] = [];
-  const socialists: { r: number; c: number; target: number }[] = [];
+  const proletarians: { r: number; c: number; target: number }[] = [];
   const crossClass: { r: number; c: number; target: number }[] = [];
 
   for (let r = 0; r < 20; r++) {
@@ -94,7 +94,7 @@ const getTopConnections = (matrix: number[][]) => {
       if (isCapR && isCapC) {
         capitalists.push({ r, c, target });
       } else if (!isCapR && !isCapC) {
-        socialists.push({ r, c, target });
+        proletarians.push({ r, c, target });
       } else {
         crossClass.push({ r, c, target });
       }
@@ -102,10 +102,10 @@ const getTopConnections = (matrix: number[][]) => {
   }
 
   const capSubset = shuffle(capitalists).slice(0, 12);
-  const socSubset = shuffle(socialists).slice(0, 12);
+  const prolSubset = shuffle(proletarians).slice(0, 12);
   const crossSubset = shuffle(crossClass).slice(0, 8);
 
-  return shuffle([...capSubset, ...socSubset, ...crossSubset]);
+  return shuffle([...capSubset, ...prolSubset, ...crossSubset]);
 };
 
 const ALL_CONNECTIONS: { r: number; c: number; target: number }[] = (() => {
@@ -241,7 +241,7 @@ export default function AnimatedTradeFlows({ isHovered }: { isHovered: boolean }
 
       const isCapitalist = i < geo.numCap;
       // Match production (chartData.ts): capitalist arcs run top→bottom so their
-      // band index is reversed; socialists run bottom→top, index as-is.
+      // band index is reversed; proletarians run bottom→top, index as-is.
       const bandIndex = isCapitalist ? geo.numCap - 1 - i : i - geo.numCap;
       const factionName = isCapitalist ? 'Capitalists' : 'Proletarians';
       const factionPct  = `${bandIndex * 10}–${(bandIndex + 1) * 10}%`;

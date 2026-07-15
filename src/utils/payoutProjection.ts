@@ -13,7 +13,7 @@
  *    `poolSize = basePrizePool + yieldBonus`.
  *  - The Masses / Oligarchy boundary is drawn at 50% of FIM *total supply*, not of
  *    the dust-filtered accumulated supply.
- *  - The Solidarity Fund (Socialist win) is redistributed by positive Net
+ *  - The Solidarity Fund (Proletariat win) is redistributed by positive Net
  *    Contribution (MoneyIn − MoneyOut), NOT by the face-value-adjusted figure the
  *    UI labels "Contribution".
  *
@@ -42,7 +42,7 @@ export interface PayoutProjectionInput {
   totalFimSupply: number;
   /** Existential (dust) threshold in FIM; holders below this are excluded. */
   dustThresholdFim: number;
-  /** true → Capitalist (Oligarchy) logic; false → Socialist (Solidarity) logic. */
+  /** true → Capitalist (Oligarchy) logic; false → Proletariat (Solidarity) logic. */
   isOligarchyWin: boolean;
   /**
    * Whether a faction is currently leading. When false the win share is unused
@@ -57,7 +57,9 @@ export interface SettlementAggregates {
   accumulatedSupply: number;          // Σ bal over dust-filtered players
   massThresholdBalance: number;       // highest balance still inside the Masses
   winningCoalitionSupply: number;     // Σ bal of the Oligarchy (top holders ≥ 50%)
-  effectiveSocialistSupply: number;   // Σ min(bal, massThresholdBalance)
+  // Σ min(bal, massThresholdBalance). "Socialist" is deprecated as a class label
+  // but kept here: the name mirrors the GameSeason contract's ABI field.
+  effectiveSocialistSupply: number;
   totalPositiveNetContribution: number; // Σ max(0, netContribUsdc)
 }
 

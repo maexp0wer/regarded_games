@@ -21,7 +21,7 @@ export interface PlayerClassData {
 }
 
 /**
- * Computes each player's class (Capitalist/Oligarchy vs Socialist/Masses) off the
+ * Computes each player's class (Capitalist/Oligarchy vs Proletarian/Masses) off the
  * shared season primitives (players + active sell orders). The class boundary is the
  * live supply-share Masses/Oligarchy cut — the largest set of poorest holders whose
  * balances sum to ≤50% of total FIM *supply* (NOT a population percentile). Multiple
@@ -129,14 +129,14 @@ export function useBatchPlayerClass(
     // within a wei of the cut classifies identically everywhere. The float
     // `massThresholdNum` below is used ONLY for the display distance metric.
     const capitalists = economy.filter(p => p.balanceRaw > liveMassThresholdRaw);
-    const socialists = economy.filter(p => p.balanceRaw <= liveMassThresholdRaw);
+    const proletarians = economy.filter(p => p.balanceRaw <= liveMassThresholdRaw);
 
     capitalists.sort((a, b) => b.balanceNum - a.balanceNum);
-    socialists.sort((a, b) => b.balanceNum - a.balanceNum);
+    proletarians.sort((a, b) => b.balanceNum - a.balanceNum);
 
-    // Find the absolute Richest Capitalist and Poorest Socialist for the scale
+    // Find the absolute Richest Capitalist and Poorest Proletarian for the scale
     const maxCapBalance = capitalists.length > 0 ? capitalists[0].balanceNum : massThresholdNum;
-    const minSocBalance = socialists.length > 0 ? socialists[socialists.length - 1].balanceNum : 0;
+    const minProlBalance = proletarians.length > 0 ? proletarians[proletarians.length - 1].balanceNum : 0;
 
     const resultsMap: Record<string, PlayerClassData> = {};
 
@@ -158,15 +158,15 @@ export function useBatchPlayerClass(
         const range = maxCapBalance - massThresholdNum;
         percentile = range > 0 ? ((userBalanceNum - massThresholdNum) / range) * 100 : 100;
       } else {
-        // Socialist Distance: 0% (At Threshold) to 100% (Poorest Player)
-        const range = massThresholdNum - minSocBalance;
+        // Proletarian Distance: 0% (At Threshold) to 100% (Poorest Player)
+        const range = massThresholdNum - minProlBalance;
         percentile = range > 0 ? ((massThresholdNum - userBalanceNum) / range) * 100 : 100;
       }
 
       // Cap strictly between 0 and 100
       percentile = Math.max(0, Math.min(100, percentile));
 
-      const classMembers = isCapitalist ? capitalists : socialists;
+      const classMembers = isCapitalist ? capitalists : proletarians;
       const rankIndex = classMembers.findIndex(p => p.address === uAddr);
 
       const data: PlayerClassData = {

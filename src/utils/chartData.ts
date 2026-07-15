@@ -135,7 +135,7 @@ export function buildChordData(
 
   // 10 bands of 10% per faction → 20 groups total.
   // Cap: 0 = richest (9 o'clock) … 9 = threshold (3 o'clock).
-  // Soc: 10 = threshold (3 o'clock) … 19 = most socialist (9 o'clock).
+  // Soc: 10 = threshold (3 o'clock) … 19 = most proletarian (9 o'clock).
   const NUM_BANDS = 10;
   const TOTAL = NUM_BANDS * 2;
   const STEP = 100 / NUM_BANDS;
