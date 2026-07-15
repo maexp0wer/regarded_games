@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import Image from 'next/image';
 import { useAccount } from 'wagmi';
 import { FactionDiscussionBoard } from './FactionDiscussionBoard';
 import { CommunitySignInGate } from './CommunitySignInGate';
@@ -62,9 +63,14 @@ function ChatMessage({ msg, isOwn, isCapitalist }: { msg: DiscourseMessage; isOw
   return (
     <div className={`flex w-full ${isOwn ? 'justify-end' : 'justify-start'}`}>
       <div className={`flex min-w-0 items-stretch max-w-[85%] rounded border ${isOwn ? 'flex-row-reverse border-border bg-card3' : 'flex-row border-border bg-card2'}`}>
-        <img
+        {/* unoptimized: avatars come from a per-env Discourse host or the dicebear
+            SVG fallback — dynamic remote hosts the image optimizer can't allowlist. */}
+        <Image
           src={src}
           alt={msg.user.username}
+          width={32}
+          height={32}
+          unoptimized
           onError={() => setErrored(true)}
           className="shrink-0 w-8 h-8 object-cover m-1 rounded-sm self-center"
         />
