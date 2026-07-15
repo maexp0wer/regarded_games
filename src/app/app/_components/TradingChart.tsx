@@ -553,7 +553,7 @@ export function TradingChart({
       {/* Fills the remaining height of the chart card and shrinks with it, so the
           panel stays fully visible when the viewport-locked row compresses. The
           card root is a bounded flex column, so flex-1 resolves; standalone
-          callers must give the card a height (see SeasonChart). The chart canvas
+          callers must give the card a height. The chart canvas
           is appended directly into this div by lightweight-charts.
           `data-chrome-scroll-guard="always"`: the chart owns the wheel to zoom/pan,
           so a wheel here must never fold the season-page chrome (see seasonChromeReveal). */}
