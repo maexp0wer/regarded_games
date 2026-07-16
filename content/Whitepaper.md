@@ -125,7 +125,7 @@ The protocol does not preach; it holds up a level field as a mirror and lets the
 
 The game opens with the familiar lure of big, high-variance returns and winner-take-all dynamics—the Capitalist payout. Its inner logic then confronts the player with a mathematical reality that overturns the assumption they walked in with.
 
-*A new player, trained by the individualist stories of the wider market, almost always starts out competing. The Oligarchy payout looks just like the dream of crypto riches, and the player is free to chase it. But on a level field the math is out in the open: the game's Gini-aware design makes concentration genuinely hard, because moving the Gini Coefficient toward concentration takes overwhelming capital. The ordinary player soon finds that in a competitive, every-player-for-themselves game (capitalism), their own weight counts for almost nothing against the big, well-funded actors. And the payout drives the lesson home: a Capitalist win produces no winning faction at all, only a winning elite.*
+A new player, trained by the individualist stories of the wider market, almost always starts out competing. The Oligarchy payout looks just like the dream of crypto riches, and the player is free to chase it. But on a level field the math is out in the open: the game's Gini-aware design makes concentration genuinely hard, because moving the Gini Coefficient toward concentration takes overwhelming capital. The ordinary player soon finds that in a competitive, every-player-for-themselves game (capitalism), their own weight counts for almost nothing against the big, well-funded actors. And the payout drives the lesson home: a Capitalist win produces no winning faction at all, only a winning elite.
 
 **This is where the player meets a genuine dilemma.** Their motive is still plain self-interest—but what *counts* as self-interest is forced to change as they play. With Oligarch status out of statistical reach, the player faces a clear choice:
 
@@ -644,47 +644,25 @@ The first goal is to reach people who can grasp the game theory and economic des
 **The Contribution Scoring Function**
 A player's Contribution Score (CS) is simply the sum of the points they earn across every quest below.
 
-**Join the Community**
-
-- *Follow on X:* 50 pts (Galxe Quest)
-
-- *Join Discord:* 50 pts (Galxe Quest)
-
-- *Log in to Discourse:* 50 pts
-
-- *Strategic Voice Bonus:*
-
-  - *Join the discussion on Discord or Discourse:* up to 400 pts
-
-  - *Vote on the Mainnet Season 1 Season Manifest (Discourse):* 200 pts
-
-**Spread the Word**
-
-- *Retweet on X:* 200 pts (Galxe Quest)
-
-- *Referrals 1–10:* 50 pts each
-
-- *Referrals 11–35:* 20 pts each
-
-- *Referrals 36–100:* 5 pts each
-
-**Dominate the Testnet**
-
-- *Use the faucet to claim fakeUSDC:* 50 pts
-
-- *Exchange fakeUSDC for \$RGD:* 50 pts
-
-- *Stake \$RGD:* 50 pts
-
-- *Buy \$FIM during the Auction:* 50 pts
-
-- *Create an order to buy or sell \$FIM during the Trading Phase:* 50 pts
-
-- *Execute a shuffle order that Moves the Gini in favor of Your Class's pole — fill bids and asks in a single batch that leaves the Gini higher (Capitalist) or lower (Proletarian) than it started:* 100 pts
-
-- *Claim payout:* 50 pts
-
-- *Win the Game (Efficiency Rank):* 0–1,000 pts, scaled linearly by relative seasonal performance — the top relative gainer receives 1,000 pts; the top relative loser receives 0.
+| Category | Quest | Points |
+| --- | --- | --- |
+| **Join the Community** | Follow on X (Galxe Quest) | 50 |
+| | Join Discord (Galxe Quest) | 50 |
+| | Log in to Discourse | 50 |
+| | Join the discussion on Discord or Discourse | up to 400 |
+| | Vote on the Mainnet Season 1 Season Manifest (Discourse) | 200 |
+| **Spread the Word** | Retweet on X (Galxe Quest) | 200 |
+| | Referrals 1–10 | 50 each |
+| | Referrals 11–35 | 20 each |
+| | Referrals 36–100 | 5 each |
+| **Dominate the Testnet** | Use the faucet to claim fakeUSDC | 50 |
+| | Exchange fakeUSDC for \$RGD | 50 |
+| | Stake \$RGD | 50 |
+| | Buy \$FIM during the Auction | 50 |
+| | Create an order to buy or sell \$FIM during the Trading Phase | 50 |
+| | Execute a shuffle order that Moves the Gini in favor of Your Class's pole — fill bids and asks in a single batch that leaves the Gini higher (Capitalist) or lower (Proletarian) than it started | 100 |
+| | Claim payout | 50 |
+| | Win the Game (Efficiency Rank) — scaled linearly by relative seasonal performance; the top relative gainer receives 1,000, the top relative loser receives 0 | 0–1,000 |
 
 ## 15. Where Players Coordinate
 

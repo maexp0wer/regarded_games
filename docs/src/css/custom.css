@@ -343,14 +343,11 @@ h2, h3, h5, h6 {
   font-weight: 700;
 }
 
-/* Single-star `*text*` highlights — purple faction accent in the mono
-   face (a terminal-style inline marker). Double-star `**strong**` keeps
-   its neutral display look. */
+/* Single-star `*text*` renders as plain italic emphasis, inheriting the
+   surrounding text color. Double-star `**strong**` keeps its neutral
+   display look. */
 .markdown em {
-  font-family: 'JetBrains Mono', monospace;
-  font-style:  normal;
-  font-size:   0.92em;
-  color:       var(--color-purple-hover);
+  font-style: italic;
 }
 
 .markdown a {
