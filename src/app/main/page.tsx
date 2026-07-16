@@ -35,7 +35,7 @@ const SECTIONS: { id: string; cards: number; pages?: number }[] = [
   { id: 'sectionHero', cards: 2 },
   { id: 'sectionPlay', cards: 3 },
   { id: 'sectionOwnMarket', cards: 3 },
-  { id: 'sectionDistribution', cards: 0, pages: 2 },
+  { id: 'sectionDistribution', cards: 0, pages: 3 },
   { id: 'sectionSecureYourStake', cards: 2 },
 ];
 
@@ -1467,11 +1467,6 @@ export default function Home() {
                   <button onClick={() => navigateToDocs('')} className="btn-secondary">
                     Docs
                   </button>
-                  {/* Plain <a> (same origin, server-rendered page) so crawlers
-                      get a real link into the FAQ from the strongest URL. */}
-                  <a href="/faq" className="btn-secondary">
-                    FAQ
-                  </a>
                   <button onClick={() => goToSection('sectionSecureYourStake')} className="btn-primary">
                     Secure Your Stake
                   </button>
@@ -1626,8 +1621,9 @@ export default function Home() {
               </div>
             </section>
 
-            {/* Distribution of Power + Campaign Sequence — one scroll stop;
-                a tick inside it flips the rulebook page instead of leaving. */}
+            {/* Distribution of Power + Campaign Sequence + Comms Channels —
+                one scroll stop; a tick inside it flips the rulebook page
+                instead of leaving. */}
             <section
               id="sectionDistribution"
               className="absolute inset-0 py-16 px-4 flex flex-col justify-center w-full"
@@ -1653,6 +1649,15 @@ export default function Home() {
                   style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)' }}
                 >
                   Campaign Sequence
+                </motion.h2>
+                <motion.h2
+                  initial={false}
+                  animate={{ opacity: distributionActive && (cardIndices['sectionDistribution'] ?? 0) === 2 ? 1 : 0 }}
+                  transition={{ duration: 0.9, ease: 'easeInOut', delay: distributionActive && (cardIndices['sectionDistribution'] ?? 0) === 2 ? 0.9 : 0 }}
+                  className="h2-app text-center text-2xl lg:text-[2.5rem] font-bold absolute inset-0"
+                  style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)' }}
+                >
+                  Comms Channels
                 </motion.h2>
               </div>
               <motion.div

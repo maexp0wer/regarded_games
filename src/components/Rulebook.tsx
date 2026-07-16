@@ -6,6 +6,7 @@ import ReactECharts from 'echarts-for-react';
 import { useTheme } from '@/context/ThemeContext';
 import RulebookCard from '@/components/RulebookCard';
 import { motion, useMotionValue, useTransform, animate, type ValueAnimationTransition } from 'framer-motion';
+import { SOCIAL_CHANNELS, type SocialChannel } from '@/config/socials';
 
 /* Docs subdomain base, derived the same way page.tsx / useDocNavigation do: the
    main domain with a `docs.` prefix (e.g. http://docs.localhost:3000 locally,
@@ -14,6 +15,12 @@ import { motion, useMotionValue, useTransform, animate, type ValueAnimationTrans
    the app domain and 404 — these must be absolute docs URLs. */
 const MAIN_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN || '';
 const DOCS_URL = MAIN_DOMAIN.replace('://', '://docs.');
+
+/* Soft-launch flag — same pattern as page.tsx (cosmetic; the real gate is the
+   server-only APP_LIVE check in middleware.ts). The Comms Channels pages print
+   real links only while live; when gated — or while a channel's URL is still
+   empty in src/config/socials.ts — the row reads "Coming Soon" instead. */
+const APP_LIVE = process.env.NEXT_PUBLIC_APP_LIVE !== 'false';
 
 interface Tier3Child {
   name: string;
@@ -98,7 +105,8 @@ const TABLE_DATA: ChartDataItem[] = [
 interface RulebookProps {
   /** Section is the active scroll-stop — drives the card fold + wheel sweep. */
   active?: boolean;
-  /** Book page from the scroll system: 0 = Distribution, 1 = Campaign. */
+  /** Book page from the scroll system: 0 = Distribution, 1 = Campaign,
+      2 = Comms Channels. */
   page?: number;
   /** Live scroll direction: 1 = scrolling down, -1 = scrolling up. Drives the
       slide-in side and the entry/exit backside flash. */
@@ -506,6 +514,89 @@ const roadmapMobileContent = (
   </div>
 );
 
+/* One channel row on the Comms Channels pages — clause line with a dotted
+   leader and a status chip: a gold "Join ↗" link when the app is live and the
+   channel URL exists, a muted "Coming Soon" chip otherwise. stopPropagation
+   keeps a link click from toggling the book's backside. */
+function ChannelEntry({ channel, clause }: { channel: SocialChannel; clause: string }) {
+  const live = APP_LIVE && channel.href !== '';
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-end gap-1.5">
+        <span className="font-mono text-[13px] font-black tabular-nums shrink-0 mb-px text-text">§ {clause}</span>
+        <span className="font-display font-black text-[15px] uppercase tracking-widest leading-tight text-text">{channel.label}</span>
+        <DottedLeader />
+        {live ? (
+          <a
+            href={channel.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="font-mono text-[11px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0 transition-transform duration-200 hover:scale-105"
+            style={{ color: 'var(--color-gold)', borderColor: 'var(--color-gold-35)', backgroundColor: 'var(--color-gold-15)' }}
+          >
+            Join ↗
+          </a>
+        ) : (
+          <span
+            className="font-mono text-[11px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0"
+            style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-card2)' }}
+          >
+            Coming Soon
+          </span>
+        )}
+      </div>
+      <p className="font-sans text-[13px] text-text2 leading-snug pl-4">{channel.description}</p>
+    </div>
+  );
+}
+
+/* Anti-phishing clause printed with the channel list: only links in this
+   rulebook are official. */
+function CommsIntro() {
+  return (
+    <p className="font-sans text-[13px] text-text2 leading-relaxed">
+      Official channels of Regarded Games. Links are printed here and nowhere
+      else — a channel that is not in this rulebook is an impostor.
+    </p>
+  );
+}
+
+const commsLeftContent = (
+  <div className="flex flex-col flex-grow gap-4 w-full">
+    <SectionHeading>Sec. 06 — Comms Channels</SectionHeading>
+    <CommsIntro />
+    <div className="flex flex-col gap-5">
+      {SOCIAL_CHANNELS.slice(0, 2).map((c, i) => (
+        <ChannelEntry key={c.key} channel={c} clause={`6.${i + 1}`} />
+      ))}
+    </div>
+  </div>
+);
+
+const commsRightContent = (
+  <div className="flex flex-col flex-grow gap-4 w-full">
+    <SectionHeading>Sec. 06 — Continued</SectionHeading>
+    <div className="flex flex-col gap-5">
+      {SOCIAL_CHANNELS.slice(2).map((c, i) => (
+        <ChannelEntry key={c.key} channel={c} clause={`6.${i + 3}`} />
+      ))}
+    </div>
+  </div>
+);
+
+const commsMobileContent = (
+  <div className="flex flex-col flex-grow gap-4 w-full">
+    <SectionHeading>Sec. 06 — Comms Channels</SectionHeading>
+    <CommsIntro />
+    <div className="flex flex-col gap-4">
+      {SOCIAL_CHANNELS.map((c, i) => (
+        <ChannelEntry key={c.key} channel={c} clause={`6.${i + 1}`} />
+      ))}
+    </div>
+  </div>
+);
+
 /* Backside of the book — adapted from the HeroCard back: cross lines, heavy
    gold corner brackets, and the two info buttons stacked vertically inside one
    peanut capsule (two rounds joined by a narrow waist). On desktop this is the
@@ -620,9 +711,11 @@ const SCENE_PERSPECTIVE = 2200;
    magnification, but an off-center leaf also shifts radially with z (parallax),
    and that residual shift scales with z — small z keeps it sub-pixel. The order
    is all that matters for sorting; compositor transforms sort sub-pixel deltas. */
-const Z_LEAF3 = 1;        // backside leaf, resting (under leaf2)
-const Z_LEAF2 = 2;        // Sec04/005 leaf
-const Z_BACK_TOP = 4;     // backside leaf lifted on top of the stack
+const Z_LEAF4 = 0.75;     // comms/backside leaf, resting (deepest right leaf)
+const Z_LEAF3 = 1;        // roadmap-right/comms-left leaf, resting (under leaf2)
+const Z_LEAF2 = 2;        // Sec04/roadmap-left leaf
+const Z_LEAF3_TOP = 3;    // leaf3 lifted while turned past leaf2 (comms spread)
+const Z_BACK_TOP = 4;     // backside leaf (leaf4) lifted on top of the stack
 const Z_COVER_DOWN = 0.5; // cover sunk flat under the right leaves
 const Z_COVER_UP = 6;     // cover closed / opening, above everything
 
@@ -785,28 +878,57 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
   /* Either trigger turns the book to its backside. */
   const backShown = showBack || flashBack;
 
+  /* Riffle staging: which leaves participate in a turn to the backside from
+     the current page, and each participant's slot in the forward cascade.
+     leaf2 still shows its front on page 0 only; leaf3 until the comms spread
+     (page < 2); leaf4 (the backside leaf) always turns. Stage = how many
+     participating leaves are ahead of it; the reverse riffle plays the same
+     stages backwards. */
+  const stage3 = page < 1 ? 1 : 0;
+  const stage4 = stage3 + (page < 2 ? 1 : 0);
+  const maxStage = stage4;
+
   /* True from the moment the book turns to the backside until the backside
-     leaf has finished flipping home again — keeps that leaf painted on top of
-     the stack for the whole round trip, and marks the return riffle (so leaf2
-     waits for it) as opposed to a plain scroll page-flip. */
-  const [backOnTop, setBackOnTop] = useState(false);
+     leaf (leaf4) has finished flipping home again — keeps that leaf painted on
+     top of the stack for the whole round trip, and marks the return riffle (so
+     the other leaves wait for it) as opposed to a plain scroll page-flip. */
+  const [leaf4OnTop, setLeaf4OnTop] = useState(false);
   /* The backside leaf is painted on top once it BEGINS its turn. On the forward
-     click riffle the 005 leaf (leaf2) leads, so the backside leaf must stay
-     UNDER it until its own (staggered) turn starts — otherwise it pops above
-     and shows Sec 05 before any page has turned. Deferred by the same stagger.
-     On exit/enter flash and reverse it goes on top immediately. */
-  const backLiftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+     click riffle the front leaves lead, so the backside leaf must stay UNDER
+     them until its own (staggered) turn starts — otherwise it pops above and
+     shows its front page before any page has turned. Deferred by its cascade
+     stage. On exit/enter flash and reverse it goes on top immediately. */
+  const leaf4LiftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (backLiftTimerRef.current) { clearTimeout(backLiftTimerRef.current); backLiftTimerRef.current = null; }
+    if (leaf4LiftTimerRef.current) { clearTimeout(leaf4LiftTimerRef.current); leaf4LiftTimerRef.current = null; }
     if (!backShown) return;
-    if (showBack && !flashBack && page < 1) {
+    if (showBack && !flashBack && stage4 > 0) {
       // forward click riffle: lift the backside leaf only when its turn starts.
-      backLiftTimerRef.current = setTimeout(() => setBackOnTop(true), TURN_MS * RIFFLE_STAGGER);
+      leaf4LiftTimerRef.current = setTimeout(() => setLeaf4OnTop(true), TURN_MS * RIFFLE_STAGGER * stage4);
     } else {
-      setBackOnTop(true);
+      setLeaf4OnTop(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backShown]);
+
+  /* leaf3 is painted above leaf2 whenever it is turned (comms spread or the
+     backside) — its back (005) must cover leaf2's turned back (003) on the
+     left half. Same deferred lift as leaf4 on the forward click riffle so its
+     front (004) never pops above leaf2 before its own turn starts; dropped
+     once it has turned fully home (leaf3 onAnimationComplete). */
+  const leaf3Turned = page >= 2 || backShown;
+  const [leaf3OnTop, setLeaf3OnTop] = useState(false);
+  const leaf3LiftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (leaf3LiftTimerRef.current) { clearTimeout(leaf3LiftTimerRef.current); leaf3LiftTimerRef.current = null; }
+    if (!leaf3Turned) return;
+    if (showBack && !flashBack && stage3 > 0) {
+      leaf3LiftTimerRef.current = setTimeout(() => setLeaf3OnTop(true), TURN_MS * RIFFLE_STAGGER * stage3);
+    } else {
+      setLeaf3OnTop(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leaf3Turned]);
   /* A scroll page-flip resets a click-opened backside, but never an entry/exit
      flash (which owns its own page). */
   useEffect(() => { setShowBack(false); }, [page]);
@@ -1406,42 +1528,50 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
   const turnDur = TURN_MS / 1000;
   const turnEase = [0.45, 0, 0.25, 1] as const;
 
-  /* Click riffle (request #2/#4): reaching the backside from Sec 04 riffles two
-     leaves over toward the back — the 005 leaf (Sec 04 → 005) leads and the
-     backside leaf follows a beat later, OVERLAPPING so a static Sec 05 spread is
-     never shown. Reversed on click-back: the backside leaf leads, the 005 leaf
-     follows. Gated on the click `showBack` round-trip (backOnTop) so plain
-     scroll flips and the entry/exit flash stay simultaneous. */
-  const riffle = !flashBack && page < 1 && (backShown || backOnTop);
-  // leaf2 = the 005/Sec-04 leaf, leaf3 = the backside leaf.
-  const leaf2Delay = riffle && !backShown ? turnDur * RIFFLE_STAGGER : 0; // reverse: follows leaf3
-  const leaf3Delay = riffle && backShown ? turnDur * RIFFLE_STAGGER : 0;  // forward: follows leaf2
+  /* Click riffle: reaching the backside riffles every still-front leaf over
+     toward the back in a cascade — leaf2 leads from Sec 04, then leaf3, then
+     the backside leaf — OVERLAPPING so no static intermediate spread is ever
+     shown. Reversed on click-back (the backside leaf leads and the others
+     follow, deepest first). Gated on the click round trip (leaf4OnTop) so
+     plain scroll flips and the entry/exit flash stay simultaneous. Each
+     leaf's delay = its cascade stage (forward) or maxStage − stage (reverse). */
+  const riffle = !flashBack && maxStage > 0 && (backShown || leaf4OnTop);
+  const leaf2Delay = riffle && !backShown ? turnDur * RIFFLE_STAGGER * maxStage : 0;
+  const leaf3Delay = riffle ? turnDur * RIFFLE_STAGGER * (backShown ? stage3 : maxStage - stage3) : 0;
+  const leaf4Delay = riffle && backShown ? turnDur * RIFFLE_STAGGER * stage4 : 0;
 
   const turnInstant = enteredUp && flashBack;
   const leaf2TurnT = turnInstant ? { duration: 0 } : { duration: turnDur, ease: turnEase, delay: leaf2Delay };
   const leaf3TurnT = turnInstant ? { duration: 0 } : { duration: turnDur, ease: turnEase, delay: leaf3Delay };
+  const leaf4TurnT = turnInstant ? { duration: 0 } : { duration: turnDur, ease: turnEase, delay: leaf4Delay };
 
   /* Mobile equivalents (single-page book, 0.9s turns). page1 = Sec-04 leaf,
-     page2 = roadmap/back leaf. Same overlapping riffle and up-entry instant. */
+     page2 = roadmap leaf, page3 = comms/back leaf. Same overlapping riffle
+     and up-entry instant. */
   const mTurnDur = 0.9;
-  const mPage1Delay = riffle && !backShown ? mTurnDur * RIFFLE_STAGGER : 0; // reverse: follows page2
-  const mPage2Delay = riffle && backShown ? mTurnDur * RIFFLE_STAGGER : 0;  // forward: follows page1
+  const mPage1Delay = riffle && !backShown ? mTurnDur * RIFFLE_STAGGER * maxStage : 0;
+  const mPage2Delay = riffle ? mTurnDur * RIFFLE_STAGGER * (backShown ? stage3 : maxStage - stage3) : 0;
+  const mPage3Delay = riffle && backShown ? mTurnDur * RIFFLE_STAGGER * stage4 : 0;
   const mInstant = enteredUp && flashBack;
   const mPage1TurnT = mInstant ? { duration: 0 } : { duration: mTurnDur, ease: turnEase, delay: mPage1Delay };
   const mPage2TurnT = mInstant ? { duration: 0 } : { duration: mTurnDur, ease: turnEase, delay: mPage2Delay };
+  const mPage3TurnT = mInstant ? { duration: 0 } : { duration: mTurnDur, ease: turnEase, delay: mPage3Delay };
 
   const mCoverAway = bookOpen;
   const mPage1Away = page >= 1 || backShown;
-  /* page1 + cover fold ~270° onto the back via useFoldLeaf: an animated rotateY
-     whose derived zIndex drops the leaf behind the back cover the exact frame it
-     crosses M_FOLD_BEHIND_DEG (no state-flip lag). page2 does NOT fold — it flips
-     in place to reveal its own backside (see the mobile page2 leaf). */
+  const mPage2Away = page >= 2 || backShown;
+  /* page1 + page2 + cover fold ~270° onto the back via useFoldLeaf: an animated
+     rotateY whose derived zIndex drops the leaf behind the back cover the exact
+     frame it crosses M_FOLD_BEHIND_DEG (no state-flip lag). page3 does NOT
+     fold — it flips in place to reveal its own backside (see the mobile page3
+     leaf). Rest order (topZ): cover 40 > page1 30 > page2 25 > page3 (z-20). */
   const mCoverTurnT = mInstant
     ? { duration: 0 }
     : mCoverAway
       ? { duration: 0.9, delay: innerDelay + 0.25, ease: [0.45, 0, 0.25, 1] as const }
       : { duration: 0.45, ease: 'easeIn' as const };
   const mPage1Fold = useFoldLeaf(mPage1Away, mPage1TurnT, 30, 0);
+  const mPage2Fold = useFoldLeaf(mPage2Away, mPage2TurnT, 25, 0.5);
   const mCoverFold = useFoldLeaf(mCoverAway, mCoverTurnT, 40, 1);
   /* Cover sinks under the stack once flat, and only pops back up when the book
      is fully closed AND gone (not merely mid-exit-flash). */
@@ -1530,36 +1660,64 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
                 are the same definite height (no content-driven resize). */}
             <div className="relative w-1/2 h-full" style={{ transformStyle: 'preserve-3d' }}>
 
-              {/* leaf3: front = roadmap right page; back = the book's backside.
-                  On backShown it turns over the spine and lands on the LEFT
-                  half (on top of the stack) displaying BackCoverDesign. Reaching
-                  the back from Sec 04 (page 0) is a two-stage riffle: leaf2 turns
-                  Sec 04 → 005 first (a real page-turn, identical to a scroll
-                  flip), then leaf3 turns 005 → back. Reversed on click-back. The
-                  leaf2/leaf3 delays (leaf3TurnT/leaf2TurnT) sequence the stages.
-                  Depth lives on the non-rotating wrapper (translateZ, lifted to
-                  the top via backOnTop) so culling stays correct and stacking
-                  holds through the turn. */}
-              <div className="absolute inset-0" style={{ transformStyle: 'preserve-3d', transform: tz(backOnTop ? Z_BACK_TOP : Z_LEAF3) }}>
+              {/* leaf4: front = comms right page (006); back = the book's
+                  backside. The deepest right leaf — it turns only for the
+                  backside. On backShown it turns over the spine and lands on
+                  the LEFT half (lifted to Z_BACK_TOP via leaf4OnTop so its back
+                  paints over every other turned leaf) displaying
+                  BackCoverDesign. Reaching the back riffles the still-front
+                  leaves first — see the stage delays (leaf2/3/4TurnT). Depth
+                  lives on the non-rotating wrapper (translateZ) so culling
+                  stays correct and stacking holds through the turn. */}
+              <div className="absolute inset-0" style={{ transformStyle: 'preserve-3d', transform: tz(leaf4OnTop ? Z_BACK_TOP : Z_LEAF4) }}>
               <motion.div
                 className="absolute inset-0"
                 style={{ transformOrigin: 'left center', transformStyle: 'preserve-3d' }}
                 initial={false}
                 animate={{ rotateY: backShown ? -180 : 0 }}
-                transition={leaf3TurnT}
-                onAnimationComplete={() => { if (!backShown) setBackOnTop(false); }}
+                transition={leaf4TurnT}
+                onAnimationComplete={() => { if (!backShown) setLeaf4OnTop(false); }}
               >
                 <div
                   className="absolute inset-0"
-                  style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: backShown ? 'none' : 'auto' }}
+                  style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: page >= 2 && !backShown ? 'auto' : 'none' }}
                 >
-                  <PageFace side="right" footer={<PageFooter left="Campaign Sequence ↗" right="004" />}>{roadmapRightContent}</PageFace>
+                  <PageFace side="right" footer={<PageFooter left="Comms Channels" right="006" />}>{commsRightContent}</PageFace>
                 </div>
                 <div
                   className="absolute inset-0"
                   style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: backShown ? 'auto' : 'none' }}
                 >
                   <BackCoverDesign />
+                </div>
+              </motion.div>
+              </div>
+
+              {/* leaf3: front = roadmap right page (004); back = comms left
+                  page (005). Turns for the scroll flip to the comms spread
+                  (page ≥ 2) AND on the way to the backside. Lifted to
+                  Z_LEAF3_TOP while turned so its back paints over leaf2's
+                  turned back (003) on the left half; dropped once fully home. */}
+              <div className="absolute inset-0" style={{ transformStyle: 'preserve-3d', transform: tz(leaf3OnTop ? Z_LEAF3_TOP : Z_LEAF3) }}>
+              <motion.div
+                className="absolute inset-0"
+                style={{ transformOrigin: 'left center', transformStyle: 'preserve-3d' }}
+                initial={false}
+                animate={{ rotateY: page >= 2 || backShown ? -180 : 0 }}
+                transition={leaf3TurnT}
+                onAnimationComplete={() => { if (!(page >= 2 || backShown)) setLeaf3OnTop(false); }}
+              >
+                <div
+                  className="absolute inset-0"
+                  style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: page >= 2 || backShown ? 'none' : 'auto' }}
+                >
+                  <PageFace side="right" footer={<PageFooter left="Campaign Sequence ↗" right="004" />}>{roadmapRightContent}</PageFace>
+                </div>
+                <div
+                  className="absolute inset-0"
+                  style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: page >= 2 && !backShown ? 'auto' : 'none' }}
+                >
+                  <PageFace side="left" footer={<PageFooter left="005" right="Rulebook" />}>{commsLeftContent}</PageFace>
                 </div>
               </motion.div>
               </div>
@@ -1598,7 +1756,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
                 </div>
                 <div
                   className="absolute inset-0"
-                  style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: page >= 1 && !backShown ? 'auto' : 'none' }}
+                  style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: page === 1 && !backShown ? 'auto' : 'none' }}
                 >
                   <PageFace side="left" footer={<PageFooter left="003" right="Rulebook" />}>{roadmapLeftContent}</PageFace>
                 </div>
@@ -1619,19 +1777,19 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
             />
           </div>
 
-          {/* Mobile — single-page book. page1 + cover fold ~270° onto the back
-              (M_FOLD_DEG). Showing the backside is different: page2 (005) flips
-              180° over its left edge to reveal its OWN back face (the info
-              buttons) while this whole container slides one page-width LEFT,
-              bringing the flipped backside (which lands one page-width right of
-              its hinge) into frame. The slide uses page2's turn transition so
-              they stay in sync. */}
+          {/* Mobile — single-page book. page1, page2 + cover fold ~270° onto
+              the back (M_FOLD_DEG). Showing the backside is different: page3
+              (comms) flips 180° over its left edge to reveal its OWN back face
+              (the info buttons) while this whole container slides one
+              page-width LEFT, bringing the flipped backside (which lands one
+              page-width right of its hinge) into frame. The slide uses page3's
+              turn transition so they stay in sync. */}
           <motion.div
             className="lg:hidden relative h-full"
             style={{ perspective: 1600 }}
             initial={false}
             animate={{ x: backShown ? '-100%' : '0%' }}
-            transition={mPage2TurnT}
+            transition={mPage3TurnT}
           >
 
             {/* page1 — wheel + clauses. Folds away with a near-full spin onto the
@@ -1703,29 +1861,20 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
               </div>
             </motion.div>
 
-            {/* page2 — Campaign Sequence roadmap (front) + the book's backside
-                with the info buttons (back). Two-faced: showing the backside
-                flips this leaf 180° over its LEFT edge (the left edge is the one
-                that lifts and crosses → hinge on the RIGHT, rotate -180) while
-                the whole mobile book slides one page-width LEFT, bringing the
-                flipped backside (which lands one page-width right of its hinge)
-                into frame. Reverse mirrors it. */}
+            {/* page2 — Campaign Sequence roadmap. Folds away like page1
+                (~270° onto the back) once the scroll moves past it (page ≥ 2)
+                or the backside shows; rests behind the book at z 0.5. */}
             <motion.div
-              className="absolute inset-0 z-20"
+              className="absolute inset-0"
               style={{
-                transformOrigin: 'right center',
+                transformOrigin: 'left center',
                 transformStyle: 'preserve-3d',
-                pointerEvents: page >= 1 ? 'auto' : 'none',
+                rotateY: mPage2Fold.rotateY,
+                zIndex: mPage2Fold.zIndex,
+                pointerEvents: mPage2Away ? 'none' : 'auto',
               }}
-              initial={false}
-              animate={{ rotateY: backShown ? -180 : 0 }}
-              transition={mPage2TurnT}
             >
-              {/* Front face — Sec 05 roadmap */}
-              <div
-                className="absolute inset-0 h-full flex flex-col rounded-md overflow-hidden"
-                style={{ ...goldFrame('var(--color-card)', '3px'), backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
-              >
+              <div className="absolute inset-0 h-full flex flex-col rounded-md overflow-hidden" style={goldFrame('var(--color-card)', '3px')}>
                 <div className="relative flex-1 flex flex-col p-4 pb-1.5">
                   <div className="relative flex-1 rounded-sm border overflow-hidden flex flex-col" style={{ borderColor: 'rgba(212, 175, 55, 0.3)' }}>
                     {cornerBrackets}
@@ -1737,6 +1886,44 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
                 <div className="flex justify-between items-center px-4 pb-2.5 pt-1.5 text-[14px] font-mono opacity-80" style={{ color: 'var(--color-text2)' }}>
                   <span>Campaign Sequence ↗</span>
                   <span>002</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* page3 — Comms Channels (front) + the book's backside with the
+                info buttons (back). Two-faced: showing the backside flips this
+                leaf 180° over its LEFT edge (the left edge is the one that
+                lifts and crosses → hinge on the RIGHT, rotate -180) while the
+                whole mobile book slides one page-width LEFT, bringing the
+                flipped backside (which lands one page-width right of its
+                hinge) into frame. Reverse mirrors it. */}
+            <motion.div
+              className="absolute inset-0 z-20"
+              style={{
+                transformOrigin: 'right center',
+                transformStyle: 'preserve-3d',
+                pointerEvents: page >= 2 ? 'auto' : 'none',
+              }}
+              initial={false}
+              animate={{ rotateY: backShown ? -180 : 0 }}
+              transition={mPage3TurnT}
+            >
+              {/* Front face — Sec 06 comms */}
+              <div
+                className="absolute inset-0 h-full flex flex-col rounded-md overflow-hidden"
+                style={{ ...goldFrame('var(--color-card)', '3px'), backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+              >
+                <div className="relative flex-1 flex flex-col p-4 pb-1.5">
+                  <div className="relative flex-1 rounded-sm border overflow-hidden flex flex-col" style={{ borderColor: 'rgba(212, 175, 55, 0.3)' }}>
+                    {cornerBrackets}
+                    <div className="relative flex flex-col flex-1 p-5">
+                      {commsMobileContent}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center px-4 pb-2.5 pt-1.5 text-[14px] font-mono opacity-80" style={{ color: 'var(--color-text2)' }}>
+                  <span>Comms Channels</span>
+                  <span>003</span>
                 </div>
               </div>
               {/* Back face — the book's backside with the info buttons */}

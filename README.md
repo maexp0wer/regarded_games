@@ -1,6 +1,7 @@
 # Regarded Games
 
-A perfect-information strategy game with real-money stakes on Base, where collective
+Regarded Games runs Class War: The Game — class war fought as a
+perfect-information strategy game with real-money stakes on Base, where collective
 action battles economic power. Players trade **FIM** tokens in a seasonal on-chain
 exchange/auction and are split into two factions by the live **Masses / Oligarchy
 boundary** — the supply-share (Lorenz) cut at 50% of total FIM *supply*:

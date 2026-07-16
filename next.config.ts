@@ -4,6 +4,13 @@ import { securityHeaders } from "./src/lib/securityHeaders";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
+  // The apex /faq page reads the single-source FAQ markdown (shared with the
+  // docs site) from disk at build time — make sure the file is traced into
+  // the route's serverless bundle on Vercel.
+  outputFileTracingIncludes: {
+    '/main/faq': ['./content/docs/faq.mdx'],
+  },
+
   // Security headers (S10) — enforced CSP + baseline hardening on every route.
   // See src/lib/securityHeaders.ts for the policy and the Report-Only escape hatch.
   async headers() {

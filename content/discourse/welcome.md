@@ -4,7 +4,7 @@ categorySlug: "general"
 pinned: "true"
 ---
 
-Welcome! This is the community forum for Regarded Games — the perfect-information strategy game with real-money stakes on Base.
+Welcome! This is the community forum for Regarded Games, which runs Class War: The Game — class war fought as a perfect-information strategy game with real-money stakes on Base.
 
 This is a place for players to discuss strategy, coordinate with their faction, follow governance votes, and get help. A few things to get you started:
 

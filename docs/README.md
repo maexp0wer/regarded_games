@@ -26,6 +26,22 @@ This command generates static content into the `build` directory and can be serv
 
 ## Deployment
 
+This site deploys as its **own Vercel project** at `docs.<domain>` — separate
+from the Next.js app, so it does **not** inherit the app's environment. You
+**must** set one env var in the docs project's dashboard (Production + Preview):
+
+```
+NEXT_PUBLIC_MAIN_DOMAIN = https://regarded.games
+```
+
+From it the config derives the navbar links (App → `https://app.<domain>`,
+Project → `https://<domain>`) and the docs canonical URL. If it is unset, a
+production build **fails** rather than silently shipping `localhost` links (see
+`docusaurus.config.ts`). Local `yarn start` / `yarn build` without the var keep
+the `localhost` fallbacks.
+
+### GitHub Pages
+
 Using SSH:
 
 ```bash

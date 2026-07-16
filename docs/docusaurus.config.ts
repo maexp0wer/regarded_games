@@ -10,7 +10,14 @@ generateWhitepaperPages();
 
 // Navbar external targets. "App" links to the running game app (the `app.`
 // subdomain locally, the deployed app in production); "Project" links to the
-// project/landing site (the bare Next.js root). Override via env in prod.
+// project/landing site (the bare Next.js root).
+//
+// The docs deploy is a SEPARATE Vercel project (docs.<domain>), so it does NOT
+// inherit the app's env. NEXT_PUBLIC_MAIN_DOMAIN must be set in that project's
+// dashboard (e.g. https://regarded.games) or every App/Project/canonical link
+// silently falls back to localhost in production. To stop that shipping
+// unnoticed, a production build with the var unset fails hard below.
+//
 // NEXT_PUBLIC_MAIN_DOMAIN is authored as a full URL (see ../.env.example), so
 // normalize to a bare host before deriving subdomain URLs — without this the
 // prod canonical would read "https://docs.https://regarded.games".
@@ -18,12 +25,24 @@ const MAIN_DOMAIN =
   (process.env.NEXT_PUBLIC_MAIN_DOMAIN ?? '')
     .replace(/^https?:\/\//, '')
     .replace(/\/.*$/, '') || undefined;
+
+// A `docusaurus build` (production output) with no domain would bake localhost
+// links into the deployed site. Fail loudly instead of shipping them. `start`
+// (local dev) and any localhost value stay on the fallbacks below.
+if (!MAIN_DOMAIN && process.env.NODE_ENV === 'production') {
+  throw new Error(
+    'NEXT_PUBLIC_MAIN_DOMAIN is not set for this docs build. Set it in the docs ' +
+      'Vercel project (e.g. https://regarded.games) — otherwise the App/Project ' +
+      'navbar links and the canonical URL fall back to localhost.',
+  );
+}
+
 const APP_URL = MAIN_DOMAIN ? `https://app.${MAIN_DOMAIN}` : 'http://app.localhost:3000';
 const PROJECT_URL = MAIN_DOMAIN ? `https://${MAIN_DOMAIN}` : 'http://localhost:3000';
 
 const config: Config = {
   title: 'Regarded Games',
-  tagline: 'Perfect-information strategy game with real-money stakes on Base',
+  tagline: 'Class War: The Game — class war fought as a perfect-information strategy game with real-money stakes on Base',
   favicon: 'img/Regardo_Head.svg',
 
   future: {
@@ -98,7 +117,8 @@ const config: Config = {
 
   // Entity identity for the docs origin. Kept in sync by hand with
   // src/config/seo.ts (the Next app's SEO source of truth) — the two projects
-  // don't share a module graph. sameAs profiles: fill alongside seo.ts.
+  // don't share a module graph. sameAs profiles: mirror src/config/socials.ts
+  // once the channel URLs are filled in.
   headTags: [
     {
       tagName: 'script',
@@ -119,8 +139,9 @@ const config: Config = {
       {
         name: 'description',
         content:
-          'Player documentation and the complete whitepaper for Regarded Games — ' +
-          'the perfect-information strategy game with real-money stakes on Base.',
+          'Player documentation and the complete whitepaper for Regarded Games, ' +
+          'which runs Class War: The Game — class war fought as a ' +
+          'perfect-information strategy game with real-money stakes on Base.',
       },
       {property: 'og:site_name', content: 'Regarded Games'},
     ],

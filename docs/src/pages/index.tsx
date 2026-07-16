@@ -24,6 +24,11 @@ const CARDS: DocCard[] = [
     to:    '/getting-started',
   },
   {
+    title: 'FAQ',
+    body:  'Straight answers about the game, the money, and the rules — is it gambling, what can you lose, and how payouts work.',
+    to:    '/faq',
+  },
+  {
     title: 'Whitepaper',
     body:  'The full philosophical, economic, and technical specification behind the project.',
     to:    '/whitepaper',

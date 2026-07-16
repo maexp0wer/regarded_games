@@ -6,9 +6,11 @@ of truth is `src/config/seo.ts`.
 
 ## Now (pre-launch)
 
-- [ ] **Fill in `SOCIAL_PROFILES`** in `src/config/seo.ts` (X, public GitHub,
-      Discord/Telegram URLs). Empty entries are omitted from the JSON-LD
-      `sameAs` array, so the entity currently has no corroborating profiles.
+- [ ] **Fill in `SOCIAL_CHANNELS`** in `src/config/socials.ts` (X, public
+      GitHub, Discord/Telegram URLs). This single list feeds both the landing
+      Rulebook's "Comms Channels" pages (empty href renders "Coming Soon") and
+      the JSON-LD `sameAs` array (empty hrefs omitted), so the entity
+      currently has no corroborating profiles.
 - [ ] **Mirror the same profiles** into the hand-duplicated Organization
       JSON-LD in `docs/docusaurus.config.ts` (`headTags`) — the two projects
       don't share a module graph, sync is manual.

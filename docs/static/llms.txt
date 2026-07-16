@@ -1,10 +1,11 @@
 # Regarded Games — Documentation
 
-> Player documentation and the complete whitepaper for Regarded Games, the
-> perfect-information strategy game with real-money stakes on Base. Players
-> stake $RGD, acquire FIM in a seasonal on-chain auction, and trade it on an
-> open exchange; the final wealth distribution decides whether the Capitalist
-> or the Proletarian side takes the prize pool.
+> Player documentation and the complete whitepaper for Regarded Games, which
+> runs Class War: The Game — class war fought as a perfect-information strategy
+> game with real-money stakes on Base. Players stake $RGD, acquire FIM in a
+> seasonal on-chain auction, and trade it on an open exchange; the final wealth
+> distribution decides whether the Capitalist or the Proletarian side takes the
+> prize pool.
 
 ## Docs
 

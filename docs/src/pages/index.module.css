@@ -108,10 +108,19 @@
 
 .cardsGrid {
   display:        grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap:            1.25rem;
-  max-width:      1040px;
+  max-width:      1180px;
   margin:         0 auto;
+}
+
+/* Four cards don't fit mid-width viewports — fold to a balanced 2×2 before
+   the single-column mobile breakpoint below. 996px = Docusaurus's own
+   desktop/mobile switch. */
+@media (max-width: 996px) {
+  .cardsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* Flat card that lifts on hover — no colored left accent bar. */

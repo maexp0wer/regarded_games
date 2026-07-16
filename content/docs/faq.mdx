@@ -1,0 +1,107 @@
+---
+title: FAQ
+slug: faq
+sidebar_position: 9
+description: Straight answers about Regarded Games — what it is, how seasons and payouts work, whether it is gambling, and what players can win or lose.
+---
+
+{/* SINGLE SOURCE for the FAQ — this file feeds two surfaces:
+    1. This docs page (the user-facing FAQ).
+    2. The SEO/GEO-canonical page at regarded.games/faq: src/app/main/faq/
+       page.tsx parses this file at build time and emits FAQPage JSON-LD from
+       the same text (parser: src/utils/faq.ts).
+    AUTHORING RULES: every question is an H2 (##); the plain paragraphs
+    beneath it are the answer. No lists, tables, images, or code blocks inside
+    answers — the JSON-LD must mirror the rendered text word for word.
+    The canonical link below points search engines at the apex copy; do not
+    remove it, or the two origins will compete for the same queries. */}
+
+<head>
+  <link rel="canonical" href="https://regarded.games/faq" />
+</head>
+
+# FAQ
+
+Straight answers about the game, the money, and the rules. The full
+specification lives in the [whitepaper](/whitepaper).
+
+## What is Regarded Games?
+
+Regarded Games runs Class War: The Game — class war fought as a
+perfect-information strategy game with real-money stakes, played on the
+Base blockchain. Two classes — the few Capitalists who hold half the
+game economy's wealth and the Proletarian majority who hold the rest —
+fight over the wealth distribution itself. Each season is one such game:
+players stake $RGD (the Regarded Token), acquire FIM — the seasonal game
+token — in an on-chain auction, and trade it on an open exchange where
+every balance and every order is public. Whether wealth ends up more
+concentrated or more evenly spread than it started decides which class
+wins the season.
+
+## How does a season work?
+
+A season moves through phases: an opening auction where players acquire
+FIM, an open trading phase on the exchange, and settlement. At
+settlement the final distribution of FIM is measured against the
+starting distribution. After a review window, payouts open and players
+claim their share of the prize pool in USDC.
+
+## What are the two classes?
+
+Every player belongs to one of two classes based on their FIM balance.
+Sort all holders from poorest to richest: the largest group of poorest
+holders whose balances together stay at or below 50% of the total FIM
+supply are the Proletarians (the Masses); everyone above that cut is a
+Capitalist (the Oligarchy). The boundary is a share-of-supply cut, not
+a headcount split — typically far more than half of all players are
+Proletarians. Your class can change live as balances move.
+
+## How are winners decided and payouts calculated?
+
+Settlement compares wealth concentration (the Gini coefficient of FIM
+holdings) at the end of the season against the start. If concentration
+increased, the Capitalist class wins; if it decreased, the Proletariat
+wins; if it is unchanged, the season is a draw and every eligible
+player gets a holdings-proportional share back. The winning side
+splits the winner share of the pool, weighted by how far the
+distribution actually moved.
+
+## Is Regarded Games gambling?
+
+No element of the game is random. It is a perfect-information game:
+every balance, every order, and the live class boundary are public
+on-chain, and the outcome is determined entirely by the trades players
+choose to make. There is no house taking the other side of your bets.
+That said, the stakes are real money — you should only ever play with
+funds you can afford to lose.
+
+## What can I lose — and what happens to my staked $RGD?
+
+You can lose some or all of the USDC you spend acquiring FIM,
+depending on how the season settles. Staked $RGD is different: a
+portion is locked as collateral while you hold FIM, but it is never
+burned or slashed — it is released back to you when you claim after
+the season. FIM itself is a seasonal token with no value once the
+season ends. Claim your payout within a year of distribution opening;
+after that, unclaimed prize funds may be swept.
+
+## What chain does it run on, and can I verify the rules?
+
+The game runs on Base, an Ethereum layer-2. All game contracts live
+on-chain where anyone can verify them, and the complete mechanics —
+auction, exchange, class boundary, settlement math, and the review
+process — are specified in the public whitepaper.
+
+## What are $RGD and FIM?
+
+$RGD, the Regarded Token, is the persistent token of the project: you
+stake it to take part, and staked $RGD acts as collateral while you
+hold FIM. FIM is the in-game token of a single season — it is what you
+auction for, trade, and measure class membership by, and it carries no
+value after the season settles.
+
+## When can I play?
+
+Seasons are announced on regarded.games and in the community. If the
+app is gated, the next season has not opened yet — read the whitepaper
+and join the community to be ready when the auction starts.

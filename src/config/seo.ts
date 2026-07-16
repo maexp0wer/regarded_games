@@ -3,6 +3,8 @@
    the entity presents ONE consistent identity to search and generative
    engines. See CONTEXT.md: "Entity (the brand, for search)" and "GEO". */
 
+import { SOCIAL_CHANNELS } from './socials';
+
 export const SITE_NAME = 'Regarded Games';
 
 export const SITE_TAGLINE = 'Economic Warfare — Fought on Chain';
@@ -11,10 +13,11 @@ export const SITE_TAGLINE = 'Economic Warfare — Fought on Chain';
    be quoted verbatim by answer engines: entity name first, category second,
    mechanics third. Faction naming follows CONTEXT.md canon. */
 export const SITE_DESCRIPTION =
-  'Regarded Games is a perfect-information strategy game with real-money ' +
-  'stakes on Base. Players stake $RGD, acquire FIM in a seasonal on-chain ' +
-  'auction, and trade it on an open exchange — the final wealth distribution ' +
-  'decides whether the Capitalist or the Proletarian side takes the prize pool.';
+  'Regarded Games runs Class War: The Game — class war fought as a ' +
+  'perfect-information strategy game with real-money stakes on Base. Players ' +
+  'stake $RGD, acquire FIM in a seasonal on-chain auction, and trade it on an ' +
+  'open exchange — the final wealth distribution decides whether the ' +
+  'Capitalist or the Proletarian side takes the prize pool.';
 
 /* NEXT_PUBLIC_MAIN_DOMAIN is authored as a full URL (see middleware.ts).
    Normalize to an origin; fall back to the production domain so metadata is
@@ -24,17 +27,11 @@ export const SITE_ORIGIN = (/^https?:\/\//.test(rawDomain) ? rawDomain : `https:
   .replace(/\/+$/, '');
 export const DOCS_ORIGIN = SITE_ORIGIN.replace('://', '://docs.');
 
-/* Official profiles for the JSON-LD sameAs array (entity corroboration:
-   independent surfaces that repeat the same name + description).
-   TODO(launch): fill in the real URLs — empty entries are omitted. */
-export const SOCIAL_PROFILES = {
-  x: '', // e.g. 'https://x.com/<handle>'
-  github: '', // public org or repo URL
-  discord: '', // permanent invite URL
-  telegram: '',
-};
-
-const sameAs = Object.values(SOCIAL_PROFILES).filter(Boolean);
+/* Entity corroboration: the JSON-LD sameAs array derives from the official
+   channel list in src/config/socials.ts (single source shared with the
+   landing Rulebook's Comms Channels pages). Empty hrefs (pre-launch) are
+   omitted. */
+const sameAs = SOCIAL_CHANNELS.map((c) => c.href).filter(Boolean);
 
 const ORG_ID = `${SITE_ORIGIN}/#organization`;
 
