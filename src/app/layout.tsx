@@ -82,6 +82,11 @@ export default async function RootLayout({
   const cookie = h.get('cookie');
   const initialState = cookieToInitialState(config, cookie);
 
+  // Per-request CSP nonce set by middleware (L6). Stamped on our inline theme
+  // script so it's already trusted under the strict Report-Only policy — and
+  // under the enforced policy once we flip it on.
+  const nonce = h.get('x-nonce') ?? undefined;
+
   const tenantHeader = h.get('x-tenant') as TenantKey | null;
   const initialChainId =
     tenantHeader === 'mainnet' || tenantHeader === 'sepolia'
@@ -91,7 +96,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${orbitron.variable} ${exo2.variable} ${spaceGrotesk.variable} ${azeretMono.variable}`}>
-        <script dangerouslySetInnerHTML={{ __html: blockingThemeScript }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: blockingThemeScript }} />
 
         <Providers initialState={initialState} initialChainId={initialChainId}>
           {children}

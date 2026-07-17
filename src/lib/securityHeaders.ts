@@ -28,7 +28,21 @@ function originOf(url: string | undefined): string | null {
   }
 }
 
-function buildCsp(isDev: boolean): string {
+/**
+ * Build the CSP string.
+ *
+ * - `nonce` omitted → the pragmatic *enforced* policy: keeps 'unsafe-inline' /
+ *   'unsafe-eval' on script-src (required by Next hydration + web3 libs). This is
+ *   what next.config.ts ships on every route today.
+ * - `nonce` provided → the *strict* policy used for the Report-Only rollout
+ *   (L6): script-src drops 'unsafe-inline'/'unsafe-eval' and trusts only the
+ *   per-request nonce (+ 'strict-dynamic' so nonced scripts may load chunks, +
+ *   'wasm-unsafe-eval' so web3 WASM still compiles without full eval). style-src
+ *   keeps 'unsafe-inline' deliberately: RainbowKit/wagmi inject styles at runtime
+ *   which can't be nonced, and inline *styles* can't execute JS — the XSS win is
+ *   on script-src. See middleware.ts for how the nonce is minted and reported.
+ */
+export function buildCsp(isDev: boolean, nonce?: string): string {
   const discourse = originOf(process.env.NEXT_PUBLIC_DISCOURSE_URL);
   const ponderMainnet = originOf(process.env.NEXT_PUBLIC_PONDER_URL_MAINNET);
   const ponderSepolia = originOf(process.env.NEXT_PUBLIC_PONDER_URL_SEPOLIA);
@@ -67,13 +81,18 @@ function buildCsp(isDev: boolean): string {
   // (covered by `https:`), in dev they come from http://community.localhost.
   const imgSrc = ["'self'", 'data:', 'blob:', 'https:', ...(isDev ? ['http://*.localhost:*', 'http://localhost:*'] : [])];
 
+  // Strict (nonce present) vs. pragmatic (nonce absent) script-src.
+  const scriptSrc = nonce
+    ? ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", "'wasm-unsafe-eval'", 'blob:']
+    : ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'blob:'];
+
   const directives: Record<string, string[]> = {
     'default-src': ["'self'"],
     'base-uri': ["'self'"],
     'object-src': ["'none'"],
     'frame-ancestors': ["'self'"],
     'form-action': ["'self'", ...(discourse ? [discourse] : [])],
-    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'blob:'],
+    'script-src': scriptSrc,
     'style-src': ["'self'", "'unsafe-inline'"],
     'img-src': imgSrc,
     'font-src': ["'self'", 'data:'],

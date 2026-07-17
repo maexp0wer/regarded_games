@@ -1,9 +1,19 @@
 // src/middleware.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { buildCsp } from '@/lib/securityHeaders';
 
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico|Regardo_Head.svg).*)'],
 };
+
+/* Per-request CSP nonce (Web Crypto — Edge-safe; no Buffer). */
+function generateNonce(): string {
+  const arr = new Uint8Array(16);
+  crypto.getRandomValues(arr);
+  let bin = '';
+  for (const b of arr) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
 
 /* NEXT_PUBLIC_MAIN_DOMAIN is authored as a full URL (e.g. https://regarded.games)
    because most call sites need the protocol (DOCS_URL derivation, auth redirects,
@@ -32,6 +42,23 @@ export function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const hostname = req.headers.get('host')!;
   const path = url.pathname;
+
+  /* CSP nonce rollout (L6): mint a nonce, forward it to the app on x-nonce so the
+     root layout can stamp inline scripts, and publish a *Report-Only* strict CSP
+     so the browser reports — but never blocks — what a nonce-based policy would
+     reject. Enforcement stays the pragmatic policy in next.config.ts until the
+     wallet-connect flow is validated with zero report-only violations. Applied
+     only to the HTML page rewrites below (the ones rendered by the root layout);
+     redirects and the SEO-file passthroughs don't render scripts. */
+  const isDev = process.env.NODE_ENV !== 'production';
+  const nonce = generateNonce();
+  const forward = { request: { headers: new Headers(req.headers) } };
+  forward.request.headers.set('x-nonce', nonce);
+  const cspReportOnly = buildCsp(isDev, nonce);
+  const withReport = (res: NextResponse): NextResponse => {
+    res.headers.set('Content-Security-Policy-Report-Only', cspReportOnly);
+    return res;
+  };
 
   // 1. DOCS SUBDOMAIN (dev only) — docs.localhost:3000 routes through the
   // /docsproxy rewrite to the local Docusaurus server on :3001. In production
@@ -76,11 +103,11 @@ export function middleware(req: NextRequest) {
        pointed at Sepolia. Header applies to the gated coming-soon rewrite too;
        /robots.txt (handled above) additionally serves Disallow for this host. */
     if (!TESTNET_APP_LIVE) {
-      const res = NextResponse.rewrite(new URL('/coming-soon', req.url));
+      const res = withReport(NextResponse.rewrite(new URL('/coming-soon', req.url), forward));
       res.headers.set('X-Robots-Tag', 'noindex, nofollow');
       return res;
     }
-    const res = NextResponse.rewrite(new URL(`/app${path}`, req.url));
+    const res = withReport(NextResponse.rewrite(new URL(`/app${path}`, req.url), forward));
     res.headers.set('x-tenant', 'sepolia');
     res.headers.set('x-app-path', path);
     res.headers.set('X-Robots-Tag', 'noindex, nofollow');
@@ -90,9 +117,9 @@ export function middleware(req: NextRequest) {
   // 3. APP SUBDOMAIN (mainnet tenant) — app.localhost:3000 OR app.yourdomain.com
   if (hostname === `app.${PROD_ROOT_DOMAIN}` || hostname === `app.${DEV_ROOT_DOMAIN}`) {
     if (!APP_LIVE) {
-      return NextResponse.rewrite(new URL('/coming-soon', req.url));
+      return withReport(NextResponse.rewrite(new URL('/coming-soon', req.url), forward));
     }
-    const res = NextResponse.rewrite(new URL(`/app${path}`, req.url));
+    const res = withReport(NextResponse.rewrite(new URL(`/app${path}`, req.url), forward));
     res.headers.set('x-tenant', 'mainnet');
     res.headers.set('x-app-path', path);
     return res;
@@ -103,7 +130,7 @@ export function middleware(req: NextRequest) {
     if (path.startsWith('/docs')) {
       return NextResponse.next();
     }
-    return NextResponse.rewrite(new URL(`/main${path}`, req.url));
+    return withReport(NextResponse.rewrite(new URL(`/main${path}`, req.url), forward));
   }
 
   return NextResponse.next();
