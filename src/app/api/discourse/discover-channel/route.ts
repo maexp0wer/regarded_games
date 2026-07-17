@@ -4,8 +4,10 @@ import { tenantFromRequest } from '@/lib/tenant.server';
 import { getTenant, type TenantKey } from '@/config/tenants';
 import { discourseNames } from '@/utils/discourseNames';
 import { getCommunitySession } from '@/lib/communitySession';
+import { sameOriginOk } from '@/lib/rateLimit';
 
 export async function POST(req: Request) {
+  if (!sameOriginOk(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   // Require a verified session and enumerate channels AS the user, so Discourse
   // only surfaces channels this wallet may access. The client's `isCapitalist`
   // hint merely picks which title to look for; it can no longer grant access to

@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
-import { verifyMessage } from 'viem';
-import { Pool } from 'pg';
-
-// Initialize the database pool
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-});
+import { isAddress, verifyMessage } from 'viem';
+import { query } from '@/lib/db';
+import {
+  buildProfileMessage,
+  isValidProfileImageUrl,
+  isValidProfileName,
+  PROFILE_FRESHNESS_MS,
+} from '@/utils/profileMessage';
+import { checkRateLimit, tooManyRequests } from '@/lib/rateLimit';
 
 /**
  * GET: Fetch profile data
@@ -26,7 +28,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ profiles: {} });
       }
 
-      const result = await pool.query(
+      const result = await query(
         'SELECT address, name, image_url FROM player_profiles WHERE address = ANY($1::text[])',
         [addresses]
       );
@@ -44,7 +46,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Address required' }, { status: 400 });
     }
 
-    const result = await pool.query(
+    const result = await query(
       'SELECT name, image_url FROM player_profiles WHERE address = $1',
       [address]
     );
@@ -65,17 +67,39 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { address, name, imageUrl, signature } = body;
+    const rl = checkRateLimit(request, { bucket: 'profile-write', limit: 10, windowMs: 60_000 });
+    if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
 
-    if (!address || !signature) {
+    const body = await request.json();
+    const { address, name, imageUrl, issuedAt, signature } = body;
+
+    if (!address || !signature || typeof address !== 'string') {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
+    if (!isAddress(address, { strict: false })) {
+      return NextResponse.json({ error: 'Invalid address' }, { status: 400 });
+    }
 
-    // Must match the frontend string exactly
-    const cleanName = name || '';
-    const cleanImage = imageUrl || '';
-    const message = `Update profile: ${cleanName} ${cleanImage}`;
+    const cleanName = typeof name === 'string' ? name : '';
+    const cleanImage = typeof imageUrl === 'string' ? imageUrl : '';
+
+    // Reject oversized names and any non-https / internal-host image URL. The
+    // stored image_url is later handed to Discourse's server-side avatar fetcher,
+    // so an unvalidated URL is an SSRF vector (see utils/profileMessage.ts).
+    if (!isValidProfileName(cleanName)) {
+      return NextResponse.json({ error: 'Name too long' }, { status: 400 });
+    }
+    if (!isValidProfileImageUrl(cleanImage)) {
+      return NextResponse.json({ error: 'Image URL must be an https link to a public host' }, { status: 400 });
+    }
+
+    // Signature must be fresh — the signed message carries a timestamp so a
+    // captured signature can't be replayed indefinitely.
+    if (typeof issuedAt !== 'number' || Math.abs(Date.now() - issuedAt) > PROFILE_FRESHNESS_MS) {
+      return NextResponse.json({ error: 'Signature expired' }, { status: 401 });
+    }
+
+    const message = buildProfileMessage(address, cleanName, cleanImage, issuedAt);
 
     // Verify the signature
     const isValid = await verifyMessage({
@@ -89,10 +113,10 @@ export async function POST(request: Request) {
     }
 
     // Upsert into Database
-    await pool.query(
+    await query(
       `INSERT INTO player_profiles (address, name, image_url, updated_at)
        VALUES ($1, $2, $3, NOW())
-       ON CONFLICT (address) 
+       ON CONFLICT (address)
        DO UPDATE SET name = $2, image_url = $3, updated_at = NOW()`,
       [address.toLowerCase(), cleanName, cleanImage]
     );

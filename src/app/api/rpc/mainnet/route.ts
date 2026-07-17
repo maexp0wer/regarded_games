@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit, tooManyRequests, sameOriginOk } from '@/lib/rateLimit';
 
 const ALLOWED_METHODS = new Set([
   'eth_call',
@@ -31,6 +32,15 @@ export async function POST(req: NextRequest) {
   if (!apiKey) {
     return NextResponse.json({ error: 'ALCHEMY_API_KEY not configured' }, { status: 500 });
   }
+
+  // This proxy spends our Alchemy quota, so it is a same-origin, rate-limited
+  // resource — not an open relay. A drive-by loop from another origin (foreign
+  // Origin header) is rejected outright; header-less clients are throttled by IP.
+  if (!sameOriginOk(req)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  const rl = checkRateLimit(req, { bucket: 'rpc', limit: 120, windowMs: 60_000 });
+  if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
 
   try {
     const body = await req.json();

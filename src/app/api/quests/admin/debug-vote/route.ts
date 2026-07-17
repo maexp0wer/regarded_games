@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
+import { isValidAdminToken } from '@/lib/adminAuth';
 import { query } from '@/lib/db';
 
 // GET /api/quests/admin/debug-vote?address=0x...
 // Dumps every step the vote-detection logic does so you can see which piece is wrong.
 export async function GET(req: Request) {
-  const adminToken = req.headers.get('x-quests-admin-token');
-  if (!adminToken || adminToken !== process.env.DISCOURSE_INIT_SECRET) {
+  if (!isValidAdminToken(req.headers.get('x-quests-admin-token'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

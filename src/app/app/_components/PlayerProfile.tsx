@@ -9,6 +9,7 @@ import ERC20AbiRaw from '@/deployments/abis/FakeUSDC.json';
 import StakingAbiRaw from '@/deployments/abis/Staking.json';
 import type { Abi } from 'abitype';
 import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
+import { buildProfileMessage } from '@/utils/profileMessage';
 import { useLifetimeStats } from '@/hooks/useLifetimeStats';
 import { usePlayerRank } from '@/hooks/usePlayerRank';
 import { useRgdPrice } from '@/hooks/useRgdPrice';
@@ -126,12 +127,15 @@ export function PlayerProfile({ profileAddress }: PlayerProfileProps) {
     if (!isOwner || !profileAddress) return;
     setIsSaving(true);
     try {
-      const message = `Update profile: ${profile.name || ''} ${profile.imageUrl || ''}`;
+      const name = profile.name || '';
+      const imageUrl = profile.imageUrl || '';
+      const issuedAt = Date.now();
+      const message = buildProfileMessage(profileAddress, name, imageUrl, issuedAt);
       const signature = await signMessageAsync({ message });
       const res = await fetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: profileAddress, name: profile.name || '', imageUrl: profile.imageUrl || '', signature }),
+        body: JSON.stringify({ address: profileAddress, name, imageUrl, issuedAt, signature }),
       });
       if (res.ok) setIsEditing(false);
       else alert(`Failed: ${await res.text()}`);

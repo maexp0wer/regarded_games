@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ssoSync } from '@/lib/discourseSSO';
+import { getCommunitySession } from '@/lib/communitySession';
+import { sameOriginOk } from '@/lib/rateLimit';
 
 const debug = process.env.APP_DEBUG === 'true';
 
@@ -21,11 +23,24 @@ const debug = process.env.APP_DEBUG === 'true';
  * Username == lowercased wallet == DiscourseConnect external_id.
  */
 export async function POST(req: Request) {
+  if (!sameOriginOk(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   try {
-    const { wallet, action } = await req.json();
-    if (!wallet || typeof wallet !== 'string') {
-      return NextResponse.json({ error: 'wallet required' }, { status: 400 });
+    // Identity is the VERIFIED session, not the body. Provisioning (`login`) and
+    // session teardown (`logout`) are privileged Discourse actions; trusting a
+    // body-supplied wallet let anyone force-log-out or provision arbitrary
+    // accounts. On a wallet switch/disconnect the caller still holds the previous
+    // wallet's session cookie (the teardown fetch and the cookie-clear fire in the
+    // same tick), so the target resolves to that wallet as intended.
+    const sessionWallet = getCommunitySession(req);
+    if (!sessionWallet) {
+      return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
     }
+
+    const { wallet: bodyWallet, action } = await req.json();
+    if (bodyWallet && typeof bodyWallet === 'string' && bodyWallet.toLowerCase() !== sessionWallet) {
+      return NextResponse.json({ error: 'wallet mismatch' }, { status: 403 });
+    }
+    const wallet = sessionWallet;
     const act: 'login' | 'logout' = action === 'login' ? 'login' : 'logout';
 
     const url = process.env.NEXT_PUBLIC_DISCOURSE_URL;

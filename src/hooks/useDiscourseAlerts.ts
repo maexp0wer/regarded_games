@@ -12,7 +12,9 @@ export function useDiscourseAlerts(walletAddress: string | undefined) {
   return useQuery<DiscourseAlerts | null>({
     queryKey: ['discourse-alerts', walletAddress?.toLowerCase()],
     queryFn: async () => {
-      const res = await fetch(`/api/discourse/alerts?address=${walletAddress}`);
+      // Identity is read from the verified session cookie server-side; the wallet
+      // arg only drives the query key / enabled guard here.
+      const res = await fetch('/api/discourse/alerts');
       if (!res.ok) return null;
       const json = await res.json();
       return json?.data ?? null;

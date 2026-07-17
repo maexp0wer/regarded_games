@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isValidAdminToken } from '@/lib/adminAuth';
 import { query } from '@/lib/db';
 import { loadForumPost } from '@/lib/quests';
 
@@ -15,8 +16,7 @@ import { loadForumPost } from '@/lib/quests';
  *   { "force": true }       // publish even if a post for this slug already exists
  */
 export async function POST(req: Request) {
-  const adminToken = req.headers.get('x-quests-admin-token');
-  if (!adminToken || adminToken !== process.env.DISCOURSE_INIT_SECRET) {
+  if (!isValidAdminToken(req.headers.get('x-quests-admin-token'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

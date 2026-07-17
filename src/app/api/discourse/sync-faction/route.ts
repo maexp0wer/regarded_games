@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isValidAdminToken } from '@/lib/adminAuth';
 import { createPublicClient, http, erc20Abi, isAddress } from 'viem';
 import { foundry, base, baseSepolia } from 'viem/chains';
 import { fetchAllPonderItems } from '@/lib/ponder';
@@ -27,8 +28,7 @@ const viemChainFor = (chainId: number) => {
 };
 
 export async function POST(req: Request) {
-  const adminToken = req.headers.get('x-discourse-admin-token');
-  if (!adminToken || adminToken !== process.env.DISCOURSE_INIT_SECRET) {
+  if (!isValidAdminToken(req.headers.get('x-discourse-admin-token'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -264,8 +264,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
 
   } catch (error) {
+    // Log the detail server-side; return a generic message so internal error
+    // text (host names, stack fragments) never reaches the client.
     const msg = error instanceof Error ? error.message : 'Server error';
     console.error("BATCH SYNC CRASH:", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: 'server_error' }, { status: 500 });
   }
 }

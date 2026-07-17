@@ -12,6 +12,7 @@ import {
 } from '@/lib/communitySession';
 import { query } from '@/lib/db';
 import { extractClientIp } from '@/utils/ipHash';
+import { checkRateLimit, tooManyRequests } from '@/lib/rateLimit';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -40,6 +41,11 @@ export async function POST(req: Request) {
   if (!process.env.COMMUNITY_SESSION_SECRET) {
     return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
   }
+
+  // Each mint runs signature verification + a Discourse sync_sso + a DB insert;
+  // throttle per-IP so it can't be spun as an amplification/abuse vector.
+  const rl = checkRateLimit(req, { bucket: 'session-mint', limit: 20, windowMs: 60_000 });
+  if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
 
   try {
     const { address, issuedAt, signature } = await req.json();

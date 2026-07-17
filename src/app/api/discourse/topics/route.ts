@@ -3,6 +3,7 @@ import { tenantFromRequest } from '@/lib/tenant.server';
 import { getTenant, type TenantKey } from '@/config/tenants';
 import { discourseNames } from '@/utils/discourseNames';
 import { getCommunitySession } from '@/lib/communitySession';
+import { sameOriginOk } from '@/lib/rateLimit';
 
 function resolveTenantFromQuery(req: Request, bodyTenant?: unknown) {
   if (bodyTenant === 'mainnet' || bodyTenant === 'sepolia') {
@@ -60,6 +61,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  if (!sameOriginOk(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const wallet = getCommunitySession(req);
   if (!wallet) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
 

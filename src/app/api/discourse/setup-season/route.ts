@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isValidAdminToken } from '@/lib/adminAuth';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { tenantFromRequest } from '@/lib/tenant.server';
@@ -26,8 +27,7 @@ function parseCategoryIntros(seasonNum: number): Record<string, { title: string;
 }
 
 export async function POST(req: Request) {
-  const adminToken = req.headers.get('x-discourse-admin-token');
-  if (!adminToken || adminToken !== process.env.DISCOURSE_INIT_SECRET) {
+  if (!isValidAdminToken(req.headers.get('x-discourse-admin-token'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

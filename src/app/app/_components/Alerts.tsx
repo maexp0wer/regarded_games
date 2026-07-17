@@ -556,11 +556,9 @@ function PollAlertRow({ poll }: { poll: PendingPoll }) {
 
 function ReplyAlertCard({
   reply,
-  playerAddress,
   onDismiss,
 }: {
   reply: ReplyGroup;
-  playerAddress: string;
   onDismiss: () => void;
 }) {
   const href = forumLoginUrl(`/t/${reply.topicSlug}/${reply.topicId}`);
@@ -570,7 +568,8 @@ function ReplyAlertCard({
     fetch('/api/discourse/alerts/mark-read', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address: playerAddress, notificationIds: reply.notificationIds }),
+      // Identity comes from the session cookie server-side; no address in the body.
+      body: JSON.stringify({ notificationIds: reply.notificationIds }),
     }).catch(() => {});
   }
 
@@ -746,7 +745,6 @@ export function Alerts({ playerAddress }: { playerAddress: string }) {
         <ReplyAlertCard
           key={reply.originalPostId}
           reply={reply}
-          playerAddress={playerAddress}
           onDismiss={() => dismissReply(reply.originalPostId)}
         />
       ))}

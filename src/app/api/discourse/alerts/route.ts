@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isAddress } from 'viem';
+import { getCommunitySession } from '@/lib/communitySession';
 
 export type PendingPoll = {
   topicId: number;
@@ -207,9 +207,13 @@ async function fetchReplyGroups(
 }
 
 export async function GET(req: NextRequest) {
-  const address = req.nextUrl.searchParams.get('address');
-  if (!address || !isAddress(address, { strict: false })) {
-    return NextResponse.json({ error: 'invalid_address' }, { status: 400 });
+  // Identity comes from the VERIFIED community session — never the query string.
+  // These are the caller's *own* forum notifications (reply excerpts, pending
+  // polls); trusting a body/query wallet let anyone read any player's alerts by
+  // their public on-chain address (IDOR). No session → nothing to show.
+  const wallet = getCommunitySession(req);
+  if (!wallet) {
+    return NextResponse.json({ success: true, data: { pendingPolls: [], replies: [] } });
   }
 
   const url = process.env.NEXT_PUBLIC_DISCOURSE_URL;
@@ -217,8 +221,6 @@ export async function GET(req: NextRequest) {
   if (!url || !apiKey) {
     return NextResponse.json({ error: 'Discourse not configured' }, { status: 500 });
   }
-
-  const wallet = address.toLowerCase();
   const adminHeaders: Record<string, string> = {
     'Api-Key': apiKey,
     'Api-Username': 'system',

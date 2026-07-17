@@ -120,5 +120,9 @@ export async function GET(req: NextRequest) {
   const returnHmac = crypto.createHmac('sha256', SECRET);
   const returnSig = returnHmac.update(returnPayload).digest('hex');
 
-  return NextResponse.redirect(`http://community.localhost/session/sso_login?sso=${returnPayload}&sig=${returnSig}`);
+  // Complete the handshake on the real Discourse host. Derived from env, not
+  // hardcoded — the literal http://community.localhost only works in fork/dev and
+  // would break SSO in production (docs/community live on their own domain).
+  const discourseBase = (process.env.NEXT_PUBLIC_DISCOURSE_URL ?? 'http://community.localhost').replace(/\/$/, '');
+  return NextResponse.redirect(`${discourseBase}/session/sso_login?sso=${returnPayload}&sig=${returnSig}`);
 }

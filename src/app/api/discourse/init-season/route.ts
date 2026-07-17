@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isValidAdminToken } from '@/lib/adminAuth';
 import { isAddress } from 'viem';
 import { fetchAllPonderItems } from '@/lib/ponder';
 import { tenantFromRequest } from '@/lib/tenant.server';
@@ -11,8 +12,7 @@ const GET_BATCH_SIZE = 20; // parallel existence checks per batch
 const SSO_CONCURRENCY = 5; // concurrent SSO sync workers
 
 export async function POST(req: Request) {
-  const adminToken = req.headers.get('x-discourse-admin-token');
-  if (!adminToken || adminToken !== process.env.DISCOURSE_INIT_SECRET) {
+  if (!isValidAdminToken(req.headers.get('x-discourse-admin-token'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

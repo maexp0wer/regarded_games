@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCommunitySession } from '@/lib/communitySession';
+import { sameOriginOk } from '@/lib/rateLimit';
 
 const DISCOURSE_URL = process.env.NEXT_PUBLIC_DISCOURSE_URL!;
 const API_KEY = process.env.DISCOURSE_API_KEY!;
@@ -31,6 +32,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: Request) {
+  if (!sameOriginOk(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const wallet = getCommunitySession(req);
   if (!wallet) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
 

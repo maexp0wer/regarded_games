@@ -4,6 +4,8 @@ import { getTenant, type TenantKey } from "@/config/tenants";
 import { discourseNames } from "@/utils/discourseNames";
 import { ssoSync } from "@/lib/discourseSSO";
 import { cache, nsKey } from "@/lib/serverCache";
+import { getCommunitySession } from "@/lib/communitySession";
+import { isValidAdminToken } from "@/lib/adminAuth";
 
 // How long a wallet is remembered as "registered + group-added" before we
 // re-verify against Discourse (the verification itself is idempotent).
@@ -13,6 +15,23 @@ const DEBUG = process.env.APP_DEBUG === 'true';
 export async function POST(req: Request) {
   try {
     const { walletAddress, seasonId, tenant: bodyTenant } = await req.json();
+
+    if (!walletAddress || typeof walletAddress !== 'string') {
+      return NextResponse.json({ error: 'walletAddress required' }, { status: 400 });
+    }
+    const targetWallet = walletAddress.toLowerCase();
+
+    // Two legitimate callers, two proofs. The indexer provisions arbitrary
+    // on-chain buyers server-to-server (admin token). A browser may only provision
+    // ITS OWN wallet (verified community session must match). This closes the gap
+    // where any caller could provision/attach arbitrary wallets from the body.
+    const isAdmin = isValidAdminToken(req.headers.get('x-discourse-admin-token'));
+    if (!isAdmin) {
+      const sessionWallet = getCommunitySession(req);
+      if (!sessionWallet || sessionWallet !== targetWallet) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
 
     const tenant = (bodyTenant === 'mainnet' || bodyTenant === 'sepolia')
       ? getTenant(bodyTenant as TenantKey)

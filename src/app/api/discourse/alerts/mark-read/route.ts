@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isAddress } from 'viem';
+import { getCommunitySession } from '@/lib/communitySession';
+import { sameOriginOk } from '@/lib/rateLimit';
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { address, notificationIds } = body;
+  if (!sameOriginOk(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  // Marking notifications read acts AS the user on Discourse — the target wallet
+  // must be the verified session, not a body-supplied address (else anyone could
+  // clear another player's alerts).
+  const wallet = getCommunitySession(req);
+  if (!wallet) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
 
-  if (!address || !isAddress(address, { strict: false }) || !Array.isArray(notificationIds)) {
+  const body = await req.json();
+  const { notificationIds } = body;
+  if (!Array.isArray(notificationIds)) {
     return NextResponse.json({ error: 'invalid_params' }, { status: 400 });
   }
 
@@ -17,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   const headers = {
     'Api-Key': apiKey,
-    'Api-Username': address.toLowerCase(),
+    'Api-Username': wallet,
     'Content-Type': 'application/json',
   };
 

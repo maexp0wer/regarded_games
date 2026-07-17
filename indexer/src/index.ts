@@ -151,7 +151,13 @@ ponder.on("Auction:FimPurchased", async ({ event, context }) => {
         // Run asynchronously so it doesn't block the indexer
         fetch(`${appUrl}/api/discourse/create-player`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                // Server-to-server: authorises provisioning an arbitrary on-chain
+                // buyer (not the caller's own wallet). The route requires this OR a
+                // matching community session for browser callers.
+                "x-discourse-admin-token": process.env.DISCOURSE_INIT_SECRET || "",
+            },
             body: JSON.stringify({
                 walletAddress: buyer,
                 seasonId: Number(season.seasonId),
