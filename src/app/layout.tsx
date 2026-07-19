@@ -94,7 +94,7 @@ export default async function RootLayout({
       : undefined;
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className={`${orbitron.variable} ${exo2.variable} ${spaceGrotesk.variable} ${azeretMono.variable}`}>
         {/* suppressHydrationWarning: React deliberately omits the `nonce` DOM
             property after commit (it's readable-once for security), so the client
