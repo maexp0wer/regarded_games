@@ -96,7 +96,12 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${orbitron.variable} ${exo2.variable} ${spaceGrotesk.variable} ${azeretMono.variable}`}>
-        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: blockingThemeScript }} />
+        {/* suppressHydrationWarning: React deliberately omits the `nonce` DOM
+            property after commit (it's readable-once for security), so the client
+            always sees it as empty on hydration even though the server rendered it
+            correctly — a known false-positive for nonced inline scripts, not a
+            real mismatch. */}
+        <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: blockingThemeScript }} />
 
         <Providers initialState={initialState} initialChainId={initialChainId}>
           {children}

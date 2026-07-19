@@ -41,6 +41,13 @@ function originOf(url: string | undefined): string | null {
  *   keeps 'unsafe-inline' deliberately: RainbowKit/wagmi inject styles at runtime
  *   which can't be nonced, and inline *styles* can't execute JS — the XSS win is
  *   on script-src. See middleware.ts for how the nonce is minted and reported.
+ *
+ *   'unsafe-eval' in the strict policy is DEV-ONLY: the Turbopack dev module
+ *   system and its eval-based sourcemaps call eval()/new Function() at runtime.
+ *   The PRODUCTION bundle contains no eval/new Function at all (verified by
+ *   grepping .next/static/chunks after `next build` — zero hits), so prod runs
+ *   the fully strict policy. Allowing it in dev only keeps the Report-Only signal
+ *   free of dev-tooling false positives without weakening the shipped policy.
  */
 export function buildCsp(isDev: boolean, nonce?: string): string {
   const discourse = originOf(process.env.NEXT_PUBLIC_DISCOURSE_URL);
@@ -48,12 +55,18 @@ export function buildCsp(isDev: boolean, nonce?: string): string {
   const ponderSepolia = originOf(process.env.NEXT_PUBLIC_PONDER_URL_SEPOLIA);
 
   // WalletConnect + Coinbase relay/RPC/verify endpoints used by RainbowKit/wagmi.
+  // web3modal.org / reown.com: RainbowKit's connector is built on Reown AppKit
+  // (WalletConnect v2's successor), which fetches remote project config from
+  // api.web3modal.org on init — confirmed via a live wallet-connect CSP violation
+  // (fails soft without it, but silently loses remote config/feature flags).
   const wallet = [
     'https://*.walletconnect.com',
     'https://*.walletconnect.org',
     'wss://*.walletconnect.com',
     'wss://*.walletconnect.org',
     'https://pulse.walletconnect.org',
+    'https://*.web3modal.org',
+    'https://*.reown.com',
     'https://*.coinbase.com',
     'wss://*.coinbase.com',
   ];
@@ -82,8 +95,17 @@ export function buildCsp(isDev: boolean, nonce?: string): string {
   const imgSrc = ["'self'", 'data:', 'blob:', 'https:', ...(isDev ? ['http://*.localhost:*', 'http://localhost:*'] : [])];
 
   // Strict (nonce present) vs. pragmatic (nonce absent) script-src.
+  // 'unsafe-eval' is added to the strict list ONLY in dev — Turbopack's dev
+  // runtime needs it; the prod bundle has no eval, so prod stays fully strict.
   const scriptSrc = nonce
-    ? ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", "'wasm-unsafe-eval'", 'blob:']
+    ? [
+        "'self'",
+        `'nonce-${nonce}'`,
+        "'strict-dynamic'",
+        "'wasm-unsafe-eval'",
+        'blob:',
+        ...(isDev ? ["'unsafe-eval'"] : []),
+      ]
     : ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'blob:'];
 
   const directives: Record<string, string[]> = {

@@ -28,15 +28,21 @@ export async function POST(req: Request) {
     // Identity is the VERIFIED session, not the body. Provisioning (`login`) and
     // session teardown (`logout`) are privileged Discourse actions; trusting a
     // body-supplied wallet let anyone force-log-out or provision arbitrary
-    // accounts. On a wallet switch/disconnect the caller still holds the previous
-    // wallet's session cookie (the teardown fetch and the cookie-clear fire in the
-    // same tick), so the target resolves to that wallet as intended.
+    // accounts.
+    //
+    // NO-OP when there's no session cookie: connecting a wallet does NOT establish
+    // a community session (that needs a separate sign-in), yet DiscourseHandshake
+    // fires `logout` on every wallet switch/disconnect. Without a session there's
+    // nothing we can authorize AND nothing a caller could abuse (an unauthenticated
+    // request logs no one out), so return a benign success rather than a 401 that
+    // surfaces as a console error on the normal teardown path. A session that IS
+    // present but names a different wallet is the actual attack → 403.
     const sessionWallet = getCommunitySession(req);
-    if (!sessionWallet) {
-      return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
-    }
-
     const { wallet: bodyWallet, action } = await req.json();
+
+    if (!sessionWallet) {
+      return NextResponse.json({ success: true, skipped: 'no_session' });
+    }
     if (bodyWallet && typeof bodyWallet === 'string' && bodyWallet.toLowerCase() !== sessionWallet) {
       return NextResponse.json({ error: 'wallet mismatch' }, { status: 403 });
     }
