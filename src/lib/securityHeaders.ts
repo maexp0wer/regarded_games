@@ -133,7 +133,17 @@ export function securityHeaders(): { key: string; value: string }[] {
   const isDev = process.env.NODE_ENV !== 'production';
 
   const headers: { key: string; value: string }[] = [
-    { key: 'Content-Security-Policy', value: buildCsp(isDev) },
+    // CSP is emitted here (statically, for every route) ONLY in dev, where it is
+    // the pragmatic loose policy so HMR / Turbopack's inline dev scripts work.
+    //
+    // In PRODUCTION the enforced CSP is the strict *nonce* policy, which must be
+    // minted per-request — so it is set by middleware.ts, not here. A static
+    // header can't carry a per-request nonce, and shipping a second enforced CSP
+    // from here would intersect with middleware's and break the app. Non-page
+    // routes (API/static) that middleware doesn't cover simply carry no CSP in
+    // prod, which is fine: they return JSON/assets, not script-executing HTML,
+    // and X-Frame-Options below still covers framing.
+    ...(isDev ? [{ key: 'Content-Security-Policy', value: buildCsp(true) }] : []),
     { key: 'X-Content-Type-Options', value: 'nosniff' },
     { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },

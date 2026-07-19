@@ -43,20 +43,33 @@ export function middleware(req: NextRequest) {
   const hostname = req.headers.get('host')!;
   const path = url.pathname;
 
-  /* CSP nonce rollout (L6): mint a nonce, forward it to the app on x-nonce so the
-     root layout can stamp inline scripts, and publish a *Report-Only* strict CSP
-     so the browser reports — but never blocks — what a nonce-based policy would
-     reject. Enforcement stays the pragmatic policy in next.config.ts until the
-     wallet-connect flow is validated with zero report-only violations. Applied
-     only to the HTML page rewrites below (the ones rendered by the root layout);
-     redirects and the SEO-file passthroughs don't render scripts. */
+  /* CSP nonce policy (L6). Mint a per-request nonce, forward it on x-nonce so the
+     root layout can stamp its inline script, and attach the strict nonce policy to
+     the HTML page responses below.
+
+     PROD: the strict policy is ENFORCED. It's also written to the forwarded
+     REQUEST headers as `Content-Security-Policy` — Next reads the nonce from there
+     and auto-stamps it on its own bootstrap/hydration <script> tags, so they
+     aren't blocked. next.config.ts emits no CSP in prod (would double up).
+
+     DEV: the strict policy is Report-Only (observe, never block); the pragmatic
+     ENFORCED policy still comes from next.config.ts so HMR/Turbopack are
+     untouched. We do NOT hand Next the CSP on the request in dev — its own inline
+     dev scripts aren't nonced, and the loose enforced policy allows them.
+
+     Applied only to the HTML page rewrites (rendered by the root layout);
+     redirects and SEO-file passthroughs don't execute scripts. */
   const isDev = process.env.NODE_ENV !== 'production';
   const nonce = generateNonce();
+  const strictCsp = buildCsp(isDev, nonce);
   const forward = { request: { headers: new Headers(req.headers) } };
   forward.request.headers.set('x-nonce', nonce);
-  const cspReportOnly = buildCsp(isDev, nonce);
+  if (!isDev) forward.request.headers.set('Content-Security-Policy', strictCsp);
   const withReport = (res: NextResponse): NextResponse => {
-    res.headers.set('Content-Security-Policy-Report-Only', cspReportOnly);
+    res.headers.set(
+      isDev ? 'Content-Security-Policy-Report-Only' : 'Content-Security-Policy',
+      strictCsp,
+    );
     return res;
   };
 
