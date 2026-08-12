@@ -1,6 +1,10 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: Elevated helper: when this script is re-invoked with this sentinel arg (via a
+:: UAC prompt), jump straight to the admin-only block and do nothing else.
+if /i "%~1"=="__admin_start" goto ADMIN_START
+
 :: ==========================================
 ::              CONFIGURATION
 :: ==========================================
@@ -132,6 +136,20 @@ call :KILL_PORT 42070
 ::   - schtasks /Run     : (re)applies the portproxy bridge; ignored if already running
 :: =========================================================================
 
+:: =========================================================================
+:: Admin-only bring-up (needs Administrator rights, mirrors stop.bat):
+::   - Start the PostgreSQL service (the DB steps below and the app depend on
+::     it). It was set to Manual start by stop.bat, so it won't be up yet.
+::   - Re-enable the "WSL Discourse Keepalive" logon task so the schtasks /Run
+::     below can fire it and it survives future logons.
+:: We re-launch just this script's :ADMIN_START block elevated -> one UAC
+:: prompt. Click Yes. (No prompt if you already launched start.bat as admin.)
+:: =========================================================================
+ECHO.
+ECHO --- Starting Postgres + enabling Discourse keepalive [approve UAC] ---
+powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -ArgumentList '__admin_start' -Verb RunAs -Wait"
+sc query postgresql-x64-18 | findstr /I RUNNING >nul || ECHO [WARN] Postgres is not running - did you approve the UAC prompt? DB steps may fail.
+
 ECHO.
 ECHO --- Ensuring Discourse (WSL2 container 'app') is running ---
 wsl -d Ubuntu -u root -- bash -lc "systemctl start docker 2>/dev/null; docker start app >/dev/null 2>&1; true"
@@ -237,4 +255,18 @@ for /f "tokens=5" %%P in ('netstat -ano ^| findstr "LISTENING" ^| findstr /R ":%
     ECHO   Killing PID %%P on port %_PORT%
     taskkill /PID %%P /F >nul 2>&1
 )
+exit /b 0
+
+:: =========================================================================
+:: :ADMIN_START  - runs elevated (re-invoked via UAC from the top of the
+:: script). Starts Postgres (kept Manual so it stays off when you're not
+:: working) and re-enables the WSL Discourse Keepalive logon task.
+:: =========================================================================
+:ADMIN_START
+echo [admin] Ensuring PostgreSQL start type is Manual...
+sc config postgresql-x64-18 start= demand
+echo [admin] Starting PostgreSQL service...
+net start postgresql-x64-18
+echo [admin] Enabling the WSL Discourse Keepalive logon task...
+schtasks /Change /TN "WSL Discourse Keepalive" /ENABLE
 exit /b 0

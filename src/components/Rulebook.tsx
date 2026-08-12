@@ -245,7 +245,7 @@ const ROADMAP_POINTS: {
     clause: '5.2',
     phase: 'Phase II',
     title: 'Build',
-    when: 'Q1–Q2 2026',
+    when: 'Q1–Q3 2026',
     status: 'In Progress',
     state: 'live',
     items: [
@@ -258,7 +258,7 @@ const ROADMAP_POINTS: {
     clause: '5.3',
     phase: 'Phase III',
     title: 'Testnet',
-    when: 'Q3 2026',
+    when: 'Q4 2026',
     status: 'Upcoming',
     state: 'upcoming',
     items: [
@@ -272,7 +272,7 @@ const ROADMAP_POINTS: {
     clause: '5.4',
     phase: 'Phase IV',
     title: 'Mainnet',
-    when: 'Q4 2026',
+    when: 'Q1 2027',
     status: 'Upcoming',
     state: 'upcoming',
     items: [

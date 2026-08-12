@@ -16,6 +16,7 @@ import {
 } from '@/components/icons/CardEmblems';
 import { useDocNavigation } from '@/hooks/useDocNavigation';
 import Rulebook from '@/components/Rulebook';
+import FitToViewport from '@/components/FitToViewport';
 import CyclingSubheading from '@/components/CyclingSubheading';
 import AnimatedAuctionChart from '@/components/AnimatedAuctionChart';
 import AnimatedTradeFlows from '@/components/AnimatedTradeFlows';
@@ -35,8 +36,8 @@ const SECTIONS: { id: string; cards: number; pages?: number }[] = [
   { id: 'sectionHero', cards: 2 },
   { id: 'sectionPlay', cards: 3 },
   { id: 'sectionOwnMarket', cards: 3 },
-  { id: 'sectionDistribution', cards: 0, pages: 3 },
   { id: 'sectionSecureYourStake', cards: 2 },
+  { id: 'sectionDistribution', cards: 0, pages: 3 },
 ];
 
 /* The Gini card ("Enforce Ideology") is the characters' final home. */
@@ -1362,6 +1363,57 @@ export default function Home() {
     />
   );
 
+  /* Section headings, hoisted so the belowLg branch can wrap them together
+     with their card deck in FitToViewport (see the sections below) while the
+     desktop branch renders them exactly as before. */
+  const heroCardsHeading = (
+    <motion.h2
+      initial={false}
+      animate={{ opacity: heroCardsActive ? 1 : 0 }}
+      transition={{ duration: 0.9, ease: 'easeInOut', delay: heroCardsActive ? 0.9 : 0 }}
+      className="h2-app mb-16 text-center text-[2.5rem] font-bold"
+      style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)', position: 'relative', zIndex: 0 }}
+    >
+      Choose Your Hero
+    </motion.h2>
+  );
+
+  const playHeading = (
+    <motion.h2
+      initial={false}
+      animate={{ opacity: playActive ? 1 : 0 }}
+      transition={{ duration: 0.9, ease: 'easeInOut', delay: playActive ? 0.9 : 0 }}
+      className="h2-app mb-16 text-center text-[2.5rem] font-bold"
+      style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)', position: 'relative', zIndex: 0 }}
+    >
+      Play the Game
+    </motion.h2>
+  );
+
+  const ownHeading = (
+    <motion.h2
+      initial={false}
+      animate={{ opacity: ownActive ? 1 : 0 }}
+      transition={{ duration: 0.9, ease: 'easeInOut', delay: ownActive ? 0.9 : 0 }}
+      className="h2-app mb-16 text-center text-[2.5rem] font-bold"
+      style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)', position: 'relative', zIndex: 0 }}
+    >
+      Own the Project
+    </motion.h2>
+  );
+
+  const stakeHeading = (
+    <motion.h2
+      initial={false}
+      animate={{ opacity: stakeActive ? 1 : 0 }}
+      transition={{ duration: 0.9, ease: 'easeInOut', delay: stakeActive ? 0.9 : 0 }}
+      className="h2-app text-center mb-16 text-[2.5rem] font-bold"
+      style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)', position: 'relative', zIndex: 0 }}
+    >
+      Secure Your Stake
+    </motion.h2>
+  );
+
   return (
     <div className={`flex font-display overflow-x-clip ${darkMode ? 'dark bg-bg' : 'bg-bg'}`}>
       {/* Titles/icons/viewport come from the App Router metadata exports in
@@ -1502,51 +1554,47 @@ export default function Home() {
               className="absolute inset-0 py-20 px-6 flex flex-col justify-center w-full"
               style={{ zIndex: heroCardsActive ? 10 : 0, pointerEvents: heroCardsActive ? 'auto' : 'none' }}
             >
-              <motion.h2
-                initial={false}
-                animate={{ opacity: heroCardsActive ? 1 : 0 }}
-                /* Sequential, no overlap: the incoming heading waits the full
-                   0.9s fade-out before fading in, so the two never cross-fade. */
-                transition={{ duration: 0.9, ease: 'easeInOut', delay: heroCardsActive ? 0.9 : 0 }}
-                className="h2-app mb-16 text-center text-[2.5rem] font-bold"
-                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)', position: 'relative', zIndex: 0 }}
-              >
-                Choose Your Hero
-              </motion.h2>
-
               {/* Entered from the header, which has no outgoing cards to clear —
                   so the throw fires immediately (enterDelay 0) and the header
                   ghost icons fly down to land with it. */}
-              <div className="dark" style={{ position: 'relative', zIndex: 10 }}>
-                {belowLg ? (
-                  <CardThrow active={heroCardsActive} dir={throwDir} cardMaxWidth="425px" enterDelay={0}>
-                    <CardDeck activeIndex={cardIndices['sectionHero'] ?? 0} height="675px" maxWidth="425px">
-                      {regardoCard}
-                      {carloCard}
-                    </CardDeck>
-                  </CardThrow>
-                ) : (
-                  <div className="grid md:grid-cols-2 gap-8 justify-items-center relative w-full max-w-5xl mx-auto">
-                    {/* Three explicit stacking levels in one context so Carlo's
-                        descent flight can sit between the cards: Regardo card on
-                        top (z-20), Carlo's flying copy in the middle (z-10), Carlo
-                        card beneath (z-0). The cards don't overlap, so demoting
-                        Carlo's card is invisible — it only opens the gap the flight
-                        slots into (behind the Regardo card, in front of his own). */}
-                    <div className="relative w-full max-w-106.25 z-20">
-                      <CardThrow active={heroCardsActive} dir={throwDir} index={0} total={2} spacing={562} cardMaxWidth="425px" enterDelay={0}>{regardoCard}</CardThrow>
-                    </div>
-                    {charOverlay?.carloBehindCards && (
-                      <div className="fixed inset-0 z-10 pointer-events-none">
-                        {renderCharFlight('carlo', charOverlay.carlo)}
+              {belowLg ? (
+                <FitToViewport>
+                  {heroCardsHeading}
+                  <div className="dark w-full" style={{ position: 'relative', zIndex: 10 }}>
+                    <CardThrow active={heroCardsActive} dir={throwDir} cardMaxWidth="425px" enterDelay={0}>
+                      <CardDeck activeIndex={cardIndices['sectionHero'] ?? 0} height="675px" maxWidth="425px">
+                        {regardoCard}
+                        {carloCard}
+                      </CardDeck>
+                    </CardThrow>
+                  </div>
+                </FitToViewport>
+              ) : (
+                <>
+                  {heroCardsHeading}
+                  <div className="dark" style={{ position: 'relative', zIndex: 10 }}>
+                    <div className="grid md:grid-cols-2 gap-8 justify-items-center relative w-full max-w-5xl mx-auto">
+                      {/* Three explicit stacking levels in one context so Carlo's
+                          descent flight can sit between the cards: Regardo card on
+                          top (z-20), Carlo's flying copy in the middle (z-10), Carlo
+                          card beneath (z-0). The cards don't overlap, so demoting
+                          Carlo's card is invisible — it only opens the gap the flight
+                          slots into (behind the Regardo card, in front of his own). */}
+                      <div className="relative w-full max-w-106.25 z-20">
+                        <CardThrow active={heroCardsActive} dir={throwDir} index={0} total={2} spacing={562} cardMaxWidth="425px" enterDelay={0}>{regardoCard}</CardThrow>
                       </div>
-                    )}
-                    <div className="relative w-full max-w-106.25 z-0">
-                      <CardThrow active={heroCardsActive} dir={throwDir} index={1} total={2} spacing={562} cardMaxWidth="425px" enterDelay={0}>{carloCard}</CardThrow>
+                      {charOverlay?.carloBehindCards && (
+                        <div className="fixed inset-0 z-10 pointer-events-none">
+                          {renderCharFlight('carlo', charOverlay.carlo)}
+                        </div>
+                      )}
+                      <div className="relative w-full max-w-106.25 z-0">
+                        <CardThrow active={heroCardsActive} dir={throwDir} index={1} total={2} spacing={562} cardMaxWidth="425px" enterDelay={0}>{carloCard}</CardThrow>
+                      </div>
                     </div>
                   </div>
-                )}
-              </div>
+                </>
+              )}
             </section>
 
             {/* Play the Game (Action Cards Section) */}
@@ -1555,35 +1603,33 @@ export default function Home() {
               className="absolute inset-0 py-16 px-4 flex flex-col justify-center w-full"
               style={{ zIndex: playActive ? 10 : 0, pointerEvents: playActive ? 'auto' : 'none' }}
             >
-              <motion.h2
-                initial={false}
-                animate={{ opacity: playActive ? 1 : 0 }}
-                transition={{ duration: 0.9, ease: 'easeInOut', delay: playActive ? 0.9 : 0 }}
-                className="h2-app mb-16 text-center text-[2.5rem] font-bold"
-                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)', position: 'relative', zIndex: 0 }}
-              >
-                Play the Game
-              </motion.h2>
-
-              <div className="dark" style={{ position: 'relative', zIndex: 10 }}>
-                {belowLg ? (
-                  <CardThrow active={playActive} dir={throwDir} cardMaxWidth="425px">
-                    <CardDeck activeIndex={cardIndices['sectionPlay'] ?? 0} height="675px" maxWidth="425px">
-                      {playCard1}
-                      {playCard2}
-                      {playCard3}
-                    </CardDeck>
-                  </CardThrow>
-                ) : (
-                  <div className="grid md:grid-cols-3 gap-8 justify-items-center relative w-full max-w-337.5 mx-auto">
-                    <CardThrow active={playActive} dir={throwDir} index={0} total={3} spacing={494} cardMaxWidth="425px" className="w-full">{playCard1}</CardThrow>
-                    <CardThrow active={playActive} dir={throwDir} index={1} total={3} spacing={494} cardMaxWidth="425px" className="w-full">{playCard2}</CardThrow>
-                    <div className="relative w-full max-w-106.25">
-                      <CardThrow active={playActive} dir={throwDir} index={2} total={3} spacing={494} cardMaxWidth="425px">{playCard3}</CardThrow>
+              {belowLg ? (
+                <FitToViewport>
+                  {playHeading}
+                  <div className="dark w-full" style={{ position: 'relative', zIndex: 10 }}>
+                    <CardThrow active={playActive} dir={throwDir} cardMaxWidth="425px">
+                      <CardDeck activeIndex={cardIndices['sectionPlay'] ?? 0} height="675px" maxWidth="425px">
+                        {playCard1}
+                        {playCard2}
+                        {playCard3}
+                      </CardDeck>
+                    </CardThrow>
+                  </div>
+                </FitToViewport>
+              ) : (
+                <>
+                  {playHeading}
+                  <div className="dark" style={{ position: 'relative', zIndex: 10 }}>
+                    <div className="grid md:grid-cols-3 gap-8 justify-items-center relative w-full max-w-337.5 mx-auto">
+                      <CardThrow active={playActive} dir={throwDir} index={0} total={3} spacing={494} cardMaxWidth="425px" className="w-full">{playCard1}</CardThrow>
+                      <CardThrow active={playActive} dir={throwDir} index={1} total={3} spacing={494} cardMaxWidth="425px" className="w-full">{playCard2}</CardThrow>
+                      <div className="relative w-full max-w-106.25">
+                        <CardThrow active={playActive} dir={throwDir} index={2} total={3} spacing={494} cardMaxWidth="425px">{playCard3}</CardThrow>
+                      </div>
                     </div>
                   </div>
-                )}
-              </div>
+                </>
+              )}
             </section>
 
             {/* Own the Project */}
@@ -1592,38 +1638,67 @@ export default function Home() {
               className="absolute inset-0 py-16 px-4 flex flex-col justify-center w-full"
               style={{ zIndex: ownActive ? 10 : 0, pointerEvents: ownActive ? 'auto' : 'none' }}
             >
-              <motion.h2
-                initial={false}
-                animate={{ opacity: ownActive ? 1 : 0 }}
-                transition={{ duration: 0.9, ease: 'easeInOut', delay: ownActive ? 0.9 : 0 }}
-                className="h2-app mb-16 text-center text-[2.5rem] font-bold"
-                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)', position: 'relative', zIndex: 0 }}
-              >
-                Own the Project
-              </motion.h2>
-
-              <div className="dark" style={{ position: 'relative', zIndex: 10 }}>
-                {belowLg ? (
-                  <CardThrow active={ownActive} dir={throwDir} cardMaxWidth="425px">
-                    <CardDeck activeIndex={cardIndices['sectionOwnMarket'] ?? 0} height="675px" maxWidth="425px">
-                      {ownCard1}
-                      {ownCard2}
-                      {ownCard3}
-                    </CardDeck>
-                  </CardThrow>
-                ) : (
-                  <div className="grid md:grid-cols-3 gap-8 justify-items-center relative w-full max-w-337.5 mx-auto">
-                    <CardThrow active={ownActive} dir={throwDir} index={0} total={3} spacing={494} cardMaxWidth="425px" className="w-full">{ownCard1}</CardThrow>
-                    <CardThrow active={ownActive} dir={throwDir} index={1} total={3} spacing={494} cardMaxWidth="425px" className="w-full">{ownCard2}</CardThrow>
-                    <CardThrow active={ownActive} dir={throwDir} index={2} total={3} spacing={494} cardMaxWidth="425px" className="w-full">{ownCard3}</CardThrow>
+              {belowLg ? (
+                <FitToViewport>
+                  {ownHeading}
+                  <div className="dark w-full" style={{ position: 'relative', zIndex: 10 }}>
+                    <CardThrow active={ownActive} dir={throwDir} cardMaxWidth="425px">
+                      <CardDeck activeIndex={cardIndices['sectionOwnMarket'] ?? 0} height="675px" maxWidth="425px">
+                        {ownCard1}
+                        {ownCard2}
+                        {ownCard3}
+                      </CardDeck>
+                    </CardThrow>
                   </div>
-                )}
-              </div>
+                </FitToViewport>
+              ) : (
+                <>
+                  {ownHeading}
+                  <div className="dark" style={{ position: 'relative', zIndex: 10 }}>
+                    <div className="grid md:grid-cols-3 gap-8 justify-items-center relative w-full max-w-337.5 mx-auto">
+                      <CardThrow active={ownActive} dir={throwDir} index={0} total={3} spacing={494} cardMaxWidth="425px" className="w-full">{ownCard1}</CardThrow>
+                      <CardThrow active={ownActive} dir={throwDir} index={1} total={3} spacing={494} cardMaxWidth="425px" className="w-full">{ownCard2}</CardThrow>
+                      <CardThrow active={ownActive} dir={throwDir} index={2} total={3} spacing={494} cardMaxWidth="425px" className="w-full">{ownCard3}</CardThrow>
+                    </div>
+                  </div>
+                </>
+              )}
+            </section>
+
+            {/* Secure Your Stake */}
+            <section
+              id="sectionSecureYourStake"
+              className="absolute inset-0 py-16 px-4 flex flex-col justify-center w-full"
+              style={{ zIndex: stakeActive ? 10 : 0, pointerEvents: stakeActive ? 'auto' : 'none' }}
+            >
+              {belowLg ? (
+                <FitToViewport>
+                  {stakeHeading}
+                  <div className="dark w-full" style={{ position: 'relative', zIndex: 10 }}>
+                    <CardThrow active={stakeActive} dir={throwDir} cardMaxWidth="425px">
+                      <CardDeck activeIndex={cardIndices['sectionSecureYourStake'] ?? 0} height="675px" maxWidth="425px">
+                        {stakeCard1}
+                        {stakeCard2}
+                      </CardDeck>
+                    </CardThrow>
+                  </div>
+                </FitToViewport>
+              ) : (
+                <>
+                  {stakeHeading}
+                  <div className="dark" style={{ position: 'relative', zIndex: 10 }}>
+                    <div className="grid md:grid-cols-2 gap-12 justify-items-center max-w-5xl mx-auto w-full">
+                      <CardThrow active={stakeActive} dir={throwDir} index={0} total={2} spacing={588} cardMaxWidth="425px" className="w-full">{stakeCard1}</CardThrow>
+                      <CardThrow active={stakeActive} dir={throwDir} index={1} total={2} spacing={588} cardMaxWidth="425px" className="w-full">{stakeCard2}</CardThrow>
+                    </div>
+                  </div>
+                </>
+              )}
             </section>
 
             {/* Distribution of Power + Campaign Sequence + Comms Channels —
                 one scroll stop; a tick inside it flips the rulebook page
-                instead of leaving. */}
+                instead of leaving. Placed last so the Rulebook closes the deck. */}
             <section
               id="sectionDistribution"
               className="absolute inset-0 py-16 px-4 flex flex-col justify-center w-full"
@@ -1657,7 +1732,7 @@ export default function Home() {
                   className="h2-app text-center text-2xl lg:text-[2.5rem] font-bold absolute inset-0"
                   style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)' }}
                 >
-                  Comms Channels
+                  Links
                 </motion.h2>
               </div>
               <motion.div
@@ -1675,39 +1750,6 @@ export default function Home() {
                   dir={throwDir}
                 />
               </motion.div>
-            </section>
-
-            {/* Secure Your Stake */}
-            <section
-              id="sectionSecureYourStake"
-              className="absolute inset-0 py-16 px-4 flex flex-col justify-center w-full"
-              style={{ zIndex: stakeActive ? 10 : 0, pointerEvents: stakeActive ? 'auto' : 'none' }}
-            >
-              <motion.h2
-                initial={false}
-                animate={{ opacity: stakeActive ? 1 : 0 }}
-                transition={{ duration: 0.9, ease: 'easeInOut', delay: stakeActive ? 0.9 : 0 }}
-                className="h2-app text-center mb-16 text-[2.5rem] font-bold"
-                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text)', position: 'relative', zIndex: 0 }}
-              >
-                Secure Your Stake
-              </motion.h2>
-
-              <div className="dark" style={{ position: 'relative', zIndex: 10 }}>
-                {belowLg ? (
-                  <CardThrow active={stakeActive} dir={throwDir} cardMaxWidth="425px">
-                    <CardDeck activeIndex={cardIndices['sectionSecureYourStake'] ?? 0} height="675px" maxWidth="425px">
-                      {stakeCard1}
-                      {stakeCard2}
-                    </CardDeck>
-                  </CardThrow>
-                ) : (
-                  <div className="grid md:grid-cols-2 gap-12 justify-items-center max-w-5xl mx-auto w-full">
-                    <CardThrow active={stakeActive} dir={throwDir} index={0} total={2} spacing={588} cardMaxWidth="425px" className="w-full">{stakeCard1}</CardThrow>
-                    <CardThrow active={stakeActive} dir={throwDir} index={1} total={2} spacing={588} cardMaxWidth="425px" className="w-full">{stakeCard2}</CardThrow>
-                  </div>
-                )}
-              </div>
             </section>
 
           </div>

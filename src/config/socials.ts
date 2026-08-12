@@ -5,7 +5,7 @@
    on the landing and is omitted from sameAs — safe to ship empty. */
 
 export interface SocialChannel {
-  key: 'x' | 'discord' | 'github' | 'telegram';
+  key: 'x' | 'discord' | 'github' | 'telegram' | 'discourse';
   /* Display name, rulebook register. */
   label: string;
   /* Full profile URL, or '' while the channel doesn't exist yet. */
@@ -17,7 +17,7 @@ export interface SocialChannel {
 export const SOCIAL_CHANNELS: SocialChannel[] = [
   {
     key: 'x',
-    label: 'X / Twitter',
+    label: 'Twitter',
     href: '',
     description:
       'Dispatches from the front: season announcements, market intel, and the official line.',
@@ -32,7 +32,7 @@ export const SOCIAL_CHANNELS: SocialChannel[] = [
   {
     key: 'github',
     label: 'GitHub',
-    href: '',
+    href: 'https://github.com/maexp0wer/regarded_games',
     description:
       'The open ledger of the machine: contracts, app, and tooling. Verify, do not trust.',
   },
@@ -42,5 +42,12 @@ export const SOCIAL_CHANNELS: SocialChannel[] = [
     href: '',
     description:
       'The wire. Fast alerts for auctions opening, settlements, and claim windows.',
+  },
+  {
+    key: 'discourse',
+    label: 'Discourse',
+    href: '',
+    description:
+      'The forum. Long-form strategy, faction debate, and the permanent record — coming soon.',
   },
 ];
