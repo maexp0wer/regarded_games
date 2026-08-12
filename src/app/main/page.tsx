@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import { motion, LayoutGroup, AnimatePresence, type TargetAndTransition } from 'framer-motion';
 import '@/app/globals.css';
 import { useTheme } from '@/context/ThemeContext';
@@ -481,61 +481,64 @@ export default function Home() {
     setActiveIdx(targetIndex);
   };
 
+  /* Shared by the wheel/touch/keyboard handlers below AND the hero's "scroll to
+     next section" affordance button, so a click plays exactly the same
+     transition as an actual scroll tick — see the button's onClick. */
+  const lockedRef = useRef(false);
+  const lockTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const lock = useCallback((ms: number) => {
+    lockedRef.current = true;
+    clearTimeout(lockTimeoutRef.current);
+    lockTimeoutRef.current = setTimeout(() => { lockedRef.current = false; }, ms);
+  }, []);
+
+  /* Intra-section stops a tick consumes before leaving the section:
+     below-lg card decks deal one card per tick; rulebook `pages` flip at
+     every breakpoint. */
+  const innerStops = useCallback((cfg?: { cards: number; pages?: number }) => {
+    if (!cfg) return 0;
+    if (cfg.pages && cfg.pages > 1) return cfg.pages;
+    return belowLgRef.current ? cfg.cards : 0;
+  }, []);
+
+  /* One tick = one stop: deal a card within the active deck if it has cards
+     left in that direction, otherwise advance to the neighboring slide.
+     Decks are entered at their near edge so dealing reverses symmetrically. */
+  const step = useCallback((dir: 1 | -1) => {
+    if (lockedRef.current) return;
+
+    const currentIndex = activeIdxRef.current;
+    const currentCfg = SECTIONS[currentIndex];
+    const currentStops = innerStops(currentCfg);
+    if (currentStops > 1) {
+      const idx = cardIndicesRef.current[currentCfg.id] ?? 0;
+      const next = idx + dir;
+      if (next >= 0 && next < currentStops) {
+        setCardIndices((prev) => ({ ...prev, [currentCfg.id]: next }));
+        lock(currentCfg.pages ? 1000 : 600);
+        return;
+      }
+    }
+
+    const targetIndex = currentIndex + dir;
+    if (targetIndex < 0 || targetIndex >= SECTIONS.length) return;
+
+    const targetCfg = SECTIONS[targetIndex];
+    const targetStops = innerStops(targetCfg);
+    if (targetStops > 1) {
+      setCardIndices((prev) => ({
+        ...prev,
+        [targetCfg.id]: dir > 0 ? 0 : targetStops - 1,
+      }));
+    }
+
+    lock(1000);
+    activeIdxRef.current = targetIndex;
+    setActiveIdx(targetIndex);
+  }, [innerStops, lock]);
+
   useEffect(() => {
-    let locked = false;
-    let lockTimeout: ReturnType<typeof setTimeout> | undefined;
-
-    const lock = (ms: number) => {
-      locked = true;
-      clearTimeout(lockTimeout);
-      lockTimeout = setTimeout(() => { locked = false; }, ms);
-    };
-
-    /* Intra-section stops a tick consumes before leaving the section:
-       below-lg card decks deal one card per tick; rulebook `pages` flip at
-       every breakpoint. */
-    const innerStops = (cfg?: { cards: number; pages?: number }) => {
-      if (!cfg) return 0;
-      if (cfg.pages && cfg.pages > 1) return cfg.pages;
-      return belowLgRef.current ? cfg.cards : 0;
-    };
-
-    /* One tick = one stop: deal a card within the active deck if it has cards
-       left in that direction, otherwise advance to the neighboring slide.
-       Decks are entered at their near edge so dealing reverses symmetrically. */
-    const step = (dir: 1 | -1) => {
-      if (locked) return;
-
-      const currentIndex = activeIdxRef.current;
-      const currentCfg = SECTIONS[currentIndex];
-      const currentStops = innerStops(currentCfg);
-      if (currentStops > 1) {
-        const idx = cardIndicesRef.current[currentCfg.id] ?? 0;
-        const next = idx + dir;
-        if (next >= 0 && next < currentStops) {
-          setCardIndices((prev) => ({ ...prev, [currentCfg.id]: next }));
-          lock(currentCfg.pages ? 1000 : 600);
-          return;
-        }
-      }
-
-      const targetIndex = currentIndex + dir;
-      if (targetIndex < 0 || targetIndex >= SECTIONS.length) return;
-
-      const targetCfg = SECTIONS[targetIndex];
-      const targetStops = innerStops(targetCfg);
-      if (targetStops > 1) {
-        setCardIndices((prev) => ({
-          ...prev,
-          [targetCfg.id]: dir > 0 ? 0 : targetStops - 1,
-        }));
-      }
-
-      lock(1000);
-      activeIdxRef.current = targetIndex;
-      setActiveIdx(targetIndex);
-    };
-
     const isExemptTarget = (target: EventTarget | null) => {
       const el = target as HTMLElement | null;
       return !!(el?.closest?.('[role="dialog"]') || el?.closest?.('.overflow-y-auto'));
@@ -593,9 +596,9 @@ export default function Home() {
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
       window.removeEventListener('keydown', handleKeyDown);
-      clearTimeout(lockTimeout);
+      clearTimeout(lockTimeoutRef.current);
     };
-  }, []);
+  }, [step]);
 
   /* ---- Traveling character home ----
      headline → hero cards → Gini docks, advancing with the active slide.
@@ -1526,11 +1529,14 @@ export default function Home() {
 
                 {/* Scroll affordance: in place of a "Learn More" button, a
                     static chevron that deals on to the first section below
-                    (Choose Your Hero). */}
+                    (Choose Your Hero). Uses `step(1)` — the same single-tick
+                    transition a wheel/touch/key scroll plays — rather than
+                    `goToSection`'s multi-section jump snap, so the click
+                    animates identically to an actual scroll. */}
                 <button
                   type="button"
                   aria-label="Scroll to next section"
-                  onClick={() => goToSection('sectionHero')}
+                  onClick={() => step(1)}
                   className="mt-24 z-30 relative text-text2 hover:text-text transition-colors cursor-pointer"
                 >
                   <svg
