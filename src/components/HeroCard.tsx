@@ -2,6 +2,12 @@
 import { motion } from 'framer-motion';
 import React, { useState } from 'react';
 
+/* Body copy in the class box — the quote and the ability descriptions. A shade
+   lighter than --color-text2 (#9E97BD), which measured 7.08:1 on the box's
+   #0D0B14 ground; this lands at 10.07:1 while still reading as secondary text
+   under the white class title. */
+const BOX_BODY_COLOR = '#BDB6D6';
+
 interface HeroCardProps {
   isFlipped: boolean;
   onFlip: () => void;
@@ -77,7 +83,10 @@ export default function HeroCard({
   footerAriaLabel,
   maxWidth = '400px',
   height = '580px',
-  imageHeight = 'h-[48%]',
+  /* 44%, down from 48%: gives the class box below it ~27px more height for the
+     1px-larger body copy. The illustration frame still clears CARD_ICON_H
+     (250px) at this ratio on the 675px cards, so no character gets cropped. */
+  imageHeight = 'h-[45%]',
   titleSize = 'text-2xl',
   onMouseEnter,
   onMouseLeave,
@@ -115,7 +124,7 @@ export default function HeroCard({
       <span>{footerMiddleText}</span>
       <span
         className="transition-colors duration-200"
-        style={isFooterHovered ? { color: highlightColor } : undefined}
+        style={isFooterHovered ? { color: '#FFFFFF' } : undefined}
       >
         {footerRightText}
       </span>
@@ -278,25 +287,25 @@ export default function HeroCard({
                     style={{ backgroundColor: 'var(--color-bg)', borderColor: `rgba(${themeColorRgba}, 0.25)` }}
                   >
                     <div className="flex justify-between items-center w-full">
-                      <span className="text-[14px] font-semibold uppercase tracking-wider text-white font-mono">
+                      <span className="text-[15px] font-semibold uppercase tracking-wider text-white font-mono">
                         {classTitle}
                       </span>
-                      <span className="text-[13px]" style={{ color: highlightColor }}>{classSymbol}</span>
+                      <span className="text-[14px]" style={{ color: highlightColor }}>{classSymbol}</span>
                     </div>
                     {classDesc && (
-                      <p className="text-[13px] leading-relaxed italic border-t pt-1.5" style={{ borderColor: '#251F3D', fontFamily: 'var(--font-sans)', color: '#9E97BD' }}>
+                      <p className="text-[14px] leading-relaxed italic border-t pt-1.5" style={{ borderColor: '#251F3D', fontFamily: 'var(--font-sans)', color: BOX_BODY_COLOR }}>
                         &ldquo;{classDesc}&rdquo;
                       </p>
                     )}
-                  
+
                     {/* Abilities */}
                     <div className="space-y-1.5 text-left overflow-y-auto pr-1.5 mt-1.5">
                       {abilities.map((ability, index) => (
                         <div key={index}>
-                          <span className="font-bold text-[13px] uppercase tracking-wider mr-1" style={{ fontFamily: 'var(--font-display)', color: highlightColor }}>
+                          <span className="font-bold text-[14px] uppercase tracking-wider mr-1" style={{ fontFamily: 'var(--font-display)', color: highlightColor }}>
                             {ability.name}:
                           </span>
-                          <span className="text-[13px] leading-relaxed" style={{ fontFamily: 'var(--font-sans)', color: '#9E97BD' }}>
+                          <span className="text-[14px] leading-relaxed" style={{ fontFamily: 'var(--font-sans)', color: BOX_BODY_COLOR }}>
                             {ability.desc}
                           </span>
                         </div>

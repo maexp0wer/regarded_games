@@ -1143,6 +1143,11 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       maxWidth="425px"
       height="675px"
       themeColor="var(--color-purple)"
+      /* Ability names in the class box run on highlightColor against the box's
+         dark ground, where the base token lands at 4.25:1 — under the 4.5:1
+         bar. The brighter hover token gets them to 6.4:1; themeColor still
+         supplies the borders and the chassis tint. */
+      themeColorHover="var(--color-purple-hover)"
       themeColorRgba="171, 71, 188"
       chassisGradient="linear-gradient(135deg, #2e0854 0%, #7b1fa2 25%, #3f0c70 50%, #ba68c8 75%, #220341 100%)"
       headerTag="Hero"
@@ -1223,6 +1228,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       onMouseEnter={() => setaction1Hovered(true)}
       onMouseLeave={() => setaction1Hovered(false)}
       themeColor="var(--color-magenta)"
+      themeColorHover="var(--color-magenta-hover)"
       themeColorRgba="184, 0, 111"
       chassisGradient="linear-gradient(135deg, #4a002d 0%, #8b0054 25%, #4a002d 50%, #b8006f 75%, #2d001b 100%)"
       maxWidth="425px"
@@ -1259,6 +1265,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       onMouseEnter={() => setaction2Hovered(true)}
       onMouseLeave={() => setaction2Hovered(false)}
       themeColor="var(--color-magenta)"
+      themeColorHover="var(--color-magenta-hover)"
       themeColorRgba="184, 0, 111"
       chassisGradient="linear-gradient(135deg, #4a002d 0%, #8b0054 25%, #4a002d 50%, #b8006f 75%, #2d001b 100%)"
       maxWidth="425px"
@@ -1272,7 +1279,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       classDesc="A gated and fair marketplace for $FIM/$USDC."
       abilities={[
         { name: "Trade", desc: "Exchange $FIM and $USDC with other players." },
-        { name: "Outplay", desc: "Use your capital and coordinate with your class to influence wealth distribution. Who you trade with is more important than the price." }
+        { name: "Outplay", desc: "Use your capital and coordinate with your class to influence wealth distribution. Choose who you trade with wisely." }
       ]}
       footerLeftText="Phase 02"
       footerMiddleText='002 / 003'
@@ -1296,6 +1303,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       onMouseEnter={() => setaction3Hovered(true)}
       onMouseLeave={() => setaction3Hovered(false)}
       themeColor="var(--color-magenta)"
+      themeColorHover="var(--color-magenta-hover)"
       themeColorRgba="184, 0, 111"
       chassisGradient="linear-gradient(135deg, #4a002d 0%, #8b0054 25%, #4a002d 50%, #b8006f 75%, #2d001b 100%)"
       maxWidth="425px"
@@ -1434,7 +1442,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       symbol={<span className="font-sans text-xs">∞</span>}
       classTitle="Type: Experiment"
       classSymbol="✦"
-      classDesc="Shape the future of economic cooperation, coordination and financial markets in the era of web3"
+      classDesc="Shape the future of economic cooperation, coordination and markets as a whole."
       abilities={[
         { name: "Challenge", desc: "Challenge the status quo of web3, finance and markets in general." },
         { name: "Build the Future", desc: "Define a new paradigm for people-owned, people-governed economies." }
