@@ -29,7 +29,7 @@ export const DOCS_ORIGIN = SITE_ORIGIN.replace('://', '://docs.');
 
 /* Entity corroboration: the JSON-LD sameAs array derives from the official
    channel list in src/config/socials.ts (single source shared with the
-   landing Rulebook's Comms Channels pages). Empty hrefs (pre-launch) are
+   landing Rulebook's Links pages). Empty hrefs (pre-launch) are
    omitted. */
 const sameAs = SOCIAL_CHANNELS.map((c) => c.href).filter(Boolean);
 

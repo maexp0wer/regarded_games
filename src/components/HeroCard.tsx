@@ -25,6 +25,16 @@ interface HeroCardProps {
   footerRightText: string;
   footerTextColor?: string; 
   backInfoLink: string;
+
+  /* Footer strip as a control. Supply AT MOST ONE of these: `footerHref` makes
+     the strip a real anchor (so middle-click / cmd-click / "open in new tab"
+     work and it is keyboard-focusable), `footerOnClick` makes it a button —
+     used when the destination is gated and we pop a modal instead of
+     navigating. With neither, the strip stays inert printed text. */
+  footerHref?: string;
+  footerOnClick?: () => void;
+  /** Accessible name for the footer control; defaults to footerRightText. */
+  footerAriaLabel?: string;
   
   // Sizing & Events
   maxWidth?: string;
@@ -62,6 +72,9 @@ export default function HeroCard({
   footerRightText,
   footerTextColor, 
   backInfoLink,
+  footerHref,
+  footerOnClick,
+  footerAriaLabel,
   maxWidth = '400px',
   height = '580px',
   imageHeight = 'h-[48%]',
@@ -74,6 +87,7 @@ export default function HeroCard({
   illustrationSlot
 }: HeroCardProps) {
   const [isCardHovered, setIsCardHovered] = useState(false);
+  const [isFooterHovered, setIsFooterHovered] = useState(false);
   const highlightColor = themeColorHover || themeColor;
 
   const handleMouseEnter = () => {
@@ -85,6 +99,75 @@ export default function HeroCard({
     setIsCardHovered(false);
     if (onMouseLeave) onMouseLeave();
   };
+
+  /* ---- Footer strip ----
+     Printed identity on the left/middle, destination on the right. When a
+     target is supplied the whole strip becomes the control (not just the right
+     label), so it needs its own hit height — the printed row is ~16px, well
+     under any touch-target guideline. `py-2 -my-1` roughly doubles it without
+     moving the printed baseline. stopPropagation keeps the click off the card's
+     flip handler, the same way actionButtonSlot and the back's info link do. */
+  const isFooterInteractive = !!footerHref || !!footerOnClick;
+
+  const footerInner = (
+    <>
+      <span>{footerLeftText}</span>
+      <span>{footerMiddleText}</span>
+      <span
+        className="transition-colors duration-200"
+        style={isFooterHovered ? { color: highlightColor } : undefined}
+      >
+        {footerRightText}
+      </span>
+    </>
+  );
+
+  const footerBaseClass =
+    'flex justify-between items-center px-1.5 text-[11px] font-mono rounded pt-1 w-full text-left';
+  const footerStyle: React.CSSProperties = {
+    color: footerTextColor || 'rgba(255, 255, 255, 0.6)',
+  };
+
+  let footerStrip: React.ReactNode;
+  if (!isFooterInteractive) {
+    footerStrip = (
+      <div className={`${footerBaseClass} opacity-80`} style={footerStyle}>
+        {footerInner}
+      </div>
+    );
+  } else {
+    const interactiveClass =
+      `${footerBaseClass} py-2 -my-1 border-t transition-all duration-200 ` +
+      `${isFooterHovered ? 'opacity-100' : 'opacity-80'}`;
+    const interactiveStyle: React.CSSProperties = {
+      ...footerStyle,
+      borderTopColor: isFooterHovered ? `rgba(${themeColorRgba}, 0.45)` : 'transparent',
+      backgroundColor: isFooterHovered ? `rgba(${themeColorRgba}, 0.12)` : 'transparent',
+    };
+    const handlers = {
+      className: interactiveClass,
+      style: interactiveStyle,
+      onMouseEnter: () => setIsFooterHovered(true),
+      onMouseLeave: () => setIsFooterHovered(false),
+      onFocus: () => setIsFooterHovered(true),
+      onBlur: () => setIsFooterHovered(false),
+      onClick: (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (footerOnClick) footerOnClick();
+      },
+      'aria-label': footerAriaLabel || footerRightText,
+    };
+
+    footerStrip = footerHref ? (
+      <a {...handlers} href={footerHref} target="_blank" rel="noopener noreferrer">
+        {footerInner}
+      </a>
+    ) : (
+      <button {...handlers} type="button">
+        {footerInner}
+      </button>
+    );
+  }
 
   return (
     <div 
@@ -102,9 +185,13 @@ export default function HeroCard({
         onClick={onFlip}
       >
         {/* ================= FRONT SIDE ================= */}
+        {/* `inert` matters as much as pointer-events here: backface-visibility
+            hides the turned-away face visually but leaves its links focusable,
+            so without this a keyboard user can Tab to an invisible control. */}
         <div
           className={`absolute inset-0 w-full h-full rounded-md ${isFlipped ? 'pointer-events-none' : ''}`}
           style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transformStyle: 'preserve-3d' }}
+          inert={isFlipped || undefined}
         >
           <div 
             className="flex flex-col h-full w-full rounded-md p-3 relative select-none transition-all duration-500"
@@ -228,14 +315,7 @@ export default function HeroCard({
                 )}
 
                 {/* 4. Footer */}
-                <div 
-                  className="flex justify-between items-center px-1.5 text-[11px] font-mono rounded opacity-80 pt-1"
-                  style={{ color: footerTextColor || 'rgba(255, 255, 255, 0.6)' }}
-                >
-                  <span>{footerLeftText}</span>
-                  <span>{footerMiddleText}</span>
-                  <span>{footerRightText}</span>
-                </div>
+                {footerStrip}
 
               </div>
             </div>
@@ -246,6 +326,7 @@ export default function HeroCard({
         <div
           className={`absolute inset-0 w-full h-full ${!isFlipped ? 'pointer-events-none' : ''}`}
           style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: "rotateY(180deg)" }}
+          inert={!isFlipped || undefined}
         >
           <div 
             className="flex flex-col h-full w-full rounded-md p-3 relative select-none transition-all duration-500"

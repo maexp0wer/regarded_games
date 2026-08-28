@@ -25,10 +25,17 @@ export function useFitZoom<
       if (!content || !bounds) return;
       /* Read the UNZOOMED natural height (zoom out, measure, restore) —
          scrollHeight at the current zoom already bakes in the last factor,
-         so reusing it directly would compound on every resize. */
+         so reusing it directly would compound on every resize. offsetHeight,
+         not scrollHeight: a card parked off-screen by CardThrow (pre-first-
+         activation) sits under a large translateX + rotateY, and browsers
+         fold a transformed descendant's post-transform bounds into an
+         ancestor's *scrollable overflow* — inflating scrollHeight by however
+         far the card is thrown, even though it never actually renders there.
+         offsetHeight reflects only the normal-flow border-box, immune to
+         that transform-driven overflow. */
       const prevZoom = content.style.zoom;
       content.style.zoom = '1';
-      const natural = content.scrollHeight;
+      const natural = content.offsetHeight;
       content.style.zoom = prevZoom;
       const available = bounds.clientHeight;
       if (natural <= 0 || available <= 0) return;

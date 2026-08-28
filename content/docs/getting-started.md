@@ -43,7 +43,7 @@ than your stake can cover, it simply fails.
 There are two ways to get FIM:
 
 1. **At the auction** (the start of a season): buy newly minted FIM with USDC at a
-   fixed rate. See [Phase 1 — The Auction](/intro#phase-1-auction).
+   fixed rate. See [Phase 1 — The Auction](/intro#phase-1--the-auction).
 2. **On the exchange** (once trading is open): buy it from other players. There
    are no hidden pools and no privileged sellers — every order and every
    counterparty is visible on-chain.
@@ -115,7 +115,7 @@ bag.
 Every trade is a strategic act. Capitalists work to concentrate FIM; Proletarians
 work to spread it out. The season is won by the class that moves the economy far
 enough from its starting point toward their pole — and the winning class dictates
-how the USDC prize pool is paid out (see [Phase 3 — Settlement & Payout](/intro#phase-3-victory-and-payouts)).
+how the USDC prize pool is paid out (see [Phase 3 — Settlement & Payout](/intro#phase-3--settlement--payout)).
 
 A few habits of strong players:
 

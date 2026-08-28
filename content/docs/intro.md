@@ -3,7 +3,6 @@ title: Intro
 slug: intro
 sidebar_position: 1
 ---
-
 # Intro
 
 **Class War: The Game** is a real-money strategy game where two classes fight
@@ -27,7 +26,7 @@ When one side wins, the prize pool is paid out according to that side's rules.
 
 → Read more: [The Clean Room of Finance](/whitepaper/part-vi-conclusion--future-vision#18-conclusion-the-clean-room-of-finance)
 
-## The Two Classes {#the-two-classes}
+## The Two Classes
 
 Every player belongs to one of two classes, decided automatically by how much
 of the seasonal token (**FIM**) they hold relative to everyone else. You don't
@@ -44,7 +43,6 @@ holders sits below it.
   Capitalists try to concentrate FIM, pushing the economy toward inequality. A
   Capitalist win pays the whole pool to the small group of top holders — the
   winner-take-all market in its purest form.
-
 - **Carlo, the Proletarian.** Carlo is the force of coordination. Proletarians
   work together to spread FIM out and keep wealth from concentrating. A
   Proletarian win caps the richest players' winnings and shares the surplus
@@ -57,7 +55,7 @@ holders sits below it.
 A season always runs through the same three phases. Each one has its own page in
 the rulebook on the landing site.
 
-### Phase 1 — The Auction {#phase-1-auction}
+### Phase 1 — The Auction
 
 A season opens with a buy-in window. Players exchange stablecoin (**USDC**) for
 the season's token, **FIM**, at a fixed one-to-one rate. All the USDC collected
@@ -72,7 +70,7 @@ locked stake.
 
 → Read more: [Phase I: Raising the Capital](/whitepaper/part-iii-the-mechanical-and-technical-framework#93-phase-i-raising-the-capital-the-auction)
 
-### Phase 2 — Trading {#phase-2-trading}
+### Phase 2 — Trading
 
 Once the auction closes, the market opens. Players trade FIM with each other on a
 **transparent peer-to-peer order book** — you can see every open order, and the
@@ -90,7 +88,7 @@ every shift in wealth is recorded in the open and nothing happens in the dark.
 
 → Read more: [Phase II: The Active Game](/whitepaper/part-iii-the-mechanical-and-technical-framework#94-phase-ii-the-active-game)
 
-### Phase 3 — Settlement &amp; Payout {#phase-3-victory-and-payouts}
+### Phase 3 — Settlement &amp; Payout
 
 A class wins by moving the economy far enough from where the season started —
 not all the way to perfect equality or total concentration, just a defined step
@@ -101,20 +99,18 @@ crosses the line, the season locks and the prize pool pays out:
 - **Capitalist victory:** the entire prize pool goes to the small group of top
   holders who together control half the supply, in proportion to what they hold.
   Everyone else gets nothing.
-
 - **Proletarian victory:** the richest players' winnings are **capped**, and the
   surplus is pooled into a **Solidarity Fund**. The fund is shared out by *net
   contribution* — the money each player put in minus what they took out — so the
   players who sacrificed the most for the cause are rewarded, and freeloaders get
   little.
-
 - **Time runs out:** if neither side reaches the target before the clock ends,
   the payout blends the two — every bit of progress a side made still translates
   into money, so no effort is ever wasted.
 
 → Read more: [Phase III: Settlement and Payout](/whitepaper/part-iii-the-mechanical-and-technical-framework#95-phase-iii-settlement-and-payout)
 
-## Who Owns the Game {#governance}
+## Who Owns the Game
 
 There is no company behind Regarded Games that can tune the rules to extract from
 players. The game is run by a **DAO** — a decentralized organization owned by the
@@ -134,7 +130,6 @@ Governance works in two halves that are kept apart:
   message rather than paying a transaction fee. Voting power comes from *staked*
   RGD, so the people setting the rules are the ones with capital committed to the
   game's long-term health.
-
 - **Carrying it out** is the job of the **Execution Council**, a shared multi-
   signature wallet. The Council has no discretion — it simply confirms that a vote
   passed and writes the result on-chain, after a waiting period that lets the
@@ -142,7 +137,7 @@ Governance works in two halves that are kept apart:
 
 → Read more: [How Governance Works](/whitepaper/part-ii-organizational--technical-framework#7-how-governance-works)
 
-## How Value Flows Back {#revenue-allocation}
+## How Value Flows Back
 
 While a season's prize pool sits in DeFi lending markets, it earns yield. That
 yield (plus the small fee charged on every trade) is real revenue, and the DAO
@@ -163,14 +158,14 @@ which stays accounted for per season and is always recoverable.
 
 The economy uses two tokens with completely different jobs:
 
-| Token | Name | What it's for |
-| :--- | :--- | :--- |
+| Token         | Name                | What it's for                                                                                                                                |
+| :------------ | :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------- |
 | **FIM** | Fake Internet Money | The seasonal game token you trade. A fresh one is minted each season; last season's FIM is worthless, so no one can hoard it across seasons. |
-| **RGD** | Regarded Token | The permanent governance and access token. You stake it to play, and you use it to vote on the rules. Fixed supply of 1,000,000,000. |
+| **RGD** | Regarded Token      | The permanent governance and access token. You stake it to play, and you use it to vote on the rules. Fixed supply of 1,000,000,000.         |
 
 → Read more: [The Dual-Token System](/whitepaper/part-iv-the-economic-framework#11-tokenomics--governance)
 
-## How Ownership Is Distributed {#distribution}
+## How Ownership Is Distributed
 
 The RGD supply is fixed at one billion tokens, and most of it belongs to the
 community rather than to insiders. The landing page's **Distribution of Power**
@@ -179,18 +174,18 @@ rulebook wheel shows the full breakdown; it splits into two groups:
 **Community-controlled (≈75%)** — the majority of the supply, governed by the
 players themselves:
 
-| Tranche | Share | What it's for |
-| :--- | :--- | :--- |
-| **DAO Treasury** | 40% | Long-term capital for growth, controlled by governance. |
-| **Growth & Ecosystem** | 20% | Incentives, rewards, and user acquisition. |
-| **Market Formation** | 15% | The launch auction, initial liquidity, testnet quests, and airdrops. |
+| Tranche                      | Share | What it's for                                                        |
+| :--------------------------- | :---- | :------------------------------------------------------------------- |
+| **DAO Treasury**       | 40%   | Long-term capital for growth, controlled by governance.              |
+| **Growth & Ecosystem** | 20%   | Incentives, rewards, and user acquisition.                           |
+| **Market Formation**   | 15%   | The launch auction, initial liquidity, testnet quests, and airdrops. |
 
 **Team & operations (≈25%)** — aligned to the long run, not handed out at launch:
 
-| Tranche | Share | What it's for |
-| :--- | :--- | :--- |
-| **Core Team** | 15% | Vests over four years behind a one-year cliff. |
-| **Operational Reserve** | 10% | Legal, audits, and infrastructure, run by the DAO LLC. |
+| Tranche                       | Share | What it's for                                          |
+| :---------------------------- | :---- | :----------------------------------------------------- |
+| **Core Team**           | 15%   | Vests over four years behind a one-year cliff.         |
+| **Operational Reserve** | 10%   | Legal, audits, and infrastructure, run by the DAO LLC. |
 
 The point of releasing it slowly is to keep the very concentration the game
 critiques from re-forming at the level of who owns it. Only a small fraction is in
@@ -199,7 +194,7 @@ play. The team only profits if the project thrives long-term.
 
 → Read more: [Supply Distribution](/whitepaper/part-iv-the-economic-framework#113-supply-distribution) · [Release Over Time](/whitepaper/part-iv-the-economic-framework#12-how-ownership-is-released-over-time)
 
-## Joining at Launch: The Capital Auction {#capital-auction}
+## Joining at Launch: The Capital Auction
 
 When RGD is created, the whole supply is minted in a single **Token Generation
 Event**, and the public sale tranche is offered through a **Capital Auction**.
@@ -215,7 +210,7 @@ Acquiring and staking RGD here is what gets you a seat at the game.
 
 → Read more: [The Token Generation Event](/whitepaper/part-iv-the-economic-framework#131-the-token-generation-event)
 
-## Earning Your Stake: The Genesis Campaign {#testnet-quests}
+## Earning Your Stake: The Genesis Campaign
 
 Before mainnet, ownership is handed to the people who show up and contribute, not
 to whoever buys the most on day one. A **testnet quest campaign** on Base Sepolia
@@ -228,25 +223,25 @@ The full schedule of phases is laid out below and on the landing page's
 
 → Read more: [Growing the Community](/whitepaper/part-v-strategic-execution#14-growing-the-community-and-distributing-ownership)
 
-## The Roadmap {#roadmap}
+## The Roadmap
 
 The protocol grows in phases, proving the core game is stable before adding
 complexity on top of it. Where it goes after launch is decided by the DAO, so
 every expansion follows the community's direction.
 
-| Phase | When | What happens |
-| :--- | :--- | :--- |
-| **Foundation** | Complete | Game design, dual-token economics, and the DAO LLC legal structure. |
-| **Build** | Q1–Q2 2026 | Core smart contracts on Base, the dApp (exchange, terminal, community), and pre-launch community seeding. |
-| **Testnet** | Q3 2026 | Public testnet on Base Sepolia, the Genesis quest campaign, the audit competition, and the Execution Council. |
-| **Mainnet** | Q4 2026 | The RGD launch and Capital Auction, the Genesis airdrop, Season 1, the bug bounty, and live governance. |
-| **Expansion** | Beyond | DAO-approved new game modes and ecosystem growth. |
+| Phase                | When         | What happens                                                                                                  |
+| :------------------- | :----------- | :------------------------------------------------------------------------------------------------------------ |
+| **Foundation** | Complete     | Game design, dual-token economics, and the DAO LLC legal structure.                                           |
+| **Build**      | Q1–Q3 2026 | Core smart contracts on Base, the dApp (exchange, terminal, community), and pre-launch community seeding.     |
+| **Testnet**    | Q4 2026      | Public testnet on Base Sepolia, the Genesis quest campaign, the audit competition, and the Execution Council. |
+| **Mainnet**    | Q1 2027      | The RGD launch and Capital Auction, the Genesis airdrop, Season 1, the bug bounty, and live governance.       |
+| **Expansion**  | Beyond       | DAO-approved new game modes and ecosystem growth.                                                             |
 
 Later seasons aren't fixed in stone: because the players own the rules, the DAO
 can add new game modes — from seasons backed by volatile real assets to ones that
 start everyone on perfectly equal footing.
 
-→ Read more: [Roadmap & Future Vision](/whitepaper/part-vi-conclusion--future-vision#19-roadmap--future-vision)
+→ Read more: [Roadmap &amp; Future Vision](/whitepaper/part-vi-conclusion--future-vision#19-roadmap--future-vision)
 
 ## How the Game Is Kept Safe
 
@@ -260,7 +255,7 @@ gives the organization a legal point of contact.
 
 ## Glossary
 
-### Gini Coefficient {#gini-coefficient}
+### Gini Coefficient
 
 The standard measure of wealth inequality, and the scoreboard of the game. It runs
 from **0** (everyone holds an equal share) to **1** (a single holder owns

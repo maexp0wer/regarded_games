@@ -2,7 +2,7 @@ import type { ClientModule } from '@docusaurus/types';
 
 /* Fix for Docusaurus's initial-load anchor race: when a page is opened directly
    at a URL with a hash (e.g. the landing-page HeroCard "i" buttons opening
-   docs.<domain>/intro#phase-2-trading in a new tab), the router's scroll
+   docs.<domain>/intro#phase-2--trading in a new tab), the router's scroll
    restoration can run before the target heading is mounted, so the jump
    silently no-ops — the page lands at the top, and only re-entering the URL in
    the address bar (a native fragment jump on an already-hydrated document)

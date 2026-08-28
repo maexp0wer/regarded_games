@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { usePublicClient, useReadContract } from 'wagmi';
-import { Address, getAddress } from 'viem';
-import { useQuery } from '@tanstack/react-query';
-import { useTenantDeployment, useTenantChainId } from '@/context/TenantContext';
+import { useReadContract } from 'wagmi';
+import { Address } from 'viem';
+import { useTenantChainId } from '@/context/TenantContext';
+import { useSeasonRegistry, seasonSlug, type SeasonRegistryEntry } from '@/hooks/useSeasonRegistry';
 import { useSeasonGini } from '@/hooks/useSeasonGini';
 import { useSeasonPhase } from '@/hooks/useSeasonPhase';
 import { useSeasonVictory } from '@/hooks/useSeasonVictory';
@@ -16,29 +16,7 @@ import { CountdownTicker } from './CountdownTicker';
 import LedgerLoader from '@/components/LedgerLoader';
 
 // --- ABI Definitions ---
-const GAME_CONTROLLER_SEASONS_ABI = [
-  {
-    "type": "function",
-    "name": "seasons",
-    "inputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
-    "outputs": [
-      { "name": "season", "type": "address" },
-      { "name": "auction", "type": "address" },
-      { "name": "exchange", "type": "address" },
-      { "name": "fim", "type": "address" }
-    ],
-    "stateMutability": "view"
-  },
-] as const;
-
 const GAME_SEASON_FULL_ABI = GameSeasonAbi as Abi;
-
-// --- Types ---
-type SeasonRegistry = {
-  id: number;
-  season: Address;
-  phase: string;
-};
 
 // --- Helpers ---
 const formatDateShort = (timestamp: number) => {
@@ -53,7 +31,7 @@ const formatDateShort = (timestamp: number) => {
 // ============================================================================
 // SUB-COMPONENT: SEASON CARD
 // ============================================================================
-function SeasonCard({ season }: { season: SeasonRegistry }) {
+function SeasonCard({ season }: { season: SeasonRegistryEntry }) {
   const { data: giniData } = useSeasonGini(season.season);
   const phase = useSeasonPhase(season.season);
   const victory = useSeasonVictory(season.season);
@@ -69,7 +47,7 @@ function SeasonCard({ season }: { season: SeasonRegistry }) {
   const gInitial = gInitialRaw ? Number(gInitialRaw) : 0;
 
   const seasonNumber = season.id + 1;
-  const slug = `season_${seasonNumber}`;
+  const slug = seasonSlug(season.id);
 
   const {
     currentPhase,
@@ -189,45 +167,8 @@ function SeasonCard({ season }: { season: SeasonRegistry }) {
 // MAIN COMPONENT
 // ============================================================================
 export function SeasonsList() {
-  const chainId = useTenantChainId();
-  const coreDeployment = useTenantDeployment();
-  const controllerAddress = getAddress(coreDeployment.Controller) as Address;
   const [showAll, setShowAll] = useState(false);
-  const publicClient = usePublicClient({ chainId });
-
-  const { data: seasonsData, isLoading } = useQuery({
-    queryKey: ['allSeasons_v3', chainId, controllerAddress],
-    queryFn: async () => {
-      if (!controllerAddress || !publicClient) return [];
-      const allSeasons: SeasonRegistry[] = [];
-
-      for (let i = 0; i < 50; i++) {
-        try {
-          const data = await publicClient.readContract({
-            address: controllerAddress,
-            abi: GAME_CONTROLLER_SEASONS_ABI,
-            functionName: 'seasons',
-            args: [BigInt(i)] as const,
-          }) as [Address, Address, Address, Address];
-
-          const phase = await publicClient.readContract({
-            address: data[0], abi: GAME_SEASON_FULL_ABI, functionName: 'getPhase'
-          });
-
-          allSeasons.push({
-            id: i,
-            season: data[0],
-            phase: phase as string,
-          });
-        } catch { break; }
-      }
-      return allSeasons;
-    },
-    enabled: !!controllerAddress && !!publicClient,
-    // Slow data: keeps the row set + Active/All filter phase live so new seasons
-    // appear and phase transitions (e.g. TRADING → PAYOUT) move rows without a reload.
-    refetchInterval: 15000,
-  });
+  const { data: seasonsData, isLoading } = useSeasonRegistry();
 
   if (isLoading) return <LedgerLoader />;
 

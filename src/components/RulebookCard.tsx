@@ -71,7 +71,7 @@ export default function RulebookCard({
   const highlightColor = themeColorHover || themeColor;
 
   const innerContent = (
-    <div className="flex flex-col flex-grow justify-between gap-1.5 z-10">
+    <div className="flex flex-col flex-grow min-h-0 justify-between gap-1.5 z-10">
 
       {/* Header plate — omitted in noBorder mode (parent wrapper owns the header) */}
       {!noBorder && (
@@ -105,9 +105,9 @@ export default function RulebookCard({
 
       {/* Rulebook page — in noBorder mode the parent page owns the inset, so the
           gold panel hugs this wrapper and matches the PageFace inner panel */}
-      <div className="flex flex-col flex-grow">
+      <div className="flex flex-col flex-grow min-h-0">
         <div
-          className="relative flex flex-col flex-grow rounded-sm border overflow-hidden shadow-inner border-t-transparent md:border-t-(--rb-panel-border)"
+          className="relative flex flex-col flex-grow min-h-0 rounded-sm border overflow-hidden shadow-inner border-t-transparent md:border-t-(--rb-panel-border)"
           style={{
             backgroundColor: 'var(--color-card)',
             // Drive border color through a CSS var so the responsive top-color
@@ -141,8 +141,8 @@ export default function RulebookCard({
             />
           )}
 
-          <div className="relative z-[5] flex flex-col flex-grow gap-2 p-5 md:p-6">
-            <div className="flex flex-col flex-grow">
+          <div className="relative z-[5] flex flex-col flex-grow min-h-0 gap-2 p-5 md:p-6">
+            <div className="flex flex-col flex-grow min-h-0 overflow-y-auto custom-scrollbar">
               {detailsSlot}
             </div>
 
@@ -173,13 +173,13 @@ export default function RulebookCard({
   if (noBezel) {
     return (
       <div
-        className="w-full relative group mx-auto flex flex-col flex-grow select-none"
+        className="w-full relative group mx-auto flex flex-col flex-grow min-h-0 select-none"
         style={{ maxWidth, minHeight, ...(width ? { width } : {}) }}
         onMouseEnter={() => setIsCardHovered(true)}
         onMouseLeave={() => setIsCardHovered(false)}
       >
         <div
-          className="flex flex-col flex-grow w-full rounded-md relative overflow-hidden transition-all duration-500"
+          className="flex flex-col flex-grow min-h-0 w-full rounded-md relative overflow-hidden transition-all duration-500"
           style={{
             border: noBorder ? 'none' : `1px solid ${themeColor}`,
             backgroundColor: 'var(--color-card)',
