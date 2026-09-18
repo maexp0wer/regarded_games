@@ -58,7 +58,7 @@ export const metadata: Metadata = {
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   icons: {
-    icon: '/Regardo_Head.svg',
+    icon: '/Governance_Token.svg',
   },
   openGraph: {
     type: 'website',

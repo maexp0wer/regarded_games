@@ -43,7 +43,7 @@ const PROJECT_URL = MAIN_DOMAIN ? `https://${MAIN_DOMAIN}` : 'http://localhost:3
 const config: Config = {
   title: 'Regarded Games',
   tagline: 'Class War: The Game — class war fought as a perfect-information strategy game with real-money stakes on Base',
-  favicon: 'img/Regardo_Head.svg',
+  favicon: 'img/Governance_Token.svg',
 
   future: {
     v4: true,

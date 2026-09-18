@@ -2,8 +2,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildCsp } from '@/lib/securityHeaders';
 
+/* Anything this matcher does NOT exclude gets tenant-rewritten by subdomain — so
+   a static file under public/ that is left in has its request swallowed and comes
+   back as an HTML app route instead of the asset. That is why the loose files in
+   public/ are named individually here, and why public/characters (the landing
+   card-back art, painted as CSS background-images) has to be excluded as a whole
+   folder: a background-image that resolves to text/html renders as nothing at all. */
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|Regardo_Head.svg).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|Regardo_Head.svg|Governance_Token.svg|characters/).*)'],
 };
 
 /* Per-request CSP nonce (Web Crypto — Edge-safe; no Buffer). */
