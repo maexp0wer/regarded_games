@@ -311,7 +311,7 @@ async function buildMainQuests(
         },
         {
           id: 'login_discourse', type: 'internal',
-          title: 'Log into our Forum',
+          title: 'Log into Discourse',
           points: P.login_discourse,
           isCompleted: isDone('login_discourse'),
           actionUrl: forumRootLoginUrl,
