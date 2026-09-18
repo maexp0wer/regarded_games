@@ -1,7 +1,7 @@
 // src/components/Rulebook.tsx
 "use client";
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useId, useRef, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTheme } from '@/context/ThemeContext';
 import RulebookCard from '@/components/RulebookCard';
@@ -11,6 +11,8 @@ import { DiscourseIcon, XIcon, DiscordIcon, TelegramIcon, GithubIcon } from '@/c
 import { useViewportWidth } from '@/hooks/useViewportWidth';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { docsOrigin } from '@/utils/appUrls';
+import { drawCoverPlateArt, type PlateHalo, renderCoverFoilMask } from '@/lib/coverPlateArt';
+import { FOIL_REST, trackFoil } from '@/lib/holoFoil';
 
 /* Scroll stops the rulebook occupies inside its landing section, back cover
    included — the LAST stop IS the back cover, reached by scrolling on from the
@@ -30,8 +32,8 @@ const MAIN_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN || '';
 const DOCS_URL = docsOrigin(MAIN_DOMAIN);
 
 /* Explainer targets for the two content pages that have one, reachable from the
-   "… ↗" slot of their running footer. Same destination-link role the footer
-   strip plays on the playing cards (HeroCard `footerHref`). */
+   "… ↗" slot of their running footer. Same destination-link role the header
+   plays on the playing cards (HeroCard `headerHref`). */
 const FOOTER_DOC_LINKS = {
   distribution: `${DOCS_URL}/intro#how-ownership-is-distributed`,
   campaign: `${DOCS_URL}/intro#the-roadmap`,
@@ -193,13 +195,16 @@ const DottedLeader = () => (
   />
 );
 
-/* Corner brackets for the thin golden inner panels. */
+/* Corner brackets for the thin golden inner panels — the page's one quoted
+   ornament, at the accent alpha the HeroCard fronts print their own brackets
+   at (0.35). They were struck at 0.5, which read as a second frame inside the
+   binding rather than as a mark in its corners. */
 const cornerBrackets = (
   <>
-    <div className="absolute top-1 left-1 w-3 h-3 border-t border-l pointer-events-none z-20" style={{ borderColor: 'rgba(212, 175, 55, 0.5)' }} />
-    <div className="absolute top-1 right-1 w-3 h-3 border-t border-r pointer-events-none z-20" style={{ borderColor: 'rgba(212, 175, 55, 0.5)' }} />
-    <div className="absolute bottom-1 left-1 w-3 h-3 border-b border-l pointer-events-none z-20" style={{ borderColor: 'rgba(212, 175, 55, 0.5)' }} />
-    <div className="absolute bottom-1 right-1 w-3 h-3 border-b border-r pointer-events-none z-20" style={{ borderColor: 'rgba(212, 175, 55, 0.5)' }} />
+    <div className="absolute top-1 left-1 w-3 h-3 border-t border-l pointer-events-none z-20" style={{ borderColor: 'rgba(212, 175, 55, 0.35)' }} />
+    <div className="absolute top-1 right-1 w-3 h-3 border-t border-r pointer-events-none z-20" style={{ borderColor: 'rgba(212, 175, 55, 0.35)' }} />
+    <div className="absolute bottom-1 left-1 w-3 h-3 border-b border-l pointer-events-none z-20" style={{ borderColor: 'rgba(212, 175, 55, 0.35)' }} />
+    <div className="absolute bottom-1 right-1 w-3 h-3 border-b border-r pointer-events-none z-20" style={{ borderColor: 'rgba(212, 175, 55, 0.35)' }} />
   </>
 );
 
@@ -216,35 +221,36 @@ const goldFrame = (surface: string, widths: string): React.CSSProperties => ({
   background: `linear-gradient(${surface}, ${surface}) padding-box, ${GOLD_CHASSIS_GRADIENT} border-box`,
 });
 
-/* Cover variant of goldFrame: the page FACE itself is the gold metal (front &
-   back covers), not just the edge. Same transparent-border frame so the corner
-   radii survive, but the padding-box surface is the chassis gradient too — so
-   the whole cover reads as one continuous sheet of gold. */
-const goldCoverFrame = (widths: string): React.CSSProperties => ({
-  borderStyle: 'solid',
-  borderColor: 'transparent',
-  borderWidth: widths,
-  background: `${GOLD_CHASSIS_GRADIENT} padding-box, ${GOLD_CHASSIS_GRADIENT} border-box`,
-});
+/* Cover surface. Unlike the leaves, the page FACE itself is the gold metal
+   (front & back covers), so there is no edge to frame. goldFrame's transparent
+   border is deliberately NOT used here: the coverMetal treatment below only
+   reaches the padding box, so a border-box gradient ring would stand around the
+   lit sheet as a plain golden border. One fill, treated edge to edge. */
+const goldCoverFrame: React.CSSProperties = {
+  background: GOLD_CHASSIS_GRADIENT,
+};
 
-/* Ink for everything printed on the gold covers. The page canvas color, so the
-   type reads as struck into the metal rather than painted onto it. */
-const COVER_INK = 'var(--color-bg)';
+/* Ink for everything printed on the gold covers. Literal, not the page-canvas
+   token it used to be: a cover is a printed object, not a themed surface — the
+   same reason every colour on the HeroCard backs is struck rather than pulled
+   from a token. As `var(--color-bg)` it inverted in light mode and printed
+   #F8F9FC on pale gold (~1.6:1), which took the whole cover with it. Struck
+   dark, it reads as ink pressed into the metal in both themes. */
+const COVER_INK = '#0D0B14';
 
 /* Metal treatment for the gold covers, layered bottom-up: the card chassis' 45°
-   weave, fine guilloche rings turned from the centre, a raking sheen so the
-   sheet reads as lit metal, and a vignette dropping the outer edges back. The
-   3px frame border sits outside these (absolute insets resolve to the padding
-   box), so the vignette leaves it standing as a bright raised lip. */
+   weave, a raking sheen so the sheet reads as lit metal, and a vignette dropping
+   the outer edges back. With no border frame beneath them these layers run to
+   the cover's own edge, so the metal stays continuous instead of sitting inside
+   a bright lip.
+
+   The concentric CSS rings that used to sit between the weave and the sheen are
+   gone: the real guilloché is struck over the top of all this by CoverPlate. */
 const coverMetal = (
   <>
     <div
       className="absolute inset-0 pointer-events-none opacity-25 mix-blend-overlay"
       style={{ backgroundImage: 'repeating-linear-gradient(45deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px)' }}
-    />
-    <div
-      className="absolute inset-0 pointer-events-none opacity-[0.12] mix-blend-overlay"
-      style={{ backgroundImage: 'repeating-radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 6px, rgba(0,0,0,0.9) 6px, rgba(0,0,0,0.9) 7px)' }}
     />
     <div
       className="absolute inset-0 pointer-events-none mix-blend-soft-light"
@@ -257,20 +263,111 @@ const coverMetal = (
   </>
 );
 
-/* Printed chrome shared by both covers: a double rule (heavy outer, hairline
-   inner) plus the heavy corner brackets the HeroCard backs wear — struck in ink
-   so front and back read as the two faces of one bound object. The hairline
-   threads between the bracket arms (which end 16px in) and the p-7 type area. */
-const coverChrome = (
-  <>
-    <div className="absolute inset-2 rounded-sm border pointer-events-none" style={{ borderColor: COVER_INK, opacity: 0.4 }} />
-    <div className="absolute inset-[18px] rounded-xs border pointer-events-none" style={{ borderColor: COVER_INK, opacity: 0.18 }} />
-    <div className="absolute top-3 left-3 w-8 h-8 border-t-4 border-l-4 pointer-events-none rounded-tl-sm" style={{ borderColor: COVER_INK }} />
-    <div className="absolute top-3 right-3 w-8 h-8 border-t-4 border-r-4 pointer-events-none rounded-tr-sm" style={{ borderColor: COVER_INK }} />
-    <div className="absolute bottom-3 left-3 w-8 h-8 border-b-4 border-l-4 pointer-events-none rounded-bl-sm" style={{ borderColor: COVER_INK }} />
-    <div className="absolute bottom-3 right-3 w-8 h-8 border-b-4 border-r-4 pointer-events-none rounded-br-sm" style={{ borderColor: COVER_INK }} />
-  </>
-);
+/* ---- Cover plate ----
+   The printing shared by both covers, and the one place the rulebook spends its
+   full ornament budget: the deck back's guilloché vortex, rope braid and
+   microprint rule, struck into the gold by src/lib/coverPlateArt.ts, with the
+   heavy corner brackets the HeroCard backs wear set on the hairline inside the
+   braid.
+
+   Drawn to the cover's real size, so the braid and the microprint hug its edge
+   at every width the book is laid out at, and only while the book is on screen
+   — the same lazy draw the deck backs use. Redrawn once the mono face has
+   loaded so the microprint isn't left set in the fallback.
+
+   The braid and microprint are also holographic foil, as on the deck back: at
+   rest plain print, and while the pointer is on the cover the foil catches the
+   light in a pool around the cursor. The gold is a bright ground in both
+   themes, so the spectrum is pushed deeper here the way BanknoteButton pushes
+   it on light stock. */
+const COVER_FOIL_BANDS =
+  'repeating-linear-gradient(115deg, #FF6FD8 0%, #FFD36E 4.8%, #9CFF8A 9.6%, #62E6FF 14.4%, #8F7BFF 19.2%, #FF6FD8 24%)';
+const COVER_FOIL_POOL =
+  'radial-gradient(circle at var(--foil-glare-x) var(--foil-glare-y), #000 0px, #000 44px, transparent 160px)';
+const COVER_FOIL_GLARE =
+  'radial-gradient(circle at var(--foil-glare-x) var(--foil-glare-y), rgba(255, 255, 255, 0.9) 0px, rgba(255, 255, 255, 0.3) 52px, rgba(255, 255, 255, 0) 130px)';
+
+function CoverPlate({ active, halos }: { active: boolean; halos: readonly PlateHalo[] }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const foilRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const foil = foilRef.current;
+    const cover = canvas?.parentElement;
+    if (!active || !canvas || !foil || !cover) return;
+
+    let cancelled = false;
+    const mono = getComputedStyle(canvas).getPropertyValue('--font-mono').trim() || 'monospace';
+
+    const draw = () => {
+      if (cancelled) return;
+      const width = cover.clientWidth;
+      const height = cover.clientHeight;
+      drawCoverPlateArt(canvas, width, height, COVER_INK, mono, halos);
+      renderCoverFoilMask(width, height, mono).then((mask) => {
+        if (cancelled || !mask) return;
+        const layers = `url(${mask}), ${COVER_FOIL_POOL}`;
+        foil.style.maskImage = layers;
+        foil.style.setProperty('-webkit-mask-image', layers);
+      });
+    };
+    const observer = new ResizeObserver(draw);
+    observer.observe(cover);
+    document.fonts.load(`600 11px ${mono}`).then(draw, () => {});
+    const stopTracking = trackFoil(cover, foil);
+
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+      stopTracking();
+    };
+  }, [active, halos]);
+
+  return (
+    <>
+      <canvas ref={canvasRef} aria-hidden="true" className="absolute inset-0 size-full pointer-events-none" />
+      {/* Fully masked (invisible) until the effect supplies the real mask. The
+          effect writes mask-image and the position variables straight to the
+          element; React never sets them, so a re-render can't reset them. */}
+      <div
+        ref={foilRef}
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-450 group-hover/cover:opacity-80
+          mask-no-repeat mask-[linear-gradient(transparent,transparent)] mask-[100%_100%,100%_100%] mask-intersect"
+        style={{ WebkitMaskComposite: 'source-in', ...FOIL_REST }}
+      >
+        <div
+          className="absolute inset-0 saturate-[1.6] brightness-[0.85]"
+          style={{ backgroundImage: COVER_FOIL_BANDS, backgroundSize: '300% 300%', backgroundPosition: 'var(--foil-x) var(--foil-y)' }}
+        />
+        <div className="absolute inset-0 mix-blend-overlay opacity-50" style={{ backgroundImage: COVER_FOIL_GLARE }} />
+      </div>
+
+      {/* Heavy corner brackets, set on the plate's hairline (19px) so the four
+          rings read as one frame instead of the brackets straddling the braid. */}
+      <div className="absolute top-[19px] left-[19px] w-7 h-7 border-t-[3px] border-l-[3px] pointer-events-none rounded-tl-xs" style={{ borderColor: COVER_INK, opacity: 0.85 }} />
+      <div className="absolute top-[19px] right-[19px] w-7 h-7 border-t-[3px] border-r-[3px] pointer-events-none rounded-tr-xs" style={{ borderColor: COVER_INK, opacity: 0.85 }} />
+      <div className="absolute bottom-[19px] left-[19px] w-7 h-7 border-b-[3px] border-l-[3px] pointer-events-none rounded-bl-xs" style={{ borderColor: COVER_INK, opacity: 0.85 }} />
+      <div className="absolute bottom-[19px] right-[19px] w-7 h-7 border-b-[3px] border-r-[3px] pointer-events-none rounded-br-xs" style={{ borderColor: COVER_INK, opacity: 0.85 }} />
+    </>
+  );
+}
+
+/* Where each cover's type sits, as a share of the cover — the field is erased
+   in a soft halo around these so every block prints on clean metal. Both covers
+   lay their blocks out with `justify-between` inside p-7, so the shares hold at
+   every size the book is drawn at. */
+const FRONT_COVER_HALOS: readonly PlateHalo[] = [
+  { cx: 0.5, cy: 0.1, rx: 0.46, ry: 0.085 },   // studio imprint + rule
+  { cx: 0.5, cy: 0.5, rx: 0.44, ry: 0.23 },    // seal + title block
+  { cx: 0.5, cy: 0.9, rx: 0.46, ry: 0.085 },   // printed strip
+];
+const BACK_COVER_HALOS: readonly PlateHalo[] = [
+  { cx: 0.5, cy: 0.13, rx: 0.34, ry: 0.1 },    // studio imprint
+  { cx: 0.5, cy: 0.5, rx: 0.48, ry: 0.19 },    // cross rule + edition cartouche
+  { cx: 0.5, cy: 0.87, rx: 0.34, ry: 0.1 },    // title imprint
+];
 
 /* Engraved divider with a centred lozenge — the printed rule that brackets the
    front cover's title block. */
@@ -284,51 +381,80 @@ function CoverRule() {
   );
 }
 
-/* The Sec. 04 supply split, printed as a struck pie inside the seal. Same five
-   allocations as TABLE_DATA, graded light-to-dark so the wedges read as one
-   engraving rather than five colors. */
+/* The Sec. 04 supply split, printed as a struck pie on the seal's face. Same
+   five allocations as TABLE_DATA, graded light-to-dark so the wedges read as
+   one engraving rather than five colors. */
 const SEAL_SEGMENTS = [40, 20, 15, 15, 10];
 
-/* Cover seal: the notched-bezel crest chassis the landing HeroCards wear (see
-   CardEmblems) reduced to a single ink weight, wrapped around the distribution
-   wheel that opens the book on page 001. */
-function CoverSeal() {
+/* Rosette engraved behind the wheel, placed by rotation so no trig runs during
+   render — the deck coins' ring of offset circles at seal scale. */
+const SEAL_ROSETTE_ANGLES = Array.from({ length: 18 }, (_, i) => i * 20);
+
+/* ---- Cover seal ----
+   Struck as a house coin: the milled edge, rim legend between two rules and
+   engraved rosette the deck backs carry (see CoinFace in HeroCard.tsx), with
+   the Sec. 04 supply wheel as the device on its face where the deck coin has
+   Regardo's portrait. So the book closes on the same object the cards turn
+   over to, and the wheel still previews the page the rulebook opens on.
+
+   It replaces a bespoke notched-bezel crest, which was the last of a motif the
+   cards themselves stopped carrying — a sixth shape in a vocabulary of five.
+   The reeding is cut to 72: the deck back's 144 aliases at this size.
+
+   `id` scopes the SVG defs — the desktop spread and the mobile stack can both
+   be mounted at once. */
+function CoverSeal({ id }: { id: string }) {
   const R = 17;
   const C = 2 * Math.PI * R;
-  const ticks = Array.from({ length: 48 });
+  const topArc = `${id}-top`;
+  const bottomArc = `${id}-bottom`;
   let offset = 0;
 
   return (
     <svg
       viewBox="0 0 100 100"
-      className="w-[86px] h-[86px] lg:w-[104px] lg:h-[104px] shrink-0"
+      className="w-[104px] h-[104px] lg:w-[124px] lg:h-[124px] shrink-0"
       style={{ color: COVER_INK }}
       aria-hidden="true"
     >
-      {/* Double bezel ring */}
-      <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="0.8" opacity="0.4" />
-      <circle cx="50" cy="50" r="43" fill="none" stroke="currentColor" strokeWidth="2.2" opacity="0.8" />
+      <defs>
+        {/* The top arc runs clockwise so its type stands outward; the bottom arc
+            runs counter-clockwise so its type stands upright too. */}
+        <path id={topArc} d="M 13.5 50 A 36.5 36.5 0 0 1 86.5 50" />
+        <path id={bottomArc} d="M 10 50 A 40 40 0 0 0 90 50" />
+      </defs>
 
-      {/* Tick crown, every fourth notch struck long */}
-      <g opacity="0.45">
-        {ticks.map((_, i) => {
-          const major = i % 4 === 0;
-          const a = (i / ticks.length) * Math.PI * 2;
-          const r1 = major ? 33.5 : 35.5;
-          return (
-            <line
-              key={i}
-              x1={50 + Math.cos(a) * r1}
-              y1={50 + Math.sin(a) * r1}
-              x2={50 + Math.cos(a) * 38.5}
-              y2={50 + Math.sin(a) * 38.5}
-              stroke="currentColor"
-              strokeWidth={major ? 1 : 0.5}
-            />
-          );
-        })}
+      {/* Milled edge: 72 reeds — pathLength normalises the ring so the dashes close evenly */}
+      <circle cx="50" cy="50" r="45.2" fill="none" stroke="currentColor" strokeOpacity="0.3" strokeWidth="3.4" />
+      <circle cx="50" cy="50" r="45.2" fill="none" stroke="currentColor" strokeOpacity="0.8" strokeWidth="3.4" pathLength={144} strokeDasharray="1 1" />
+
+      {/* Rim: the legend band between two rules, dotted either side */}
+      <circle cx="50" cy="50" r="43.2" fill="none" stroke="currentColor" strokeOpacity="0.5" strokeWidth="0.7" />
+      <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeOpacity="0.5" strokeWidth="0.7" />
+      <g
+        fill="currentColor"
+        fillOpacity="0.85"
+        fontSize="5.6"
+        fontWeight="700"
+        letterSpacing="1"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        <text>
+          <textPath href={`#${topArc}`} startOffset="50%" textAnchor="middle">REGARDED GAMES</textPath>
+        </text>
+        <text>
+          <textPath href={`#${bottomArc}`} startOffset="50%" textAnchor="middle">RULEBOOK</textPath>
+        </text>
       </g>
-      <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="0.7" opacity="0.5" />
+      <circle cx="6.8" cy="50" r="0.9" fill="currentColor" fillOpacity="0.6" />
+      <circle cx="93.2" cy="50" r="0.9" fill="currentColor" fillOpacity="0.6" />
+
+      {/* Engraved rosette, struck behind the device */}
+      <g fill="none" stroke="currentColor" strokeWidth="0.4" strokeOpacity="0.2">
+        {SEAL_ROSETTE_ANGLES.map((angle) => (
+          <circle key={angle} cx="75.5" cy="50" r="5.2" transform={`rotate(${angle} 50 50)`} />
+        ))}
+      </g>
 
       {/* Supply wheel — one dashed arc per allocation, struck from 12 o’clock */}
       <g transform="rotate(-90 50 50)" fill="none" strokeWidth="9">
@@ -350,7 +476,7 @@ function CoverSeal() {
           return arc;
         })}
       </g>
-      <circle cx="50" cy="50" r="7.5" fill="none" stroke="currentColor" strokeWidth="0.7" opacity="0.55" />
+      <circle cx="50" cy="50" r="7.5" fill="none" stroke="currentColor" strokeWidth="0.7" strokeOpacity="0.55" />
     </svg>
   );
 }
@@ -360,14 +486,16 @@ function CoverSeal() {
    a three-part printed strip in the same rhythm as the HeroCard footer. Sits on
    the right half of the closed desktop spread (edge="right"); on mobile it is
    the whole page (edge="full"). */
-function FrontCoverDesign({ edge = 'right' }: { edge?: 'right' | 'full' }) {
+function FrontCoverDesign({ active, edge = 'right' }: { active: boolean; edge?: 'right' | 'full' }) {
+  /* useId's output carries characters that url(#…) references choke on. */
+  const sealId = `seal-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   return (
     <div
-      className={`relative h-full w-full flex flex-col items-center justify-between p-7 overflow-hidden ${edge === 'right' ? 'rounded-r-md' : 'rounded-md'}`}
-      style={goldCoverFrame('3px')}
+      className={`group/cover relative h-full w-full flex flex-col items-center justify-between p-9 overflow-hidden ${edge === 'right' ? 'rounded-r-md' : 'rounded-md'}`}
+      style={goldCoverFrame}
     >
       {coverMetal}
-      {coverChrome}
+      <CoverPlate active={active} halos={FRONT_COVER_HALOS} />
 
       {/* Studio imprint */}
       <div className="relative z-10 w-full flex flex-col items-center gap-2.5 select-none">
@@ -383,7 +511,7 @@ function FrontCoverDesign({ edge = 'right' }: { edge?: 'right' | 'full' }) {
       {/* Title block. pl-[0.3em] on the tracked lines cancels the trailing
           letter-space so they optically centre under the seal. */}
       <div className="relative z-10 flex flex-col items-center gap-4 select-none">
-        <CoverSeal />
+        <CoverSeal id={sealId} />
         <div className="flex flex-col items-center gap-2">
           <span
             className="font-display font-black uppercase tracking-[0.3em] text-2xl lg:text-3xl leading-none pl-[0.3em]"
@@ -500,26 +628,38 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* State-driven palette for the rail node + status pill. `done` reads green
-   (settled), `live` pulses gold (the current phase), `upcoming` is muted. */
-const ROADMAP_STATE_STYLE: Record<RoadmapState, { accent: string; tint: string; ring: string }> = {
-  done: { accent: 'var(--color-green)', tint: 'var(--color-green-15)', ring: 'var(--color-green-35)' },
-  live: { accent: 'var(--color-gold)', tint: 'var(--color-gold-15)', ring: 'var(--color-gold-35)' },
-  upcoming: { accent: 'var(--color-text2)', tint: 'transparent', ring: 'var(--color-border)' },
+/* State-driven ink for the rail node and the printed status legend. A page
+   marks state the way print does — by ink weight and by the shape of the mark,
+   not by hue: `done` is struck solid in the text ink, `upcoming` is a hollow
+   ring in the muted rule colour, and gold is spent once per page on the phase
+   actually in hand.
+
+   `mark` colours the graphic, `legend` the type. They differ for `live` because
+   gold-as-text needs the `-hover` token to clear 4.5:1 — which is the deeper
+   ochre in light mode and the brighter metallic in dark, so it works both ways
+   round. The tint fills, coloured rings and glows this used to carry are gone;
+   a content page holds no fills in the accent. */
+const ROADMAP_STATE_STYLE: Record<RoadmapState, { mark: string; legend: string }> = {
+  done: { mark: 'var(--color-text)', legend: 'var(--color-text2)' },
+  live: { mark: 'var(--color-gold)', legend: 'var(--color-gold-hover)' },
+  upcoming: { mark: 'var(--color-border2)', legend: 'var(--color-text2)' },
 };
 
-/* A single milestone tick: a small filled green disc with a centred check when
-   done, an empty muted ring when still pending — the compact treatment, with a
-   tight 3px tint ring. Display only — reflects real progress. The check svg is
-   `block` + viewBox-fitted so it sits cleanly inside the circle (no inline-svg
-   baseline gap, no overflow). */
+/* A single milestone tick: a small disc struck solid in the text ink with a
+   centred check when done, an empty hollow ring when still pending. Display
+   only — reflects real progress. The check svg is `block` + viewBox-fitted so
+   it sits cleanly inside the circle (no inline-svg baseline gap, no overflow).
+
+   The green fill and its 3px tint halo are gone: green is a trading signal on
+   the terminal side, and a halo is a glow on a content surface. Done/pending
+   now reads off solid-vs-hollow, which survives both themes and greyscale. */
 function MilestoneCheck({ item }: { item: RoadmapItem }) {
   return (
     <li className="flex items-start gap-2.5">
       {item.done ? (
         <span
           className="grid place-items-center w-3.5 h-3.5 rounded-full shrink-0 mt-1"
-          style={{ backgroundColor: 'var(--color-green)', boxShadow: '0 0 0 3px var(--color-green-35)' }}
+          style={{ backgroundColor: 'var(--color-text)' }}
         >
           <svg viewBox="0 0 10 10" className="block w-2 h-2" fill="none" stroke="var(--color-card)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M2 5.2 L4.2 7.4 L8 3" />
@@ -527,8 +667,8 @@ function MilestoneCheck({ item }: { item: RoadmapItem }) {
         </span>
       ) : (
         <span
-          className="w-3.5 h-3.5 rounded-full shrink-0 mt-1 border-2"
-          style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-card2)' }}
+          className="w-3.5 h-3.5 rounded-full shrink-0 mt-1 border"
+          style={{ borderColor: 'var(--color-border2)' }}
         />
       )}
       <span
@@ -541,36 +681,33 @@ function MilestoneCheck({ item }: { item: RoadmapItem }) {
   );
 }
 
-/* Rail node: the larger phase marker — a filled disc + tick for a done phase, a
-   pulsing filled dot for the live phase, a hollow ring for an upcoming one, with
-   a soft 2px halo. */
+/* Rail node: the larger phase marker. Done is struck solid with a tick, the
+   live phase solid with a punched centre, an upcoming one a hollow ring.
+
+   Nothing here animates. A printed page is print at rest, and the ping the live
+   node used to throw — plus its 8px glow and the done node's 2px halo — were
+   terminal idioms that had wandered onto paper: they pulled the eye off the
+   prose the page exists to carry, on every view, forever. */
 function RailNode({ state }: { state: RoadmapState }) {
   const s = ROADMAP_STATE_STYLE[state];
-  if (state === 'done') {
+  if (state === 'upcoming') {
     return (
       <span
-        className="grid place-items-center w-4.25 h-4.25 rounded-full shrink-0"
-        style={{ backgroundColor: s.accent, boxShadow: '0 0 0 2px var(--color-green-15)' }}
-      >
-        <svg viewBox="0 0 12 12" className="block w-2.5 h-2.5" fill="none" stroke="var(--color-card)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 6.3 L5.2 8.4 L9 3.6" />
-        </svg>
-      </span>
-    );
-  }
-  if (state === 'live') {
-    return (
-      <span className="relative grid place-items-center w-4.25 h-4.25 shrink-0">
-        <span className="absolute inset-0 rounded-full animate-ping opacity-60" style={{ backgroundColor: s.accent }} />
-        <span className="relative w-3 h-3 rounded-full" style={{ backgroundColor: s.accent, boxShadow: `0 0 8px ${s.ring}` }} />
-      </span>
+        className="w-4.25 h-4.25 rounded-full shrink-0 border-2"
+        style={{ backgroundColor: 'var(--color-card)', borderColor: s.mark }}
+      />
     );
   }
   return (
-    <span
-      className="w-4.25 h-4.25 rounded-full shrink-0 border-2"
-      style={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-border2)' }}
-    />
+    <span className="grid place-items-center w-4.25 h-4.25 rounded-full shrink-0" style={{ backgroundColor: s.mark }}>
+      {state === 'done' ? (
+        <svg viewBox="0 0 12 12" className="block w-2.5 h-2.5" fill="none" stroke="var(--color-card)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 6.3 L5.2 8.4 L9 3.6" />
+        </svg>
+      ) : (
+        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--color-card)' }} />
+      )}
+    </span>
   );
 }
 
@@ -585,39 +722,39 @@ function RoadmapEntry({ point, isLast }: { point: (typeof ROADMAP_POINTS)[number
           completed phase is drawn in its accent so the finished run reads solid. */}
       <div className="flex flex-col items-center pt-px">
         <RailNode state={point.state} />
+        {/* The connector is a rule, not a status bar — one colour, with the run
+            already walked printed a shade heavier. */}
         {!isLast && (
           <span
             className="w-px flex-1 mt-1"
-            style={{ backgroundColor: point.state === 'done' ? s.accent : 'var(--color-border2)', opacity: point.state === 'done' ? 0.5 : 0.4 }}
+            style={{ backgroundColor: 'var(--color-border2)', opacity: point.state === 'done' ? 0.55 : 0.3 }}
           />
         )}
       </div>
       <div className="flex flex-col gap-1.5 flex-1 pb-5 min-w-0">
-        {/* Eyebrow: clause + phase tag + timeframe chip */}
+        {/* Eyebrow: clause + phase tag, the leader, then the timeframe. Set as
+            plain legend type — the dotted leader already carries the eye to the
+            date, which is the whole job the capsule around it was doing. */}
         <div className="flex items-center gap-2">
-          <span className="font-mono text-[11px] font-black tabular-nums shrink-0 tracking-wider" style={{ color: live ? s.accent : 'var(--color-text2)' }}>§ {point.clause}</span>
+          <span className="font-mono text-[11px] font-black tabular-nums shrink-0 tracking-wider" style={{ color: live ? s.legend : 'var(--color-text2)' }}>§ {point.clause}</span>
           <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-text2 opacity-70">{point.phase}</span>
           <DottedLeader />
-          <span
-            className="font-mono text-[11px] font-bold tabular-nums tracking-wider px-2.5 py-0.5 rounded-full border shrink-0"
-            style={{ color: 'var(--color-text2)', backgroundColor: 'var(--color-card2)', borderColor: 'var(--color-border)' }}
-          >
-            {point.when}
-          </span>
+          <span className="font-mono text-[11px] font-bold tabular-nums tracking-wider shrink-0 text-text2">{point.when}</span>
         </div>
-        {/* Title + status pill + progress counter */}
+        {/* Title, printed status legend, progress counter. The title stays in
+            the text ink for every phase but the live one, so the page carries a
+            single accent rather than one per row. */}
         <div className="flex items-center gap-2">
           <span
             className="font-display font-black text-[15px] uppercase tracking-widest leading-tight"
-            style={{ color: point.state === 'upcoming' ? 'var(--color-text)' : s.accent }}
+            style={{ color: live ? s.legend : 'var(--color-text)' }}
           >
             {point.title}
           </span>
           <span
-            className="font-mono text-[11px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0 flex items-center gap-1.5"
-            style={{ color: s.accent, borderColor: s.ring, backgroundColor: s.tint }}
+            className="font-mono text-[10px] font-black uppercase tracking-[0.2em] shrink-0"
+            style={{ color: s.legend }}
           >
-            {live && <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: s.accent }} />}
             {point.status}
           </span>
           <DottedLeader />
@@ -646,8 +783,8 @@ function RoadmapList({ from, to }: { from: number; to: number }) {
 }
 
 /* The "… ↗" slot of a running footer, wired to the page's explainer section
-   in the docs — the same destination-link role the footer strip plays on the
-   playing cards (HeroCard `footerHref`): opens the docs in a new tab, warms to
+   in the docs — the same destination-link role the header plays on the
+   playing cards (HeroCard `headerHref`): opens the docs in a new tab. Warms to
    gold on hover. The footer strip is pointer-events-none so a click anywhere on
    the page still turns it, so the anchor re-enables hits on itself; the click
    is stopped from reaching the page-turn handlers, like the card links. */
@@ -671,7 +808,7 @@ function FooterDocLink({ label, href }: { label: string; href: string }) {
 function PageFooter({ left, right }: { left: React.ReactNode; right: React.ReactNode }) {
   return (
     <div
-      className="absolute bottom-0 inset-x-0 flex justify-between items-center px-4 pb-2.5 text-[14px] font-mono opacity-80 pointer-events-none z-20"
+      className="absolute bottom-0 inset-x-0 flex justify-between items-center px-4 pb-2.5 text-[11px] font-mono opacity-80 pointer-events-none z-20"
       style={{ color: 'var(--color-text2)' }}
     >
       <span>{left}</span>
@@ -741,8 +878,9 @@ const roadmapMobileContentB = (
   </div>
 );
 
-/* Brand mark per channel key — printed in a gold badge in place of the old
-   clause-description paragraph. */
+/* Brand mark per channel key — struck straight into the row in the muted ink,
+   with no badge behind it: a filled disc in the accent is an accent fill on a
+   content surface, and five of them down a page read as buttons. */
 const CHANNEL_ICONS: Record<SocialChannel['key'], React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
   discourse: DiscourseIcon,
   x: XIcon,
@@ -751,9 +889,10 @@ const CHANNEL_ICONS: Record<SocialChannel['key'], React.ComponentType<React.SVGP
   github: GithubIcon,
 };
 
-/* One channel row on the Links pages — a gold icon badge, the clause line
-   with a dotted leader, and a status chip: a gold "Join ↗" link when the app
-   is live and the channel URL exists, a muted "Coming Soon" chip otherwise. */
+/* One channel row on the Links pages — the brand mark, the clause line with a
+   dotted leader, and the channel's state printed at the end of it: a "Join ↗"
+   link that warms to gold on hover (the same treatment the running footer's
+   explainer link gets), or a muted "Coming Soon" legend. */
 function ChannelEntry({ channel, clause }: { channel: SocialChannel; clause: string }) {
   /* A channel is live purely on whether its URL exists in socials.ts. This used
      to also require the app to be live, which had it backwards: a forum or a
@@ -763,12 +902,7 @@ function ChannelEntry({ channel, clause }: { channel: SocialChannel; clause: str
   const Icon = CHANNEL_ICONS[channel.key];
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-      <div
-        className="flex items-center justify-center size-8 rounded-full border shrink-0"
-        style={{ borderColor: 'var(--color-gold-35)', backgroundColor: 'var(--color-gold-15)' }}
-      >
-        <Icon className="size-4" style={{ color: 'var(--color-gold)' }} />
-      </div>
+      <Icon className="size-4 shrink-0 text-text2" />
       <span className="font-mono text-[13px] font-black tabular-nums shrink-0 text-text">§ {clause}</span>
       <span className="font-display font-black text-[15px] uppercase tracking-widest leading-tight text-text shrink-0">{channel.label}</span>
       <DottedLeader />
@@ -778,16 +912,12 @@ function ChannelEntry({ channel, clause }: { channel: SocialChannel; clause: str
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="font-mono text-[11px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0 transition-transform duration-200 hover:scale-105"
-          style={{ color: 'var(--color-gold)', borderColor: 'var(--color-gold-35)', backgroundColor: 'var(--color-gold-15)' }}
+          className="font-mono text-[11px] font-black uppercase tracking-[0.2em] shrink-0 text-text transition-colors duration-200 hover:text-gold-hover focus-visible:text-gold-hover"
         >
           Join ↗
         </a>
       ) : (
-        <span
-          className="font-mono text-[11px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0"
-          style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-card2)' }}
-        >
+        <span className="font-mono text-[11px] font-black uppercase tracking-[0.2em] shrink-0 text-text2 opacity-70">
           Coming Soon
         </span>
       )}
@@ -833,13 +963,13 @@ const commsMobileContent = (
    FrontCoverDesign so the two close on each other. On desktop this is the back
    face of the last right leaf, landing on the left half (edge="left"); on
    mobile it is the full single back page (edge="full"). */
-function BackCoverDesign({ edge = 'left' }: { edge?: 'left' | 'full' }) {
+function BackCoverDesign({ active, edge = 'left' }: { active: boolean; edge?: 'left' | 'full' }) {
   return (
     <div
-      className={`relative h-full w-full flex flex-col items-center justify-between p-7 overflow-hidden ${edge === 'left' ? 'rounded-l-md' : 'rounded-md'}`}
-      style={goldCoverFrame(edge === 'left' ? '3px 0 3px 3px' : '3px')}>
+      className={`group/cover relative h-full w-full flex flex-col items-center justify-between p-9 overflow-hidden ${edge === 'left' ? 'rounded-l-md' : 'rounded-md'}`}
+      style={goldCoverFrame}>
       {coverMetal}
-      {coverChrome}
+      <CoverPlate active={active} halos={BACK_COVER_HALOS} />
 
       {/* Studio imprint */}
       <div className="relative z-10 flex flex-col items-center justify-center font-mono text-[13px] tracking-[0.3em] font-bold uppercase select-none text-center px-5 py-2">
@@ -1920,7 +2050,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
                   WebkitBackfaceVisibility: 'hidden',
                 }}
               >
-                <FrontCoverDesign edge="right" />
+                <FrontCoverDesign active={active} edge="right" />
               </div>
             </motion.div>
             </div>
@@ -1957,7 +2087,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
                   className="absolute inset-0"
                   style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: backShown ? 'auto' : 'none' }}
                 >
-                  <BackCoverDesign />
+                  <BackCoverDesign active={active} />
                 </div>
               </motion.div>
               </div>
@@ -2130,7 +2260,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
                 pointerEvents: mCoverAway ? 'none' : 'auto',
               }}
             >
-              <FrontCoverDesign edge="full" />
+              <FrontCoverDesign active={active} edge="full" />
             </motion.div>
 
             {/* page2 — Campaign Sequence, phases I–II. Folds away like page1
@@ -2233,7 +2363,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
                 className="absolute inset-0"
                 style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
               >
-                <BackCoverDesign edge="full" />
+                <BackCoverDesign active={active} edge="full" />
               </div>
             </motion.div>
           </motion.div>

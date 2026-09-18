@@ -7,23 +7,25 @@ import { useTheme } from '@/context/ThemeContext';
 import { MoonIcon, SunIcon } from '@/components/icons/svg';
 import Regardo from '@/components/icons/Regardo.svg';
 import Carlo from '@/components/icons/Carlo.svg';
-import {
-  DaoEmblem,
-  YieldEmblem,
-  ParadigmEmblem,
-  AuctionEmblem,
-  QuestEmblem,
-} from '@/components/icons/CardEmblems';
 import { useDocNavigation } from '@/hooks/useDocNavigation';
 import Rulebook, { RULEBOOK_PAGES, RULEBOOK_PAGES_BELOW_LG } from '@/components/Rulebook';
 import FitToViewport from '@/components/FitToViewport';
 import CyclingSubheading from '@/components/CyclingSubheading';
 import AnimatedAuctionChart from '@/components/AnimatedAuctionChart';
 import AnimatedTradeFlows from '@/components/AnimatedTradeFlows';
+import DaoVote from '@/components/DaoVote';
+import AirdropQuestBoard from '@/components/AirdropQuestBoard';
+import AnimatedCapitalAuction from '@/components/AnimatedCapitalAuction';
+import YieldDistribution from '@/components/YieldDistribution';
+import RoundTable from '@/components/RoundTable';
 import HeroCard from '@/components/HeroCard';
+import BanknoteButton from '@/components/BanknoteButton';
+import BanknoteGround from '@/components/BanknoteGround';
 import AnimatedGiniCard from '@/components/AnimatedGiniCard';
 import CardDeck from '@/components/CardDeck';
 import ComingSoonModal from '@/components/ComingSoonModal';
+import DeckChevron from '@/components/DeckChevron';
+import DeckRail from '@/components/DeckRail';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useViewportWidth } from '@/hooks/useViewportWidth';
 import type { LaunchState } from '@/config/stage';
@@ -41,14 +43,24 @@ import { resolveAppTarget, resolveDiscourseTarget, resolveMainTarget, type CardT
    pages — see the mobile leaf stack in src/components/Rulebook.tsx). Both
    counts come from the Rulebook itself, and their LAST stop is the book's back
    cover — scrolled on from the final content page rather than clicked. */
-const SECTIONS: { id: string; cards: number; pages?: number; pagesBelowLg?: number }[] = [
-  { id: 'hero', cards: 0 },
-  { id: 'sectionHero', cards: 2 },
-  { id: 'sectionPlay', cards: 3 },
-  { id: 'sectionOwnMarket', cards: 3 },
-  { id: 'sectionSecureYourStake', cards: 2 },
-  { id: 'sectionDistribution', cards: 0, pages: RULEBOOK_PAGES, pagesBelowLg: RULEBOOK_PAGES_BELOW_LG },
+/* `label` names the section in the deck rail — on hover and to assistive tech. */
+const SECTIONS: { id: string; label: string; cards: number; pages?: number; pagesBelowLg?: number }[] = [
+  { id: 'hero', label: 'Class War', cards: 0 },
+  { id: 'sectionHero', label: 'Choose Your Hero', cards: 2 },
+  { id: 'sectionPlay', label: 'Play the Game', cards: 3 },
+  { id: 'sectionOwnMarket', label: 'Own the Project', cards: 3 },
+  { id: 'sectionSecureYourStake', label: 'Secure Your Stake', cards: 2 },
+  { id: 'sectionDistribution', label: 'The Rulebook', cards: 0, pages: RULEBOOK_PAGES, pagesBelowLg: RULEBOOK_PAGES_BELOW_LG },
 ];
+
+/* Intra-section stops a tick consumes before leaving the section: below-lg card
+   decks deal one card per tick; rulebook `pages` flip at every breakpoint.
+   Shared by the scroll handler (off a ref) and the rail (off render state). */
+function sectionStops(cfg: (typeof SECTIONS)[number] | undefined, belowLg: boolean) {
+  if (!cfg) return 0;
+  if (cfg.pages && cfg.pages > 1) return belowLg ? (cfg.pagesBelowLg ?? cfg.pages) : cfg.pages;
+  return belowLg ? cfg.cards : 0;
+}
 
 /* The Gini card ("Enforce Ideology") is the characters' final home. */
 const GINI_SECTION_ID = 'sectionPlay';
@@ -362,7 +374,7 @@ function CardThrow({
         >
           <div
             className="w-full h-full rounded-md border flex flex-col items-center justify-center gap-4"
-            style={{ backgroundColor: '#1F1A30', borderColor: '#251F3D' }}
+            style={{ backgroundColor: '#0D0B14', borderColor: '#251F3D' }}
           >
             <div
               className="w-28 h-28 rounded-full border border-dashed opacity-25"
@@ -461,6 +473,33 @@ function TravelIcon({
   );
 }
 
+/* Knocks the security-print ground (BanknoteGround) out from behind a hero
+   ghost. The ghosts are translucent (HOME_OPACITY.headline), so without this
+   the wave pattern runs straight through them. The child is a second render of
+   the ghost's art, sized identically and sitting opaque behind it, flood-filled
+   with the page colour by GHOST_KNOCKOUT_FILTER — so it covers exactly the
+   character's silhouette and nothing around it.
+
+   On a return flight the ghost glides in from the cards; the knockout waits for
+   the second half of that flight before fading in, instead of cutting a
+   silhouette-shaped hole in the pattern ahead of the arriving character. */
+const GHOST_KNOCKOUT_FILTER = 'ghost-knockout';
+
+function GhostKnockout({ arriving, children }: { arriving: boolean; children: ReactNode }) {
+  return (
+    <motion.div
+      aria-hidden="true"
+      className="absolute top-0 left-0 pointer-events-none"
+      style={{ filter: `url(#${GHOST_KNOCKOUT_FILTER})` }}
+      initial={{ opacity: arriving ? 0 : 1 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4, delay: arriving ? 0.4 : 0 }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 export function LandingClient({ launch }: { launch: LaunchState }) {
   /* Which "not open yet" notice is showing, if any. */
   const [comingSoon, setComingSoon] = useState<SoonCopy | null>(null);
@@ -485,8 +524,13 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
   const [own1Flipped , setOwn1Flipped] = useState(false);
   const [own2Flipped , setOwn2Flipped] = useState(false);
   const [own3Flipped , setOwn3Flipped] = useState(false);
+  const [own2Hovered, setOwn2Hovered] = useState(false);
+  const [own3Hovered, setOwn3Hovered] = useState(false);
+
   const [stake1Flipped, setStake1Flipped] = useState(false);
   const [stake2Flipped, setStake2Flipped] = useState(false);
+
+  const [stake1Hovered, setStake1Hovered] = useState(false);
 
   /* The page is a fixed-viewport slide deck — there is no document scrolling.
      Wheel / touch / key ticks move this index and the transition plays out in
@@ -503,6 +547,12 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
   useEffect(() => { cardIndicesRef.current = cardIndices; }, [cardIndices]);
   const belowLgRef = useRef(belowLg);
   useEffect(() => { belowLgRef.current = belowLg; }, [belowLg]);
+
+  /* The reader has moved the deck at least once, by any means. The down chevron
+     stops bobbing and settles to a dimmer rest once this is true: past the first
+     step the gesture is known, and the chevron has the rest of the visit to sit
+     there. */
+  const [hasStepped, setHasStepped] = useState(false);
 
   /* Jump target for the hero CTAs. A jump always enters the target from above
      (throwDir resolves to 1), so decks open at their first card.
@@ -528,6 +578,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
   const goToSection = (id: string) => {
     const targetIndex = SECTIONS.findIndex((s) => s.id === id);
     if (targetIndex < 0) return;
+    setHasStepped(true);
     setCardIndices((prev) => ({ ...prev, [id]: 0 }));
 
     /* Resolve the target's settled character home the same way the render does
@@ -573,23 +624,19 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
     lockTimeoutRef.current = setTimeout(() => { lockedRef.current = false; }, ms);
   }, []);
 
-  /* Intra-section stops a tick consumes before leaving the section:
-     below-lg card decks deal one card per tick; rulebook `pages` flip at
-     every breakpoint. */
-  const innerStops = useCallback((cfg?: { cards: number; pages?: number; pagesBelowLg?: number }) => {
-    if (!cfg) return 0;
-    if (cfg.pages && cfg.pages > 1) {
-      const pages = belowLgRef.current ? (cfg.pagesBelowLg ?? cfg.pages) : cfg.pages;
-      return pages;
-    }
-    return belowLgRef.current ? cfg.cards : 0;
-  }, []);
+  /* The scroll handler's view of `sectionStops`, off the ref so the
+     once-registered wheel/touch listeners always read the live breakpoint. */
+  const innerStops = useCallback(
+    (cfg?: (typeof SECTIONS)[number]) => sectionStops(cfg, belowLgRef.current),
+    [],
+  );
 
   /* One tick = one stop: deal a card within the active deck if it has cards
      left in that direction, otherwise advance to the neighboring slide.
      Decks are entered at their near edge so dealing reverses symmetrically. */
   const step = useCallback((dir: 1 | -1) => {
     if (lockedRef.current) return;
+    setHasStepped(true);
 
     const currentIndex = activeIdxRef.current;
     const currentCfg = SECTIONS[currentIndex];
@@ -945,6 +992,39 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
     return () => clearTimeout(timer);
   }, [playActive]);
 
+  /* Same fixed window for the Own deck's round table, so the REDEFINE MARKETS
+     crowd chatters while the cards fly in and then freezes exactly like the
+     Play cards' graphics above. Past the window it is hover-driven; below lg,
+     where there is no hover to fall back on, the card ORs in belowLg and the
+     graphic simply runs for as long as it is mounted. */
+  const [ownCardsLive, setOwnCardsLive] = useState(false);
+  useEffect(() => {
+    if (!ownActive) {
+      setOwnCardsLive(false);
+      return;
+    }
+    setOwnCardsLive(true);
+    const timer = setTimeout(() => setOwnCardsLive(false), 3200);
+    return () => clearTimeout(timer);
+  }, [ownActive]);
+
+  /* Same fixed window for the Secure-Your-Stake deck's capital auction, so the
+     auction runs while the cards fly in and then freezes where it stands, like
+     the Play cards' graphics above. Past the window it is hover-driven, and a
+     hover picks the auction up from the deposit it stopped on; below lg, where
+     there is no hover to fall back on, the card ORs in belowLg and the auction
+     simply plays through to its end. */
+  const [stakeCardsLive, setStakeCardsLive] = useState(false);
+  useEffect(() => {
+    if (!stakeActive) {
+      setStakeCardsLive(false);
+      return;
+    }
+    setStakeCardsLive(true);
+    const timer = setTimeout(() => setStakeCardsLive(false), 3200);
+    return () => clearTimeout(timer);
+  }, [stakeActive]);
+
   /* Fires when a headline→cards flying copy's own tween genuinely completes.
      Both regardo and carlo must report in (they share a duration but not
      necessarily a frame) before handing off, so a still-easing copy is never
@@ -1018,8 +1098,10 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       </motion.div>
     );
 
-  /* ---- Card footer destinations ----
-     Every card's footer strip is a control now. Liveness is decided per TARGET
+  /* ---- Card header destinations ----
+     A card's header is its way out to its app surface. The class cards
+     (Regardo, Carlo) have none: their only link is the docs, which the coin on
+     every card's back already carries. Liveness is decided per TARGET
      HOST, not by the coarse stage: the ICO is pinned to mainnet and the quests
      to sepolia, so in a testnet-only launch one of the Secure-Your-Stake cards
      links through while its neighbour pops the modal.
@@ -1037,18 +1119,12 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
     else setComingSoon(soon);
   };
 
-  /* Spread onto a HeroCard: prints the label and wires the strip to either a
-     real anchor or the modal. */
-  const footerLink = (target: CardTarget, label: string, soon: SoonCopy) =>
+  /* Spread onto a HeroCard: wires its header to either a real anchor or the
+     modal. The label is the control's accessible name. */
+  const headerLink = (target: CardTarget, label: string, soon: SoonCopy) =>
     target.kind === 'link'
-      ? { footerRightText: label, footerHref: target.href }
-      : { footerRightText: label, footerOnClick: () => setComingSoon(soon) };
-
-  /* A plain docs link — the class cards have no app surface of their own. */
-  const footerDocs = (label: string, href: string) => ({
-    footerRightText: label,
-    footerHref: href,
-  });
+      ? { headerLabel: label, headerHref: target.href }
+      : { headerLabel: label, headerOnClick: () => setComingSoon(soon) };
 
   /* ---- Cards (shared between the lg grid and the below-lg deck) ---- */
 
@@ -1064,7 +1140,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       chassisGradient="linear-gradient(135deg, #7c6225 0%, #dfc482 25%, #977636 50%, #ebdba4 75%, #6a501c 100%)"
       headerTag="Hero"
       title="Regardo"
-      symbol={<span className="font-sans text-xs">$</span>}
+      symbol={<span className="font-sans">$</span>}
       classTitle="Class: Capitalist"
       classSymbol={<span className="font-sans text-xs">★</span>}
       classDesc="the smallest number of players collectively holding 50% of the supply."
@@ -1074,7 +1150,6 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       ]}
       footerLeftText="Class 01"
       footerMiddleText='001 / 002'
-      {...footerDocs('Open Class Brief ↗', `${DOCS_URL}/intro#the-two-classes`)}
       footerTextColor="rgba(7, 7, 9, 0.65)"
       backInfoLink={`${DOCS_URL}/intro#the-two-classes`}
       backgroundSlot={
@@ -1152,56 +1227,122 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       chassisGradient="linear-gradient(135deg, #2e0854 0%, #7b1fa2 25%, #3f0c70 50%, #ba68c8 75%, #220341 100%)"
       headerTag="Hero"
       title="Carlo"
-      symbol={<span className="font-sans text-xs">⚒</span>}
+      symbol={<span className="font-sans">⚒</span>}
       classTitle="Class: Proletariat"
       classSymbol={<span className="font-sans text-xs">⚒</span>}
       classDesc="the largest number of players collectively holding 50% of the supply."
       abilities={[
         { name: "Distribute Capital", desc: "coordinate with your class to push the economy toward perfect equality." },
-        { name: "Wealth Tax", desc: "Capitalist payouts are capped and the surplus flows to you." }
+        { name: "Wealth Tax", desc: "Capitalist payouts are capped and the surplus flows to the Proletariat." }
       ]}
       footerLeftText="Class 02"
       footerMiddleText='002 / 002'
-      {...footerDocs('Open Class Brief ↗', `${DOCS_URL}/intro#the-two-classes`)}
       footerTextColor="rgba(255, 255, 255, 0.65)"
       backInfoLink={`${DOCS_URL}/intro#the-two-classes`}
       backgroundSlot={
+        /* Heavy industry — the Proletarian counterpart to Regardo's financial
+           district, built on the same three-plane recipe: bg-filled far haze,
+           a 0.65 mid band in --color-card, then the full-opacity works in
+           card2/card3. Purple stands in for the skyline's gold: it lights the
+           sawtooth north-light glazing, the stack bands, the conveyor run and
+           the tap-hole bloom at the furnace foot. */
         <svg viewBox="0 0 800 450" preserveAspectRatio="none" style={{ display: 'block', width: '100%', height: '100%' }}>
           <defs>
             <linearGradient id="skyGrad-car" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="var(--color-bg)" />
               <stop offset="100%" stopColor="var(--color-card)" />
             </linearGradient>
-            <linearGradient id="glassGrad-car" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="var(--color-purple)" stopOpacity="0.35" />
+            {/* Sawtooth glazing — Carlo's answer to Regardo's curtain wall. */}
+            <linearGradient id="glazeGrad-car" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--color-purple)" stopOpacity="0.45" />
               <stop offset="100%" stopColor="var(--color-purple)" stopOpacity="0" />
             </linearGradient>
+            {/* Exhaust. card3 is the darkest surface in light mode and the
+                lightest in dark, so the plumes read against the sky either way. */}
+            <radialGradient id="smokeGrad-car" cx="50%" cy="60%" r="50%">
+              <stop offset="0%" stopColor="var(--color-card3)" stopOpacity="0.7" />
+              <stop offset="100%" stopColor="var(--color-card3)" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="furnaceGlow-car" cx="50%" cy="85%" r="65%">
+              <stop offset="0%" stopColor="var(--color-purple)" stopOpacity="0.55" />
+              <stop offset="100%" stopColor="var(--color-purple)" stopOpacity="0" />
+            </radialGradient>
           </defs>
           <rect width="800" height="450" fill="url(#skyGrad-car)" />
+
+          {/* Far plane — sheds and thin stacks dissolving into the haze. */}
           <g opacity="0.35">
-            <rect x="40" y="180" width="85" height="270" fill="var(--color-bg)" />
-            <rect x="200" y="120" width="60" height="330" fill="var(--color-bg)" />
-            <rect x="440" y="100" width="100" height="350" fill="var(--color-bg)" />
+            <rect x="0" y="252" width="150" height="198" fill="var(--color-bg)" />
+            <rect x="96" y="150" width="16" height="110" fill="var(--color-bg)" />
+            <rect x="296" y="214" width="176" height="236" fill="var(--color-bg)" />
+            <rect x="348" y="128" width="18" height="96" fill="var(--color-bg)" />
+            <rect x="410" y="152" width="16" height="72" fill="var(--color-bg)" />
+            <rect x="596" y="234" width="204" height="216" fill="var(--color-bg)" />
+            <rect x="668" y="142" width="20" height="102" fill="var(--color-bg)" />
           </g>
-          <g opacity="0.65">
-            <line x1="145" y1="120" x2="145" y2="180" stroke="var(--color-border2)" strokeWidth="2" />
-            <rect x="110" y="180" width="70" height="270" fill="var(--color-card)" />
-            <polygon points="260,200 310,240 310,450 260,450" fill="var(--color-card)" />
-          </g>
+
+          {/* Drifting exhaust — in front of the haze, behind the works. */}
           <g>
-            <rect x="0" y="220" width="50" height="230" fill="var(--color-card2)" />
-            <rect x="60" y="170" width="40" height="280" fill="var(--color-card2)" />
-            <line x1="195" y1="50" x2="195" y2="100" stroke="var(--color-purple)" strokeWidth="3" />
-            <rect x="140" y="100" width="105" height="350" fill="var(--color-card3)" />
-            <rect x="195" y="130" width="38" height="180" fill="url(#glassGrad-car)" />
-            <polygon points="275,250 330,220 330,450 275,450" fill="var(--color-card2)" />
-            <line x1="460" y1="120" x2="460" y2="180" stroke="var(--color-purple)" strokeWidth="2.5" />
-            <polygon points="435,180 460,170 485,180 485,450 435,450" fill="var(--color-card3)" />
-            <line x1="448" y1="200" x2="448" y2="430" stroke="var(--color-purple)" strokeWidth="1.5" strokeDasharray="2,10" opacity="0.75" />
-            <line x1="472" y1="200" x2="472" y2="430" stroke="var(--color-purple)" strokeWidth="1.5" strokeDasharray="2,10" opacity="0.75" />
-            <rect x="560" y="220" width="55" height="230" fill="var(--color-card3)" />
-            <rect x="695" y="80" width="105" height="370" fill="var(--color-card2)" />
-            <rect x="710" y="110" width="90" height="340" fill="var(--color-card3)" stroke="var(--color-border)" strokeWidth="0.5" />
+            <ellipse cx="148" cy="48" rx="88" ry="34" fill="url(#smokeGrad-car)" />
+            <ellipse cx="248" cy="26" rx="72" ry="26" fill="url(#smokeGrad-car)" />
+            <ellipse cx="380" cy="100" rx="58" ry="22" fill="url(#smokeGrad-car)" />
+            <ellipse cx="678" cy="192" rx="88" ry="36" fill="url(#smokeGrad-car)" />
+          </g>
+
+          {/* Mid plane — a second sawtooth shed and a gas holder. */}
+          <g opacity="0.65">
+            <polygon points="296,450 296,332 332,308 332,332 368,308 368,332 404,308 404,332 440,308 440,450" fill="var(--color-card)" />
+            <line x1="358" y1="240" x2="358" y2="308" stroke="var(--color-border2)" strokeWidth="2" />
+            <rect x="350" y="232" width="16" height="80" fill="var(--color-card)" />
+            <path d="M600,450 L600,296 A44,44 0 0 1 688,296 L688,450 Z" fill="var(--color-card)" />
+          </g>
+
+          {/* Near plane — the works. */}
+          <g>
+            {/* Sawtooth assembly hall, glazing lit on every north face. */}
+            <polygon points="0,450 0,318 28,294 28,318 56,294 56,318 84,294 84,318 112,294 112,450" fill="var(--color-card2)" />
+            <rect x="0" y="294" width="112" height="26" fill="url(#glazeGrad-car)" />
+            <line x1="28" y1="294" x2="28" y2="318" stroke="var(--color-purple)" strokeWidth="2.5" />
+            <line x1="56" y1="294" x2="56" y2="318" stroke="var(--color-purple)" strokeWidth="2.5" />
+            <line x1="84" y1="294" x2="84" y2="318" stroke="var(--color-purple)" strokeWidth="2.5" />
+            <line x1="112" y1="294" x2="112" y2="318" stroke="var(--color-purple)" strokeWidth="2.5" />
+
+            {/* Chimney with its warning bands. */}
+            <polygon points="126,450 133,58 157,58 164,450" fill="var(--color-card3)" />
+            <rect x="128" y="48" width="34" height="12" fill="var(--color-card2)" />
+            <line x1="133" y1="78" x2="157" y2="78" stroke="var(--color-purple)" strokeWidth="3" />
+            <line x1="134" y1="96" x2="156" y2="96" stroke="var(--color-purple)" strokeWidth="3" />
+
+            {/* Machine hall + travelling gantry crane. */}
+            <rect x="180" y="352" width="250" height="98" fill="var(--color-card2)" />
+            <rect x="200" y="336" width="96" height="16" fill="var(--color-card3)" />
+            <rect x="180" y="316" width="250" height="10" fill="var(--color-card3)" />
+            <rect x="198" y="326" width="8" height="26" fill="var(--color-card3)" />
+            <rect x="406" y="326" width="8" height="26" fill="var(--color-card3)" />
+            <line x1="330" y1="326" x2="330" y2="362" stroke="var(--color-purple)" strokeWidth="1.5" strokeDasharray="2,10" opacity="0.75" />
+            <rect x="322" y="362" width="16" height="10" fill="var(--color-card3)" />
+            <rect x="246" y="404" width="26" height="46" fill="var(--color-purple)" opacity="0.35" />
+            <ellipse cx="259" cy="450" rx="56" ry="46" fill="url(#furnaceGlow-car)" />
+
+            {/* Conveyor run climbing to the transfer tower. */}
+            <polygon points="430,318 556,240 556,258 430,336" fill="var(--color-card2)" />
+            <line x1="434" y1="328" x2="552" y2="255" stroke="var(--color-purple)" strokeWidth="1.5" strokeDasharray="2,10" opacity="0.75" />
+            <rect x="490" y="288" width="7" height="162" fill="var(--color-card3)" />
+            <rect x="552" y="196" width="48" height="254" fill="var(--color-card3)" stroke="var(--color-border)" strokeWidth="0.5" />
+            <rect x="552" y="186" width="48" height="12" fill="var(--color-card2)" />
+
+            {/* Cooling tower. */}
+            <path d="M610,450 C632,360 648,330 648,300 C648,276 642,262 640,250 L714,250 C712,262 706,276 706,300 C706,330 722,360 744,450 Z" fill="var(--color-card3)" />
+            <rect x="636" y="242" width="82" height="10" fill="var(--color-card2)" />
+            <line x1="662" y1="262" x2="656" y2="430" stroke="var(--color-purple)" strokeWidth="1.5" strokeDasharray="2,10" opacity="0.6" />
+            <line x1="692" y1="262" x2="698" y2="430" stroke="var(--color-purple)" strokeWidth="1.5" strokeDasharray="2,10" opacity="0.6" />
+
+            {/* Blast furnace, flare mast, and the tap-hole bloom at its foot. */}
+            <line x1="776" y1="86" x2="776" y2="122" stroke="var(--color-purple)" strokeWidth="3" />
+            <rect x="758" y="122" width="36" height="30" fill="var(--color-card2)" />
+            <rect x="748" y="152" width="52" height="298" fill="var(--color-card3)" stroke="var(--color-border)" strokeWidth="0.5" />
+            <rect x="748" y="196" width="52" height="8" fill="var(--color-purple)" opacity="0.55" />
+            <ellipse cx="774" cy="450" rx="66" ry="52" fill="url(#furnaceGlow-car)" />
           </g>
         </svg>
       }
@@ -1239,13 +1380,12 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       symbol="01"
       classTitle="Phase: Auction"
       classSymbol="✦"
-      classDesc="The initial prize pool formation."
       abilities={[
-        { name: "Seed the Prize Pool", desc: "Buy Fake Internet Money ($FIM) with $USDC." }
+        { name: "Seed the Prize Pool", desc: "Buy the in-game currency, Fake Internet Money ($FIM), with $USDC." }
       ]}
       footerLeftText="Phase 01"
       footerMiddleText='001 / 003'
-      {...footerLink(appTarget('stage', '/play/auction'), 'Open Auction ↗', SOON.game)}
+      {...headerLink(appTarget('stage', '/play/auction'), 'Open Auction', SOON.game)}
       backInfoLink={`${DOCS_URL}/intro#phase-1--the-auction`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-magenta) 0%, transparent 70%)' }} />
@@ -1276,14 +1416,13 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       symbol="02"
       classTitle="Phase: Trading"
       classSymbol="✦"
-      classDesc="A gated and fair marketplace for $FIM/$USDC."
       abilities={[
         { name: "Trade", desc: "Exchange $FIM and $USDC with other players." },
         { name: "Outplay", desc: "Use your capital and coordinate with your class to influence wealth distribution. Choose who you trade with wisely." }
       ]}
       footerLeftText="Phase 02"
       footerMiddleText='002 / 003'
-      {...footerLink(appTarget('stage', '/play/trading'), 'Open Market ↗', SOON.game)}
+      {...headerLink(appTarget('stage', '/play/trading'), 'Open Market', SOON.game)}
       backInfoLink={`${DOCS_URL}/intro#phase-2--trading`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-magenta) 0%, transparent 70%)' }} />
@@ -1314,14 +1453,13 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       symbol="03"
       classTitle="Phase: Payout"
       classSymbol="✦"
-      classDesc="The final prize pool distribution."
       abilities={[
         { name: "TAKEOVER", desc: "Shift the game economies' wealth distribution in favor of your class." },
         { name: "Dictate", desc: "Set the payout rules: Bailout or Wealth Tax" }
       ]}
       footerLeftText="Phase 03"
       footerMiddleText='003 / 003'
-      {...footerLink(appTarget('stage', '/play/payout'), 'Open Payouts ↗', SOON.game)}
+      {...headerLink(appTarget('stage', '/play/payout'), 'Open Payouts', SOON.game)}
       backInfoLink={`${DOCS_URL}/intro#phase-3--settlement--payout`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-magenta) 0%, transparent 70%)' }} />
@@ -1369,7 +1507,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       titleSize="text-xl"
       headerTag="Governance"
       title="JOIN THE DAO"
-      symbol={<span className="font-sans text-xs">⚖</span>}
+      symbol={<span className="font-sans">⚖</span>}
       classTitle="Type: DAO"
       classSymbol={<span className="font-sans text-xs">✦</span>}
       classDesc="Player Ownership. No company. No rigged outcomes."
@@ -1379,15 +1517,15 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       ]}
       footerLeftText="Ownership"
       footerMiddleText='001 / 003'
-      {...footerLink(resolveDiscourseTarget(launch, '/c/governance'), 'Open Governance ↗', SOON.governance)}
+      {...headerLink(resolveDiscourseTarget(launch, '/c/governance'), 'Open Governance', SOON.governance)}
       footerTextColor="rgba(255, 255, 255, 0.6)"
       backInfoLink={`${DOCS_URL}/intro#governance`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-orange) 0%, transparent 70%)' }} />
       }
       illustrationSlot={
-        <div className="w-full h-full flex justify-center items-center pointer-events-none drop-shadow-[0_8px_8px_rgba(22,18,36,0.45)] absolute z-20">
-          <DaoEmblem accent="#e65c00" deep="#b34a00" uid="dao" className="w-[72%] h-auto max-w-44" />
+        <div className="absolute inset-0 w-full h-full overflow-hidden rounded-xl z-20 p-5 pointer-events-auto">
+          <DaoVote onVoteCast={() => setOwn1Flipped(true)} />
         </div>
       }
     />
@@ -1397,6 +1535,8 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
     <HeroCard
       isFlipped={own2Flipped}
       onFlip={() => setOwn2Flipped(!own2Flipped)}
+      onMouseEnter={() => setOwn2Hovered(true)}
+      onMouseLeave={() => setOwn2Hovered(false)}
       themeColor="var(--color-orange)"
       themeColorRgba="249, 115, 22"
       chassisGradient="linear-gradient(135deg, #5c2400 0%, #b34a00 25%, #5c2400 50%, #e65c00 75%, #2e1200 100%)"
@@ -1405,23 +1545,23 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       titleSize="text-xl"
       headerTag="Governance"
       title="CAPTURE VALUE"
-      symbol={<span className="font-sans text-xs">$</span>}
+      symbol={<span className="font-sans">$</span>}
       classTitle="Type: Yield"
       classSymbol="✦"
       classDesc="Prize Pool is deployed to blue-chip defi during the game."
       abilities={[
-        { name: "Payback", desc: "Yield funds deflationary buybacks, liquidity injections, or Prize Pool Bonuses." }
+        { name: "Payback", desc: "Yield funds deflationary buybacks, liquidity injections, prize pool bonuses and the treasury" }
       ]}
       footerLeftText="Economics"
       footerMiddleText='002 / 003'
-      {...footerLink(resolveMainTarget(launch, MAIN_DOMAIN, 'mainnet', '/treasury'), 'Open Treasury ↗', SOON.treasury)}
-      backInfoLink={`${DOCS_URL}/intro#revenue-allocation`}
+      {...headerLink(resolveMainTarget(launch, MAIN_DOMAIN, 'mainnet', '/treasury'), 'Open Treasury', SOON.treasury)}
+      backInfoLink={`${DOCS_URL}/intro#how-value-flows-back`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-orange) 0%, transparent 70%)' }} />
       }
       illustrationSlot={
-        <div className="w-full h-full flex justify-center items-center pointer-events-none drop-shadow-[0_8px_8px_rgba(22,18,36,0.45)] absolute z-20">
-          <YieldEmblem accent="#e65c00" deep="#b34a00" uid="yield" className="w-[72%] h-auto max-w-44" />
+        <div className="absolute inset-0 w-full h-full overflow-hidden rounded-xl z-20 p-5 pointer-events-auto">
+          <YieldDistribution isHovered={own2Hovered || ownCardsLive || belowLg} />
         </div>
       }
     />
@@ -1431,6 +1571,8 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
     <HeroCard
       isFlipped={own3Flipped}
       onFlip={() => setOwn3Flipped(!own3Flipped)}
+      onMouseEnter={() => setOwn3Hovered(true)}
+      onMouseLeave={() => setOwn3Hovered(false)}
       themeColor="var(--color-orange)"
       themeColorRgba="249, 115, 22"
       chassisGradient="linear-gradient(135deg, #5c2400 0%, #b34a00 25%, #5c2400 50%, #e65c00 75%, #2e1200 100%)"
@@ -1439,24 +1581,24 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       titleSize="text-xl"
       headerTag="Governance"
       title="REDEFINE MARKETS"
-      symbol={<span className="font-sans text-xs">∞</span>}
+      symbol={<span className="font-sans">∞</span>}
       classTitle="Type: Experiment"
       classSymbol="✦"
-      classDesc="Shape the future of economic cooperation, coordination and markets as a whole."
+      classDesc="Shape the future of human coordination and economic cooperation."
       abilities={[
-        { name: "Challenge", desc: "Challenge the status quo of web3, finance and markets in general." },
+        { name: "Dismantle", desc: "Challenge the status quo of web3, finance and markets in general." },
         { name: "Build the Future", desc: "Define a new paradigm for people-owned, people-governed economies." }
       ]}
       footerLeftText="Vision"
       footerMiddleText='003 / 003'
-      {...footerLink(resolveDiscourseTarget(launch), 'Open Forum ↗', SOON.forum)}
+      {...headerLink(resolveDiscourseTarget(launch), 'Open Forum', SOON.forum)}
       backInfoLink={`${DOCS_URL}/mission`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-orange) 0%, transparent 70%)' }} />
       }
       illustrationSlot={
-        <div className="w-full h-full flex justify-center items-center pointer-events-none drop-shadow-[0_8px_8px_rgba(22,18,36,0.45)] absolute z-20">
-          <ParadigmEmblem accent="#e65c00" deep="#b34a00" uid="paradigm" className="w-[72%] h-auto max-w-44" />
+        <div className="absolute inset-0 w-full h-full overflow-hidden rounded-xl z-20 p-5 pointer-events-none">
+          <RoundTable isHovered={own3Hovered || ownCardsLive || belowLg} />
         </div>
       }
     />
@@ -1466,6 +1608,8 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
     <HeroCard
       isFlipped={stake1Flipped}
       onFlip={() => setStake1Flipped(!stake1Flipped)}
+      onMouseEnter={() => setStake1Hovered(true)}
+      onMouseLeave={() => setStake1Hovered(false)}
       themeColor="var(--color-sunset, #ff5e62)"
       themeColorRgba="255, 94, 98"
       chassisGradient="linear-gradient(135deg, #4a1525 0%, #b83b5e 25%, #6a1b37 50%, #f08a5d 75%, #2a0815 100%)"
@@ -1483,18 +1627,18 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       ]}
       footerLeftText="Auction Phase"
       footerMiddleText='001 / 002'
-      {...footerLink(appTarget('mainnet', '/ico'), 'Open ICO ↗', SOON.ico)}
+      {...headerLink(appTarget('mainnet', '/ico'), 'Open ICO', SOON.ico)}
       backInfoLink={`${DOCS_URL}/intro#capital-auction`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-sunset, #ff5e62) 0%, transparent 70%)' }} />
       }
       illustrationSlot={
-        <div className="w-full h-full flex justify-center items-center pointer-events-none drop-shadow-[0_8px_8px_rgba(22,18,36,0.45)] absolute z-20">
-          <AuctionEmblem accent="#ff5e62" deep="#b83b5e" uid="auction" className="w-[72%] h-auto max-w-44" />
+        <div className="absolute inset-0 w-full h-full overflow-hidden rounded-xl z-20 p-6 pointer-events-none">
+          <AnimatedCapitalAuction isHovered={stake1Hovered || stakeCardsLive || belowLg} />
         </div>
       }
       actionButtonSlot={
-        /* Same rule as the footer strip: always a live control, and a gated
+        /* Same rule as the card header: always a live control, and a gated
            destination pops the modal instead of opening a tab that only says
            "Coming Soon". The URL used to be a hardcoded app.localhost:3000
            literal, which was broken in production. */
@@ -1526,18 +1670,23 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       classSymbol="✦"
       classDesc="Ecosystem deployment trial and game testing."
       abilities={[
-        { name: "Activity", desc: "Complete quests and play on the testnet to earn campaign points that translate to $RGD at TGE." },
+        { name: "Test", desc: "Complete quests and play on the testnet to earn campaign points that translate to $RGD Governance Token at the Token Generation Event." },
       ]}
       footerLeftText="Testnet Phase"
       footerMiddleText='002 / 002'
-      {...footerLink(appTarget('testnet', '/quests'), 'Open Quest Board ↗', SOON.quests)}
+      {...headerLink(appTarget('testnet', '/quests'), 'Open Quest Board', SOON.quests)}
       backInfoLink={`${DOCS_URL}/intro#testnet-quests`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-sunset, #ff5e62) 0%, transparent 70%)' }} />
       }
       illustrationSlot={
-        <div className="w-full h-full flex justify-center items-center pointer-events-none drop-shadow-[0_8px_8px_rgba(22,18,36,0.45)] absolute z-20">
-          <QuestEmblem accent="#ff5e62" deep="#b83b5e" uid="quest" className="w-[72%] h-auto max-w-44" />
+        /* pointer-events-auto: the board's EXECUTE buttons are real controls.
+           They stop their own clicks, so the rest of the illustration still
+           flips the card. */
+        <div className="absolute inset-0 w-full h-full overflow-hidden rounded-xl z-20 p-5 pointer-events-auto">
+          {/* Clearing the board is the card's own reveal: it holds on the full
+              1,000 points, then turns itself over to the back. */}
+          <AirdropQuestBoard onCleared={() => setStake2Flipped(true)} />
         </div>
       }
       actionButtonSlot={
@@ -1645,6 +1794,17 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
     </div>
   );
 
+  /* Deck rail + chevrons. The rail renders at lg+ only, where card decks don't
+     deal, so a section's stop count there is its `pages` alone. The chevrons
+     hide at the ends of the deck rather than sitting inert: `step()` would
+     no-op, and a dead control is worse than no control. */
+  const lastSection = SECTIONS[SECTIONS.length - 1];
+  const lastSectionStops = sectionStops(lastSection, belowLg);
+  const atLastStop =
+    activeIdx === SECTIONS.length - 1 &&
+    (lastSectionStops <= 1 || (cardIndices[lastSection.id] ?? 0) >= lastSectionStops - 1);
+  const railStops = SECTIONS.map(({ id, label, pages }) => ({ id, label, pages: pages ?? 0 }));
+
   const distributionBook = (
     <motion.div
       initial={false}
@@ -1681,23 +1841,75 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
 
       <LayoutGroup>
         <main className="relative mx-auto min-w-0 w-full">
-          {/* Theme toggle overlays the hero slide and fades away with it. */}
-          <motion.button
+          {/* Theme toggle overlays the hero slide and fades away with it: a
+              round banknote button, printed like Secure Your Stake. */}
+          <motion.div
             initial={false}
             animate={{ opacity: heroActive ? 1 : 0 }}
             transition={{ duration: 0.5 }}
-            onClick={toggleTheme}
-            className="absolute top-4 right-4 z-40 bg-card p-2 rounded-full text-text hover:[background:var(--sunset-35)] transition-colors duration-300 shadow-md"
+            className="absolute top-4 right-4 z-40 flex"
             style={{ pointerEvents: heroActive ? 'auto' : 'none' }}
-            aria-label="Toggle dark mode"
           >
-            {darkMode ? <SunIcon /> : <MoonIcon />}
-          </motion.button>
+            <BanknoteButton variant="primary" round onClick={toggleTheme} aria-label="Toggle dark mode">
+              {darkMode ? <SunIcon /> : <MoonIcon />}
+            </BanknoteButton>
+          </motion.div>
+
+          {/* Deck navigation, overlaid on the stage rather than built into each
+              section: the sections are vertically centred and fitted to the
+              viewport, so in-flow controls would fight FitToViewport and have to
+              be kept in sync six times over.
+
+              Up sits at the head of the stage and down at its foot, so each
+              control points the way it travels. Both call `step()` — the same
+              single-tick transition a wheel/touch/key scroll plays.
+
+              Down also shows below lg on the hero, which is where it used to
+              live in-flow: on a phone it is the opening invitation to swipe.
+              Everywhere else these are pointer affordances for a deck that has
+              no scrollbar, and the rest of the deck is swiped. */}
+          {activeIdx > 0 && (
+            <div className="absolute top-5 left-1/2 z-40 hidden -translate-x-1/2 lg:block">
+              <DeckChevron dir="up" onClick={() => step(-1)} settled={hasStepped} />
+            </div>
+          )}
+          {!atLastStop && (
+            <div
+              className={`absolute bottom-8 left-1/2 z-40 -translate-x-1/2 ${
+                heroActive ? 'block' : 'hidden lg:block'
+              }`}
+            >
+              <DeckChevron dir="down" onClick={() => step(1)} settled={hasStepped} />
+            </div>
+          )}
+          {/* Not on the hero: the opening slide has no progress to report, and
+              the rail would only crowd it. It fades in on the first step. */}
+          {activeIdx > 0 && (
+            <DeckRail
+              stops={railStops}
+              activeIndex={activeIdx}
+              activePage={cardIndices[SECTIONS[activeIdx].id] ?? 0}
+              onSelect={goToSection}
+            />
+          )}
 
           {/* Slide stage: every section is absolutely stacked inside this fixed
               viewport; transitions animate in place instead of scrolling. The
               active slide sits on top and owns pointer events. */}
           <div className="relative w-full h-screen overflow-hidden text-text" style={{ height: '100dvh' }}>
+            {/* Security-printed ground behind every slide. First in the stage
+                and unstacked, so each section paints over it. */}
+            <BanknoteGround />
+            {/* Fills whatever it's applied to with the page colour, inside its
+                own silhouette — see GhostKnockout. Zero-size rather than
+                display:none, which would break the url(#…) reference. */}
+            <svg aria-hidden="true" width="0" height="0" className="absolute">
+              <filter id={GHOST_KNOCKOUT_FILTER} colorInterpolationFilters="sRGB">
+                <feFlood style={{ floodColor: 'var(--color-bg)' }} />
+                <feComposite in2="SourceAlpha" operator="in" />
+              </filter>
+            </svg>
+
             {/* Hero Section */}
             <section
               id="hero"
@@ -1707,26 +1919,52 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
               {/* Character home 1: giant near-transparent ghosts behind the headline.
                   Oversized and pushed past each edge, top-anchored so the heads stay
                   visible and the feet are clipped by the section's overflow-hidden.
-                  Sits below the gradient glow (z-0) so the sunset effect reads on top. */}
+                  Sits below the gradient glow (z-0) so the sunset effect reads on top.
+
+                  Height is clamped against viewport WIDTH as well as height. Sized on
+                  vh alone, a narrow/tall viewport (small phones, tablets in portrait)
+                  makes the pair wider than the row: justify-between then degrades to
+                  flex-start and dumps the whole overflow on Carlo, who gets sliced off
+                  the right edge while Regardo stays whole. The vw caps keep each body
+                  inside half the row plus its own negative-margin bleed, so both clip
+                  symmetrically. The vh values still win on normal aspect ratios, so
+                  desktop is unchanged. */}
               <div className="absolute inset-0 pointer-events-none z-0 flex items-start justify-between">
-                <div ref={ghostRegardoRef} className="flex items-start -ml-[8vw] lg:-ml-[12vw]">
+                <div ref={ghostRegardoRef} className="relative flex items-start -ml-[8vw] lg:-ml-[12vw]">
+                  {characterHome === 'headline' && !charOverlay && (
+                    <GhostKnockout arriving={charFromOpacity !== HOME_OPACITY.headline}>
+                      <Regardo
+                        className="h-[min(70vh,88vw)] lg:h-[min(140vh,99vw)] w-auto"
+                        viewBox="0 0 491.52783 788.49512"
+                      />
+                    </GhostKnockout>
+                  )}
                   <AnimatePresence>
                     {characterHome === 'headline' && !charOverlay && (
                       <TravelIcon id="char-regardo" opacity={0.07} fromOpacity={charFromOpacity}>
                         <Regardo
-                          className="h-[70vh] lg:h-[140vh] w-auto text-gold"
+                          className="h-[min(70vh,88vw)] lg:h-[min(140vh,99vw)] w-auto text-gold"
                           viewBox="0 0 491.52783 788.49512"
                         />
                       </TravelIcon>
                     )}
                   </AnimatePresence>
                 </div>
-                <div ref={ghostCarloRef} className="flex items-start -mr-[8vw] lg:-mr-[12vw]">
+                <div ref={ghostCarloRef} className="relative flex items-start -mr-[8vw] lg:-mr-[12vw]">
+                  {characterHome === 'headline' && !charOverlay && (
+                    <GhostKnockout arriving={charFromOpacity !== HOME_OPACITY.headline}>
+                      <Carlo
+                        className="h-[min(70vh,88vw)] lg:h-[min(140vh,99vw)] w-auto"
+                        style={{ aspectRatio: CARLO_ASPECT }}
+                        viewBox={CARLO_VIEWBOX}
+                      />
+                    </GhostKnockout>
+                  )}
                   <AnimatePresence>
                     {characterHome === 'headline' && !charOverlay && (
                       <TravelIcon id="char-carlo" opacity={0.07} fromOpacity={charFromOpacity}>
                         <Carlo
-                          className="h-[70vh] lg:h-[140vh] w-auto text-purple"
+                          className="h-[min(70vh,88vw)] lg:h-[min(140vh,99vw)] w-auto text-purple"
                           style={{ aspectRatio: CARLO_ASPECT }}
                           viewBox={CARLO_VIEWBOX}
                         />
@@ -1764,42 +2002,20 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
 
                 
 
-                {/* `dark`: the header buttons render with dark-mode tokens in
-                    both themes, so they look identical in light and dark (matching
-                    the cards + rulebook below). */}
-                <div className="dark flex flex-wrap items-center justify-center gap-4 z-30 relative">
-                  <button onClick={() => navigateToDocs('')} className="btn-secondary">
+                {/* Banknote buttons, in the page theme. gap-5 leaves room for
+                    the glows. */}
+                <div className="flex flex-wrap items-center justify-center gap-5 z-30 relative">
+                  <BanknoteButton variant="secondary" onClick={() => navigateToDocs('')}>
                     Docs
-                  </button>
-                  <button onClick={() => goToSection('sectionSecureYourStake')} className="btn-primary">
+                  </BanknoteButton>
+                  <BanknoteButton variant="primary" onClick={() => goToSection('sectionSecureYourStake')}>
                     Secure Your Stake
-                  </button>
+                  </BanknoteButton>
                 </div>
 
-                {/* Scroll affordance: in place of a "Learn More" button, a
-                    static chevron that deals on to the first section below
-                    (Choose Your Hero). Uses `step(1)` — the same single-tick
-                    transition a wheel/touch/key scroll plays — rather than
-                    `goToSection`'s multi-section jump snap, so the click
-                    animates identically to an actual scroll. */}
-                <button
-                  type="button"
-                  aria-label="Scroll to next section"
-                  onClick={() => step(1)}
-                  className="mt-24 z-30 relative text-text2 hover:text-text transition-colors cursor-pointer"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="32"
-                    height="32"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2}
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                  </svg>
-                </button>
+                {/* The scroll chevron that used to sit here now lives in the
+                    stage's deck-navigation overlay, which carries it on every
+                    slide instead of just this one — see DeckChevron there. */}
               </motion.div>
             </section>
 

@@ -6,6 +6,11 @@ You now have the Regarded Games design paradigm. It is derived from the season d
 (`src/app/app/[seasonSlug]/page.tsx`) and the component tree it composes. Use it whenever you
 build or review UI for this project.
 
+**Scope: the `/app` terminal.** Surfaces outside it that read as *printed matter* — the landing
+deck, the hero cards, the rulebook, the banknote buttons — run the companion print paradigm
+instead: `/regarded-print`. The two do not mix; that doc opens with the table that decides which
+one applies.
+
 # Regarded Games Design Paradigm — Gamified Trading Terminal
 
 ## How to use this
