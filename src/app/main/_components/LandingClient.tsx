@@ -1386,7 +1386,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       footerLeftText="Phase 01"
       footerMiddleText='001 / 003'
       {...headerLink(appTarget('stage', '/play/auction'), 'Open Auction', SOON.game)}
-      backInfoLink={`${DOCS_URL}/intro#phase-1--the-auction`}
+      backInfoLink={`${DOCS_URL}/intro#phase-1-auction`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-magenta) 0%, transparent 70%)' }} />
       }
@@ -1423,7 +1423,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       footerLeftText="Phase 02"
       footerMiddleText='002 / 003'
       {...headerLink(appTarget('stage', '/play/trading'), 'Open Market', SOON.game)}
-      backInfoLink={`${DOCS_URL}/intro#phase-2--trading`}
+      backInfoLink={`${DOCS_URL}/intro#phase-2-trading`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-magenta) 0%, transparent 70%)' }} />
       }
@@ -1460,7 +1460,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       footerLeftText="Phase 03"
       footerMiddleText='003 / 003'
       {...headerLink(appTarget('stage', '/play/payout'), 'Open Payouts', SOON.game)}
-      backInfoLink={`${DOCS_URL}/intro#phase-3--settlement--payout`}
+      backInfoLink={`${DOCS_URL}/intro#phase-3-victory-and-payouts`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-magenta) 0%, transparent 70%)' }} />
       }
@@ -1555,7 +1555,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       footerLeftText="Economics"
       footerMiddleText='002 / 003'
       {...headerLink(resolveMainTarget(launch, MAIN_DOMAIN, 'mainnet', '/treasury'), 'Open Treasury', SOON.treasury)}
-      backInfoLink={`${DOCS_URL}/intro#how-value-flows-back`}
+      backInfoLink={`${DOCS_URL}/intro#revenue-allocation`}
       backgroundSlot={
         <div className="w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, var(--color-orange) 0%, transparent 70%)' }} />
       }
