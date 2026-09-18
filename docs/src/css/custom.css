@@ -183,12 +183,30 @@ body {
 
 /* ── NAVBAR ─────────────────────────────────────────────────────── */
 .navbar {
-  backdrop-filter:    blur(12px);
+  border-bottom: 1px solid var(--color-border);
+  position:      sticky;
+  top:           0;
+  z-index:       100;
+}
+
+/* The frosted blur is painted by a pseudo-element instead of sitting on
+   .navbar itself. `backdrop-filter` makes an element the containing block for
+   its fixed-position descendants — and the mobile drawer (.navbar-sidebar,
+   `position: fixed; top: 0; bottom: 0`) is a DOM child of .navbar. With the
+   filter on .navbar the open drawer was clamped to the 60px bar, so its
+   .navbar-sidebar__brand row (logo, theme toggle, close) was all that fitted
+   and .navbar-sidebar__items — every nav link — computed to
+   `calc(100% - 60px)` = 0 height. The scrim (.navbar-sidebar__backdrop,
+   `inset: 0`) collapsed the same way. The pseudo-element has no descendants,
+   so it blurs identically and traps nothing. */
+.navbar::before {
+  content:                 '';
+  position:                absolute;
+  inset:                   0;
+  z-index:                 -1;
+  pointer-events:          none;
+  backdrop-filter:         blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom:      1px solid var(--color-border);
-  position:           sticky;
-  top:                0;
-  z-index:            100;
 }
 
 .navbar__title {
@@ -211,6 +229,20 @@ body {
 .navbar__link:hover,
 .navbar__link--active {
   color: var(--color-text) !important;
+}
+
+/* ── MOBILE DRAWER (hamburger menu) ─────────────────────────────── */
+/* Infima paints the drawer in --ifm-navbar-background-color, which is 85%
+   translucent here so the bar can frost. As a full-height panel that just
+   reads as the page showing through, so give it an opaque surface, and put
+   back the header divider that --ifm-navbar-shadow: none removes. */
+.navbar-sidebar {
+  background-color: var(--color-bg);
+  border-right:     1px solid var(--color-border);
+}
+
+.navbar-sidebar__brand {
+  border-bottom: 1px solid var(--color-border);
 }
 
 /* ── SIDEBAR ────────────────────────────────────────────────────── */

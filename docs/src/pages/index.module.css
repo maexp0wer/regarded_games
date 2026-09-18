@@ -12,11 +12,17 @@
 
 /* ── HERO ─────────────────────────────────────────────────────── */
 /* No overflow clip here — the glow is centered on the hero but taller than it,
-   so its lower half must spill out of the hero and over the cards below. */
+   so its lower half must spill out of the hero and over the cards below.
+
+   Vertical padding is viewport-relative so the page fits a desktop screen with
+   no dead scroll. On tall viewports the hero flex-grows into whatever the card
+   grid leaves and centers its content in that, so this padding is invisible
+   there — it only stops shorter windows (~900px on a 1080p screen) from
+   overflowing by a few dozen pixels of nothing. */
 .hero {
   position:   relative;
   flex:       1 0 auto;
-  padding:    6rem 1.5rem 5rem;
+  padding:    clamp(2rem, 6vh, 6rem) 1.5rem clamp(1.5rem, 4vh, 5rem);
   text-align: center;
   display:    flex;
   align-items: center;
@@ -62,20 +68,20 @@
   text-transform: uppercase;
   letter-spacing: 0.35em;
   color:          var(--color-text2);
-  margin:         0 0 1rem;
+  margin:         0 0 clamp(0.5rem, 1.5vh, 1rem);
 }
 
 /* Main title — the "Class War / The Game" wordmark, mirroring the app's
    landing hero (.hero-title + .hero-gradient-text in src/app/globals.css). */
 .heroTitle {
   font-family:    'Exo 2', system-ui, sans-serif;
-  font-size:      clamp(2.5rem, 6vw, 4.5rem);
+  font-size:      clamp(2.5rem, min(6vw, 7.5vh), 4.5rem);
   font-weight:    900;
   text-transform: uppercase;
   letter-spacing: -0.02em;
   line-height:    1.05;
   color:          var(--color-text);
-  margin:         0 0 1.5rem;
+  margin:         0 0 clamp(0.75rem, 2.5vh, 1.5rem);
 }
 
 /* "The Game" — sunset gradient clipped to the text, gold fallback. */
@@ -103,7 +109,7 @@
 .cardsSection {
   position: relative;
   z-index:  1;
-  padding:  1rem 1.5rem 5rem;
+  padding:  1rem 1.5rem clamp(2rem, 5vh, 5rem);
 }
 
 .cardsGrid {
