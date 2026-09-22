@@ -1,16 +1,22 @@
 // src/lib/coverPlateArt.ts
-import { type Braid, canvasToDataUrl, drawMicroprint, drawRope, prepareCanvas } from '@/lib/cardBackArt';
+import { canvasToDataUrl, drawMicroprint, prepareCanvas } from '@/lib/cardBackArt';
 
 /* ---- Rulebook covers: the printed plate ----
    The front and back covers of the rulebook are the deck back's plate struck
    into gold instead of onto stock (see src/lib/cardBackArt.ts): a guilloché
-   vortex turning out of the centre, a hairline rule, a braided rope border and
-   a microprint rule between them.
+   vortex turning out of the centre, a hairline rule, and a microprint rule
+   between them.
 
-   Same four rings in from the edge as the card back, on the same ~8px cadence —
-   rope 9 · hairline 19 · microprint 27 · field 36 — so the two objects read as
-   one house. The braid geometry is the exported `Braid` type, and the legend is
-   the deck back's own, so nothing here is a second vocabulary.
+   The deck back's rope braid is deliberately NOT carried over. On the card it
+   is the outermost ring and reads as a woven edge; struck into gold at cover
+   scale the two crossing strands read as a chain of intersections running round
+   the sheet, which fought the metal's own raking sheen. The cover's outermost
+   ring is the hairline instead, with the heavy corner brackets set on it.
+
+   Three rings in from the edge, on the card back's ~8px cadence —
+   hairline 19 · microprint 27 · field 36 — so the two objects still read as one
+   house, and the legend is the deck back's own: nothing here is a second
+   vocabulary.
 
    Struck in one literal ink rather than the back's sunset gradient: the ground
    is already a five-stop metal, and a gradient over a gradient reads as neither.
@@ -19,20 +25,17 @@ import { type Braid, canvasToDataUrl, drawMicroprint, drawRope, prepareCanvas } 
    mode.
 
    Drawn to a canvas rather than shipped as an SVG for the deck back's reasons:
-   the rope and microprint hug the cover's real edge, which moves between the
+   the rules and microprint hug the cover's real edge, which moves between the
    desktop spread, the mobile page and every viewport in between. Rulebook only
    draws it while a cover is actually showing. */
 
-/* Frame geometry, px in from the cover edge: the rope's centre line, the
-   hairline inside it, the microprint's centre line, and where the field starts.
-   FIELD is also where the cover's type area begins (Rulebook's covers are p-9),
-   so the printed blocks sit inside the field and clear the microprint rule. */
-const ROPE = 9;
+/* Frame geometry, px in from the cover edge: the outer hairline, the
+   microprint's centre line, and where the field starts. FIELD is also where the
+   cover's type area begins (Rulebook's covers are p-9), so the printed blocks
+   sit inside the field and clear the microprint rule. */
 const HAIRLINE = 19;
 const MICRO = 27;
 const FIELD = 36;
-
-const COVER_ROPE: Braid = { inset: ROPE, radius: 6, amplitude: 3.5, pitch: 11, lineWidth: 0.7 };
 
 /** A patch of the field erased so a block of type sits on clean metal. Given in
     fractions of the cover's width and height, not px: the cover's blocks are
@@ -111,11 +114,10 @@ export function drawCoverPlateArt(
   }
   ctx.drawImage(layer, 0, 0, W, H);
 
-  // 3. Rope border, the hairline inside it, and the microprint rule.
-  drawRope(ctx, W, H, COVER_ROPE, ink, 0.55);
-  ctx.globalAlpha = 0.3;
+  // 3. The outer hairline and the microprint rule inside it.
+  ctx.globalAlpha = 0.45;
   ctx.strokeStyle = ink;
-  ctx.lineWidth = 0.7;
+  ctx.lineWidth = 0.8;
   ctx.beginPath();
   ctx.roundRect(HAIRLINE, HAIRLINE, W - 2 * HAIRLINE, H - 2 * HAIRLINE, 4);
   ctx.stroke();
@@ -123,15 +125,16 @@ export function drawCoverPlateArt(
   ctx.globalAlpha = 1;
 }
 
-/** Renders the foil mask for a `width` x `height` cover — the rope braid and
-    microprint alone, opaque on transparent, at print weight — as a PNG data
-    URL. Resolves null if the cover has no size or the canvas can't be encoded. */
+/** Renders the foil mask for a `width` x `height` cover — the microprint rule
+    alone, opaque on transparent, at print weight — as a PNG data URL. With the
+    braid gone the legend is the only foil on the cover, so the hover pool now
+    lights the microprint rather than a woven edge. Resolves null if the cover
+    has no size or the canvas can't be encoded. */
 export function renderCoverFoilMask(width: number, height: number, monoFamily: string): Promise<string | null> {
   if (width <= 0 || height <= 0) return Promise.resolve(null);
   const canvas = document.createElement('canvas');
   const ctx = prepareCanvas(canvas, width, height);
   if (!ctx) return Promise.resolve(null);
-  drawRope(ctx, width, height, { ...COVER_ROPE, lineWidth: 1 }, '#fff', 1);
   drawMicroprint(ctx, width, height, MICRO, '#fff', 1, monoFamily);
   return canvasToDataUrl(canvas);
 }

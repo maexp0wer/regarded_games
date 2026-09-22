@@ -13,7 +13,9 @@
 
    A section holding pages of its own (the rulebook) prints them as a short run
    of smaller pips beneath its dot, which is the one place in the deck where a
-   reader can otherwise lose track of how much is left.
+   reader can otherwise lose track of how much is left. Each pip jumps to its
+   page: the deck swallows the wheel, so without them the only way back to a
+   rulebook page is to tick through the whole book again.
 
    Desktop only, and never on the hero: below lg the deck is swiped, where the
    gesture needs no advertising and the viewport has no margin to give up, and
@@ -25,6 +27,9 @@ export type RailStop = {
   label: string;
   /** Inner stops this section holds at this breakpoint; 0 or 1 = none. */
   pages: number;
+  /** Name of each inner stop, shown on hover over its pip. Falls back to a
+      page number where missing. */
+  pageLabels?: string[];
 };
 
 export default function DeckRail({
@@ -37,7 +42,8 @@ export default function DeckRail({
   activeIndex: number;
   /** Position within the active section's inner stops. */
   activePage: number;
-  onSelect: (id: string) => void;
+  /** Jump to a section, optionally to a given stop inside it. */
+  onSelect: (id: string, page?: number) => void;
 }) {
   return (
     <nav
@@ -49,8 +55,11 @@ export default function DeckRail({
           const active = i === activeIndex;
 
           return (
-            <li key={stop.id} className="group flex flex-col items-end gap-1.5">
-              <div className="relative flex items-center">
+            <li key={stop.id} className="flex flex-col items-end gap-1.5">
+              {/* The hover group is the dot's row, not the whole item, so a
+                  pointer on one of the section's pips names the page alone
+                  instead of stacking the section name over it. */}
+              <div className="group relative flex items-center">
                 <button
                   type="button"
                   onClick={() => onSelect(stop.id)}
@@ -77,22 +86,53 @@ export default function DeckRail({
                 </span>
               </div>
 
-              {/* Pages inside the section. Always printed, so the rail's height
-                  never jumps: dim while the section is elsewhere, filled on the
-                  page in hand. */}
+              {/* Pages inside the section, each one a jump of its own. Always
+                  printed, so the rail's height never jumps: dim while the
+                  section is elsewhere, filled on the page in hand.
+
+                  The pips are 3px, so the hit area is padded well past the ink
+                  — outward horizontally, where it costs nothing, and only as
+                  far vertically as the gap allows, so neighbouring pips never
+                  overlap and swallow each other's clicks. */}
               {stop.pages > 1 && (
-                <div aria-hidden="true" className="flex w-4 flex-col items-center gap-1">
-                  {Array.from({ length: stop.pages }, (_, page) => (
-                    <span
-                      key={page}
-                      className={`size-0.75 rounded-full transition-opacity duration-300 motion-reduce:transition-none ${
-                        active && page === activePage
-                          ? 'bg-text opacity-100'
-                          : `bg-text2 ${active ? 'opacity-40' : 'opacity-20'}`
-                      }`}
-                    />
-                  ))}
-                </div>
+                /* `w-2` matches the active dot's footprint, so centring the
+                   pips in it puts them on the dot's centre line rather than its
+                   right edge — both columns right-align to the same margin. */
+                <ul className="flex w-2 list-none flex-col items-center gap-2">
+                  {Array.from({ length: stop.pages }, (_, page) => {
+                    const onPage = active && page === activePage;
+                    const pageName = stop.pageLabels?.[page] ?? `Page ${page + 1}`;
+                    return (
+                      /* `w-2`, the dot row's width, so this item's `right-full`
+                         lands the page name on the same margin as the section
+                         name above it. */
+                      <li key={page} className="group/pip relative flex w-2 justify-center">
+                        <button
+                          type="button"
+                          onClick={() => onSelect(stop.id, page)}
+                          aria-label={`${stop.label}: ${pageName}`}
+                          aria-current={onPage ? 'true' : undefined}
+                          className="-mx-2 -my-1 flex cursor-pointer px-2 py-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text2"
+                        >
+                          <span
+                            className={`size-0.75 rounded-full transition-opacity duration-300 motion-reduce:transition-none ${
+                              onPage
+                                ? 'bg-text opacity-100'
+                                : `bg-text2 ${active ? 'opacity-40' : 'opacity-20'} group-hover/pip:opacity-70`
+                            }`}
+                          />
+                        </button>
+
+                        <span
+                          aria-hidden="true"
+                          className="pointer-events-none absolute top-1/2 right-full mr-3 -translate-y-1/2 whitespace-nowrap font-mono text-[9px] font-black uppercase leading-none tracking-[0.12em] text-text2 opacity-0 transition-opacity duration-300 group-hover/pip:opacity-100 motion-reduce:transition-none"
+                        >
+                          {pageName}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
               )}
             </li>
           );

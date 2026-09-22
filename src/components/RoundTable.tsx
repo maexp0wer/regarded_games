@@ -212,6 +212,20 @@ const PEOPLE = (() => {
     }));
 })();
 
+/* The crowd's geometry, published for the landing page's Play → Own transition:
+   the two characters docked on the Gini card split into this many copies and
+   fly onto these exact spots, so the flight has to be able to compute them in
+   viewport pixels before the card it lands on has finished arriving. Positions
+   are viewBox units against CROWD_VIEWBOX, `x`/`y` being each figure's CENTRE.
+   See the "crowd flight" block in LandingClient. */
+export const CROWD_VIEWBOX = { w: VBW, h: VBH };
+/** The `<defs>` sprite id a given `spriteId` produces for one class, so another
+    component can `<use href>` the same single pair of figures. */
+export const crowdSpriteId = (spriteId: string, cap: boolean) =>
+  `rt-${cap ? 'cap' : 'pro'}-${spriteId}`;
+export const CROWD_FIGURES: { i: number; cap: boolean; x: number; y: number; w: number; h: number }[] =
+  PEOPLE.map((p) => ({ i: p.i, cap: p.cap, x: p.x, y: p.y, w: p.w, h: p.h }));
+
 /* ── Who talks to whom ──────────────────────────────────────────────────────
    Cross-class only, and only within arm's reach: with the crowd spread over
    the whole frame, unrestricted pairing sends every other bubble on a
@@ -698,8 +712,23 @@ interface Bubble {
   tailDown: boolean;
   bornAt: number;
 }
-export default function RoundTable({ isHovered }: { isHovered: boolean }) {
-  const uid = useId().replace(/:/g, '');
+export default function RoundTable({
+  isHovered,
+  spriteId,
+  crowdHidden = false,
+}: {
+  isHovered: boolean;
+  /** Fixed id for the `<defs>` sprite, so another component can `<use>` the
+      same single Regardo/Carlo pair instead of inlining a second copy of
+      ~630 KB of path data. Defaults to a generated id when unset. */
+  spriteId?: string;
+  /** Hold the crowd off the frame. The landing page's Play → Own flight lands
+      the figures itself and reveals them at the end, so the graphic must not
+      already be showing them while they are still in the air. */
+  crowdHidden?: boolean;
+}) {
+  const generatedId = useId().replace(/:/g, '');
+  const uid = spriteId ?? generatedId;
   /** Parts of the temple that have been dropped, each with the point in the air
       it was shed from, so it can fly in from there and grow into place. `gen`
       is bumped when a column is replaced, so the arriving column is keyed as a
@@ -941,10 +970,10 @@ export default function RoundTable({ isHovered }: { isHovered: boolean }) {
         {/* The sprite: one whole Regardo and one whole Carlo, Carlo padded above
             by the height of Regardo's hat so the two bodies match at equal
             height. Never rendered — only referenced. */}
-        <svg id={`rt-cap-${uid}`} viewBox={`${REGARDO_BOX.x} ${REGARDO_BOX.y} ${REGARDO_BOX.w} ${REGARDO_BOX.h}`} width={REGARDO_BOX.w} height={REGARDO_BOX.h}>
+        <svg id={crowdSpriteId(uid, true)} viewBox={`${REGARDO_BOX.x} ${REGARDO_BOX.y} ${REGARDO_BOX.w} ${REGARDO_BOX.h}`} width={REGARDO_BOX.w} height={REGARDO_BOX.h}>
           <Regardo x={0} y={0} width={REGARDO_SRC.w} height={REGARDO_SRC.h} viewBox={`0 0 ${REGARDO_SRC.w} ${REGARDO_SRC.h}`} />
         </svg>
-        <svg id={`rt-pro-${uid}`} viewBox={`${CARLO_BOX.x} ${CARLO_BOX.y} ${CARLO_BOX.w} ${CARLO_BOX.h}`} width={CARLO_BOX.w} height={CARLO_BOX.h}>
+        <svg id={crowdSpriteId(uid, false)} viewBox={`${CARLO_BOX.x} ${CARLO_BOX.y} ${CARLO_BOX.w} ${CARLO_BOX.h}`} width={CARLO_BOX.w} height={CARLO_BOX.h}>
           <Carlo x={0} y={0} width={CARLO_SRC.w} height={CARLO_SRC.h} viewBox={`0 0 ${CARLO_SRC.w} ${CARLO_SRC.h}`} />
         </svg>
       </defs>
@@ -1118,10 +1147,10 @@ export default function RoundTable({ isHovered }: { isHovered: boolean }) {
       </AnimatePresence>
 
       {/* ── The crowd ── */}
-      {PEOPLE.map((p) => (
+      {!crowdHidden && PEOPLE.map((p) => (
         <use
           key={`p-${p.i}`}
-          href={`#rt-${p.cap ? 'cap' : 'pro'}-${uid}`}
+          href={`#${crowdSpriteId(uid, p.cap)}`}
           x={p.x - p.w / 2}
           y={p.y - p.h / 2}
           width={p.w}

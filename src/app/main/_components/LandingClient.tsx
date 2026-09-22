@@ -8,7 +8,7 @@ import { MoonIcon, SunIcon } from '@/components/icons/svg';
 import Regardo from '@/components/icons/Regardo.svg';
 import Carlo from '@/components/icons/Carlo.svg';
 import { useDocNavigation } from '@/hooks/useDocNavigation';
-import Rulebook, { RULEBOOK_PAGES, RULEBOOK_PAGES_BELOW_LG } from '@/components/Rulebook';
+import Rulebook, { RULEBOOK_PAGES, RULEBOOK_PAGES_BELOW_LG, RULEBOOK_QUICK_OPEN_MS, RULEBOOK_QUICK_TURN_MS } from '@/components/Rulebook';
 import FitToViewport from '@/components/FitToViewport';
 import CyclingSubheading from '@/components/CyclingSubheading';
 import AnimatedAuctionChart from '@/components/AnimatedAuctionChart';
@@ -17,7 +17,7 @@ import DaoVote from '@/components/DaoVote';
 import AirdropQuestBoard from '@/components/AirdropQuestBoard';
 import AnimatedCapitalAuction from '@/components/AnimatedCapitalAuction';
 import YieldDistribution from '@/components/YieldDistribution';
-import RoundTable from '@/components/RoundTable';
+import RoundTable, { CROWD_FIGURES, CROWD_VIEWBOX, crowdSpriteId } from '@/components/RoundTable';
 import HeroCard from '@/components/HeroCard';
 import BanknoteButton from '@/components/BanknoteButton';
 import BanknoteGround from '@/components/BanknoteGround';
@@ -33,6 +33,36 @@ import { docsOrigin } from '@/utils/appUrls';
 import { resolveAppTarget, resolveDiscourseTarget, resolveMainTarget, type CardTarget, type CardHost } from '@/utils/cardLinks';
 
 
+/* Chapter titles, shared by the heading above the book and the deck rail's page
+   labels. 'back' names the cover for the rail alone: the heading slot fades out
+   there, because the back cover prints its own title. */
+type RulebookChapter = 'distribution' | 'campaign' | 'links' | 'back';
+
+const RULEBOOK_CHAPTERS: Record<RulebookChapter, string> = {
+  distribution: 'Distribution of Power',
+  campaign: 'Campaign Sequence',
+  links: 'Links',
+  back: 'Back Cover',
+};
+
+/* Which rulebook chapter a book page belongs to. Below lg the Campaign Sequence
+   runs across TWO book pages (stops 1 and 2) so its heading holds across both
+   and Links moves to stop 3; the lg+ spread keeps the 1:1 stop→chapter mapping.
+   The final stop is always the back cover. */
+function rulebookChapter(page: number, belowLg: boolean): RulebookChapter {
+  if (page >= (belowLg ? RULEBOOK_PAGES_BELOW_LG : RULEBOOK_PAGES) - 1) return 'back';
+  if (page === 0) return 'distribution';
+  return page <= (belowLg ? 2 : 1) ? 'campaign' : 'links';
+}
+
+/* Rulebook page names for the deck rail. Fixed to the desktop spread: the rail
+   only renders at lg+, where the book always runs RULEBOOK_PAGES stops. The
+   back cover gets no pip (see `railStops`), so it gets no name either. */
+const RULEBOOK_PAGE_LABELS = Array.from(
+  { length: RULEBOOK_PAGES - 1 },
+  (_, page) => RULEBOOK_CHAPTERS[rulebookChapter(page, false)],
+);
+
 /* Section scroll-stops in page order. `cards` > 1 marks sections that collapse
    into a one-card-at-a-time deck below lg; the wheel/touch handler deals through
    the deck before releasing to the neighboring section. */
@@ -43,14 +73,29 @@ import { resolveAppTarget, resolveDiscourseTarget, resolveMainTarget, type CardT
    pages — see the mobile leaf stack in src/components/Rulebook.tsx). Both
    counts come from the Rulebook itself, and their LAST stop is the book's back
    cover — scrolled on from the final content page rather than clicked. */
-/* `label` names the section in the deck rail — on hover and to assistive tech. */
-const SECTIONS: { id: string; label: string; cards: number; pages?: number; pagesBelowLg?: number }[] = [
+/* `label` names the section in the deck rail — on hover and to assistive tech.
+   `pageLabels` names its individual stops there, one per `pages`. */
+const SECTIONS: {
+  id: string;
+  label: string;
+  cards: number;
+  pages?: number;
+  pagesBelowLg?: number;
+  pageLabels?: string[];
+}[] = [
   { id: 'hero', label: 'Class War', cards: 0 },
   { id: 'sectionHero', label: 'Choose Your Hero', cards: 2 },
   { id: 'sectionPlay', label: 'Play the Game', cards: 3 },
   { id: 'sectionOwnMarket', label: 'Own the Project', cards: 3 },
   { id: 'sectionSecureYourStake', label: 'Secure Your Stake', cards: 2 },
-  { id: 'sectionDistribution', label: 'The Rulebook', cards: 0, pages: RULEBOOK_PAGES, pagesBelowLg: RULEBOOK_PAGES_BELOW_LG },
+  {
+    id: 'sectionDistribution',
+    label: 'The Rulebook',
+    cards: 0,
+    pages: RULEBOOK_PAGES,
+    pagesBelowLg: RULEBOOK_PAGES_BELOW_LG,
+    pageLabels: RULEBOOK_PAGE_LABELS,
+  },
 ];
 
 /* Intra-section stops a tick consumes before leaving the section: below-lg card
@@ -65,6 +110,63 @@ function sectionStops(cfg: (typeof SECTIONS)[number] | undefined, belowLg: boole
 /* The Gini card ("Enforce Ideology") is the characters' final home. */
 const GINI_SECTION_ID = 'sectionPlay';
 const GINI_CARD_INDEX = 2;
+
+/* ---- Crowd flight (Play → Own) ----
+   The two characters docked on "Enforce Your Ideology" split into the sixteen
+   figures of the REDEFINE MARKETS crowd and fly onto them, shrinking on the
+   way; scrolling back gathers them into the dock again. This is a decorative
+   overlay, NOT a fourth CharacterHome: the crowd is a permanent part of the
+   RoundTable graphic, so the dock stays the characters' home the whole time
+   and only holds its icons invisible while copies are in the air. Making it a
+   home would mean unmounting the docked layoutId instances and remounting them
+   on a card that has meanwhile parked off-screen, which framer-motion would
+   animate as a stray flight across the viewport.
+
+   The flight instances both characters through RoundTable's `<defs>` sprite
+   rather than inlining its art sixteen more times — Carlo.svg alone is ~580 KB
+   of path data. The id is fixed here so the overlay can reference it. */
+const CROWD_SPRITE_ID = 'rg-crowd';
+const OWN_SECTION_ID = 'sectionOwnMarket';
+/* ownCard3 is throw index 2 of 3: 0.5s enterDelay + 2 x 0.08s stagger + 1.0s
+   flight. The Gini card coming back the other way plays the full reversed exit
+   timeline instead (0.55 stack + 0.65 fold + 0.7 slide). */
+const CROWD_OUT_S = 1.66;
+const CROWD_BACK_S = 1.9;
+/* Copies leave one after another and all land together, the same way the card
+   throws fan out and settle as one. Kept short on purpose: the card they are
+   leaving is the rightmost of its row and starts sliding at once, so a copy
+   held back much longer than this launches from a spot the card has already
+   vacated. */
+const CROWD_STAGGER_S = 0.03;
+/* The sprite boxes a flying copy draws into — Regardo's own frame and Carlo's
+   padded one, matching CARLO_VIEWBOX so every render of the pair stays in
+   register. A copy is one `<use>` of RoundTable's sprite at this box. */
+const SPRITE_BOX = {
+  cap: { w: 491.52783, h: 788.49512 },
+  pro: { w: 579.04352, h: 919.01 },
+};
+/* Residual-correction pass once the receiving card has settled — see the same
+   retarget on the cards → gini descent for why offset-summed rects need it. */
+const CROWD_SETTLE_S = 0.22;
+/* How long AFTER the receiving card's throw nominally ends before the residual
+   is read. The card's animation does not start on the frame that schedules it,
+   so it finishes a frame or two behind this clock — and the Gini card arrives
+   on the reversed exit timeline, whose closing phase sweeps ~990px in 0.55s.
+   Twenty milliseconds short of the end it is still 2.6px out, forty a full
+   10px, and whatever it is out by at that moment gets read as the landing spot
+   and never corrected again: the copies stop there and the real icons appear
+   elsewhere, which is the snap. The enter-down throw decelerates to nothing and
+   is within a fifth of a pixel over the same window, which is why the descent
+   onto this dock never showed it. A margin this wide covers either. */
+const CROWD_SETTLE_DELAY_S = 0.15;
+
+/* Each figure's ordinal WITHIN its class, so the eight copies of one character
+   stagger 0..7 rather than inheriting the crowd's painter-order index. */
+const CROWD_ORDINALS = (() => {
+  let cap = 0;
+  let pro = 0;
+  return CROWD_FIGURES.map((f) => (f.cap ? cap++ : pro++));
+})();
 
 /* Launch state arrives as a prop from the server wrapper (src/app/main/page.tsx),
    which reads the same server-only APP_LIVE / TESTNET_APP_LIVE flags middleware
@@ -128,6 +230,41 @@ const SOON: Record<'game' | 'ico' | 'quests' | 'governance' | 'forum' | 'treasur
    their hero cards, or docked on the Gini card. Exactly one home mounts each
    layoutId element at a time — framer-motion flies the character between homes. */
 type CharacterHome = 'headline' | 'cards' | 'gini';
+
+type CharKey = 'regardo' | 'carlo';
+
+/* The two characters travel independently: Regardo's card can be turned over
+   while Carlo's is not, and then only one of them is grounded. Everything that
+   used to be one home is a pair of homes. */
+type HomeMap = Record<CharKey, CharacterHome>;
+const bothAt = (home: CharacterHome): HomeMap => ({ regardo: home, carlo: home });
+
+/* Which cards are currently showing their backs. */
+type FlipState = { regardo: boolean; carlo: boolean; gini: boolean; own: boolean };
+
+/* ---- Turned-away cards don't fly ----
+   Every on-card icon sits inside a backface-culled wrapper (see HeroCard's
+   "Character / Graphic Frame"), so a flipped card shows no character at all:
+   the figure belongs to the face that is now pointing away. A free copy flown
+   to or from such a card therefore has nowhere real to start or stop — it
+   either appears out of thin air or coasts to a halt on top of a card back.
+
+   So a character whose own launch or landing card is turned away does not fly.
+   It is handed to its destination at once and with no morph, and rides in as
+   part of the card it belongs to while the card it left sweeps out.
+
+   Judged per CHARACTER, not per transition: the two hero cards turn over
+   separately, so one of them being face-down grounds its own character and
+   leaves the other flying. Both share the Gini dock, though, so a turned Gini
+   card grounds the pair.
+
+   `headline` is the giant ghosts behind the hero copy — not a card, never
+   turned away. */
+function faceTurnedAway(home: CharacterHome, key: CharKey, flipped: FlipState) {
+  if (home === 'cards') return key === 'regardo' ? flipped.regardo : flipped.carlo;
+  if (home === 'gini') return flipped.gini;
+  return false;
+}
 
 const HOME_OPACITY: Record<CharacterHome, number> = {
   headline: 0.07,
@@ -449,6 +586,38 @@ function settledRect(el: HTMLElement): FlightRect {
   return { x, y, w: el.offsetWidth * zoom, h: el.offsetHeight * zoom };
 }
 
+/* Where the REDEFINE MARKETS crowd's viewBox units land in viewport pixels.
+   The RoundTable svg is `xMidYMid meet` inside the illustration slot, so it
+   letterboxes: one uniform scale plus whatever centering slack is left over on
+   the axis that did not bind. Feeding it a settled slot rect gives the crowd's
+   landing spots while the card is still flying in. */
+type CrowdMap = { x: number; y: number; scale: number };
+
+function crowdMap(box: FlightRect): CrowdMap {
+  const scale = Math.min(box.w / CROWD_VIEWBOX.w, box.h / CROWD_VIEWBOX.h);
+  return {
+    x: box.x + (box.w - CROWD_VIEWBOX.w * scale) / 2,
+    y: box.y + (box.h - CROWD_VIEWBOX.h * scale) / 2,
+    scale,
+  };
+}
+
+/* Every crowd figure's box in viewport pixels, in CROWD_FIGURES order —
+   the flight's landing spots, or its launch spots on the way back. */
+function crowdRects(map: CrowdMap): FlightRect[] {
+  return CROWD_FIGURES.map((f) => ({
+    x: map.x + (f.x - f.w / 2) * map.scale,
+    y: map.y + (f.y - f.h / 2) * map.scale,
+    w: f.w * map.scale,
+    h: f.h * map.scale,
+  }));
+}
+
+function liveRect(el: HTMLElement): FlightRect {
+  const r = el.getBoundingClientRect();
+  return { x: r.left, y: r.top, w: r.width, h: r.height };
+}
+
 function TravelIcon({
   id,
   opacity = 1,
@@ -527,6 +696,19 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
   const [own2Hovered, setOwn2Hovered] = useState(false);
   const [own3Hovered, setOwn3Hovered] = useState(false);
 
+  /* The flip flags as the flight effects see them. Those effects key on the
+     section change alone and must NOT depend on the flags themselves: a card
+     flipped mid-transition would otherwise re-run them and re-fire a flight. */
+  const flippedRef = useRef<FlipState>({ regardo: false, carlo: false, gini: false, own: false });
+  useEffect(() => {
+    flippedRef.current = {
+      regardo: regardoFlipped,
+      carlo: carloFlipped,
+      gini: action3Flipped,
+      own: own3Flipped,
+    };
+  });
+
   const [stake1Flipped, setStake1Flipped] = useState(false);
   const [stake2Flipped, setStake2Flipped] = useState(false);
 
@@ -575,11 +757,52 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
      the history refs so no stale flight fires), making the post-jump state
      identical to having scrolled down: the subsequent scroll-up then plays the
      same, correct reverse flights whether the user scrolled or jumped. */
-  const goToSection = (id: string) => {
+  /* `page` lands the jump on a specific stop inside the target section — the
+     deck rail's rulebook pips jump straight to a page. It defaults to the
+     section's first stop, which is every other caller. */
+  /* A jump to a rulebook page never lands on it directly. Entering the book, it
+     arrives closed like any other entrance, the cover folds open on the first
+     page, and only then do the leaves turn; inside the book, they turn from the
+     page in hand. Either way it walks one stop at a time, since the Rulebook
+     choreographs exactly one leaf per stop. The cover and leaves turn at the
+     book's quick tempo (`quickWalk`) and scrolling is locked for it, so a tick can't turn a
+     leaf mid-flight; any later jump cancels it. Timed off the desktop spread,
+     the only place the rail (the one caller with a page) renders. */
+  const pageWalkTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [quickWalk, setQuickWalk] = useState(false);
+  const clearPageWalk = () => {
+    pageWalkTimersRef.current.forEach(clearTimeout);
+    pageWalkTimersRef.current = [];
+    setQuickWalk(false);
+  };
+  useEffect(() => clearPageWalk, []);
+
+  const goToSection = (id: string, page = 0) => {
     const targetIndex = SECTIONS.findIndex((s) => s.id === id);
     if (targetIndex < 0) return;
     setHasStepped(true);
-    setCardIndices((prev) => ({ ...prev, [id]: 0 }));
+    clearPageWalk();
+
+    const entering = targetIndex !== activeIdxRef.current;
+    const walkFrom = SECTIONS[targetIndex].pages
+      ? (entering ? 0 : (cardIndicesRef.current[id] ?? 0))
+      : page;
+    setCardIndices((prev) => ({ ...prev, [id]: walkFrom }));
+    const turns = Math.abs(page - walkFrom);
+    if (turns > 0 || (entering && SECTIONS[targetIndex].pages)) {
+      const dir = Math.sign(page - walkFrom);
+      const firstTurnAt = entering ? RULEBOOK_QUICK_OPEN_MS : 0;
+      const walkMs = firstTurnAt + turns * RULEBOOK_QUICK_TURN_MS;
+      setQuickWalk(true);
+      for (let k = 1; k <= turns; k++) {
+        pageWalkTimersRef.current.push(setTimeout(
+          () => setCardIndices((prev) => ({ ...prev, [id]: walkFrom + dir * k })),
+          firstTurnAt + (k - 1) * RULEBOOK_QUICK_TURN_MS,
+        ));
+      }
+      pageWalkTimersRef.current.push(setTimeout(() => setQuickWalk(false), walkMs));
+      lock(walkMs);
+    }
 
     /* Resolve the target's settled character home the same way the render does
        (see the "Traveling character home" block), then snap directly to it and
@@ -592,11 +815,13 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       /* Mirror the render derivation: below-lg the characters only dock at gini
          once the Gini card is the top of its deck. A jump lands PAST gini (or,
          on desktop, always) so giniOnTop holds; only a same-index jump to
-         sectionPlay itself could sit on an earlier deck card → 'cards'. */
+         sectionPlay itself could sit on an earlier deck card → 'cards'. That
+         jump is the one case whose deck position this call is itself setting,
+         so read the page being jumped to rather than the outgoing one. */
       const giniOnTop =
         !belowLgRef.current ||
         targetIndex > giniIdxLocal ||
-        (cardIndicesRef.current[GINI_SECTION_ID] ?? 0) === GINI_CARD_INDEX;
+        (targetIndex === giniIdxLocal ? page : (cardIndicesRef.current[GINI_SECTION_ID] ?? 0)) === GINI_CARD_INDEX;
       jumpHome = giniOnTop ? 'gini' : 'cards';
     } else if (targetIndex >= cardsIdxLocal) {
       jumpHome = 'cards';
@@ -604,9 +829,9 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
     clearTimeout(flipTimerRef.current);
     clearTimeout(giniRetargetTimerRef.current);
     setCharOverlay(null);
-    setCharacterHome(jumpHome);
+    setCharacterHome(bothAt(jumpHome));
     prevTargetRef.current = jumpHome;
-    prevHomeRef.current = jumpHome;
+    prevHomeRef.current = bothAt(jumpHome);
 
     activeIdxRef.current = targetIndex;
     setActiveIdx(targetIndex);
@@ -781,12 +1006,18 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
      hero cards → the Gini dock on "Enforce Your Ideology", and that dock
      back onto the hero cards when scrolling up. Every other home change
      keeps its immediate layoutId flight. */
-  const [characterHome, setCharacterHome] = useState<CharacterHome>(targetHome);
+  const [characterHome, setCharacterHome] = useState<HomeMap>(bothAt(targetHome));
   const [charOverlay, setCharOverlay] = useState<{
-    regardo: { from: FlightRect; to: FlightRect };
-    carlo: { from: FlightRect; to: FlightRect };
+    /* Null for a character that is not flying this transition — grounded by a
+       turned-away card at one of its own ends (see faceTurnedAway). */
+    regardo: { from: FlightRect; to: FlightRect } | null;
+    carlo: { from: FlightRect; to: FlightRect } | null;
     duration: number;
     fromOpacity: number;
+    /* Where this flight launched from. Only the headline descent hands off on
+       its copies reporting in, so the handoff callback keys on this rather
+       than on a flag that happens to coincide with it. */
+    src: CharacterHome;
     /* Descent into Choose Your Hero only: render Carlo's flight beneath the
        card layer so he tucks behind the Regardo icon and the Regardo card his
        path crosses, instead of riding over them. The real on-card icon takes
@@ -813,50 +1044,95 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
      recognize it's stale and no-op instead of firing a bogus handoff. */
   const headlineFlightTokenRef = useRef(0);
   const headlineFlightCompleteCountRef = useRef(0);
+  /* How many copies that handoff is waiting on — one per character actually
+     flying, which is not always two. */
+  const headlineFlightExpectedRef = useRef(0);
   /* Fires mid-descent to retarget the gini flight onto the now-settled dock's
      true viewport rect (see the cards→gini branch); cleared alongside flipTimer. */
   const giniRetargetTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /* Per character, set when that one skipped its flight (see faceTurnedAway):
+     its receiving icon mounts with no layout morph and at full opacity, so it
+     appears already in place on the card rather than sliding to it. */
+  const [instantHome, setInstantHome] = useState<Record<CharKey, boolean>>({
+    regardo: false,
+    carlo: false,
+  });
+
   useEffect(() => {
     const prevTarget = prevTargetRef.current;
     prevTargetRef.current = targetHome;
     clearTimeout(flipTimerRef.current);
     clearTimeout(giniRetargetTimerRef.current);
 
-    if (prevTarget === 'headline' && targetHome === 'cards') {
+    /* Each character is judged on its OWN two ends (see faceTurnedAway), so
+       one hero card turned over grounds that character alone and its partner
+       still flies. */
+    const flipped = flippedRef.current;
+    const flying: Record<CharKey, boolean> = {
+      regardo:
+        !faceTurnedAway(prevTarget, 'regardo', flipped) &&
+        !faceTurnedAway(targetHome, 'regardo', flipped),
+      carlo:
+        !faceTurnedAway(prevTarget, 'carlo', flipped) &&
+        !faceTurnedAway(targetHome, 'carlo', flipped),
+    };
+    setInstantHome({ regardo: !flying.regardo, carlo: !flying.carlo });
+
+    /* Whoever is grounded arrives now rather than at the handoff, so it rides
+       the receiving card in instead of appearing on one that has already
+       stopped. Whoever is flying keeps its old home until its copy lands. */
+    if (!flying.regardo || !flying.carlo) {
+      setCharacterHome((prev) => ({
+        regardo: flying.regardo ? prev.regardo : targetHome,
+        carlo: flying.carlo ? prev.carlo : targetHome,
+      }));
+    }
+
+    if (!flying.regardo && !flying.carlo) {
+      setCharOverlay(null);
+    } else if (prevTarget === 'headline' && targetHome === 'cards') {
       const gR = ghostRegardoRef.current;
       const gC = ghostCarloRef.current;
       const dR = cardRegardoSlotRef.current;
       const dC = cardCarloSlotRef.current;
       const flightToken = ++headlineFlightTokenRef.current;
       headlineFlightCompleteCountRef.current = 0;
-      if (gR && gC && dR && dC) {
-        /* Ghosts are static (untransformed), so their live rect is exact. */
-        const rectOf = (el: HTMLElement): FlightRect => {
-          const r = el.getBoundingClientRect();
-          return { x: r.left, y: r.top, w: r.width, h: r.height };
-        };
+      /* Ghosts are static (untransformed), so their live rect is exact. */
+      const rectOf = (el: HTMLElement): FlightRect => {
+        const r = el.getBoundingClientRect();
+        return { x: r.left, y: r.top, w: r.width, h: r.height };
+      };
+      const regardoLeg =
+        flying.regardo && gR && dR ? { from: rectOf(gR), to: settledRect(dR) } : null;
+      const carloLeg =
+        flying.carlo && gC && dC ? { from: rectOf(gC), to: settledRect(dC) } : null;
+      headlineFlightExpectedRef.current = (regardoLeg ? 1 : 0) + (carloLeg ? 1 : 0);
+      if (regardoLeg || carloLeg) {
         setCharOverlay({
-          regardo: { from: rectOf(gR), to: settledRect(dR) },
-          carlo: { from: rectOf(gC), to: settledRect(dC) },
+          regardo: regardoLeg,
+          carlo: carloLeg,
           /* Hero-card throws fire with enterDelay 0 and land at ~1.0s. */
           duration: 1.0,
           fromOpacity: HOME_OPACITY.headline,
-          carloBehindCards: true,
+          src: 'headline',
+          carloBehindCards: !!carloLeg,
           /* dC sits inside sectionHero's zoomed FitToViewport subtree, and so
              does the carloBehindCards overlay itself (see that render site) —
              reuse the same ambient zoom detected for the destination. */
-          carloOverlayZoom: ancestorZoom(dC).zoom,
+          carloOverlayZoom: dC ? ancestorZoom(dC).zoom : 1,
         });
+        /* Hand off once EVERY flying copy reports its own tween actually
+           finished (see headlineFlightComplete / onAnimationComplete below),
+           not a guessed timer — a fixed delay can't account for real-device
+           frame-timing variance under concurrent card-throw animation load. */
+        flipTimerRef.current = setTimeout(() => {
+          if (headlineFlightTokenRef.current !== flightToken) return;
+          setCharacterHome(bothAt('cards'));
+          setCharOverlay(null);
+        }, 2500);
+      } else {
+        setCharacterHome(bothAt('cards'));
       }
-      /* Hand off once BOTH flying copies report their own tween actually
-         finished (see headlineFlightComplete / onAnimationComplete below),
-         not a guessed timer — a fixed delay can't account for real-device
-         frame-timing variance under concurrent card-throw animation load. */
-      flipTimerRef.current = setTimeout(() => {
-        if (headlineFlightTokenRef.current !== flightToken) return;
-        setCharacterHome('cards');
-        setCharOverlay(null);
-      }, 2500);
     } else if (prevTarget === 'cards' && targetHome === 'gini' && !belowLgRef.current) {
       /* Hero cards rest at transform identity when this descent starts (their
          exit animates transforms only), so settledRect doubles as the live
@@ -865,14 +1141,19 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       const fC = cardCarloSlotRef.current;
       const dR = giniRegardoSlotRef.current;
       const dC = giniCarloSlotRef.current;
-      if (fR && fC && dR && dC) {
+      const regardoLeg =
+        flying.regardo && fR && dR ? { from: settledRect(fR), to: settledRect(dR) } : null;
+      const carloLeg =
+        flying.carlo && fC && dC ? { from: settledRect(fC), to: settledRect(dC) } : null;
+      if (regardoLeg || carloLeg) {
         setCharOverlay({
-          regardo: { from: settledRect(fR), to: settledRect(dR) },
-          carlo: { from: settledRect(fC), to: settledRect(dC) },
+          regardo: regardoLeg,
+          carlo: carloLeg,
           /* The Gini card is throw index 2 of 3: 0.5s enterDelay + 0.16s
              stagger + 1.0s flight ≈ 1.66s. */
           duration: 1.66,
           fromOpacity: 1,
+          src: 'cards',
         });
         /* settledRect sums per-level offsetLeft/offsetTop, which round to whole
            px at each ancestor — over the gauge-card chain that compounds to a
@@ -885,21 +1166,26 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
            primary stops avoids the velocity discontinuity (a visible bob) that
            re-aiming mid-flight caused; handoff waits for this correction. */
         giniRetargetTimerRef.current = setTimeout(() => {
-          const liveR = dR.getBoundingClientRect();
-          const liveC = dC.getBoundingClientRect();
           const rectOf = (r: DOMRect): FlightRect => ({ x: r.left, y: r.top, w: r.width, h: r.height });
+          const liveR = dR ? rectOf(dR.getBoundingClientRect()) : null;
+          const liveC = dC ? rectOf(dC.getBoundingClientRect()) : null;
           setCharOverlay((prev) =>
             prev
-              ? { ...prev, duration: 0.25, regardo: { ...prev.regardo, to: rectOf(liveR) }, carlo: { ...prev.carlo, to: rectOf(liveC) } }
+              ? {
+                  ...prev,
+                  duration: 0.25,
+                  regardo: prev.regardo && liveR ? { ...prev.regardo, to: liveR } : prev.regardo,
+                  carlo: prev.carlo && liveC ? { ...prev.carlo, to: liveC } : prev.carlo,
+                }
               : prev,
           );
         }, 1680);
         flipTimerRef.current = setTimeout(() => {
-          setCharacterHome('gini');
+          setCharacterHome(bothAt('gini'));
           setCharOverlay(null);
         }, 1980);
       } else {
-        setCharacterHome('gini');
+        setCharacterHome(bothAt('gini'));
       }
     } else if (prevTarget === 'gini' && targetHome === 'cards' && !belowLgRef.current) {
       /* Reverse descent (Play → Choose Your Hero): the Gini dock rests at
@@ -910,25 +1196,30 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       const fC = giniCarloSlotRef.current;
       const dR = cardRegardoSlotRef.current;
       const dC = cardCarloSlotRef.current;
-      if (fR && fC && dR && dC) {
+      const regardoLeg =
+        flying.regardo && fR && dR ? { from: settledRect(fR), to: settledRect(dR) } : null;
+      const carloLeg =
+        flying.carlo && fC && dC ? { from: settledRect(fC), to: settledRect(dC) } : null;
+      if (regardoLeg || carloLeg) {
         setCharOverlay({
-          regardo: { from: settledRect(fR), to: settledRect(dR) },
-          carlo: { from: settledRect(fC), to: settledRect(dC) },
+          regardo: regardoLeg,
+          carlo: carloLeg,
           /* Hero cards enter-up plays the full reversed exit timeline:
              0.55s stack + 0.65s fold + 0.7s slide ≈ 1.9s. */
           duration: 1.9,
           fromOpacity: 1,
+          src: 'gini',
         });
         flipTimerRef.current = setTimeout(() => {
-          setCharacterHome('cards');
+          setCharacterHome(bothAt('cards'));
           setCharOverlay(null);
         }, 1950);
       } else {
-        setCharacterHome('cards');
+        setCharacterHome(bothAt('cards'));
       }
     } else {
       setCharOverlay(null);
-      setCharacterHome(targetHome);
+      setCharacterHome(bothAt(targetHome));
     }
     return () => {
       clearTimeout(flipTimerRef.current);
@@ -936,13 +1227,163 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
     };
   }, [targetHome]);
 
+  /* ---- Crowd flight (Play ↔ Own) ----
+     Scrolling from "Play the Game" into "Own the Project" splits the two
+     characters docked on ENFORCE YOUR IDEOLOGY into the sixteen figures of the
+     REDEFINE MARKETS crowd: eight copies of each leave the dock stacked, shrink
+     to crowd size and fan out onto their exact spots as the card arrives.
+     Scrolling back gathers them up again.
+
+     The copies are `<use>` references to the sprite RoundTable already keeps in
+     its `<defs>`, laid out in one viewport-sized svg — sixteen inlined Carlos
+     would be megabytes of path data. They fly against the crowd's own geometry
+     (CROWD_FIGURES), so they land on the figures rather than near them, and the
+     graphic holds its crowd back (crowdHidden) until they have arrived.
+
+     This is decorative only: both characters' homes stay 'gini' throughout.
+     See the note on CROWD_SPRITE_ID for why it is not a fourth home. */
+  const [crowdFlight, setCrowdFlight] = useState<{
+    dir: 'out' | 'back';
+    /** One entry per crowd figure: where its copy launches and where it lands,
+        both as viewport boxes. `from` is also the copy's layout box, so only
+        `to` moves when the residual correction lands. */
+    figures: { cap: boolean; from: FlightRect; to: FlightRect }[];
+    duration: number;
+    /** True once the flight has landed and is easing its residual in. */
+    settling: boolean;
+  } | null>(null);
+  const crowdSlotRef = useRef<HTMLDivElement>(null);
+  const crowdTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const clearCrowdTimers = useCallback(() => {
+    crowdTimersRef.current.forEach(clearTimeout);
+    crowdTimersRef.current = [];
+  }, []);
+  const crowdPrevSectionRef = useRef(sectionIdx);
+
+  useEffect(() => {
+    const prev = crowdPrevSectionRef.current;
+    crowdPrevSectionRef.current = sectionIdx;
+    clearCrowdTimers();
+
+    const playIdx = SECTIONS.findIndex((sec) => sec.id === GINI_SECTION_ID);
+    const ownIdx = SECTIONS.findIndex((sec) => sec.id === OWN_SECTION_ID);
+    const out = prev === playIdx && sectionIdx === ownIdx;
+    const back = prev === ownIdx && sectionIdx === playIdx;
+    /* Below lg both sections are one-card decks, and the step between them
+       leaves the Gini card for the FIRST Own card — the crowd is not even on
+       screen, so there is nothing to fly between. A turned-away card at either
+       end skips the flight for the reason faceTurnedAway gives: the copies would
+       have nowhere real to leave from or land on. The crowd is a permanent part
+       of the RoundTable graphic and the dock icons never move, so skipping here
+       needs nothing else — both ends simply ride in with their cards. */
+    const flipped = flippedRef.current;
+    if (belowLgRef.current || (!out && !back) || flipped.gini || flipped.own) {
+      setCrowdFlight(null);
+      return;
+    }
+
+    const slot = crowdSlotRef.current;
+    const dR = giniRegardoSlotRef.current;
+    const dC = giniCarloSlotRef.current;
+    if (!slot || !dR || !dC) {
+      setCrowdFlight(null);
+      return;
+    }
+
+    /* A character flight still in the air is aiming at the very dock these
+       copies are leaving. Settle it first so one thing owns the icons. */
+    clearTimeout(flipTimerRef.current);
+    clearTimeout(giniRetargetTimerRef.current);
+    setCharOverlay(null);
+    setCharacterHome(bothAt('gini'));
+
+    /* A zero-sized slot would give every figure a zero height and turn the
+       pose maths into NaN. It cannot happen after layout, but the flight is
+       cheap to skip and impossible to recover from once it has launched. */
+    const map = crowdMap(settledRect(slot));
+    if (!(map.scale > 0)) {
+      setCrowdFlight(null);
+      return;
+    }
+
+    const crowd = crowdRects(map);
+    const dockCap = settledRect(dR);
+    const dockPro = settledRect(dC);
+    const duration = out ? CROWD_OUT_S : CROWD_BACK_S;
+    setCrowdFlight({
+      dir: out ? 'out' : 'back',
+      figures: CROWD_FIGURES.map((f, i) => ({
+        cap: f.cap,
+        from: out ? (f.cap ? dockCap : dockPro) : crowd[i],
+        to: out ? crowd[i] : f.cap ? dockCap : dockPro,
+      })),
+      duration,
+      settling: false,
+    });
+
+    /* Offset-summed rects round at every ancestor, so the landing spots carry a
+       couple of px of accumulated error — the same residual the cards → gini
+       descent has to correct. Once the receiving card has well and truly
+       stopped (see CROWD_SETTLE_DELAY_S — reading it a frame too early is worse
+       than not correcting at all), re-read its true viewport rect and ease the
+       difference in before handing the figures over. Sixteen small figures make
+       a 2px discrepancy read as a shimmer at handoff, so it earns the pass. */
+    crowdTimersRef.current.push(
+      setTimeout(() => {
+        setCrowdFlight((inAir) => {
+          if (!inAir) return inAir;
+          if (inAir.dir === 'out') {
+            const el = crowdSlotRef.current;
+            if (!el) return inAir;
+            const live = crowdRects(crowdMap(liveRect(el)));
+            return {
+              ...inAir,
+              figures: inAir.figures.map((fig, i) => ({ ...fig, to: live[i] })),
+              settling: true,
+            };
+          }
+          const a = giniRegardoSlotRef.current;
+          const b = giniCarloSlotRef.current;
+          if (!a || !b) return inAir;
+          const cap = liveRect(a);
+          const pro = liveRect(b);
+          return {
+            ...inAir,
+            figures: inAir.figures.map((fig) => ({ ...fig, to: fig.cap ? cap : pro })),
+            settling: true,
+          };
+        });
+      }, (duration + CROWD_SETTLE_DELAY_S) * 1000),
+    );
+    crowdTimersRef.current.push(
+      setTimeout(
+        () => setCrowdFlight(null),
+        (duration + CROWD_SETTLE_DELAY_S + CROWD_SETTLE_S) * 1000 + 80,
+      ),
+    );
+
+    return clearCrowdTimers;
+  }, [sectionIdx, clearCrowdTimers]);
+
+  /* A character flight started on top of a crowd flight (Own → Play → Choose
+     Your Hero inside two seconds) would have the dock launching two icons
+     upward while sixteen are still converging on it. The character flight is
+     the one carrying the characters' home, so it wins: the copies drop out and
+     the crowd flight's own timers clean the state up behind them. The reverse
+     order never happens — starting a crowd flight settles any character flight
+     first (see above). */
+  const crowdInFlight = !!crowdFlight && !charOverlay;
+
   /* Previous home, read during the render where the home flips so each new
      TravelIcon can mount at the opacity the character just had. */
-  const prevHomeRef = useRef<CharacterHome>(characterHome);
+  const prevHomeRef = useRef<HomeMap>(characterHome);
   useEffect(() => {
     prevHomeRef.current = characterHome;
   });
-  const charFromOpacity = HOME_OPACITY[prevHomeRef.current];
+  /* The opacity this character had at the home it just left. */
+  const homeFromOpacity = (key: CharKey) => HOME_OPACITY[prevHomeRef.current[key]];
+  /* Is a free copy of this character in the air right now? */
+  const charFlying = (key: CharKey) => !!charOverlay?.[key];
 
   /* Entry direction for the card throws, resolved during render (not in an
      effect) so the same render that activates a section already animates from
@@ -964,15 +1405,19 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
      exactly where the overlay stopped — already opaque, no second flight.
      All other home changes keep the layoutId morph. (Below lg the cards →
      gini descent doesn't fly an overlay, so the gini dock keeps its morph.) */
-  const handedOffToCards =
-    (characterHome === 'cards' && prevHomeRef.current === 'headline' && throwDir === 1) ||
-    (!belowLg && characterHome === 'cards' && prevHomeRef.current === 'gini' && throwDir === -1);
-  const charFlightDuration = handedOffToCards ? 0 : 0.8;
-  const cardIconFromOpacity = handedOffToCards ? 1 : charFromOpacity;
-  const handedOffToGini =
-    !belowLg && characterHome === 'gini' && prevHomeRef.current === 'cards' && throwDir === 1;
-  const giniFlightDuration = handedOffToGini ? 0 : 0.8;
-  const giniIconFromOpacity = handedOffToGini ? 1 : charFromOpacity;
+  const handedOffToCards = (key: CharKey) =>
+    (characterHome[key] === 'cards' && prevHomeRef.current[key] === 'headline' && throwDir === 1) ||
+    (!belowLg && characterHome[key] === 'cards' && prevHomeRef.current[key] === 'gini' && throwDir === -1);
+  const cardIconDuration = (key: CharKey) =>
+    handedOffToCards(key) || instantHome[key] ? 0 : 0.8;
+  const cardIconFromOpacity = (key: CharKey) =>
+    handedOffToCards(key) || instantHome[key] ? 1 : homeFromOpacity(key);
+  const handedOffToGini = (key: CharKey) =>
+    !belowLg && characterHome[key] === 'gini' && prevHomeRef.current[key] === 'cards' && throwDir === 1;
+  const giniIconDuration = (key: CharKey) =>
+    handedOffToGini(key) || instantHome[key] ? 0 : 0.8;
+  const giniIconFromOpacity = (key: CharKey) =>
+    handedOffToGini(key) || instantHome[key] ? 1 : homeFromOpacity(key);
   const playActive = effectiveSection === 'sectionPlay';
   const ownActive = effectiveSection === 'sectionOwnMarket';
   const distributionActive = effectiveSection === 'sectionDistribution';
@@ -1034,11 +1479,23 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
   const headlineFlightComplete = (token: number) => {
     if (headlineFlightTokenRef.current !== token) return;
     headlineFlightCompleteCountRef.current += 1;
-    if (headlineFlightCompleteCountRef.current < 2) return;
+    if (headlineFlightCompleteCountRef.current < headlineFlightExpectedRef.current) return;
     clearTimeout(flipTimerRef.current);
-    setCharacterHome('cards');
+    setCharacterHome(bothAt('cards'));
     setCharOverlay(null);
   };
+
+  /* Carlo's in-grid descent (carloBehindCards) keeps its own layer regardless:
+     the clip is what hides him behind his own card, and the layer's place in
+     the grid is what threads him behind the Regardo card. */
+  const carloFlightInGrid = !!charOverlay?.carloBehindCards;
+
+  /* The headline → cards descent hands off on both copies reporting in; which
+     layer each one flies in does not change that. */
+  const headlineHandoff =
+    charOverlay?.src === 'headline'
+      ? () => headlineFlightComplete(headlineFlightTokenRef.current)
+      : undefined;
 
   /* One flying character copy: launches at its previous home's rect/opacity and
      animates to the receiving slot. Shared by the detached overlay (Regardo, and
@@ -1064,8 +1521,9 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
     flight: { from: FlightRect; to: FlightRect },
     onComplete?: () => void,
     overlayZoom = 1,
-  ) =>
-    charOverlay && (
+  ) => {
+    if (!charOverlay) return null;
+    return (
       <motion.div
         key={key}
         className="absolute"
@@ -1097,6 +1555,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
         )}
       </motion.div>
     );
+  };
 
   /* ---- Card header destinations ----
      A card's header is its way out to its app surface. The class cards
@@ -1200,8 +1659,12 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
           {/* Always-mounted sizer: marks the icon's box for overlay flights,
               as landing target (header → cards) and launch point (cards → gini). */}
           <div ref={cardRegardoSlotRef} style={{ height: CARD_ICON_H, width: CARD_ICON_H * REGARDO_ASPECT }}>
-            {characterHome === 'cards' && !charOverlay && (
-              <TravelIcon id="char-regardo" fromOpacity={cardIconFromOpacity} duration={charFlightDuration}>
+            {characterHome.regardo === 'cards' && !charFlying('regardo') && (
+              <TravelIcon
+                id="char-regardo"
+                fromOpacity={cardIconFromOpacity('regardo')}
+                duration={cardIconDuration('regardo')}
+              >
                 <Regardo className="w-auto" style={{ height: CARD_ICON_H }} viewBox="0 0 491.52783 788.49512" />
               </TravelIcon>
             )}
@@ -1351,8 +1814,12 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
           {/* Always-mounted sizer: marks the icon's box for overlay flights,
               as landing target (header → cards) and launch point (cards → gini). */}
           <div ref={cardCarloSlotRef} style={{ height: CARD_ICON_H, width: CARD_ICON_H * CARLO_ASPECT }}>
-            {characterHome === 'cards' && !charOverlay && (
-              <TravelIcon id="char-carlo" fromOpacity={cardIconFromOpacity} duration={charFlightDuration}>
+            {characterHome.carlo === 'cards' && !charFlying('carlo') && (
+              <TravelIcon
+                id="char-carlo"
+                fromOpacity={cardIconFromOpacity('carlo')}
+                duration={cardIconDuration('carlo')}
+              >
                 <Carlo className="w-auto" style={{ height: CARD_ICON_H, aspectRatio: CARLO_ASPECT }} viewBox={CARLO_VIEWBOX} />
               </TravelIcon>
             )}
@@ -1472,18 +1939,36 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
             /* Always-mounted sizers mark the dock boxes so the cards → gini
                overlay flight can aim at them while the card is mid-throw. */
             leftIcon={
-              <div ref={giniCarloSlotRef} style={{ height: GINI_ICON_H, width: GINI_ICON_H * CARLO_ASPECT }}>
-                {characterHome === 'gini' && !charOverlay && (
-                  <TravelIcon id="char-carlo" fromOpacity={giniIconFromOpacity} duration={giniFlightDuration}>
+              <div
+                ref={giniCarloSlotRef}
+                /* Held invisible, not unmounted, while the crowd flight has
+                   copies in the air: unmounting a layoutId instance here and
+                   remounting it after the Gini card has parked off-screen makes
+                   framer-motion fly the icon across the viewport to catch up. */
+                style={{ height: GINI_ICON_H, width: GINI_ICON_H * CARLO_ASPECT, opacity: crowdInFlight ? 0 : 1 }}
+              >
+                {characterHome.carlo === 'gini' && !charFlying('carlo') && (
+                  <TravelIcon
+                    id="char-carlo"
+                    fromOpacity={giniIconFromOpacity('carlo')}
+                    duration={giniIconDuration('carlo')}
+                  >
                     <Carlo className="w-auto h-20 text-purple" style={{ aspectRatio: CARLO_ASPECT }} viewBox={CARLO_VIEWBOX} />
                   </TravelIcon>
                 )}
               </div>
             }
             rightIcon={
-              <div ref={giniRegardoSlotRef} style={{ height: GINI_ICON_H, width: GINI_ICON_H * REGARDO_ASPECT }}>
-                {characterHome === 'gini' && !charOverlay && (
-                  <TravelIcon id="char-regardo" fromOpacity={giniIconFromOpacity} duration={giniFlightDuration}>
+              <div
+                ref={giniRegardoSlotRef}
+                style={{ height: GINI_ICON_H, width: GINI_ICON_H * REGARDO_ASPECT, opacity: crowdInFlight ? 0 : 1 }}
+              >
+                {characterHome.regardo === 'gini' && !charFlying('regardo') && (
+                  <TravelIcon
+                    id="char-regardo"
+                    fromOpacity={giniIconFromOpacity('regardo')}
+                    duration={giniIconDuration('regardo')}
+                  >
                     <Regardo className="w-auto h-20 text-gold" viewBox="0 0 491.52783 788.49512" />
                   </TravelIcon>
                 )}
@@ -1598,7 +2083,20 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       }
       illustrationSlot={
         <div className="absolute inset-0 w-full h-full overflow-hidden rounded-xl z-20 p-5 pointer-events-none">
-          <RoundTable isHovered={own3Hovered || ownCardsLive || belowLg} />
+          {/* Always-mounted sizer around the graphic, matching the svg's own
+              box exactly: the crowd flight measures it (transform-free, while
+              the card is still arriving) to work out where each figure lands.
+              settledRect needs an HTML element, which an <svg> is not. */}
+          <div ref={crowdSlotRef} className="w-full h-full">
+            <RoundTable
+              /* The crowd is off the frame and the bubbles are held while the
+                 figures are still flying in — they are what raises the temple,
+                 and nobody should be speaking before they arrive. */
+              isHovered={(own3Hovered || ownCardsLive || belowLg) && !crowdInFlight}
+              spriteId={CROWD_SPRITE_ID}
+              crowdHidden={crowdInFlight}
+            />
+          </div>
         </div>
       }
     />
@@ -1752,31 +2250,16 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
     </motion.h2>
   );
 
-  /* Which rulebook chapter the current book page belongs to. Below lg the
-     Campaign Sequence runs across TWO book pages (stops 1 and 2) so its heading
-     holds across both and Links moves to stop 3; the lg+ spread keeps the 1:1
-     stop→chapter mapping. The final stop is the back cover, which prints its
-     own title — it maps to no chapter, so the heading slot fades out. */
-  const distributionPage = cardIndices['sectionDistribution'] ?? 0;
-  const distributionBackPage = (belowLg ? RULEBOOK_PAGES_BELOW_LG : RULEBOOK_PAGES) - 1;
-  const distributionChapter =
-    distributionPage >= distributionBackPage
-      ? 'back'
-      : distributionPage === 0
-        ? 'distribution'
-        : distributionPage <= (belowLg ? 2 : 1)
-          ? 'campaign'
-          : 'links';
+  /* The chapter the current book page belongs to — see rulebookChapter. On the
+     back cover no heading matches, so the slot fades out. */
+  const distributionChapter = rulebookChapter(cardIndices['sectionDistribution'] ?? 0, belowLg);
 
   /* Three headers stacked in the same slot — cross-fade on page flip. Identical
      classes to all other section h2s so position matches. */
   const distributionHeading = (
     <div className="relative mb-6 lg:mb-8">
-      {([
-        ['distribution', 'Distribution of Power'],
-        ['campaign', 'Campaign Sequence'],
-        ['links', 'Links'],
-      ] as const).map(([key, label], i) => {
+      {(['distribution', 'campaign', 'links'] as const).map((key, i) => {
+        const label = RULEBOOK_CHAPTERS[key];
         const on = distributionActive && distributionChapter === key;
         return (
           <motion.h2
@@ -1803,7 +2286,15 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
   const atLastStop =
     activeIdx === SECTIONS.length - 1 &&
     (lastSectionStops <= 1 || (cardIndices[lastSection.id] ?? 0) >= lastSectionStops - 1);
-  const railStops = SECTIONS.map(({ id, label, pages }) => ({ id, label, pages: pages ?? 0 }));
+  /* The rulebook's last stop is its back cover, reached by scrolling on from the
+     final page; it closes the book rather than holding a page, so the rail
+     prints no pip for it. */
+  const railStops = SECTIONS.map(({ id, label, pages, pageLabels }) => ({
+    id,
+    label,
+    pages: pages ? pages - 1 : 0,
+    pageLabels,
+  }));
 
   const distributionBook = (
     <motion.div
@@ -1819,6 +2310,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
         active={distributionActive}
         page={cardIndices['sectionDistribution'] ?? 0}
         dir={throwDir}
+        quick={quickWalk}
       />
     </motion.div>
   );
@@ -1931,8 +2423,8 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
                   desktop is unchanged. */}
               <div className="absolute inset-0 pointer-events-none z-0 flex items-start justify-between">
                 <div ref={ghostRegardoRef} className="relative flex items-start -ml-[8vw] lg:-ml-[12vw]">
-                  {characterHome === 'headline' && !charOverlay && (
-                    <GhostKnockout arriving={charFromOpacity !== HOME_OPACITY.headline}>
+                  {characterHome.regardo === 'headline' && !charFlying('regardo') && (
+                    <GhostKnockout arriving={homeFromOpacity('regardo') !== HOME_OPACITY.headline}>
                       <Regardo
                         className="h-[min(70vh,88vw)] lg:h-[min(140vh,99vw)] w-auto"
                         viewBox="0 0 491.52783 788.49512"
@@ -1940,8 +2432,8 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
                     </GhostKnockout>
                   )}
                   <AnimatePresence>
-                    {characterHome === 'headline' && !charOverlay && (
-                      <TravelIcon id="char-regardo" opacity={0.07} fromOpacity={charFromOpacity}>
+                    {characterHome.regardo === 'headline' && !charFlying('regardo') && (
+                      <TravelIcon id="char-regardo" opacity={0.07} fromOpacity={homeFromOpacity('regardo')}>
                         <Regardo
                           className="h-[min(70vh,88vw)] lg:h-[min(140vh,99vw)] w-auto text-gold"
                           viewBox="0 0 491.52783 788.49512"
@@ -1951,8 +2443,8 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
                   </AnimatePresence>
                 </div>
                 <div ref={ghostCarloRef} className="relative flex items-start -mr-[8vw] lg:-mr-[12vw]">
-                  {characterHome === 'headline' && !charOverlay && (
-                    <GhostKnockout arriving={charFromOpacity !== HOME_OPACITY.headline}>
+                  {characterHome.carlo === 'headline' && !charFlying('carlo') && (
+                    <GhostKnockout arriving={homeFromOpacity('carlo') !== HOME_OPACITY.headline}>
                       <Carlo
                         className="h-[min(70vh,88vw)] lg:h-[min(140vh,99vw)] w-auto"
                         style={{ aspectRatio: CARLO_ASPECT }}
@@ -1961,8 +2453,8 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
                     </GhostKnockout>
                   )}
                   <AnimatePresence>
-                    {characterHome === 'headline' && !charOverlay && (
-                      <TravelIcon id="char-carlo" opacity={0.07} fromOpacity={charFromOpacity}>
+                    {characterHome.carlo === 'headline' && !charFlying('carlo') && (
+                      <TravelIcon id="char-carlo" opacity={0.07} fromOpacity={homeFromOpacity('carlo')}>
                         <Carlo
                           className="h-[min(70vh,88vw)] lg:h-[min(140vh,99vw)] w-auto text-purple"
                           style={{ aspectRatio: CARLO_ASPECT }}
@@ -2055,12 +2547,18 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
                       <div className="relative w-full max-w-106.25 z-20">
                         <CardThrow active={heroCardsActive} dir={throwDir} index={0} total={2} spacing={562} cardMaxWidth="425px" enterDelay={0}>{regardoCard}</CardThrow>
                       </div>
-                      {charOverlay?.carloBehindCards && (
-                        <div className="fixed inset-0 z-10 pointer-events-none">
+                      {charOverlay?.carlo && carloFlightInGrid && (
+                        /* z 10 threads Carlo between the Regardo card (z 20)
+                           and his own (z 0); the occlusion clip, when his own
+                           card is turned away, takes him under that one too. */
+                        <div
+                          aria-hidden="true"
+                          className="fixed inset-0 z-10 pointer-events-none"
+                        >
                           {renderCharFlight(
                             'carlo',
                             charOverlay.carlo,
-                            () => headlineFlightComplete(headlineFlightTokenRef.current),
+                            headlineHandoff,
                             charOverlay.carloOverlayZoom,
                           )}
                         </div>
@@ -2198,25 +2696,92 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
 
           {/* Overlay flights: free copies of the characters fly from their
               previous home onto the receiving card's settled icon slots while
-              that card is still being thrown, landing together. This detached
-              z-50 layer sits above the whole card grid. On the Choose Your Hero
-              descent Carlo is omitted here and rendered inside the grid instead
-              (carloBehindCards), interleaved between the two card wrappers so he
-              reads behind the Regardo card yet in front of his own. */}
-          {charOverlay && (
-            <div className="fixed inset-0 z-50 pointer-events-none">
-              {renderCharFlight(
-                'regardo',
-                charOverlay.regardo,
-                charOverlay.carloBehindCards
-                  ? () => headlineFlightComplete(headlineFlightTokenRef.current)
-                  : undefined,
-              )}
-              {/* On the Choose Your Hero descent Carlo flies inside the card grid
-                  instead (between the two card wrappers) so he reads behind the
-                  Regardo card and in front of his own; here he only flies on the
-                  other flights, where there is no such card to tuck behind. */}
-              {!charOverlay.carloBehindCards && renderCharFlight('carlo', charOverlay.carlo)}
+              that card is still being thrown, landing together. These detached
+              z-50 layers sit above the whole card grid — one per character, so
+              each can be clipped on its own: a copy landing on a card that is
+              showing its back vanishes under that card while the other carries
+              on flying over the stage. */}
+          {charOverlay?.regardo && (
+            <div aria-hidden="true" className="fixed inset-0 z-50 pointer-events-none">
+              {renderCharFlight('regardo', charOverlay.regardo, headlineHandoff)}
+            </div>
+          )}
+          {/* On the Choose Your Hero descent Carlo flies inside the card grid
+              instead (between the two card wrappers) so he reads behind the
+              Regardo card and in front of his own; here he only flies on the
+              other flights, where there is no such card to tuck behind. */}
+          {charOverlay?.carlo && !carloFlightInGrid && (
+            <div aria-hidden="true" className="fixed inset-0 z-50 pointer-events-none">
+              {renderCharFlight('carlo', charOverlay.carlo, headlineHandoff)}
+            </div>
+          )}
+
+          {/* Crowd flight: the two characters docked on ENFORCE YOUR IDEOLOGY
+              split into the REDEFINE MARKETS crowd and back. Built exactly like
+              the character flights above — a free copy laid out at its launch
+              box and tweened to its landing box — only there are sixteen of
+              them and they shrink by about two and a half times on the way, so
+              the pair reads as one icon per class that fans apart into a crowd.
+
+              Each copy draws a single `<use>` of the sprite RoundTable already
+              keeps in its `<defs>`; sixteen inlined figures would be megabytes
+              of path data. The copies are plain HTML divs rather than SVG
+              groups because framer-motion overwrites `transform-origin` on SVG
+              elements (buildSVGAttrs forces "50% 50%"), which against
+              `transform-box: view-box` anchors every copy to the centre of the
+              viewport and throws the launch pose across the screen.
+
+              Same occlusion rule as the character flights: clipped against
+              whichever of the two cards is showing its back, so the copies slide
+              out from behind the Gini card and vanish behind the agora. */}
+          {crowdFlight && crowdInFlight && (
+            <div aria-hidden="true" className="fixed inset-0 z-50 pointer-events-none">
+              {crowdFlight.figures.map((figure, i) => {
+                const box = figure.cap ? SPRITE_BOX.cap : SPRITE_BOX.pro;
+                /* Copies leave one after another and all land together, the way
+                   the card throws fan out and settle as one. The residual pass
+                   has nothing to stagger — everyone corrects at once. */
+                const delay = crowdFlight.settling ? 0 : CROWD_ORDINALS[i] * CROWD_STAGGER_S;
+                const dur = crowdFlight.settling
+                  ? CROWD_SETTLE_S
+                  : Math.max(0.2, crowdFlight.duration - delay);
+                return (
+                  <motion.div
+                    key={i}
+                    className="absolute"
+                    style={{
+                      left: figure.from.x,
+                      top: figure.from.y,
+                      width: figure.from.w,
+                      height: figure.from.h,
+                      transformOrigin: 'top left',
+                    }}
+                    initial={{ x: 0, y: 0, scale: 1 }}
+                    animate={{
+                      x: figure.to.x - figure.from.x,
+                      y: figure.to.y - figure.from.y,
+                      scale: figure.to.h / figure.from.h,
+                      opacity: 1,
+                    }}
+                    transition={{
+                      duration: dur,
+                      delay,
+                      ease: 'easeOut',
+                      opacity: { duration: dur * 0.3, delay, ease: 'easeOut' },
+                    }}
+                  >
+                    <svg className="w-full h-full" viewBox={`0 0 ${box.w} ${box.h}`}>
+                      <use
+                        href={`#${crowdSpriteId(CROWD_SPRITE_ID, figure.cap)}`}
+                        x={0}
+                        y={0}
+                        width={box.w}
+                        height={box.h}
+                      />
+                    </svg>
+                  </motion.div>
+                );
+              })}
             </div>
           )}
         </main>

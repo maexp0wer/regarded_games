@@ -132,6 +132,9 @@ interface RulebookProps {
   /** Live scroll direction: 1 = scrolling down, -1 = scrolling up. Drives the
       slide-in side and the entry/exit backside flash. */
   dir?: 1 | -1;
+  /** A deck-rail jump is carrying the reader into or through the book: the
+      cover fold and leaf turns run at RULEBOOK_QUICK_TURN_MS for its duration. */
+  quick?: boolean;
 }
 
 interface Group {
@@ -265,17 +268,16 @@ const coverMetal = (
 
 /* ---- Cover plate ----
    The printing shared by both covers, and the one place the rulebook spends its
-   full ornament budget: the deck back's guilloché vortex, rope braid and
+   full ornament budget: the deck back's guilloché vortex, outer hairline and
    microprint rule, struck into the gold by src/lib/coverPlateArt.ts, with the
-   heavy corner brackets the HeroCard backs wear set on the hairline inside the
-   braid.
+   heavy corner brackets the HeroCard backs wear set on that hairline.
 
-   Drawn to the cover's real size, so the braid and the microprint hug its edge
+   Drawn to the cover's real size, so the rules and the microprint hug its edge
    at every width the book is laid out at, and only while the book is on screen
    — the same lazy draw the deck backs use. Redrawn once the mono face has
    loaded so the microprint isn't left set in the fallback.
 
-   The braid and microprint are also holographic foil, as on the deck back: at
+   The microprint is also holographic foil, as the deck back's legend is: at
    rest plain print, and while the pointer is on the cover the foil catches the
    light in a pool around the cursor. The gold is a bright ground in both
    themes, so the spectrum is pushed deeper here the way BanknoteButton pushes
@@ -344,8 +346,8 @@ function CoverPlate({ active, halos }: { active: boolean; halos: readonly PlateH
         <div className="absolute inset-0 mix-blend-overlay opacity-50" style={{ backgroundImage: COVER_FOIL_GLARE }} />
       </div>
 
-      {/* Heavy corner brackets, set on the plate's hairline (19px) so the four
-          rings read as one frame instead of the brackets straddling the braid. */}
+      {/* Heavy corner brackets, set on the plate's outer hairline (19px) so the
+          rings and the brackets read as one frame. */}
       <div className="absolute top-[19px] left-[19px] w-7 h-7 border-t-[3px] border-l-[3px] pointer-events-none rounded-tl-xs" style={{ borderColor: COVER_INK, opacity: 0.85 }} />
       <div className="absolute top-[19px] right-[19px] w-7 h-7 border-t-[3px] border-r-[3px] pointer-events-none rounded-tr-xs" style={{ borderColor: COVER_INK, opacity: 0.85 }} />
       <div className="absolute bottom-[19px] left-[19px] w-7 h-7 border-b-[3px] border-l-[3px] pointer-events-none rounded-bl-xs" style={{ borderColor: COVER_INK, opacity: 0.85 }} />
@@ -381,7 +383,7 @@ function CoverRule() {
   );
 }
 
-/* The Sec. 04 supply split, printed as a struck pie on the seal's face. Same
+/* The Sec. 01 supply split, printed as a struck pie on the seal's face. Same
    five allocations as TABLE_DATA, graded light-to-dark so the wedges read as
    one engraving rather than five colors. */
 const SEAL_SEGMENTS = [40, 20, 15, 15, 10];
@@ -393,7 +395,7 @@ const SEAL_ROSETTE_ANGLES = Array.from({ length: 18 }, (_, i) => i * 20);
 /* ---- Cover seal ----
    Struck as a house coin: the milled edge, rim legend between two rules and
    engraved rosette the deck backs carry (see CoinFace in HeroCard.tsx), with
-   the Sec. 04 supply wheel as the device on its face where the deck coin has
+   the Sec. 01 supply wheel as the device on its face where the deck coin has
    Regardo's portrait. So the book closes on the same object the cards turn
    over to, and the wheel still previews the page the rulebook opens on.
 
@@ -537,7 +539,7 @@ function FrontCoverDesign({ active, edge = 'right' }: { active: boolean; edge?: 
         >
           <span>Vol. I</span>
           <span>Rules of Play</span>
-          <span className="tabular-nums">Sec. 04–06</span>
+          <span className="tabular-nums">Sec. 01–03</span>
         </div>
       </div>
     </div>
@@ -563,7 +565,7 @@ const ROADMAP_POINTS: {
   items: RoadmapItem[];
 }[] = [
   {
-    clause: '5.1',
+    clause: '2.1',
     phase: 'Phase I',
     title: 'Foundation',
     when: '2025',
@@ -576,7 +578,7 @@ const ROADMAP_POINTS: {
     ],
   },
   {
-    clause: '5.2',
+    clause: '2.2',
     phase: 'Phase II',
     title: 'Build',
     when: 'Q1–Q3 2026',
@@ -589,7 +591,7 @@ const ROADMAP_POINTS: {
     ],
   },
   {
-    clause: '5.3',
+    clause: '2.3',
     phase: 'Phase III',
     title: 'Testnet',
     when: 'Q4 2026',
@@ -603,7 +605,7 @@ const ROADMAP_POINTS: {
     ],
   },
   {
-    clause: '5.4',
+    clause: '2.4',
     phase: 'Phase IV',
     title: 'Mainnet',
     when: 'Q1 2027',
@@ -850,30 +852,30 @@ function PageFace({ side, footer, children }: { side: 'left' | 'right'; footer?:
 
 const roadmapLeftContent = (
   <div className="flex flex-col flex-grow gap-3 w-full">
-    <SectionHeading>Sec. 05 — Campaign Sequence</SectionHeading>
+    <SectionHeading>Sec. 02 — Campaign Sequence</SectionHeading>
     <RoadmapList from={0} to={2} />
   </div>
 );
 
 const roadmapRightContent = (
   <div className="flex flex-col flex-grow gap-3 w-full">
-    <SectionHeading>Sec. 05 — Continued</SectionHeading>
+    <SectionHeading>Sec. 02 — Continued</SectionHeading>
     <RoadmapList from={2} to={4} />
   </div>
 );
 
-/* Mobile runs the same Sec. 05 split as the desktop spread — phases I–II on
+/* Mobile runs the same Sec. 02 split as the desktop spread — phases I–II on
    one page, III–IV on the next — so neither page ever has to scroll. */
 const roadmapMobileContentA = (
   <div className="flex flex-col flex-grow gap-3 w-full">
-    <SectionHeading>Sec. 05 — Campaign Sequence</SectionHeading>
+    <SectionHeading>Sec. 02 — Campaign Sequence</SectionHeading>
     <RoadmapList from={0} to={2} />
   </div>
 );
 
 const roadmapMobileContentB = (
   <div className="flex flex-col flex-grow gap-3 w-full">
-    <SectionHeading>Sec. 05 — Continued</SectionHeading>
+    <SectionHeading>Sec. 02 — Continued</SectionHeading>
     <RoadmapList from={2} to={4} />
   </div>
 );
@@ -890,21 +892,31 @@ const CHANNEL_ICONS: Record<SocialChannel['key'], React.ComponentType<React.SVGP
 };
 
 /* One channel row on the Links pages — the brand mark, the clause line with a
-   dotted leader, and the channel's state printed at the end of it: a "Join ↗"
-   link that warms to gold on hover (the same treatment the running footer's
-   explainer link gets), or a muted "Coming Soon" legend. */
+   dotted leader, and the channel's state printed at the end of it: an open
+   channel ends in a gold, underlined "Join ↗"; a pending one in a muted
+   "Coming Soon" legend. */
 function ChannelEntry({ channel, clause }: { channel: SocialChannel; clause: string }) {
   /* A channel is live purely on whether its URL exists in socials.ts. This used
-     to also require the app to be live, which had it backwards: a forum or a
-     Discord open during the pre-launch window is exactly when a link matters
-     most. The game's launch state has nothing to do with a chat server. */
+     to also require the app to be live, which had it backwards: a forum, a repo
+     or a Discord open during the pre-launch window is exactly when a link
+     matters most. The game's launch state has nothing to do with a chat server.
+
+     A live entry is printed live the whole way across — mark, clause and name in
+     full ink, tail in gold and underlined — and a pending one is muted end to
+     end. The tail alone used to carry it, and once the gold capsule came off
+     that tail read no louder than "Coming Soon" until you hovered it, which on
+     a touch screen is never. Right now GitHub is the only open channel in
+     socials.ts, so this is the difference between it being findable and it
+     being lost in a column of four dead ones. Gold is spent here and nowhere
+     else on the page: one accent, on the one entry that goes anywhere. */
   const live = channel.href !== '';
   const Icon = CHANNEL_ICONS[channel.key];
+  const ink = live ? 'text-text' : 'text-text2';
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-      <Icon className="size-4 shrink-0 text-text2" />
-      <span className="font-mono text-[13px] font-black tabular-nums shrink-0 text-text">§ {clause}</span>
-      <span className="font-display font-black text-[15px] uppercase tracking-widest leading-tight text-text shrink-0">{channel.label}</span>
+      <Icon className={`size-4 shrink-0 ${live ? 'text-text' : 'text-text2 opacity-60'}`} />
+      <span className={`font-mono text-[13px] font-black tabular-nums shrink-0 ${ink}`}>§ {clause}</span>
+      <span className={`font-display font-black text-[15px] uppercase tracking-widest leading-tight shrink-0 ${ink}`}>{channel.label}</span>
       <DottedLeader />
       {live ? (
         <a
@@ -912,7 +924,9 @@ function ChannelEntry({ channel, clause }: { channel: SocialChannel; clause: str
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="font-mono text-[11px] font-black uppercase tracking-[0.2em] shrink-0 text-text transition-colors duration-200 hover:text-gold-hover focus-visible:text-gold-hover"
+          className="font-mono text-[11px] font-black uppercase tracking-[0.2em] shrink-0 text-gold-hover
+            underline underline-offset-[3px] decoration-1 transition-colors duration-200
+            hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-hover"
         >
           Join ↗
         </a>
@@ -925,23 +939,14 @@ function ChannelEntry({ channel, clause }: { channel: SocialChannel; clause: str
   );
 }
 
+/* All five channels, clauses 3.1–3.5, on the left page of the Links spread.
+   The facing page (006) is left blank for now. */
 const commsLeftContent = (
   <div className="flex flex-col flex-grow gap-4 w-full">
-    <SectionHeading>Sec. 06 — Links</SectionHeading>
+    <SectionHeading>Sec. 03 — Links</SectionHeading>
     <div className="flex flex-col gap-5">
-      {SOCIAL_CHANNELS.slice(0, 2).map((c, i) => (
-        <ChannelEntry key={c.key} channel={c} clause={`6.${i + 1}`} />
-      ))}
-    </div>
-  </div>
-);
-
-const commsRightContent = (
-  <div className="flex flex-col flex-grow gap-4 w-full">
-    <SectionHeading>Sec. 06 — Continued</SectionHeading>
-    <div className="flex flex-col gap-5">
-      {SOCIAL_CHANNELS.slice(2).map((c, i) => (
-        <ChannelEntry key={c.key} channel={c} clause={`6.${i + 3}`} />
+      {SOCIAL_CHANNELS.map((c, i) => (
+        <ChannelEntry key={c.key} channel={c} clause={`3.${i + 1}`} />
       ))}
     </div>
   </div>
@@ -949,10 +954,10 @@ const commsRightContent = (
 
 const commsMobileContent = (
   <div className="flex flex-col flex-grow gap-4 w-full">
-    <SectionHeading>Sec. 06 — Links</SectionHeading>
+    <SectionHeading>Sec. 03 — Links</SectionHeading>
     <div className="flex flex-col gap-4">
       {SOCIAL_CHANNELS.map((c, i) => (
-        <ChannelEntry key={c.key} channel={c} clause={`6.${i + 1}`} />
+        <ChannelEntry key={c.key} channel={c} clause={`3.${i + 1}`} />
       ))}
     </div>
   </div>
@@ -1018,6 +1023,24 @@ const SLIDE_IN_S = 0.6;
 const SLIDE_OUT_S = 0.7;
 const SLIDE_IN_MS = SLIDE_IN_S * 1000;
 
+/* Desktop cover fold: it waits out the slide-in plus a short hold, then swings
+   open around the spine. */
+const COVER_FOLD_DELAY_S = 0.25;
+const COVER_FOLD_S = 1.05;
+
+/* Leaf turn duration — shared by scroll page-flips and the backside flips so
+   every page-turn reads identically. */
+const RULEBOOK_TURN_MS = 1000;
+
+/* Turn duration of a deck-rail jump (the `quick` prop). A reader who picked a
+   page off the rail wants that page, so the cover and the leaves turn briskly
+   on the way there; the slide-in and the hold before the fold keep their usual
+   tempo. `RULEBOOK_QUICK_OPEN_MS` runs from the book going active to its cover
+   lying flat on the desktop spread: the earliest moment a leaf can turn
+   without landing on a closed book. */
+export const RULEBOOK_QUICK_TURN_MS = 550;
+export const RULEBOOK_QUICK_OPEN_MS = SLIDE_IN_MS + COVER_FOLD_DELAY_S * 1000 + RULEBOOK_QUICK_TURN_MS;
+
 /* Desktop leaf stacking is by depth, not z-index: the whole spread is one
    `preserve-3d` scene (so z-index is ignored), and each leaf's NON-rotating
    wrapper carries a `translateZ` slot. Depth lives on the wrapper, not the
@@ -1034,7 +1057,7 @@ const SCENE_PERSPECTIVE = 2200;
    is all that matters for sorting; compositor transforms sort sub-pixel deltas. */
 const Z_LEAF4 = 0.75;     // comms/backside leaf, resting (deepest right leaf)
 const Z_LEAF3 = 1;        // roadmap-right/comms-left leaf, resting (under leaf2)
-const Z_LEAF2 = 2;        // Sec04/roadmap-left leaf
+const Z_LEAF2 = 2;        // Sec01/roadmap-left leaf
 const Z_LEAF3_TOP = 3;    // leaf3 lifted while turned past leaf2 (comms spread)
 const Z_BACK_TOP = 4;     // backside leaf (leaf4) lifted on top of the stack
 const Z_COVER_DOWN = 0.5; // cover sunk flat under the right leaves
@@ -1091,7 +1114,7 @@ function useFoldLeaf(
   return { rotateY, zIndex };
 }
 
-const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }) => {
+const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0, dir = 1, quick = false }) => {
   const data = TABLE_DATA;
   // Subscribe to theme changes: the re-render lets render-time resolveColor()
   // calls pick up the flipped CSS palette (no field of the context is read).
@@ -1130,6 +1153,17 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
      carries one page more than the desktop spread (see RULEBOOK_PAGES*). */
   const bp = useBreakpoint();
   const belowLg = bp === 'xs' || bp === 'sm' || bp === 'md';
+
+  /* Once the book has slid off-screen after an exit it is `parked` (see the
+     repark effect below), and a parked book rests shut on its first page,
+     whatever page the scroll system last left it on. A deck-rail jump can carry
+     the reader out from any page, back cover included, and a book left open
+     would come back already open — or turn its leaves home in view. Parking
+     settles it instantly while nobody can see it, so every entrance starts from
+     the closed cover. */
+  const [parkedRight, setParkedRight] = useState(false);
+  const parked = parkedRight && !active;
+  const page = parked ? 0 : pageProp;
   const backPage = (belowLg ? RULEBOOK_PAGES_BELOW_LG : RULEBOOK_PAGES) - 1;
   const pageBack = page >= backPage;
 
@@ -1143,16 +1177,22 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
   const [everActive, setEverActive] = useState(active);
 
   /* Scroll-driven backside flash, distinct from the backside scroll stop:
-       enter-up   — the book lands showing its back, then turns to Sec 05.
+       enter-up   — the book lands showing its back, then turns to Sec 02.
        exit-down  — the book flashes its back, then slides off to the left.
      `flashBack` turns the same leaves as the backside stop does; `exiting`
      gates the slide so it waits for that flash. */
   const [flashBack, setFlashBack] = useState(false);
   const [exiting, setExiting] = useState(false);
   /* On an up-entrance the leaves must START on the back (no front→back turn) so
-     only the backside shows, then turn open to Sec 05. While this is true the
+     only the backside shows, then turn open to Sec 02. While this is true the
      turn TO the back is instant; the turn back to the page animates. */
   const [enteredUp, setEnteredUp] = useState(false);
+  /* Parking (below) shuts the book once its exit slide has landed. A reader who
+     comes straight back before then finds the leaves still on the page they
+     left, so a down-entrance also snaps them to the page it enters on —
+     instantly, while the book is still off-screen — instead of turning them
+     home in view. Held for a beat, just long enough to commit. */
+  const [snapLeaves, setSnapLeaves] = useState(false);
 
   /* z-choreography for the cover leaf: it must stay above the whole right
      stack while the book is closed AND during the opening fold — dropping it
@@ -1162,9 +1202,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
      the render-time transition block, which pre-sinks it on enter-up. */
   const [coverDown, setCoverDown] = useState(active);
 
-  /* Leaf turn duration — shared by scroll page-flips and the backside flips so
-     every page-turn reads identically (see leaf transitions below). */
-  const TURN_MS = 1000;
+  const TURN_MS = quick ? RULEBOOK_QUICK_TURN_MS : RULEBOOK_TURN_MS;
   /* Brief beat the fully-turned back lingers before the book resolves (turns to
      its page on entry, or slides away on exit). */
   const FLASH_HOLD_MS = 300;
@@ -1191,7 +1229,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
       setExiting(false);
       if (dir === -1) {
         /* Enter-up: appear showing ONLY the back (instant turn), hold, then turn
-           open to Sec 05. Cover is pre-opened + sunk so no cover-fold shows. */
+           open to Sec 02. Cover is pre-opened + sunk so no cover-fold shows. */
         setEnteredUp(true);
         setFlashBack(true);
         setCoverDown(true);
@@ -1199,9 +1237,11 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
           setTimeout(() => { setFlashBack(false); setEnteredUp(false); }, SLIDE_IN_MS + FLASH_HOLD_MS)
         );
       } else {
-        /* Enter-down: normal cover-open fold to Sec 04, no backside flash. */
+        /* Enter-down: normal cover-open fold to Sec 01, no backside flash. */
         setEnteredUp(false);
         setFlashBack(false);
+        setSnapLeaves(true);
+        flashTimersRef.current.push(setTimeout(() => setSnapLeaves(false), 50));
       }
     } else {
       /* Leaving: freeze the exit direction, then set the exit phase. */
@@ -1303,14 +1343,14 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
     return Object.values(map);
   }, [data]);
 
-  /* Rulebook clause numbers: groups are §4.1 / §4.2, slices §4.x.y. */
+  /* Rulebook clause numbers: groups are §1.1 / §1.2, slices §1.x.y. */
   const clauses = useMemo(() => {
     const byName: Record<string, string> = {};
     const byParent: Record<string, string> = {};
     groups.forEach((g, gi) => {
-      byParent[g.parentName] = `4.${gi + 1}`;
+      byParent[g.parentName] = `1.${gi + 1}`;
       g.items.forEach((item, ii) => {
-        byName[item.name] = `4.${gi + 1}.${ii + 1}`;
+        byName[item.name] = `1.${gi + 1}.${ii + 1}`;
       });
     });
     return { byName, byParent };
@@ -1634,7 +1674,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
   const sectionHeading = (
     <div className="hidden md:flex flex-col gap-1">
       <span className="font-mono text-[14px] font-black uppercase tracking-[0.25em] text-text2">
-        Sec. 04 — Distribution of Power
+        Sec. 01 — Distribution of Power
       </span>
       <div className="border-b border-[var(--color-border2)] opacity-60" />
     </div>
@@ -1905,9 +1945,13 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
      instead of drifting from wherever it left. Done invisibly via a 0-dur
      snap once the slide-out has fully played. */
   const reparkRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [parkedRight, setParkedRight] = useState(false);
   useEffect(() => {
     if (active) { setParkedRight(false); return; }
+    if (everActive && exitDir === -1) {
+      // exit-up slide is running; park once it lands, which shuts the book.
+      if (reparkRef.current) clearTimeout(reparkRef.current);
+      reparkRef.current = setTimeout(() => setParkedRight(true), SLIDE_OUT_S * 1000 + 50);
+    }
     if (everActive && exitDir === 1 && exiting) {
       // exit-down slide is running; snap right + drop the flash once it lands.
       if (reparkRef.current) clearTimeout(reparkRef.current);
@@ -1931,7 +1975,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
 
   /* The backside leaves' turn transition. Normally a full page-turn; on an
      up-entrance the turn ONTO the back is instant (the book must appear already
-     showing only its back) while the subsequent turn open to Sec 05 animates. */
+     showing only its back) while the subsequent turn open to Sec 02 animates. */
   const turnDur = TURN_MS / 1000;
   const turnEase = [0.45, 0, 0.25, 1] as const;
 
@@ -1939,19 +1983,19 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
      from the page before it, never jumped to from an arbitrary page — so every
      turn is a single plain flip with no cascade to stagger. */
   const turnInstant = enteredUp && flashBack;
-  const leafTurnT = turnInstant ? { duration: 0 } : { duration: turnDur, ease: turnEase };
+  const leafTurnT = turnInstant || snapLeaves || parked ? { duration: 0 } : { duration: turnDur, ease: turnEase };
   const leaf2TurnT = leafTurnT;
   const leaf3TurnT = leafTurnT;
   const leaf4TurnT = leafTurnT;
 
-  /* Mobile equivalents (single-page book, 0.9s turns). page1 = Sec-04 leaf,
+  /* Mobile equivalents (single-page book, 0.9s turns). page1 = Sec-01 leaf,
      page2 = Campaign Sequence I–II, page2b = Campaign Sequence III–IV,
      page3 = comms/back leaf. The mobile book carries that one extra leaf, so
      its scroll stops run 0–4 against the desktop spread's 0–3 — see
      `pagesBelowLg` in the landing SECTIONS. */
   const mTurnDur = 0.9;
   const mInstant = enteredUp && flashBack;
-  const mTurnT = mInstant ? { duration: 0 } : { duration: mTurnDur, ease: turnEase };
+  const mTurnT = mInstant || snapLeaves || parked ? { duration: 0 } : { duration: mTurnDur, ease: turnEase };
   const mPage1TurnT = mTurnT;
   const mPage2TurnT = mTurnT;
   const mPage2bTurnT = mTurnT;
@@ -1967,7 +2011,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
      NOT fold — it flips in place to reveal its own backside (see the mobile
      page3 leaf). Rest order (topZ): cover 40 > page1 30 > page2 25 > page2b 22 >
      page3 (z-20); folded, they stack back the other way (behindZ). */
-  const mCoverTurnT = mInstant
+  const mCoverTurnT = mInstant || parked
     ? { duration: 0 }
     : mCoverAway
       ? { duration: 0.9, delay: innerDelay + 0.25, ease: [0.45, 0, 0.25, 1] as const }
@@ -2009,10 +2053,10 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
               style={{ transformOrigin: 'right center', transformStyle: 'preserve-3d' }}
               initial={false}
               animate={{ rotateY: bookOpen ? 0 : 180 }}
-              transition={turnInstant
+              transition={turnInstant || parked
                 ? { duration: 0 }
                 : bookOpen
-                  ? { duration: 1.05, delay: innerDelay + 0.25, ease: [0.45, 0, 0.25, 1] }
+                  ? { duration: quick ? RULEBOOK_QUICK_TURN_MS / 1000 : COVER_FOLD_S, delay: innerDelay + COVER_FOLD_DELAY_S, ease: [0.45, 0, 0.25, 1] }
                   : { duration: 0.45, ease: 'easeIn' }}
               onAnimationComplete={() => { if (bookOpen) setCoverDown(true); }}
             >
@@ -2060,7 +2104,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
                 are the same definite height (no content-driven resize). */}
             <div className="relative w-1/2 h-full" style={{ transformStyle: 'preserve-3d' }}>
 
-              {/* leaf4: front = comms right page (006); back = the book's
+              {/* leaf4: front = blank right page (006); back = the book's
                   backside. The deepest right leaf — it turns only for the
                   backside. On backShown it turns over the spine and lands on
                   the LEFT half (lifted to Z_BACK_TOP via leaf4OnTop so its back
@@ -2081,7 +2125,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
                   className="absolute inset-0"
                   style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: page >= 2 && !backShown ? 'auto' : 'none' }}
                 >
-                  <PageFace side="right" footer={<PageFooter left="Links" right="006" />}>{commsRightContent}</PageFace>
+                  <PageFace side="right" footer={<PageFooter left="Links" right="006" />}>{null}</PageFace>
                 </div>
                 <div
                   className="absolute inset-0"
@@ -2092,7 +2136,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
               </motion.div>
               </div>
 
-              {/* leaf3: front = roadmap right page (004); back = comms left
+              {/* leaf3: front = roadmap right page (004); back = the Links
                   page (005). Turns for the scroll flip to the comms spread
                   (page ≥ 2) AND on the way to the backside. Lifted to
                   Z_LEAF3_TOP while turned so its back paints over leaf2's
@@ -2121,7 +2165,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
               </motion.div>
               </div>
 
-              {/* leaf2: front = clauses page (Sec 04), back = roadmap left page.
+              {/* leaf2: front = clauses page (Sec 01), back = roadmap left page.
                   Fills the half (absolute inset-0) so it never defines height —
                   the spread height is the container's definite h-full, identical
                   for both halves and stable through the turn. Turns for a scroll
@@ -2293,7 +2337,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
             </motion.div>
 
             {/* page2b — Campaign Sequence, phases III–IV. The mobile-only
-                second half of Sec. 05: the four phases do not fit one phone
+                second half of Sec. 02: the four phases do not fit one phone
                 page, so they turn instead of scrolling. Folds away at page ≥ 3
                 and rests behind the book at z 0.75, on top of page2. */}
             <motion.div
@@ -2340,7 +2384,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page = 0, dir = 1 }
               animate={{ rotateY: backShown ? -180 : 0 }}
               transition={mPage3TurnT}
             >
-              {/* Front face — Sec 06 links */}
+              {/* Front face — Sec 03 links */}
               <div
                 className="absolute inset-0 h-full flex flex-col rounded-md overflow-hidden"
                 style={{ ...goldFrame('var(--color-card)', '3px'), backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
