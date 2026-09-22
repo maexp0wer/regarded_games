@@ -35,7 +35,7 @@ const DOCS_URL = docsOrigin(MAIN_DOMAIN);
    "… ↗" slot of their running footer. Same destination-link role the header
    plays on the playing cards (HeroCard `headerHref`). */
 const FOOTER_DOC_LINKS = {
-  distribution: `${DOCS_URL}/intro#distribution`,
+  distribution: `${DOCS_URL}/intro#how-ownership-is-distributed`,
   campaign: `${DOCS_URL}/intro#roadmap`,
 };
 
