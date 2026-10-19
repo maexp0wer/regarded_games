@@ -20,6 +20,7 @@ import YieldDistribution from '@/components/YieldDistribution';
 import RoundTable, { CROWD_FIGURES, CROWD_VIEWBOX, crowdSpriteId } from '@/components/RoundTable';
 import HeroCard from '@/components/HeroCard';
 import BanknoteButton from '@/components/BanknoteButton';
+import FoilText from '@/components/FoilText';
 import BanknoteGround from '@/components/BanknoteGround';
 import AnimatedGiniCard from '@/components/AnimatedGiniCard';
 import CardDeck from '@/components/CardDeck';
@@ -2471,22 +2472,24 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
                 animate={{ opacity: heroActive ? 1 : 0 }}
                 transition={{ duration: 0.5 }}
                 className="relative flex flex-col items-center justify-center text-center pt-32 px-6 pb-24 max-w-5xl mx-auto z-20"
+                /* The headline's foil lights from anywhere in the column. */
+                data-foil-host=""
               >
                 {/* Stage marker above the headline. This is the ONE place the
                     coarse stage is surfaced — nine card footers each carrying a
                     "testnet" tag would crowd them for the same information.
                     Cosmetic; the real gate is middleware's APP_LIVE check. */}
                 {launch.stage !== 'live' && (
-                  <span className="font-mono text-base md:text-lg font-black uppercase tracking-[0.35em] mb-4 text-text2">
+                  <span className="hero-subtitle mb-4!">
                     {launch.stage === 'testnet' ? 'Now Live on Testnet' : 'Coming Soon'}
                   </span>
                 )}
-                <h1 className="hero-title">
+                <h1 className="hero-title hero-title-stencil">
                   {/* Entity name for crawlers/screen readers only — the visual
                       hero stays the slogan. See CONTEXT.md "Entity". */}
                   <span className="sr-only">Regarded Games — </span>
                   Class War<br />
-                  <span className="hero-gradient-text">The Game</span>
+                  <FoilText text="The Game" className="hero-gradient-text" />
                 </h1>
                 <div className="hero-subtitle relative z-20">
                   <CyclingSubheading />
@@ -2495,8 +2498,10 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
                 
 
                 {/* Banknote buttons, in the page theme. gap-5 leaves room for
-                    the glows. */}
-                <div className="flex flex-wrap items-center justify-center gap-5 z-30 relative">
+                    the glows. On phones the pair would wrap to two lines at
+                    unequal widths, so it stacks instead, both stretched to
+                    the wider one. */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 sm:gap-5 z-30 relative">
                   <BanknoteButton variant="secondary" onClick={() => navigateToDocs('')}>
                     Docs
                   </BanknoteButton>

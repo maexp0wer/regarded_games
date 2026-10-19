@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Space_Grotesk, Azeret_Mono, Exo_2, Orbitron } from 'next/font/google';
+import { Space_Grotesk, Azeret_Mono, Exo_2, Orbitron, Big_Shoulders_Stencil } from 'next/font/google';
 import { headers } from 'next/headers';
 import { cookieToInitialState } from 'wagmi';
 import { config } from '@/config/wagmi';
@@ -20,6 +20,15 @@ const orbitron = Orbitron({
 const exo2 = Exo_2({
   subsets: ['latin'],
   variable: '--font-display', // This is what overrides your CSS!
+  display: 'swap',
+});
+
+/* The landing hero's headline face (.hero-title-stencil). Variable, with the
+   optical-size axis: the hero picks its cut with font-variation-settings. */
+const bigShouldersStencil = Big_Shoulders_Stencil({
+  subsets: ['latin'],
+  axes: ['opsz'],
+  variable: '--font-headline',
   display: 'swap',
 });
 
@@ -95,7 +104,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
-      <body className={`${orbitron.variable} ${exo2.variable} ${spaceGrotesk.variable} ${azeretMono.variable}`}>
+      <body className={`${orbitron.variable} ${exo2.variable} ${bigShouldersStencil.variable} ${spaceGrotesk.variable} ${azeretMono.variable}`}>
         {/* suppressHydrationWarning: React deliberately omits the `nonce` DOM
             property after commit (it's readable-once for security), so the client
             always sees it as empty on hydration even though the server rendered it

@@ -1,18 +1,25 @@
 // src/components/Rulebook.tsx
 "use client";
 
-import React, { useState, useMemo, useEffect, useId, useRef, useCallback } from 'react';
-import ReactECharts from 'echarts-for-react';
-import { useTheme } from '@/context/ThemeContext';
-import RulebookCard from '@/components/RulebookCard';
+import React, { useState, useEffect, useId, useRef, useCallback } from 'react';
 import { motion, useMotionValue, useTransform, animate, type ValueAnimationTransition } from 'framer-motion';
 import { SOCIAL_CHANNELS, type SocialChannel } from '@/config/socials';
 import { DiscourseIcon, XIcon, DiscordIcon, TelegramIcon, GithubIcon } from '@/components/icons/SocialIcons';
 import { useViewportWidth } from '@/hooks/useViewportWidth';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { docsOrigin } from '@/utils/appUrls';
-import { drawCoverPlateArt, type PlateHalo, renderCoverFoilMask } from '@/lib/coverPlateArt';
+import { CARTOUCHE, COVER_STOCK, drawCoverPlateArt, type PlateHalo, renderCoverFoilMask } from '@/lib/coverPlateArt';
 import { FOIL_REST, trackFoil } from '@/lib/holoFoil';
+import PowerChamber from '@/components/PowerChamber';
+import {
+  ALLOCATIONS,
+  COALITIONS,
+  SEAT_CAPTION,
+  allocationLit,
+  coalitionLit,
+  sameFocus,
+  type ChamberFocus,
+} from '@/config/distribution';
 
 /* Scroll stops the rulebook occupies inside its landing section, back cover
    included — the LAST stop IS the back cover, reached by scrolling on from the
@@ -25,102 +32,22 @@ export const RULEBOOK_PAGES_BELOW_LG = 5;
 
 /* Docs subdomain base, derived the same way LandingClient + useDocNavigation do:
    the main domain with a `docs.` prefix (e.g. http://docs.localhost:3000 locally,
-   https://docs.<domain> in prod). The running-footer links render as raw <a href>
+   https://docs.<domain> in prod). The running-head links render as raw <a href>
    on the main app domain, so a bare "intro#..." would resolve against the app
    domain and 404 — these must be absolute docs URLs. */
 const MAIN_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN || '';
 const DOCS_URL = docsOrigin(MAIN_DOMAIN);
 
-/* Explainer targets for the two content pages that have one, reachable from the
-   "… ↗" slot of their running footer. Same destination-link role the header
-   plays on the playing cards (HeroCard `headerHref`). */
-const FOOTER_DOC_LINKS = {
+/* Explainer targets for the content pages that have one, reachable from the
+   "… ↗" title in their running head. Same destination-link role the header
+   plays on the playing cards (HeroCard `headerHref`). The other pages print
+   their running head as plain titles: they link nowhere. */
+const DOC_LINKS = {
   distribution: `${DOCS_URL}/intro#how-ownership-is-distributed`,
-  campaign: `${DOCS_URL}/intro#roadmap`,
 };
 
-interface Tier3Child {
-  name: string;
-  percentage: number;
-  color: string;
-}
-
-interface ChartDataItem {
-  name: string;
-  percentage: number;
-  color: string;
-  explanation?: string;
-  parentName: string;
-  parentPercentage: number;
-  parentColor: string;
-  parentExplanation?: string;
-  subChildren: Tier3Child[];
-}
-
-const TABLE_DATA: ChartDataItem[] = [
-  {
-    parentName: "Community Controlled",
-    parentPercentage: 75,
-    parentColor: "var(--color-card3)",
-    parentExplanation: "75% of the initial $RGD supply is directly controlled by you, the DAO members.",
-    name: "DAO Treasury Reserve",
-    percentage: 40,
-    color: "var(--color-green)",
-    explanation: "Long-Term Capital. Controlled entirely by governance for future growth, acquisitions, or diversification. Subject to a 5-year linear unlock.",
-    subChildren: []
-  },
-  {
-    parentName: "Community Controlled",
-    parentPercentage: 75,
-    parentColor: "var(--color-card3)",
-    name: "Growth & Ecosystem",
-    percentage: 20,
-    color: "var(--color-magenta)",
-    explanation: "Funds Active Incentives and marketing. Released based on DAO-approved milestones.",
-    subChildren: [
-      { name: "Merkl Rewards", percentage: 5, color: "var(--color-magenta-70)" },
-      { name: "User Acquisition", percentage: 15, color: "var(--color-magenta)" }
-    ]
-  },
-  {
-    parentName: "Community Controlled",
-    parentPercentage: 75,
-    parentColor: "var(--color-card3)",
-    name: "Market Formation",
-    percentage: 15,
-    color: "var(--color-orange)",
-    explanation: "Distributed to early community participants and used to provide initial exchange liquidity to ensure Day 1 market stability.",
-    subChildren: [
-      { name: "Genesis Program", percentage: 3, color: "var(--color-orange-35)" },
-      { name: "Capital Auction", percentage: 6, color: "var(--color-orange-70)" },
-      { name: "Liquidity Pool", percentage: 6, color: "var(--color-orange)" },
-    ]
-  },
-  {
-    parentName: "Team & Operations",
-    parentPercentage: 25,
-    parentColor: "var(--color-border)",
-    parentExplanation: "only 25% of the initial $RGD supply is not directly controlled by you, but distributed to the non-profit DAO LLC and vested among the founding Team for longterm alignment.",
-    name: "Team",
-    percentage: 15,
-    color: "var(--color-gold)",
-    explanation: "Incentivizes the founding team. Subject to a 4-year vesting schedule with a 12-month cliff.",
-    subChildren: []
-  },
-  {
-    parentName: "Team & Operations",
-    parentPercentage: 25,
-    parentColor: "var(--color-border)",
-    name: "Operational Reserve",
-    percentage: 10,
-    color: "var(--color-purple)",
-    explanation: "Allocated to the non-profit Regarded DAO LLC to cover real-world costs (legal compliance, audits, hosting). Managed via multi-sig with strict spending rules.",
-    subChildren: []
-  },
-];
-
 interface RulebookProps {
-  /** Section is the active scroll-stop — drives the card fold + wheel sweep. */
+  /** Section is the active scroll-stop — drives the cover fold + the chamber's roll call. */
   active?: boolean;
   /** Book page from the scroll system. Desktop spread (RULEBOOK_PAGES stops):
       0 = Distribution, 1 = Campaign, 2 = Links, 3 = back cover. The mobile
@@ -137,59 +64,6 @@ interface RulebookProps {
   quick?: boolean;
 }
 
-interface Group {
-  parentName: string;
-  parentPercentage: number;
-  parentColor: string;
-  parentExplanation?: string;
-  items: Array<ChartDataItem & { globalIndex: number }>;
-}
-
-function resolveColor(cssValue: string): string {
-  if (typeof window === 'undefined') return '#888888';
-  if (!cssValue.startsWith('var(')) return cssValue;
-  /* The rulebook always renders with dark-mode tokens (see the forced-dark
-     wrapper in page.tsx), so the probe must resolve under `.dark` too — the
-     ECharts wheel reads its colors through here, and the probe is appended to
-     document.body (outside the wrapper), which carries the live page theme. */
-  const host = document.createElement('div');
-  host.className = 'dark';
-  host.style.cssText = 'position:fixed;width:0;height:0';
-  const el = document.createElement('div');
-  el.setAttribute('style', `position:fixed;width:0;height:0;background:${cssValue}`);
-  host.appendChild(el);
-  document.body.appendChild(host);
-  const resolved = getComputedStyle(el).backgroundColor;
-  document.body.removeChild(host);
-  return resolved || '#888888';
-}
-
-/* var(--color-x) → var(--color-x-hover); resolveColor falls back to the base
-   color when no hover token exists (the var resolves to transparent). */
-function getHoverColor(cssVar: string): string {
-  if (typeof cssVar === 'string' && cssVar.startsWith('var(')) {
-    return cssVar.replace(/\)$/, '-hover)');
-  }
-  return cssVar;
-}
-
-function resolveHoverColor(cssVar: string, fallback: string): string {
-  const resolved = resolveColor(getHoverColor(cssVar));
-  if (resolved === 'rgba(0, 0, 0, 0)' || resolved === 'transparent') return fallback;
-  return resolved;
-}
-
-/* Index of the pie slice covering `pct` (0–100) along the wheel's sweep;
-   `shares` are the slice percentages in draw order and sum to 100. */
-function sliceAtShare(shares: number[], pct: number): number | null {
-  let acc = 0;
-  for (let i = 0; i < shares.length; i++) {
-    acc += shares[i];
-    if (pct <= acc) return i;
-  }
-  return null;
-}
-
 /* Dotted clause leader, rulebook table-of-contents style. */
 const DottedLeader = () => (
   <span
@@ -198,117 +72,83 @@ const DottedLeader = () => (
   />
 );
 
-/* Corner brackets for the thin golden inner panels — the page's one quoted
-   ornament, at the accent alpha the HeroCard fronts print their own brackets
-   at (0.35). They were struck at 0.5, which read as a second frame inside the
-   binding rather than as a mark in its corners. */
-const cornerBrackets = (
-  <>
-    <div className="absolute top-1 left-1 w-3 h-3 border-t border-l pointer-events-none z-20" style={{ borderColor: 'rgba(212, 175, 55, 0.35)' }} />
-    <div className="absolute top-1 right-1 w-3 h-3 border-t border-r pointer-events-none z-20" style={{ borderColor: 'rgba(212, 175, 55, 0.35)' }} />
-    <div className="absolute bottom-1 left-1 w-3 h-3 border-b border-l pointer-events-none z-20" style={{ borderColor: 'rgba(212, 175, 55, 0.35)' }} />
-    <div className="absolute bottom-1 right-1 w-3 h-3 border-b border-r pointer-events-none z-20" style={{ borderColor: 'rgba(212, 175, 55, 0.35)' }} />
-  </>
-);
+/* ---- Covers ----
+   Struck like the deck back, in literal colours: a cover is a printed object,
+   not a themed surface, so nothing on it comes from a token. The plate (the
+   vortex, the band, the double rule) is drawn by src/lib/coverPlateArt.ts,
+   which also owns the stock (COVER_STOCK); the type and the seal are set here
+   over it. */
+const COVER_EDGE = '#251F3D';
+const COVER_INK = '#9E97BD';
+const COVER_WORDMARK = '#D6CFEA';
+const COVER_SUNSET = 'linear-gradient(90deg, #9D4EDD 0%, #D81B60 45%, #FF8C00 75%, #FFC300 100%)';
 
-/* Gold chassis gradient — same metal as the Regardo HeroCard frame. */
-const GOLD_CHASSIS_GRADIENT = 'linear-gradient(135deg, #7c6225 0%, #dfc482 25%, #977636 50%, #ebdba4 75%, #6a501c 100%)';
+/* The pages are printed on the covers' stock, so the book is one paper from
+   cover to cover. */
+const PAGE_STOCK = COVER_STOCK;
 
-/* Thick gradient frame for the book's outer edges: a transparent border
-   painted by a border-box gradient layer beneath a padding-box surface fill.
-   Survives border-radius, and per-side widths keep the spine edge open. */
-const goldFrame = (surface: string, widths: string): React.CSSProperties => ({
-  borderStyle: 'solid',
-  borderColor: 'transparent',
-  borderWidth: widths,
-  background: `linear-gradient(${surface}, ${surface}) padding-box, ${GOLD_CHASSIS_GRADIENT} border-box`,
-});
+/* The whole book glows in the sunset, the deck back's halo at twice its rest
+   strength, so the dark book stands off the page canvas in either theme.
+   Carried by one layer behind the book (see the spread and the mobile stack),
+   not by the sheets, so stacked leaves don't add up. */
+const BOOK_GLOW = '0 0 48px rgba(255, 140, 0, 0.3)';
 
-/* Cover surface. Unlike the leaves, the page FACE itself is the gold metal
-   (front & back covers), so there is no edge to frame. goldFrame's transparent
-   border is deliberately NOT used here: the coverMetal treatment below only
-   reaches the padding box, so a border-box gradient ring would stand around the
-   lit sheet as a plain golden border. One fill, treated edge to edge. */
-const goldCoverFrame: React.CSSProperties = {
-  background: GOLD_CHASSIS_GRADIENT,
+/* The cover sheet: stock edge to edge with a hairline edge. Its printed edge
+   is the plate's double rule. */
+const coverSheet: React.CSSProperties = {
+  backgroundColor: COVER_STOCK,
+  boxShadow: `inset 0 0 0 1px ${COVER_EDGE}`,
 };
 
-/* Ink for everything printed on the gold covers. Literal, not the page-canvas
-   token it used to be: a cover is a printed object, not a themed surface — the
-   same reason every colour on the HeroCard backs is struck rather than pulled
-   from a token. As `var(--color-bg)` it inverted in light mode and printed
-   #F8F9FC on pale gold (~1.6:1), which took the whole cover with it. Struck
-   dark, it reads as ink pressed into the metal in both themes. */
-const COVER_INK = '#0D0B14';
-
-/* Metal treatment for the gold covers, layered bottom-up: the card chassis' 45°
-   weave, a raking sheen so the sheet reads as lit metal, and a vignette dropping
-   the outer edges back. With no border frame beneath them these layers run to
-   the cover's own edge, so the metal stays continuous instead of sitting inside
-   a bright lip.
-
-   The concentric CSS rings that used to sit between the weave and the sheen are
-   gone: the real guilloché is struck over the top of all this by CoverPlate. */
-const coverMetal = (
-  <>
-    <div
-      className="absolute inset-0 pointer-events-none opacity-25 mix-blend-overlay"
-      style={{ backgroundImage: 'repeating-linear-gradient(45deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px)' }}
-    />
-    <div
-      className="absolute inset-0 pointer-events-none mix-blend-soft-light"
-      style={{ backgroundImage: 'linear-gradient(118deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.05) 32%, rgba(0,0,0,0.05) 62%, rgba(0,0,0,0.4) 100%)' }}
-    />
-    <div
-      className="absolute inset-0 pointer-events-none"
-      style={{ backgroundImage: 'radial-gradient(125% 95% at 50% 38%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.22) 100%)' }}
-    />
-  </>
-);
+/* "Rulebook" is set in the landing hero's stencil (--font-headline, the same
+   optical size), inked in the sunset. */
+const COVER_TITLE: React.CSSProperties = {
+  fontFamily: 'var(--font-headline), var(--font-display)',
+  fontOpticalSizing: 'none',
+  fontVariationSettings: "'opsz' 36",
+  backgroundImage: COVER_SUNSET,
+};
 
 /* ---- Cover plate ----
-   The printing shared by both covers, and the one place the rulebook spends its
-   full ornament budget: the deck back's guilloché vortex, outer hairline and
-   microprint rule, struck into the gold by src/lib/coverPlateArt.ts, with the
-   heavy corner brackets the HeroCard backs wear set on that hairline.
+   The printing under each cover's type, drawn to the cover's real size by
+   src/lib/coverPlateArt.ts, and only while the book is on screen (the deck
+   backs' lazy draw).
 
-   Drawn to the cover's real size, so the rules and the microprint hug its edge
-   at every width the book is laid out at, and only while the book is on screen
-   — the same lazy draw the deck backs use. Redrawn once the mono face has
-   loaded so the microprint isn't left set in the fallback.
-
-   The microprint is also holographic foil, as the deck back's legend is: at
-   rest plain print, and while the pointer is on the cover the foil catches the
-   light in a pool around the cursor. The gold is a bright ground in both
-   themes, so the spectrum is pushed deeper here the way BanknoteButton pushes
-   it on light stock. */
+   The back's band and edition cartouche are holographic foil, as the deck
+   back's frame is: at rest plain print, and while the pointer is on the cover
+   the foil catches the light in a pool round the cursor, its bands sliding as
+   the pointer crosses the cover. The cover is dark stock in both themes, so the
+   spectrum is tuned for dark stock. The front carries no foil. */
 const COVER_FOIL_BANDS =
-  'repeating-linear-gradient(115deg, #FF6FD8 0%, #FFD36E 4.8%, #9CFF8A 9.6%, #62E6FF 14.4%, #8F7BFF 19.2%, #FF6FD8 24%)';
+  'repeating-linear-gradient(115deg, #FF6FD8 0px, #FFD36E 24px, #9CFF8A 48px, #62E6FF 72px, #8F7BFF 96px, #FF6FD8 120px)';
+const COVER_FOIL_TRAVEL = { x: 160, y: 80 };
 const COVER_FOIL_POOL =
-  'radial-gradient(circle at var(--foil-glare-x) var(--foil-glare-y), #000 0px, #000 44px, transparent 160px)';
+  'radial-gradient(circle at var(--foil-glare-x) var(--foil-glare-y), #000 0px, #000 50px, transparent 170px)';
 const COVER_FOIL_GLARE =
   'radial-gradient(circle at var(--foil-glare-x) var(--foil-glare-y), rgba(255, 255, 255, 0.9) 0px, rgba(255, 255, 255, 0.3) 52px, rgba(255, 255, 255, 0) 130px)';
 
-function CoverPlate({ active, halos }: { active: boolean; halos: readonly PlateHalo[] }) {
+function CoverPlate({ active, halos, back = false }: { active: boolean; halos: readonly PlateHalo[]; back?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const foilRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const foil = foilRef.current;
+    const foil = back ? foilRef.current : null;
     const cover = canvas?.parentElement;
-    if (!active || !canvas || !foil || !cover) return;
+    if (!active || !canvas || !cover) return;
 
+    /* `pass` drops a slow foil encode that a newer resize has overtaken. */
     let cancelled = false;
-    const mono = getComputedStyle(canvas).getPropertyValue('--font-mono').trim() || 'monospace';
-
+    let pass = 0;
     const draw = () => {
       if (cancelled) return;
+      const current = ++pass;
       const width = cover.clientWidth;
       const height = cover.clientHeight;
-      drawCoverPlateArt(canvas, width, height, COVER_INK, mono, halos);
-      renderCoverFoilMask(width, height, mono).then((mask) => {
-        if (cancelled || !mask) return;
+      drawCoverPlateArt(canvas, width, height, halos, back);
+      if (!foil) return;
+      renderCoverFoilMask(width, height).then((mask) => {
+        if (cancelled || current !== pass || !mask) return;
         const layers = `url(${mask}), ${COVER_FOIL_POOL}`;
         foil.style.maskImage = layers;
         foil.style.setProperty('-webkit-mask-image', layers);
@@ -316,15 +156,14 @@ function CoverPlate({ active, halos }: { active: boolean; halos: readonly PlateH
     };
     const observer = new ResizeObserver(draw);
     observer.observe(cover);
-    document.fonts.load(`600 11px ${mono}`).then(draw, () => {});
-    const stopTracking = trackFoil(cover, foil);
+    const stopTracking = foil ? trackFoil(cover, foil) : undefined;
 
     return () => {
       cancelled = true;
       observer.disconnect();
-      stopTracking();
+      stopTracking?.();
     };
-  }, [active, halos]);
+  }, [active, halos, back]);
 
   return (
     <>
@@ -332,61 +171,80 @@ function CoverPlate({ active, halos }: { active: boolean; halos: readonly PlateH
       {/* Fully masked (invisible) until the effect supplies the real mask. The
           effect writes mask-image and the position variables straight to the
           element; React never sets them, so a re-render can't reset them. */}
-      <div
-        ref={foilRef}
-        aria-hidden="true"
-        className="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-450 group-hover/cover:opacity-80
-          mask-no-repeat mask-[linear-gradient(transparent,transparent)] mask-[100%_100%,100%_100%] mask-intersect"
-        style={{ WebkitMaskComposite: 'source-in', ...FOIL_REST }}
-      >
+      {back && (
         <div
-          className="absolute inset-0 saturate-[1.6] brightness-[0.85]"
-          style={{ backgroundImage: COVER_FOIL_BANDS, backgroundSize: '300% 300%', backgroundPosition: 'var(--foil-x) var(--foil-y)' }}
-        />
-        <div className="absolute inset-0 mix-blend-overlay opacity-50" style={{ backgroundImage: COVER_FOIL_GLARE }} />
-      </div>
-
-      {/* Heavy corner brackets, set on the plate's outer hairline (19px) so the
-          rings and the brackets read as one frame. */}
-      <div className="absolute top-[19px] left-[19px] w-7 h-7 border-t-[3px] border-l-[3px] pointer-events-none rounded-tl-xs" style={{ borderColor: COVER_INK, opacity: 0.85 }} />
-      <div className="absolute top-[19px] right-[19px] w-7 h-7 border-t-[3px] border-r-[3px] pointer-events-none rounded-tr-xs" style={{ borderColor: COVER_INK, opacity: 0.85 }} />
-      <div className="absolute bottom-[19px] left-[19px] w-7 h-7 border-b-[3px] border-l-[3px] pointer-events-none rounded-bl-xs" style={{ borderColor: COVER_INK, opacity: 0.85 }} />
-      <div className="absolute bottom-[19px] right-[19px] w-7 h-7 border-b-[3px] border-r-[3px] pointer-events-none rounded-br-xs" style={{ borderColor: COVER_INK, opacity: 0.85 }} />
+          ref={foilRef}
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-450 group-hover/cover:opacity-50
+            mask-no-repeat mask-[linear-gradient(transparent,transparent)] mask-[100%_100%,100%_100%] mask-intersect"
+          style={{ WebkitMaskComposite: 'source-in', ...FOIL_REST }}
+        >
+          <div
+            className="absolute inset-0 saturate-[1.15] brightness-[1.08]"
+            style={{
+              backgroundImage: COVER_FOIL_BANDS,
+              backgroundSize: `calc(100% + ${COVER_FOIL_TRAVEL.x}px) calc(100% + ${COVER_FOIL_TRAVEL.y}px)`,
+              backgroundPosition: 'var(--foil-x) var(--foil-y)',
+            }}
+          />
+          <div className="absolute inset-0 mix-blend-overlay opacity-50" style={{ backgroundImage: COVER_FOIL_GLARE }} />
+        </div>
+      )}
     </>
   );
 }
 
-/* Where each cover's type sits, as a share of the cover — the field is erased
-   in a soft halo around these so every block prints on clean metal. Both covers
-   lay their blocks out with `justify-between` inside p-7, so the shares hold at
-   every size the book is drawn at. */
+/* Where each cover's type sits, as a share of the cover — the vortex is erased
+   in a soft halo round these so every block prints on clean stock. The covers
+   place their blocks at the same shares of their height (top-[12%] and so on),
+   so they hold at every size the book is drawn at. The back's band clears its
+   own path through the vortex (coverPlateArt.ts). */
 const FRONT_COVER_HALOS: readonly PlateHalo[] = [
-  { cx: 0.5, cy: 0.1, rx: 0.46, ry: 0.085 },   // studio imprint + rule
-  { cx: 0.5, cy: 0.5, rx: 0.44, ry: 0.23 },    // seal + title block
-  { cx: 0.5, cy: 0.9, rx: 0.46, ry: 0.085 },   // printed strip
+  { cx: 0.5, cy: 0.12, rx: 0.38, ry: 0.055 },  // wordmark
+  { cx: 0.5, cy: 0.5, rx: 0.38, ry: 0.22 },    // seal + title block
+  { cx: 0.5, cy: 0.87, rx: 0.42, ry: 0.06 },   // printed strip
 ];
 const BACK_COVER_HALOS: readonly PlateHalo[] = [
-  { cx: 0.5, cy: 0.13, rx: 0.34, ry: 0.1 },    // studio imprint
-  { cx: 0.5, cy: 0.5, rx: 0.48, ry: 0.19 },    // cross rule + edition cartouche
-  { cx: 0.5, cy: 0.87, rx: 0.34, ry: 0.1 },    // title imprint
+  { cx: 0.5, cy: 0.13, rx: 0.38, ry: 0.055 },  // wordmark
+  { cx: 0.5, cy: 0.87, rx: 0.44, ry: 0.055 },  // title imprint
 ];
 
-/* Engraved divider with a centred lozenge — the printed rule that brackets the
-   front cover's title block. */
+/* The house wordmark, set as on the deck back. Smaller below lg, so the back's
+   longer title imprint fits a phone-width cover inside its rules. */
+function CoverWordmark({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      className="font-display font-black uppercase leading-none whitespace-nowrap tracking-[0.3em] pl-[0.3em] text-[13px] sm:text-[15px] lg:text-[20px]"
+      style={{ color: COVER_WORDMARK }}
+    >
+      {children}
+    </span>
+  );
+}
+
+/* Engraved divider with a centred lozenge — the printed rule over the front
+   cover's strip. */
 function CoverRule() {
   return (
     <div className="flex items-center gap-2 w-full">
-      <span className="flex-1 h-px" style={{ backgroundColor: COVER_INK, opacity: 0.45 }} />
-      <span className="w-1.5 h-1.5 rotate-45" style={{ backgroundColor: COVER_INK, opacity: 0.6 }} />
-      <span className="flex-1 h-px" style={{ backgroundColor: COVER_INK, opacity: 0.45 }} />
+      <span className="flex-1 h-px" style={{ backgroundColor: COVER_INK, opacity: 0.35 }} />
+      <span className="w-1.5 h-1.5 rotate-45" style={{ backgroundColor: COVER_INK, opacity: 0.55 }} />
+      <span className="flex-1 h-px" style={{ backgroundColor: COVER_INK, opacity: 0.35 }} />
     </div>
   );
 }
 
-/* The Sec. 01 supply split, printed as a struck pie on the seal's face. Same
-   five allocations as TABLE_DATA, graded light-to-dark so the wedges read as
-   one engraving rather than five colors. */
-const SEAL_SEGMENTS = [40, 20, 15, 15, 10];
+/* The Sec. 01 supply split, printed as a struck wheel on the seal's face: the
+   five allocations (src/config/distribution.ts) as shares, inked in the
+   sunset's run with the smallest in the muted ink, so the wheel reads as one
+   engraving. */
+const SEAL_SEGMENTS: ReadonlyArray<readonly [number, string]> = [
+  [40, '#9D4EDD'],
+  [20, '#D81B60'],
+  [15, '#FF8C00'],
+  [15, '#FFC300'],
+  [10, COVER_INK],
+];
 
 /* Rosette engraved behind the wheel, placed by rotation so no trig runs during
    render — the deck coins' ring of offset circles at seal scale. */
@@ -397,10 +255,8 @@ const SEAL_ROSETTE_ANGLES = Array.from({ length: 18 }, (_, i) => i * 20);
    engraved rosette the deck backs carry (see CoinFace in HeroCard.tsx), with
    the Sec. 01 supply wheel as the device on its face where the deck coin has
    Regardo's portrait. So the book closes on the same object the cards turn
-   over to, and the wheel still previews the page the rulebook opens on.
-
-   It replaces a bespoke notched-bezel crest, which was the last of a motif the
-   cards themselves stopped carrying — a sixth shape in a vocabulary of five.
+   over to, and its face still previews the shares the rulebook opens on. The
+   milled edge is struck in the sunset, the rules and legend in the muted ink.
    The reeding is cut to 72: the deck back's 144 aliases at this size.
 
    `id` scopes the SVG defs — the desktop spread and the mobile stack can both
@@ -408,34 +264,40 @@ const SEAL_ROSETTE_ANGLES = Array.from({ length: 18 }, (_, i) => i * 20);
 function CoverSeal({ id }: { id: string }) {
   const R = 17;
   const C = 2 * Math.PI * R;
+  const sun = `${id}-sun`;
   const topArc = `${id}-top`;
   const bottomArc = `${id}-bottom`;
   let offset = 0;
 
   return (
-    <svg
-      viewBox="0 0 100 100"
-      className="w-[104px] h-[104px] lg:w-[124px] lg:h-[124px] shrink-0"
-      style={{ color: COVER_INK }}
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 100 100" className="w-[110px] h-[110px] lg:w-[150px] lg:h-[150px] shrink-0" aria-hidden="true">
       <defs>
+        <linearGradient id={sun} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="100" y2="100">
+          <stop offset="0" stopColor="#9D4EDD" />
+          <stop offset="0.45" stopColor="#D81B60" />
+          <stop offset="0.75" stopColor="#FF8C00" />
+          <stop offset="1" stopColor="#FFC300" />
+        </linearGradient>
         {/* The top arc runs clockwise so its type stands outward; the bottom arc
             runs counter-clockwise so its type stands upright too. */}
         <path id={topArc} d="M 13.5 50 A 36.5 36.5 0 0 1 86.5 50" />
         <path id={bottomArc} d="M 10 50 A 40 40 0 0 0 90 50" />
       </defs>
 
+      {/* Coin: the rim band, then the face inside the inner rule */}
+      <circle cx="50" cy="50" r="47.4" fill="#191426" />
+      <circle cx="50" cy="50" r="30" fill="#211B33" />
+
       {/* Milled edge: 72 reeds — pathLength normalises the ring so the dashes close evenly */}
-      <circle cx="50" cy="50" r="45.2" fill="none" stroke="currentColor" strokeOpacity="0.3" strokeWidth="3.4" />
-      <circle cx="50" cy="50" r="45.2" fill="none" stroke="currentColor" strokeOpacity="0.8" strokeWidth="3.4" pathLength={144} strokeDasharray="1 1" />
+      <circle cx="50" cy="50" r="45.2" fill="none" stroke={`url(#${sun})`} strokeOpacity="0.3" strokeWidth="3.4" />
+      <circle cx="50" cy="50" r="45.2" fill="none" stroke={`url(#${sun})`} strokeOpacity="0.9" strokeWidth="3.4" pathLength={144} strokeDasharray="1 1" />
 
       {/* Rim: the legend band between two rules, dotted either side */}
-      <circle cx="50" cy="50" r="43.2" fill="none" stroke="currentColor" strokeOpacity="0.5" strokeWidth="0.7" />
-      <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeOpacity="0.5" strokeWidth="0.7" />
+      <circle cx="50" cy="50" r="43.2" fill="none" stroke={COVER_INK} strokeOpacity="0.5" strokeWidth="0.7" />
+      <circle cx="50" cy="50" r="30" fill="none" stroke={COVER_INK} strokeOpacity="0.5" strokeWidth="0.7" />
       <g
-        fill="currentColor"
-        fillOpacity="0.85"
+        fill={COVER_INK}
+        fillOpacity="0.9"
         fontSize="5.6"
         fontWeight="700"
         letterSpacing="1"
@@ -448,11 +310,11 @@ function CoverSeal({ id }: { id: string }) {
           <textPath href={`#${bottomArc}`} startOffset="50%" textAnchor="middle">RULEBOOK</textPath>
         </text>
       </g>
-      <circle cx="6.8" cy="50" r="0.9" fill="currentColor" fillOpacity="0.6" />
-      <circle cx="93.2" cy="50" r="0.9" fill="currentColor" fillOpacity="0.6" />
+      <circle cx="6.8" cy="50" r="0.9" fill={COVER_INK} fillOpacity="0.6" />
+      <circle cx="93.2" cy="50" r="0.9" fill={COVER_INK} fillOpacity="0.6" />
 
       {/* Engraved rosette, struck behind the device */}
-      <g fill="none" stroke="currentColor" strokeWidth="0.4" strokeOpacity="0.2">
+      <g fill="none" stroke={COVER_INK} strokeWidth="0.4" strokeOpacity="0.2">
         {SEAL_ROSETTE_ANGLES.map((angle) => (
           <circle key={angle} cx="75.5" cy="50" r="5.2" transform={`rotate(${angle} 50 50)`} />
         ))}
@@ -460,7 +322,7 @@ function CoverSeal({ id }: { id: string }) {
 
       {/* Supply wheel — one dashed arc per allocation, struck from 12 o’clock */}
       <g transform="rotate(-90 50 50)" fill="none" strokeWidth="9">
-        {SEAL_SEGMENTS.map((pct, i) => {
+        {SEAL_SEGMENTS.map(([pct, color], i) => {
           const len = (pct / 100) * C - 1.6;
           const arc = (
             <circle
@@ -468,74 +330,64 @@ function CoverSeal({ id }: { id: string }) {
               cx="50"
               cy="50"
               r={R}
-              stroke="currentColor"
+              stroke={color}
               strokeDasharray={`${len} ${C - len}`}
               strokeDashoffset={-offset}
-              opacity={0.95 - i * 0.17}
             />
           );
           offset += (pct / 100) * C;
           return arc;
         })}
       </g>
-      <circle cx="50" cy="50" r="7.5" fill="none" stroke="currentColor" strokeWidth="0.7" strokeOpacity="0.55" />
+      <circle cx="50" cy="50" r="7.5" fill="none" stroke={COVER_INK} strokeWidth="0.7" strokeOpacity="0.55" />
     </svg>
   );
 }
 
-/* Front cover — the title page of the bound object BackCoverDesign closes:
-   studio imprint ruled off at the top, the struck seal over the title block, and
-   a three-part printed strip in the same rhythm as the HeroCard footer. Sits on
-   the right half of the closed desktop spread (edge="right"); on mobile it is
-   the whole page (edge="full"). */
+/* Front cover — the title page of the bound object BackCoverDesign closes: the
+   house wordmark, the struck seal over the title, and a three-part printed
+   strip in the same rhythm as the HeroCard footer, each block at a fixed share
+   of the cover's height (see FRONT_COVER_HALOS). Sits on the right half of the
+   closed desktop spread (edge="right"); on mobile it is the whole page
+   (edge="full"). */
 function FrontCoverDesign({ active, edge = 'right' }: { active: boolean; edge?: 'right' | 'full' }) {
   /* useId's output carries characters that url(#…) references choke on. */
   const sealId = `seal-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   return (
     <div
-      className={`group/cover relative h-full w-full flex flex-col items-center justify-between p-9 overflow-hidden ${edge === 'right' ? 'rounded-r-md' : 'rounded-md'}`}
-      style={goldCoverFrame}
+      className={`group/cover relative h-full w-full overflow-hidden select-none ${edge === 'right' ? 'rounded-r-md' : 'rounded-md'}`}
+      style={coverSheet}
     >
-      {coverMetal}
       <CoverPlate active={active} halos={FRONT_COVER_HALOS} />
 
-      {/* Studio imprint */}
-      <div className="relative z-10 w-full flex flex-col items-center gap-2.5 select-none">
-        <span
-          className="font-mono text-[11px] lg:text-[13px] font-bold uppercase tracking-[0.3em] whitespace-nowrap pl-[0.3em]"
-          style={{ color: COVER_INK, opacity: 0.8 }}
-        >
-          Regarded Games
-        </span>
-        <CoverRule />
+      <div className="absolute inset-x-0 top-[12%] -translate-y-1/2 flex justify-center">
+        <CoverWordmark>Regarded Games</CoverWordmark>
       </div>
 
-      {/* Title block. pl-[0.3em] on the tracked lines cancels the trailing
+      {/* Title block. pl-[…] on the tracked lines cancels the trailing
           letter-space so they optically centre under the seal. */}
-      <div className="relative z-10 flex flex-col items-center gap-4 select-none">
+      <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex flex-col items-center gap-3 lg:gap-4">
         <CoverSeal id={sealId} />
-        <div className="flex flex-col items-center gap-2">
-          <span
-            className="font-display font-black uppercase tracking-[0.3em] text-2xl lg:text-3xl leading-none pl-[0.3em]"
-            style={{ color: COVER_INK }}
-          >
-            Rulebook
-          </span>
-          <span
-            className="font-mono text-[9px] lg:text-[10px] font-bold uppercase tracking-[0.3em] whitespace-nowrap pl-[0.3em]"
-            style={{ color: COVER_INK, opacity: 0.7 }}
-          >
-            Class War · The Game
-          </span>
-        </div>
+        <span
+          className="font-black uppercase leading-none tracking-[0.12em] pl-[0.12em] text-[42px] lg:text-[56px] bg-clip-text text-transparent"
+          style={COVER_TITLE}
+        >
+          Rulebook
+        </span>
+        <span
+          className="-mt-1 font-mono text-[9px] lg:text-[10px] font-bold uppercase tracking-[0.3em] whitespace-nowrap pl-[0.3em]"
+          style={{ color: COVER_INK }}
+        >
+          Class War · The Game
+        </span>
       </div>
 
       {/* Printed strip — three-part, same rhythm as the HeroCard footer */}
-      <div className="relative z-10 w-full flex flex-col items-center gap-2.5 select-none">
+      <div className="absolute left-[15%] right-[15%] top-[87%] -translate-y-1/2 flex flex-col gap-3">
         <CoverRule />
         <div
-          className="w-full flex justify-between items-center px-1 font-mono text-[8px] lg:text-[9px] font-bold uppercase tracking-[0.2em]"
-          style={{ color: COVER_INK, opacity: 0.75 }}
+          className="flex justify-between items-center font-mono text-[8px] lg:text-[9px] font-bold uppercase tracking-[0.2em]"
+          style={{ color: COVER_INK }}
         >
           <span>Vol. I</span>
           <span>Rules of Play</span>
@@ -663,7 +515,7 @@ function MilestoneCheck({ item }: { item: RoadmapItem }) {
           className="grid place-items-center w-3.5 h-3.5 rounded-full shrink-0 mt-1"
           style={{ backgroundColor: 'var(--color-text)' }}
         >
-          <svg viewBox="0 0 10 10" className="block w-2 h-2" fill="none" stroke="var(--color-card)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg viewBox="0 0 10 10" className="block w-2 h-2" fill="none" stroke={PAGE_STOCK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M2 5.2 L4.2 7.4 L8 3" />
           </svg>
         </span>
@@ -696,18 +548,18 @@ function RailNode({ state }: { state: RoadmapState }) {
     return (
       <span
         className="w-4.25 h-4.25 rounded-full shrink-0 border-2"
-        style={{ backgroundColor: 'var(--color-card)', borderColor: s.mark }}
+        style={{ backgroundColor: PAGE_STOCK, borderColor: s.mark }}
       />
     );
   }
   return (
     <span className="grid place-items-center w-4.25 h-4.25 rounded-full shrink-0" style={{ backgroundColor: s.mark }}>
       {state === 'done' ? (
-        <svg viewBox="0 0 12 12" className="block w-2.5 h-2.5" fill="none" stroke="var(--color-card)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg viewBox="0 0 12 12" className="block w-2.5 h-2.5" fill="none" stroke={PAGE_STOCK} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M3 6.3 L5.2 8.4 L9 3.6" />
         </svg>
       ) : (
-        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--color-card)' }} />
+        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: PAGE_STOCK }} />
       )}
     </span>
   );
@@ -784,68 +636,109 @@ function RoadmapList({ from, to }: { from: number; to: number }) {
   );
 }
 
-/* The "… ↗" slot of a running footer, wired to the page's explainer section
-   in the docs — the same destination-link role the header plays on the
+/* ---- Book pages ----
+   A page follows the theme (the book's dark wrapper keeps it dark in both):
+   the card surface edged in the sunset on its outer sides, paper grain and the
+   fore-edge stack. No frame inside and no corner brackets — the page is ruled
+   the way a book is: a running head ruled off in the sunset at the top, and the
+   folio ruled off in the muted ink at the foot, at the page's outer corner. */
+type PageSide = 'left' | 'right' | 'single';
+
+/* Built from the colour tokens rather than --sunset: that token resolves its
+   colours where it's declared, so it would ignore the book's .dark wrapper. */
+const PAGE_SUNSET = 'linear-gradient(90deg, var(--color-purple) 0%, var(--color-magenta) 45%, var(--color-orange) 75%, var(--color-gold) 100%)';
+const PAGE_GRAIN = 'repeating-linear-gradient(0deg, rgba(255,255,255,0.6) 0px, rgba(255,255,255,0.6) 1px, transparent 1px, transparent 3px)';
+const FORE_EDGE = 'repeating-linear-gradient(90deg, transparent 0px, transparent 1.5px, rgba(0,0,0,0.22) 1.5px, rgba(0,0,0,0.22) 2.5px)';
+
+/* The book's edge: a sunset border on every side but the spine, heavy enough to
+   hold the book's outline against the page canvas behind it. */
+const PAGE_EDGE_WIDTH = 1;
+
+/* The page ground (the stock) inside its sunset edge: a transparent border painted by a
+   border-box gradient beneath a padding-box fill, which survives the rounded
+   corners. On the open spread the sunset runs once across both pages — the
+   left page prints its first half, the right page its second — so it doesn't
+   restart at the spine. */
+function pageSurface(side: PageSide): React.CSSProperties {
+  const w = `${PAGE_EDGE_WIDTH}px`;
+  const sunset = side === 'single'
+    ? `${PAGE_SUNSET} border-box`
+    : `${PAGE_SUNSET} ${side === 'left' ? '0%' : '100%'} 0 / 200% 100% border-box`;
+  return {
+    borderStyle: 'solid',
+    borderColor: 'transparent',
+    borderWidth: side === 'left' ? `${w} 0 ${w} ${w}` : side === 'right' ? `${w} ${w} ${w} 0` : w,
+    background: `linear-gradient(${PAGE_STOCK}, ${PAGE_STOCK}) padding-box, ${sunset}`,
+  };
+}
+
+/* The running head's title, wired to the page's explainer section in the docs
+   where it has one — the same destination-link role the header plays on the
    playing cards (HeroCard `headerHref`): opens the docs in a new tab. Warms to
-   gold on hover. The footer strip is pointer-events-none so a click anywhere on
-   the page still turns it, so the anchor re-enables hits on itself; the click
-   is stopped from reaching the page-turn handlers, like the card links. */
-function FooterDocLink({ label, href }: { label: string; href: string }) {
+   gold on hover. The head is pointer-events-none so a click anywhere on the
+   page still turns it, so the link re-enables hits on itself (its padding
+   widens the target past the small legend type) and stops the click from
+   reaching the page-turn handlers, like the card links. */
+function HeadDocLink({ label, href }: { label: string; href: string }) {
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
-      className="pointer-events-auto transition-colors duration-200 hover:text-gold-hover focus-visible:text-gold-hover"
+      className="pointer-events-auto inline-block py-2 -my-2 transition-colors duration-200 hover:text-gold-hover focus-visible:text-gold-hover"
     >
       {label} ↗
     </a>
   );
 }
 
-/* Half of the running footer, printed on a single page face so it turns with
-   the page. The near-spine slot carries the split page number ("004 /" left
-   page, "005" right page) so the spread reads as one centered line. */
-function PageFooter({ left, right }: { left: React.ReactNode; right: React.ReactNode }) {
+/* A book page: the running head (`head`, its two halves), the page's content,
+   and the folio. `bodyClassName` sets the content area's padding and scroll;
+   the default suits a page of flowing content. */
+function PageFace({
+  side,
+  head,
+  folio,
+  style,
+  bodyClassName = 'overflow-y-auto custom-scrollbar px-6 pt-5 lg:px-8 lg:pt-6',
+  children,
+}: {
+  side: PageSide;
+  head: readonly [React.ReactNode, React.ReactNode];
+  folio: string;
+  style?: React.CSSProperties;
+  bodyClassName?: string;
+  children: React.ReactNode;
+}) {
+  const radius = side === 'left' ? 'rounded-l-md' : side === 'right' ? 'rounded-r-md' : 'rounded-md';
   return (
-    <div
-      className="absolute bottom-0 inset-x-0 flex justify-between items-center px-4 pb-2.5 text-[11px] font-mono opacity-80 pointer-events-none z-20"
-      style={{ color: 'var(--color-text2)' }}
-    >
-      <span>{left}</span>
-      <span>{right}</span>
-    </div>
-  );
-}
+    <div className={`relative h-full w-full flex flex-col overflow-hidden ${radius}`} style={{ ...pageSurface(side), ...style }}>
+      <div className="absolute inset-0 pointer-events-none opacity-[0.05] mix-blend-overlay" style={{ backgroundImage: PAGE_GRAIN }} />
+      {/* Page-edge stack on the fore-edge (the outer edge) */}
+      <div
+        className={`absolute inset-y-1 ${side === 'left' ? 'left-0' : 'right-0'} w-1.25 pointer-events-none z-10`}
+        style={{ backgroundImage: FORE_EDGE }}
+      />
 
-/* Bespoke book page: paper surface + thin golden inner panel with corner
-   brackets — matches the RulebookCard page chrome. The pb-7 leaves the
-   printed-footer strip clear inside the gold frame. */
-function PageFace({ side, footer, children }: { side: 'left' | 'right'; footer?: React.ReactNode; children: React.ReactNode }) {
-  const isLeft = side === 'left';
-  return (
-    <div
-      className={`relative h-full w-full flex flex-col overflow-hidden p-4 pb-9 ${isLeft ? 'rounded-l-md' : 'rounded-r-md'}`}
-      style={goldFrame('var(--color-card)', isLeft ? '3px 0 3px 3px' : '3px 3px 3px 0')}
-    >
-      {/* Paper grain */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.05] mix-blend-overlay"
-        style={{ backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.6) 0px, rgba(255,255,255,0.6) 1px, transparent 1px, transparent 3px)' }}
-      />
-      {/* Page-edge stack on the fore-edge (outer edge) */}
-      <div
-        className={`absolute inset-y-1 ${isLeft ? 'left-0' : 'right-0'} w-[5px] pointer-events-none z-10`}
-        style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent 0px, transparent 1.5px, rgba(0,0,0,0.22) 1.5px, rgba(0,0,0,0.22) 2.5px)' }}
-      />
-      <div className="relative flex-1 rounded-sm border overflow-hidden flex flex-col" style={{ borderColor: 'rgba(212, 175, 55, 0.3)' }}>
-        {cornerBrackets}
-        <div className="relative flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar p-5 md:p-6">
-          {children}
+      {/* Running head, ruled off in the sunset */}
+      <div className="relative z-20 shrink-0 px-6 lg:px-8 pt-5 pointer-events-none">
+        <div className="flex justify-between items-center gap-4 font-mono text-[9px] font-bold uppercase tracking-[0.2em] leading-none text-text2 opacity-80">
+          <span>{head[0]}</span>
+          <span>{head[1]}</span>
+        </div>
+        <div className="mt-2.25 h-px opacity-75" style={{ backgroundImage: PAGE_SUNSET }} />
+      </div>
+
+      <div className={`relative flex flex-col flex-1 min-h-0 ${bodyClassName}`}>{children}</div>
+
+      {/* Folio, ruled off in the muted ink, at the outer corner */}
+      <div className="relative shrink-0 px-6 lg:px-8 pt-2 pb-3 pointer-events-none">
+        <div className="h-px bg-text2 opacity-[0.22]" />
+        <div className={`flex ${side === 'left' ? 'justify-start' : 'justify-end'} pt-2.25 font-mono text-[11px] leading-none tabular-nums text-text2 opacity-80`}>
+          {folio}
         </div>
       </div>
-      {footer}
     </div>
   );
 }
@@ -963,62 +856,44 @@ const commsMobileContent = (
   </div>
 );
 
-/* Backside of the book — adapted from the HeroCard back: the centred cross
-   rule and heavy corner brackets, struck into the same gold sheet as
-   FrontCoverDesign so the two close on each other. On desktop this is the back
+/* Backside of the book — the plate that closes it: the house wordmark at the
+   head, the title imprint at the foot, and across the middle the guilloché
+   band carrying the edition cartouche, both lit as holographic foil under the
+   pointer. The back carries no links and no seal. On desktop this is the back
    face of the last right leaf, landing on the left half (edge="left"); on
    mobile it is the full single back page (edge="full"). */
 function BackCoverDesign({ active, edge = 'left' }: { active: boolean; edge?: 'left' | 'full' }) {
   return (
     <div
-      className={`group/cover relative h-full w-full flex flex-col items-center justify-between p-9 overflow-hidden ${edge === 'left' ? 'rounded-l-md' : 'rounded-md'}`}
-      style={goldCoverFrame}>
-      {coverMetal}
-      <CoverPlate active={active} halos={BACK_COVER_HALOS} />
+      className={`group/cover relative h-full w-full overflow-hidden select-none ${edge === 'left' ? 'rounded-l-md' : 'rounded-md'}`}
+      style={coverSheet}
+    >
+      <CoverPlate active={active} halos={BACK_COVER_HALOS} back />
 
-      {/* Studio imprint */}
-      <div className="relative z-10 flex flex-col items-center justify-center font-mono text-[13px] tracking-[0.3em] font-bold uppercase select-none text-center px-5 py-2">
-        <div className="opacity-80 flex flex-col items-center gap-1.5 pl-[0.3em]" style={{ color: COVER_INK }}>
-          <span>REGARDED</span>
-          <span>GAMES</span>
-        </div>
+      <div className="absolute inset-x-0 top-[13%] -translate-y-1/2 flex justify-center">
+        <CoverWordmark>Regarded Games</CoverWordmark>
       </div>
 
-      {/* Printed edition mark, struck into the middle of a cross rule — the same
-          centred cross the HeroCard backs carry, drawn here as four segments
-          radiating from the cartouche so it needs no opaque mask over the gold.
-          The back still carries no links and no seal; this is the middle line of
-          the three-part cover text, given a plate to sit in. Purely decorative,
-          so it never takes the pointer. */}
-      <div className="relative z-10 w-full flex flex-col items-center pointer-events-none select-none">
-        <span className="w-px h-7 lg:h-10" style={{ backgroundColor: COVER_INK, opacity: 0.3 }} />
-        <div className="w-full flex items-center gap-3">
-          <span className="flex-1 h-px" style={{ backgroundColor: COVER_INK, opacity: 0.3 }} />
-          <span
-            className="relative font-mono text-[11px] lg:text-[12px] font-bold uppercase tracking-[0.3em] whitespace-nowrap px-4 py-2 rounded-xs border"
-            style={{ color: COVER_INK, borderColor: COVER_INK, opacity: 0.85 }}
-          >
-            <span className="absolute inset-[3px] rounded-xs border" style={{ borderColor: COVER_INK, opacity: 0.35 }} />
-            <span className="relative pl-[0.3em]">First Edition</span>
-          </span>
-          <span className="flex-1 h-px" style={{ backgroundColor: COVER_INK, opacity: 0.3 }} />
-        </div>
-        <span className="w-px h-7 lg:h-10" style={{ backgroundColor: COVER_INK, opacity: 0.3 }} />
+      {/* The edition cartouche: the plate prints its frame, centred on the
+          cover; this is its type, set in the same box. Purely decorative, so it
+          never takes the pointer. */}
+      <div
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none
+          font-mono text-[12px] font-bold uppercase tracking-[0.3em] whitespace-nowrap"
+        style={{ width: CARTOUCHE.width, height: CARTOUCHE.height, color: COVER_WORDMARK }}
+      >
+        <span className="pl-[0.3em]">First Edition</span>
       </div>
 
-      {/* Title imprint */}
-      <div className="relative z-10 flex flex-col items-center justify-center font-mono text-[13px] tracking-[0.3em] font-bold uppercase select-none text-center px-5 py-2">
-        <div className="opacity-80 flex flex-col items-center gap-1.5 pl-[0.3em]" style={{ color: COVER_INK }}>
-          <span>CLASS WAR</span>
-          <span>THE GAME</span>
-        </div>
+      <div className="absolute inset-x-0 top-[87%] -translate-y-1/2 flex justify-center">
+        <CoverWordmark>Class War · The Game</CoverWordmark>
       </div>
     </div>
   );
 }
 
 /* The closed book slides in from the right before anything else happens; the
-   cover-fold, wheel sweep and bezel all wait out this slide. */
+   cover fold and the chamber's roll call both wait out this slide. */
 const SLIDE_IN_S = 0.6;
 const SLIDE_OUT_S = 0.7;
 const SLIDE_IN_MS = SLIDE_IN_S * 1000;
@@ -1062,6 +937,7 @@ const Z_LEAF3_TOP = 3;    // leaf3 lifted while turned past leaf2 (comms spread)
 const Z_BACK_TOP = 4;     // backside leaf (leaf4) lifted on top of the stack
 const Z_COVER_DOWN = 0.5; // cover sunk flat under the right leaves
 const Z_COVER_UP = 6;     // cover closed / opening, above everything
+const Z_GLOW = 0;         // the book's glow, flat under every leaf
 
 /* Depth wrapper transform: push to depth z AND counter-scale by (P-z)/P so the
    page's APPARENT size is constant at every depth — without this, a leaf pushed
@@ -1070,12 +946,26 @@ const Z_COVER_UP = 6;     // cover closed / opening, above everything
    scale shrinks by (P-z)/P. */
 const tz = (z: number) => `translateZ(${z}px) scale(${(SCENE_PERSPECTIVE - z) / SCENE_PERSPECTIVE})`;
 
-/* Cover hold + book-fold first; the wheel begins painting as the page settles flat. */
-const SWEEP_DELAY_MS = 1250;
-/* Clockwise arc-grow from the 9 o'clock mark (startAngle 180). */
-const SWEEP_DURATION_MS = 1000;
-/* Bezel ticks fade in over this duration after the sweep lands. */
-const BEZEL_FADE_MS = 600;
+/* Where a turning leaf's free edge falls on screen, in leaf widths from the
+   spine (+ right, − left), for a leaf `leafPx` wide turned `deg` about the
+   spine (rotateY; 0 lies flat on the right, −180 on the left). The edge moves
+   by the cosine of the turn, not in step with it: it hardly moves while the
+   leaf leaves and meets the page, and sweeps across through the middle,
+   where the leaf stands up toward the viewer and the scene's perspective
+   swings it further out. The book's glow follows this, not the angle. */
+function leafEdge(deg: number, leafPx: number) {
+  const a = (deg * Math.PI) / 180;
+  return Math.cos(a) / (1 + (leafPx / SCENE_PERSPECTIVE) * Math.sin(a));
+}
+const glowPct = (n: number) => `${Number(n.toFixed(3))}%`;
+
+/* Cover hold + book fold first; the chamber's roll call begins as the page
+   settles flat. */
+const CALL_DELAY_MS = 1250;
+/* How long leaving a coalition or allocation waits before the chamber settles
+   back to rest: long enough to cross the aisle, or the gap between two index
+   rows, without flashing the resting readout. */
+const FOCUS_LEAVE_MS = 180;
 
 /* Mobile fold-away pose: instead of vanishing at 90°, a turned page swings 270°
    around its left edge onto the BACK of the book, staying visible the whole spin
@@ -1114,23 +1004,188 @@ function useFoldLeaf(
   return { rotateY, zIndex };
 }
 
-const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0, dir = 1, quick = false }) => {
-  const data = TABLE_DATA;
-  // Subscribe to theme changes: the re-render lets render-time resolveColor()
-  // calls pick up the flipped CSS palette (no field of the context is read).
-  useTheme();
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [hoveredParent, setHoveredParent] = useState<string | null>(null);
+/* A sub-allocation as the index prints it, under its allocation. */
+function SubAllocationRow({ name, share, color }: { name: string; share: number; color: string }) {
+  return (
+    <div className="flex items-end gap-1.5">
+      <span className="size-1.5 rounded-full shrink-0 mb-0.75" style={{ backgroundColor: color }} />
+      <span className="font-mono text-[13px] uppercase tracking-wider text-text2 leading-tight">{name}</span>
+      <DottedLeader />
+      <span className="font-mono text-[13px] tabular-nums shrink-0 text-text2">{share}%</span>
+    </div>
+  );
+}
 
-  /* Wheel inspection has two input modes. A pointer that can hover reads the
-     ECharts mouseover/mouseout pair; a touch screen has neither (the tap fires
-     a phantom mouseover that never pairs with a mouseout, so the old overlay
-     stuck open), so there a TAP pins a slice and the pin holds until the same
-     slice, the ✕ or the overlay is tapped again. Capability is read after
+/* ---- Distribution index ----
+   The chamber's facing page: each coalition with its allocations beneath it,
+   lit together with the chamber. Hovering a row (on touch, tapping it)
+   focuses it here and in the chamber, and the rest dims, and the focused row
+   opens in place to its explanation, an allocation's to its sub-allocations
+   too.
+
+   `compact` is the cut for the single-page book, where the index shares the
+   page with the chamber under it: a coalition per line with its allocations
+   set as one wrapped line of chips, and the focused item's explanation in a
+   panel of fixed height beneath, so neither the list nor the chamber above
+   ever reflows. A tap on the panel (or its ✕) closes a pin. At rest the panel
+   says how to read the chamber, in a phone's terms: a tap. */
+function DistributionIndex({
+  compact = false,
+  focus,
+  pinned,
+  onHover,
+  onLeave,
+  onSelect,
+  onClear,
+}: {
+  compact?: boolean;
+  focus: ChamberFocus;
+  pinned: boolean;
+  onHover: (focus: ChamberFocus) => void;
+  onLeave: () => void;
+  onSelect: (focus: ChamberFocus) => void;
+  onClear: () => void;
+}) {
+  const row = (target: ChamberFocus) => ({
+    onMouseEnter: () => onHover(target),
+    onMouseLeave: onLeave,
+    onClick: () => onSelect(target),
+  });
+
+  if (compact) {
+    const detail = !focus
+      ? null
+      : focus.kind === 'allocation'
+        ? ALLOCATIONS[focus.index]
+        : { ...COALITIONS[focus.index], ink: null, subs: [] };
+    return (
+      <div className="flex flex-col gap-4 w-full">
+        <div className="flex flex-col gap-2.5">
+          {COALITIONS.map((c, k) => {
+            const first = ALLOCATIONS.findIndex((a) => a.coalition === k);
+            return (
+              <div key={c.name} className={`flex flex-col gap-1.5 ${k ? 'pt-2.5 border-t border-border' : ''}`}>
+                <div className={`flex items-end gap-1.5 cursor-default transition-opacity duration-200 ${coalitionLit(focus, k) ? '' : 'opacity-35'}`} {...row({ kind: 'coalition', index: k })}>
+                  <span className="font-display font-black text-[13px] uppercase tracking-widest leading-tight text-text">{c.name}</span>
+                  <DottedLeader />
+                  <span className="font-mono font-bold text-[15px] tabular-nums shrink-0 text-text">{c.share}%</span>
+                </div>
+                <div className="flex flex-wrap gap-x-4">
+                  {c.allocations.map((a, j) => {
+                    const i = first + j;
+                    return (
+                      <span
+                        key={a.name}
+                        className={`inline-flex items-center gap-1.5 py-1 cursor-default transition-opacity duration-200 ${allocationLit(focus, i) ? '' : 'opacity-35'}`}
+                        {...row({ kind: 'allocation', index: i })}
+                      >
+                        <span className="size-1.75 rounded-full shrink-0" style={{ backgroundColor: a.ink }} />
+                        <span className="font-mono text-[11px] uppercase tracking-wider leading-none text-text">{a.short}</span>
+                        <span className="font-mono text-[11px] tabular-nums leading-none text-text2">{a.share}%</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div
+          className="h-44 flex flex-col gap-2 pt-3 border-t border-border overflow-y-auto custom-scrollbar"
+          onClick={pinned ? onClear : undefined}
+        >
+          {detail ? (
+            <>
+              <div className="flex items-end gap-1.5">
+                {detail.ink && <span className="size-1.75 rounded-full shrink-0 mb-1" style={{ backgroundColor: detail.ink }} />}
+                <span className="font-display font-black text-[13px] uppercase tracking-widest leading-tight text-text">{detail.name}</span>
+                <DottedLeader />
+                <span className="font-mono font-bold text-[15px] tabular-nums shrink-0 text-text">{detail.share}%</span>
+                {pinned && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onClear(); }}
+                    aria-label="Close"
+                    className="font-mono text-[13px] leading-none shrink-0 mb-px px-1 text-text2 hover:text-text transition-colors"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              <p className="font-sans text-[13px] text-text2 leading-relaxed">{detail.explanation}</p>
+              {detail.subs.length > 0 && (
+                <div className="flex flex-col gap-1.25 pt-1">
+                  {detail.subs.map((sub) => <SubAllocationRow key={sub.name} {...sub} />)}
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="m-auto font-mono text-[10px] uppercase tracking-[0.14em] text-center text-text2 opacity-75">
+              Tap a coalition or an allocation to read its terms
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex flex-col grow gap-4.5 w-full">
+      <SectionHeading>Distribution of Power</SectionHeading>
+      {COALITIONS.map((c, k) => {
+        const first = ALLOCATIONS.findIndex((a) => a.coalition === k);
+        const open = focus?.kind === 'coalition' && focus.index === k;
+        return (
+          <div key={c.name} className={`flex flex-col gap-2.75 ${k ? 'pt-4 border-t border-border' : ''}`}>
+            <div className={`cursor-default transition-opacity duration-200 ${coalitionLit(focus, k) ? '' : 'opacity-35'}`} {...row({ kind: 'coalition', index: k })}>
+              <div className="flex items-end gap-1.5">
+                <span className="font-display font-black text-[14px] uppercase tracking-widest leading-tight text-text">{c.name}</span>
+                <DottedLeader />
+                <span className="font-mono font-bold text-[17px] tabular-nums shrink-0 text-text">{c.share}%</span>
+              </div>
+              {open && <p className="mt-1.5 font-sans text-[14px] text-text2 leading-relaxed">{c.explanation}</p>}
+            </div>
+            <div className="flex flex-col gap-2.25">
+              {c.allocations.map((a, j) => {
+                const i = first + j;
+                const opened = focus?.kind === 'allocation' && focus.index === i;
+                return (
+                  <div key={a.name} className={`cursor-default transition-opacity duration-200 ${allocationLit(focus, i) ? '' : 'opacity-35'}`} {...row({ kind: 'allocation', index: i })}>
+                    <div className="flex items-end gap-1.5">
+                      <span className="size-1.75 rounded-full shrink-0 mb-0.75" style={{ backgroundColor: a.ink }} />
+                      <span className="font-mono text-[13px] uppercase tracking-wider leading-tight text-text">{a.name}</span>
+                      <DottedLeader />
+                      <span className="font-mono text-[13px] tabular-nums shrink-0 text-text">{a.share}%</span>
+                    </div>
+                    {opened && (
+                      <div className="flex flex-col gap-1.5 mt-1.5 pl-3.25">
+                        <p className="font-sans text-[14px] text-text2 leading-relaxed">{a.explanation}</p>
+                        {a.subs.map((sub) => <SubAllocationRow key={sub.name} {...sub} />)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0, dir = 1, quick = false }) => {
+  /* Chamber focus has two input modes. A pointer that can hover focuses what
+     it is over (in the chamber or on the index), and leaving waits
+     FOCUS_LEAVE_MS before the chamber settles back to rest, a wait the next
+     hover cancels. A touch screen cannot hover, so there a TAP pins a
+     coalition or allocation, and the pin holds until the same one, the ✕, the
+     detail overlay or the empty chamber is tapped. Capability is read after
      mount — matchMedia does not exist during SSR — defaulting to hover so the
      desktop first paint is already right. */
-  const [pinnedIndex, setPinnedIndex] = useState<number | null>(null);
-  const [pinnedParent, setPinnedParent] = useState<string | null>(null);
+  const [hovered, setHovered] = useState<ChamberFocus>(null);
+  const [pinned, setPinned] = useState<ChamberFocus>(null);
   const [canHover, setCanHover] = useState(true);
   useEffect(() => {
     const mq = window.matchMedia('(hover: hover) and (pointer: fine)');
@@ -1140,12 +1195,29 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
     return () => mq.removeEventListener('change', read);
   }, []);
 
+  const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(leaveTimerRef.current), []);
+  const hoverFocus = useCallback((next: ChamberFocus) => {
+    if (!canHover) return;
+    clearTimeout(leaveTimerRef.current);
+    setHovered(next);
+  }, [canHover]);
+  const leaveFocus = useCallback(() => {
+    if (!canHover) return;
+    clearTimeout(leaveTimerRef.current);
+    leaveTimerRef.current = setTimeout(() => setHovered(null), FOCUS_LEAVE_MS);
+  }, [canHover]);
+  const selectFocus = useCallback((next: ChamberFocus) => {
+    if (canHover) return;
+    setPinned((prev) => (sameFocus(prev, next) ? null : next));
+  }, [canHover]);
   const clearSelection = useCallback(() => {
-    setPinnedIndex(null);
-    setPinnedParent(null);
-    setHoveredIndex(null);
-    setHoveredParent(null);
+    clearTimeout(leaveTimerRef.current);
+    setPinned(null);
+    setHovered(null);
   }, []);
+  /* A pin outranks a hover, so a pinned clause survives the pointer wandering. */
+  const focus = pinned ?? hovered;
 
   /* The book's backside is the section's FINAL scroll stop, not a click target:
      the last content page turns on to it and scrolling back up turns it home.
@@ -1285,617 +1357,37 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
   const [leaf3OnTop, setLeaf3OnTop] = useState(false);
   useEffect(() => { if (leaf3Turned) setLeaf3OnTop(true); }, [leaf3Turned]);
 
-  /* A page flip drops any pinned slice — the overlay belongs to the wheel page
-     alone, and must not ride along to the next one. */
+  /* A page flip drops any focus — it belongs to the chamber's page alone, and
+     must not ride along to the next one. */
   useEffect(() => { clearSelection(); }, [page, active, clearSelection]);
 
-  /* Two-stage entrance, both reset on section exit so each entry re-sweeps:
-       sweeping    — arc data is live and growing clockwise from 9 o'clock.
-       bezelOpacity — 0→1 ramp driven by rAF, starts when the sweep lands. */
-  const [sweeping, setSweeping] = useState(false);
-  const [bezelOpacity, setBezelOpacity] = useState(0);
-  const rafRef = useRef<number | null>(null);
-
+  /* The chamber stands empty while the book opens; its roll call begins once
+     the page has settled flat, and each entry calls it again. Only the book
+     on screen (the spread or the single page) plays it. */
+  const [calling, setCalling] = useState(false);
   useEffect(() => {
     if (!active) {
-      setSweeping(false);
-      setBezelOpacity(0);
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      setCalling(false);
       return;
     }
-    let revealTimer: ReturnType<typeof setTimeout>;
-    const sweepTimer = setTimeout(() => {
-      setSweeping(true);
-      revealTimer = setTimeout(() => {
-        /* rAF ramp: 0 → 1 over BEZEL_FADE_MS, updating ECharts opacity each frame. */
-        const start = performance.now();
-        const tick = (now: number) => {
-          const t = Math.min((now - start) / BEZEL_FADE_MS, 1);
-          setBezelOpacity(t);
-          if (t < 1) rafRef.current = requestAnimationFrame(tick);
-        };
-        rafRef.current = requestAnimationFrame(tick);
-      }, SWEEP_DURATION_MS);
-    }, SLIDE_IN_MS + SWEEP_DELAY_MS);
-
-    return () => {
-      clearTimeout(sweepTimer);
-      clearTimeout(revealTimer);
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    };
+    const timer = setTimeout(() => setCalling(true), SLIDE_IN_MS + CALL_DELAY_MS);
+    return () => clearTimeout(timer);
   }, [active]);
 
-  const groups = useMemo<Group[]>(() => {
-    const map: Record<string, Group> = {};
-    data.forEach((item, index) => {
-      const key = item.parentName;
-      if (!map[key]) {
-        map[key] = {
-          parentName: key,
-          parentPercentage: item.parentPercentage,
-          parentColor: item.parentColor,
-          parentExplanation: item.parentExplanation,
-          items: [],
-        };
-      }
-      map[key].items.push({ ...item, globalIndex: index });
-    });
-    return Object.values(map);
-  }, [data]);
-
-  /* Rulebook clause numbers: groups are §1.1 / §1.2, slices §1.x.y. */
-  const clauses = useMemo(() => {
-    const byName: Record<string, string> = {};
-    const byParent: Record<string, string> = {};
-    groups.forEach((g, gi) => {
-      byParent[g.parentName] = `1.${gi + 1}`;
-      g.items.forEach((item, ii) => {
-        byName[item.name] = `1.${gi + 1}.${ii + 1}`;
-      });
-    });
-    return { byName, byParent };
-  }, [groups]);
-
-  const parentData = useMemo(() =>
-    groups.map(g => ({ name: g.parentName, value: g.parentPercentage, color: g.parentColor })),
-    [groups]
+  /* `compact`: the single-page book's cuts (see PowerChamber, DistributionIndex). */
+  const chamber = (play: boolean, compact = false) => (
+    <PowerChamber play={play} compact={compact} focus={focus} onHover={hoverFocus} onLeave={leaveFocus} onSelect={selectFocus} />
   );
-
-
-  /* The inspected slice, whichever way it was chosen: a pin (tap) outranks a
-     hover, so a pinned clause survives the pointer wandering off the wheel.
-     Falls back to the inner (parent) ring so the inner pie reveals its group
-     details just like the outer slices. */
-  const selIndex = pinnedIndex ?? hoveredIndex;
-  const selParent = pinnedParent ?? hoveredParent;
-  const isPinned = pinnedIndex !== null || pinnedParent !== null;
-
-  const activeDisplay = useMemo(() => {
-    if (selIndex !== null) {
-      const item = data[selIndex];
-      return {
-        clause: clauses.byName[item.name],
-        name: item.name,
-        explanation: item.explanation,
-        color: item.color,
-        percentage: item.percentage,
-        subChildren: item.subChildren,
-      };
-    }
-    if (selParent !== null) {
-      const pData = data.find(d => d.parentName === selParent);
-      return {
-        clause: clauses.byParent[selParent],
-        name: selParent,
-        explanation: pData?.parentExplanation,
-        color: 'var(--color-text)',
-        percentage: pData?.parentPercentage,
-        subChildren: [] as Tier3Child[],
-      };
-    }
-    return null;
-  }, [selIndex, selParent, data, clauses]);
-
-  const option = useMemo(() => {
-    if (typeof window === 'undefined') return {};
-
-    /* The wheel is printed on the paper page, so slice gaps and tick
-       marks match the page surface. */
-    const canvasColor = resolveColor('var(--color-card)');
-    const textColor = resolveColor('var(--color-text)');
-    const ringColor = resolveColor('var(--color-text2)');
-
-    /* A pinned (tapped) slice has no ECharts hover state to lean on, so the
-       selection is baked into the option instead: the fill lifts to the same
-       tone hovering would give it. Hover-capable pointers never pin (see
-       onEvents), so this is inert on desktop. */
-    const pinnedName = pinnedIndex !== null ? data[pinnedIndex]?.name ?? null : null;
-
-    /* The inner ring's wedges are neutral surfaces (card3 / border), and
-       neutrals carry no `-hover` token for resolveHoverColor to lift to — which
-       left a selected inner wedge looking identical to an idle one. They lift to
-       the interactive divider tone instead, the palette's designated step up
-       from a resting surface. */
-    const parentSelected = resolveColor('var(--color-border2)');
-
-    const tier1Items = parentData.map((d) => {
-      const sliceColor = resolveColor(d.color);
-      const isPinned = pinnedParent === d.name;
-
-      return {
-        name: d.name,
-        value: d.value,
-        itemStyle: {
-          color: isPinned ? parentSelected : sliceColor,
-        },
-        emphasis: {
-          scale: false,
-          itemStyle: {
-            color: parentSelected,
-          }
-        }
-      };
-    });
-
-    const tier2Items = data.map((d) => {
-      const words = d.name.split(' ');
-      const isLong = d.name.length > 12 && words.length > 1;
-      let labelText: string;
-      if (isLong) {
-        const mid = Math.ceil(words.length / 2);
-        const l1 = words.slice(0, mid).join(' ').toUpperCase();
-        const l2 = words.slice(mid).join(' ').toUpperCase();
-        labelText = `{n|${l1}}\n{n|${l2}}\n{p|${d.percentage}%}`;
-      } else {
-        labelText = `{n|${d.name.toUpperCase()}}\n{p|${d.percentage}%}`;
-      }
-
-      const baseColor = resolveColor(d.color);
-      const hoverColor = resolveHoverColor(d.color, baseColor);
-      const isPinned = pinnedName === d.name;
-
-      // Bake per-slice label offsets directly into the item so ECharts applies
-      // them from frame 1 of the sweep — labelLayout is a post-process and
-      // causes a position jump after the animation settles.
-      const nameUpper = d.name.toUpperCase();
-      const labelOffset: [number, number] =
-        nameUpper.includes('DAO TREASURY') ? [0, 10] :
-        nameUpper.includes('GROWTH') ? [-3, 0] :
-        [0, 0];
-
-      return {
-        name: d.name,
-        value: d.percentage,
-        label: {
-          formatter: () => labelText,
-          offset: labelOffset,
-        },
-        itemStyle: {
-          color: isPinned ? hoverColor : baseColor,
-          borderColor: canvasColor,
-          borderWidth: 6,
-          borderRadius: 8
-        },
-        emphasis: {
-          scale: false,
-          itemStyle: {
-            color: hoverColor,
-            borderColor: canvasColor,
-            borderWidth: 6,
-            borderRadius: 8
-          }
-        }
-      };
-    });
-
-    return {
-      // Off for hover re-renders so they apply instantly. On only during the
-      // entrance sweep so hover never re-triggers it.
-      animation: sweeping && bezelOpacity === 0,
-      animationDuration: SWEEP_DURATION_MS,
-      animationEasing: 'cubicOut',
-      series: [
-        {
-          type: 'pie',
-          radius: ['0%', '28%'],
-          startAngle: 180,
-          animationType: 'expansion',
-          data: sweeping ? tier1Items : [],
-          /* Touch taps are hit-tested by hand (see wheelTapProps) because
-             zrender mis-resolves them under the landing's CSS zoom; going
-             silent stops ECharts emphasising the wedge it wrongly picked. */
-          silent: !canHover,
-          emphasis: { scale: false },
-          label: {
-            show: true,
-            position: 'inside',
-            formatter: (params: { name: string; value: number }) =>
-              `{t1p|${params.value}%}`,
-            rich: {
-              t1n: { fontSize: 9, fontWeight: 900, color: textColor, lineHeight: 14 },
-              t1p: { fontSize: 9, fontWeight: 700, color: textColor, lineHeight: 12 },
-            },
-          },
-          labelLine: { show: false },
-          itemStyle: {
-            borderColor: canvasColor,
-            borderWidth: 6,
-            borderRadius: 4
-          },
-        },
-        {
-          type: 'pie',
-          radius: ['31%', '90%'],
-          startAngle: 180,
-          animationType: 'expansion',
-          data: sweeping ? tier2Items : [],
-          silent: !canHover,
-          emphasis: { scale: false },
-          label: {
-            show: true,
-            position: 'inside',
-            rich: {
-              n: { fontSize: 10, fontWeight: 900, color: canvasColor, lineHeight: 14 },
-              p: { fontSize: 9, fontWeight: 700, color: canvasColor, lineHeight: 12 },
-            },
-          },
-          labelLine: { show: false },
-        },
-        {
-          type: 'gauge',
-          center: ['50%', '50%'],
-          radius: '96%',
-          z: 10,
-          startAngle: 90,
-          endAngle: -270,
-          splitNumber: 12,
-          // Always rendered; opacity ramps 0→1 via bezelOpacity so the ring and
-          // ticks fade in smoothly rather than snapping on.
-          axisLine: {
-            show: true,
-            lineStyle: {
-              color: [[1, ringColor]],
-              width: 1,
-              opacity: 0.25 * bezelOpacity,
-            }
-          },
-          pointer: { show: false },
-          axisTick: {
-            show: true,
-            lineStyle: { color: canvasColor, opacity: bezelOpacity, width: 1 },
-            length: 5,
-            splitNumber: 3
-          },
-          splitLine: {
-            show: true,
-            lineStyle: { color: canvasColor, opacity: bezelOpacity, width: 1.5 },
-            length: 12
-          },
-          axisLabel: { show: false },
-          detail: { show: false },
-          title: { show: false }
-        }
-      ],
-    };
-  }, [data, parentData, sweeping, bezelOpacity, pinnedIndex, pinnedParent, canHover]);
-
-  /* Wheel input. A hover-capable pointer keeps the original mouseover/mouseout
-     pair and never pins. A touch screen never reaches these at all: the pies go
-     `silent` there and the tap is hit-tested by hand instead — see
-     `wheelTapProps` below for why ECharts cannot be trusted with it. */
-  const onEvents = useMemo(() => ({
-    mouseover: (params: { seriesIndex: number; name: string }) => {
-      if (!canHover) return;
-      if (params.seriesIndex === 0) {
-        setHoveredParent(params.name);
-        setHoveredIndex(null);
-      } else if (params.seriesIndex === 1) {
-        const index = data.findIndex(d => d.name === params.name);
-        setHoveredIndex(index >= 0 ? index : null);
-        setHoveredParent(null);
-      }
-    },
-    mouseout: () => {
-      if (!canHover) return;
-      setHoveredParent(null);
-      setHoveredIndex(null);
-    },
-  }), [data, canHover]);
-
-  /* ---- Touch hit-testing for the wheel ----
-     zrender resolves a TOUCH to chart coordinates as `clientX - canvasRect.left`
-     — a Touch carries no `offsetX` for it to prefer, the way a mouse event does.
-     That subtraction is only right while the canvas's visual box matches its
-     layout box, and the landing shrinks whole sections with CSS `zoom`
-     (FitToViewport). Under a zoom below 1 the rect is smaller than the
-     coordinate space the wheel was drawn in, so every tap resolved to a wedge
-     further along the sweep than the one under the finger — which is why
-     tapping lit up and described the wrong clause. Mouse hover is unaffected
-     (`offsetX` already comes zoom-corrected), so this only ever bit touch.
-
-     Measuring the wedge here fixes it for good: the tap and the rect are read
-     in the SAME visual space, so whatever zoom is in force cancels out. The
-     pies run `silent` on touch so ECharts cannot paint its own mis-hit
-     emphasis over the answer. */
-
-  /* Pie geometry, mirrored from `option` below: radii as a fraction of
-     min(width, height) / 2, the sweep starting at 180° (9 o'clock) and running
-     clockwise. The bands stretch a little past the drawn 28% / 90% so a tap on
-     the hairline gap still lands on the wedge it looks like. */
-  const INNER_MAX_R = 0.30;
-  const OUTER_MAX_R = 0.95;
-
-  const tapStartRef = useRef<{ x: number; y: number } | null>(null);
-  const wheelTapProps = {
-    onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => {
-      tapStartRef.current = { x: e.clientX, y: e.clientY };
-    },
-    onClick: (e: React.MouseEvent<HTMLDivElement>) => {
-      if (canHover) return;
-      const start = tapStartRef.current;
-      tapStartRef.current = null;
-      /* A swipe that flips the page ends in a click too — only a finger that
-         stayed put is a selection. */
-      if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) return;
-
-      const rect = e.currentTarget.getBoundingClientRect();
-      const radius = Math.min(rect.width, rect.height) / 2;
-      if (radius <= 0) return;
-      const dx = e.clientX - (rect.left + rect.width / 2);
-      const dy = e.clientY - (rect.top + rect.height / 2);
-      const r = Math.hypot(dx, dy) / radius;
-
-      /* ECharts angles put 0° at 3 o'clock and count counter-clockwise, so the
-         share swept is how far CLOCKWISE the tap sits from the 180° start. */
-      const deg = (Math.atan2(-dy, dx) * 180) / Math.PI;
-      const pct = ((((180 - deg) % 360) + 360) % 360) / 3.6;
-
-      if (r <= INNER_MAX_R) {
-        const hit = sliceAtShare(parentData.map((d) => d.value), pct);
-        const name = hit === null ? null : parentData[hit].name;
-        setPinnedIndex(null);
-        setPinnedParent((prev) => (prev === name ? null : name));
-      } else if (r <= OUTER_MAX_R) {
-        const hit = sliceAtShare(data.map((d) => d.percentage), pct);
-        setPinnedParent(null);
-        setPinnedIndex((prev) => (prev === hit ? null : hit));
-      } else {
-        /* Tapped the bezel, off every wedge — read as "close this". */
-        clearSelection();
-      }
-    },
-  };
-
-  /* The wheel's caption tells the visitor which gesture actually works here. */
-  const inspectHint = canHover
-    ? 'Hover the wheel to inspect a clause'
-    : 'Tap the wheel to inspect a clause';
-
-  const sectionHeading = (
-    <div className="hidden md:flex flex-col gap-1">
-      <span className="font-mono text-[14px] font-black uppercase tracking-[0.25em] text-text2">
-        Sec. 01 — Distribution of Power
-      </span>
-      <div className="border-b border-[var(--color-border2)] opacity-60" />
-    </div>
-  );
-
-  /* The ECharts canvas — shared between the standalone desktop column and the
-     embedded mobile slot inside the card. Hidden until the sweep fires. */
-  const chartCanvas = (
-    <div
-      className="w-full aspect-square transition-opacity duration-150"
-      style={{ opacity: sweeping ? 1 : 0, pointerEvents: sweeping ? 'auto' : 'none', visibility: sweeping ? 'visible' : 'hidden' }}
-      {...wheelTapProps}
-    >
-      {active && (
-        <ReactECharts
-          option={option}
-          onEvents={onEvents}
-          style={{ height: '100%', width: '100%' }}
-          notMerge={false}
-          lazyUpdate
-        />
-      )}
-    </div>
-  );
-
-  /* Right page — shared by the desktop spread and the mobile stack. */
-  const rulebookCard = (
-        <RulebookCard
-          themeColor="var(--color-gold)"
-          themeColorHover="var(--color-gold-hover)"
-          themeColorRgba="212, 175, 55"
-          chassisGradient=""
-          noBezel
-          noBorder
-          maxWidth="none"
-          width="100%"
-          minHeight="0"
-          headerTag="Rulebook"
-          title="DISTRIBUTION OF POWER"
-          symbol={<span className="font-sans text-[15px]">§</span>}
-          pageNumber=""
-          footerLeftText=""
-          footerMiddleText=""
-          footerRightText=""
-
-          detailsSlot={
-            <div className="relative flex flex-col grow gap-3 w-full">
-
-              {/* ── DESKTOP layout ── */}
-              <div className="hidden md:flex flex-col grow gap-3 w-full">
-                {sectionHeading}
-
-                {/* Group summaries */}
-                <div className="flex flex-col gap-5 w-full">
-                  {groups.map((g, gi) => {
-                    const groupClause = clauses.byParent[g.parentName];
-                    const isThisGroupHovered = selParent === g.parentName;
-                    return (
-                      <div key={gi} className="flex flex-col gap-1">
-                        <div className="flex items-end gap-1.5">
-                          <span className="font-mono text-[13px] font-black tabular-nums shrink-0 mb-px text-text">§ {groupClause}</span>
-                          <span className="font-display font-black text-[14px] uppercase tracking-widest leading-tight text-text">{g.parentName}</span>
-                          <DottedLeader />
-                          <span className="font-mono font-bold text-[17px] tabular-nums shrink-0 text-text">{g.parentPercentage}%</span>
-                        </div>
-                        {isThisGroupHovered && (
-                          <p className="font-sans text-[14px] text-text2 leading-relaxed pl-4">{g.parentExplanation ?? ''}</p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Allocation index with per-row inline swap */}
-                <div className="flex flex-col gap-2 pt-2.5 border-t border-border">
-                  <span className="font-mono text-[14px] font-black uppercase tracking-[0.25em] text-text2">Allocation Index</span>
-                  {data.map((d, i) => {
-                    const itemClause = clauses.byName[d.name];
-                    const isSliceHovered = selIndex !== null && data[selIndex]?.name === d.name;
-                    return (
-                      <div key={i} className="flex flex-col gap-0.5">
-                        {isSliceHovered && activeDisplay ? (
-                          <>
-                            <div className="flex items-end gap-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full shrink-0 mb-0.75" style={{ backgroundColor: activeDisplay.color }} />
-                              <span className="font-mono text-[13px] font-black tabular-nums shrink-0 mb-px" style={{ color: activeDisplay.color }}>§ {activeDisplay.clause}</span>
-                              <span className="font-display font-black text-[14px] uppercase tracking-widest leading-tight" style={{ color: activeDisplay.color }}>{activeDisplay.name}</span>
-                              <DottedLeader />
-                              {activeDisplay.percentage != null && (
-                                <span className="font-mono font-bold text-[17px] tabular-nums shrink-0" style={{ color: activeDisplay.color }}>{activeDisplay.percentage}%</span>
-                              )}
-                            </div>
-                            <div className="pl-5 flex flex-col gap-1.5">
-                              <p className="font-sans text-[14px] text-text2 leading-relaxed">{activeDisplay.explanation ?? 'No additional information available.'}</p>
-                              {activeDisplay.subChildren && activeDisplay.subChildren.length > 0 && (
-                                <div className="flex flex-col gap-1.5 pt-1.5 border-t border-border">
-                                  {activeDisplay.subChildren.map((sub, sIdx) => (
-                                    <div key={sIdx} className="flex items-end gap-1.5">
-                                      <span className="w-1.5 h-1.5 rounded-full shrink-0 mb-0.75" style={{ backgroundColor: sub.color }} />
-                                      <span className="font-mono text-[13px] uppercase tracking-wider text-text2 leading-tight">{sub.name}</span>
-                                      <DottedLeader />
-                                      <span className="font-mono text-[13px] tabular-nums shrink-0 text-text2">{sub.percentage}%</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="flex items-end gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full shrink-0 mb-0.75" style={{ backgroundColor: d.color }} />
-                            <span className="font-mono text-[13px] tabular-nums shrink-0 text-text2">§ {itemClause}</span>
-                            <span className="font-mono text-[13px] uppercase tracking-wider leading-tight text-text">{d.name}</span>
-                            <DottedLeader />
-                            <span className="font-mono text-[13px] tabular-nums shrink-0 text-text">{d.percentage}%</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <p className="font-mono text-[10px] uppercase tracking-widest text-text2 opacity-60 mt-auto pt-2 transition-opacity duration-150" style={{ opacity: activeDisplay ? 0 : undefined }}>
-                  {inspectHint}
-                </p>
-              </div>
-
-              {/* ── MOBILE layout ── */}
-              <div className="md:hidden relative flex flex-col grow gap-3 w-full">
-                {sectionHeading}
-
-                {/* Groups with slices indented beneath, no allocation index header or border */}
-                <div className="flex flex-col gap-3 w-full">
-                  {groups.map((g, gi) => {
-                    const groupClause = clauses.byParent[g.parentName];
-                    return (
-                      <div key={gi} className="flex flex-col gap-1">
-                        {/* Group heading */}
-                        <div className="flex items-end gap-1.5">
-                          <span className="font-mono text-[13px] font-black tabular-nums shrink-0 mb-px text-text">§ {groupClause}</span>
-                          <span className="font-display font-black text-[14px] uppercase tracking-widest leading-tight text-text">{g.parentName}</span>
-                          <DottedLeader />
-                          <span className="font-mono font-bold text-[17px] tabular-nums shrink-0 text-text">{g.parentPercentage}%</span>
-                        </div>
-                        {/* Indented slices */}
-                        <div className="flex flex-col gap-1 pl-4 border-l border-border">
-                          {g.items.map((d) => {
-                            const itemClause = clauses.byName[d.name];
-                            return (
-                              <div key={d.name} className="flex items-end gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full shrink-0 mb-0.75" style={{ backgroundColor: d.color }} />
-                                <span className="font-mono text-[13px] tabular-nums shrink-0 text-text2">§ {itemClause}</span>
-                                <span className="font-mono text-[13px] uppercase tracking-wider leading-tight text-text">{d.name}</span>
-                                <DottedLeader />
-                                <span className="font-mono text-[13px] tabular-nums shrink-0 text-text">{d.percentage}%</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <p className="font-mono text-[10px] uppercase tracking-widest text-text2 opacity-60 mt-auto pt-2">
-                  {inspectHint}
-                </p>
-
-                {/* Inspection overlay — fades over the whole mobile content for
-                    the hovered or pinned slice. A pin only clears on purpose, so
-                    the overlay itself is a dismiss target (with an explicit ✕
-                    for the visitor who does not guess that). */}
-                <div
-                  className="absolute inset-0 flex flex-col gap-2 transition-opacity duration-150"
-                  style={{ opacity: activeDisplay ? 1 : 0, pointerEvents: activeDisplay ? 'auto' : 'none', backgroundColor: 'var(--color-card)' }}
-                  aria-hidden={!activeDisplay}
-                  onClick={clearSelection}
-                >
-                  {activeDisplay && (
-                    <>
-                      <div className="flex items-end gap-1.5">
-                        {activeDisplay.clause && (
-                          <span className="font-mono text-[13px] font-black tabular-nums shrink-0 mb-px" style={{ color: activeDisplay.color }}>§ {activeDisplay.clause}</span>
-                        )}
-                        <span className="font-display font-black text-[14px] uppercase tracking-widest leading-tight" style={{ color: activeDisplay.color }}>{activeDisplay.name}</span>
-                        <DottedLeader />
-                        {activeDisplay.percentage != null && (
-                          <span className="font-mono font-bold text-[17px] tabular-nums shrink-0" style={{ color: activeDisplay.color }}>{activeDisplay.percentage}%</span>
-                        )}
-                        {isPinned && (
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); clearSelection(); }}
-                            aria-label="Close clause"
-                            className="font-mono text-[13px] leading-none shrink-0 mb-px px-1 text-text2 hover:text-text transition-colors"
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
-                      <p className="font-sans text-[14px] text-text2 leading-relaxed">{activeDisplay.explanation ?? 'No additional information available.'}</p>
-                      {activeDisplay.subChildren && activeDisplay.subChildren.length > 0 && (
-                        <div className="flex flex-col gap-1.5 pt-2 border-t border-border">
-                          {activeDisplay.subChildren.map((sub, sIdx) => (
-                            <div key={sIdx} className="flex items-end gap-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full shrink-0 mb-0.75" style={{ backgroundColor: sub.color }} />
-                              <span className="font-mono text-[13px] uppercase tracking-wider text-text2 leading-tight">{sub.name}</span>
-                              <DottedLeader />
-                              <span className="font-mono text-[13px] tabular-nums shrink-0 text-text2">{sub.percentage}%</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-
-            </div>
-          }
-        />
+  const distributionIndex = (compact = false) => (
+    <DistributionIndex
+      compact={compact}
+      focus={focus}
+      pinned={pinned !== null}
+      onHover={hoverFocus}
+      onLeave={leaveFocus}
+      onSelect={selectFocus}
+      onClear={clearSelection}
+    />
   );
 
   /* ---- Book slide choreography ----
@@ -1965,13 +1457,33 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
   }, [active, everActive, exitDir, exiting]);
   if (parkedRight && !active) { bookX = slideOffset; bookOpacity = 0; bookTransition = { duration: 0 }; }
 
-  /* Inner fold + wheel sweep wait for the slide-in to settle on entry. */
+  /* Inner fold + roll call wait for the slide-in to settle on entry. */
   const innerDelay = active ? SLIDE_IN_S : 0;
 
   /* The book holds its open spread through the exit-down backside flash so the
      cover/spine don't snap shut before the back has shown — they reset only as
      the book slides away. */
   const bookOpen = active || backShown;
+
+  /* The desktop glow's edges ride the two leaves that move them: the cover's
+     free edge on the left (rotateY 180 closed, 0 open; as a leaf hinged on the
+     right, 180° less) and the back leaf's on the right. Their turns animate
+     these motion values (passed in their style), and the glow reads each edge
+     off its leaf's live angle, every frame, kept to the book's footprint.
+     `leafPxRef` is a leaf's width, for the perspective. */
+  const coverTurn = useMotionValue(bookOpen ? 0 : 180);
+  const leaf4Turn = useMotionValue(backShown ? -180 : 0);
+  const spreadRef = useRef<HTMLDivElement>(null);
+  const leafPxRef = useRef(0);
+  useEffect(() => {
+    const spread = spreadRef.current;
+    if (!spread) return;
+    const observer = new ResizeObserver(() => { leafPxRef.current = spread.offsetWidth / 2; });
+    observer.observe(spread);
+    return () => observer.disconnect();
+  }, []);
+  const glowLeft = useTransform(coverTurn, (r) => glowPct(50 * (1 + Math.max(-1, Math.min(0, leafEdge(r - 180, leafPxRef.current))))));
+  const glowRight = useTransform(leaf4Turn, (r) => glowPct(50 * (1 - Math.min(1, Math.max(0, leafEdge(r, leafPxRef.current))))));
 
   /* The backside leaves' turn transition. Normally a full page-turn; on an
      up-entrance the turn ONTO the back is instant (the book must appear already
@@ -1987,6 +1499,11 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
   const leaf2TurnT = leafTurnT;
   const leaf3TurnT = leafTurnT;
   const leaf4TurnT = leafTurnT;
+  const coverFoldT = turnInstant || parked
+    ? { duration: 0 }
+    : bookOpen
+      ? { duration: quick ? RULEBOOK_QUICK_TURN_MS / 1000 : COVER_FOLD_S, delay: innerDelay + COVER_FOLD_DELAY_S, ease: [0.45, 0, 0.25, 1] as const }
+      : { duration: 0.45, ease: 'easeIn' as const };
 
   /* Mobile equivalents (single-page book, 0.9s turns). page1 = Sec-01 leaf,
      page2 = Campaign Sequence I–II, page2b = Campaign Sequence III–IV,
@@ -2039,9 +1556,20 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
               3D scene: perspective + preserve-3d, so all leaves fold in the same
               space and stack by translateZ (not z-index, which preserve-3d
               ignores). */}
-          <div className="hidden lg:flex relative items-stretch h-full" style={{ perspective: 2200, transformStyle: 'preserve-3d' }}>
+          <div ref={spreadRef} className="hidden lg:flex relative items-stretch h-full" style={{ perspective: SCENE_PERSPECTIVE, transformStyle: 'preserve-3d' }}>
 
-            {/* leaf1 — left page. Front = wheel; back = book cover. Closed
+            {/* Glow (BOOK_GLOW) round the book's footprint: the right half
+                while closed, widening with the cover as it opens; the whole
+                spread; and the left half on the backside, narrowing as the
+                back leaf turns over. Each edge sits under the free edge of the
+                leaf that moves it (glowLeft / glowRight). */}
+            <motion.div
+              aria-hidden="true"
+              className="absolute inset-y-0 rounded-md pointer-events-none"
+              style={{ boxShadow: BOOK_GLOW, transform: tz(Z_GLOW), left: glowLeft, right: glowRight }}
+            />
+
+            {/* leaf1 — left page. Front = the chamber; back = book cover. Closed
                 (inactive) the leaf lies on the right half showing the cover;
                 on entry it folds open around the spine. It never moves for
                 the backside stop — the back lands on top of it via leaf3. The
@@ -2050,48 +1578,40 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
             <div className="relative w-1/2 h-full" style={{ transformStyle: 'preserve-3d', transform: tz(coverDown ? Z_COVER_DOWN : Z_COVER_UP) }}>
             <motion.div
               className="absolute inset-0"
-              style={{ transformOrigin: 'right center', transformStyle: 'preserve-3d' }}
+              style={{ transformOrigin: 'right center', transformStyle: 'preserve-3d', rotateY: coverTurn }}
               initial={false}
               animate={{ rotateY: bookOpen ? 0 : 180 }}
-              transition={turnInstant || parked
-                ? { duration: 0 }
-                : bookOpen
-                  ? { duration: quick ? RULEBOOK_QUICK_TURN_MS / 1000 : COVER_FOLD_S, delay: innerDelay + COVER_FOLD_DELAY_S, ease: [0.45, 0, 0.25, 1] }
-                  : { duration: 0.45, ease: 'easeIn' }}
+              transition={coverFoldT}
               onAnimationComplete={() => { if (bookOpen) setCoverDown(true); }}
             >
-              {/* Front face: wheel page */}
-              <div
-                className="relative h-full flex flex-col p-4 pb-9 rounded-l-md overflow-hidden"
+              {/* Front face: the chamber page. Like every face, it takes the
+                  pointer only while it's the page showing: a hidden face is
+                  still hit-tested. */}
+              <PageFace
+                side="left"
+                head={['Rulebook', 'Vol. I']}
+                folio="001"
+                bodyClassName="px-8 pt-4"
                 style={{
-                  ...goldFrame('var(--color-card)', '3px 0 3px 3px'),
                   backfaceVisibility: 'hidden',
                   WebkitBackfaceVisibility: 'hidden',
+                  pointerEvents: bookOpen && page === 0 && !backShown ? 'auto' : 'none',
                 }}
               >
-                <div
-                  className="absolute inset-0 pointer-events-none opacity-[0.05] mix-blend-overlay"
-                  style={{ backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.6) 0px, rgba(255,255,255,0.6) 1px, transparent 1px, transparent 3px)' }}
-                />
-                <div
-                  className="absolute inset-y-1 left-0 w-[5px] pointer-events-none z-10"
-                  style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent 0px, transparent 1.5px, rgba(0,0,0,0.22) 1.5px, rgba(0,0,0,0.22) 2.5px)' }}
-                />
-                <div className="relative flex-1 rounded-sm border flex items-center justify-center" style={{ borderColor: 'rgba(212, 175, 55, 0.3)' }}>
-                  {cornerBrackets}
-                  {chartCanvas}
-                </div>
-                <PageFooter left="001" right="Rulebook" />
-              </div>
+                <div className="relative flex-1 min-h-0">{chamber(calling && !belowLg)}</div>
+              </PageFace>
 
               {/* Back face at rotateY(180deg): the front cover — visible on entry
-                  fold, and again when the leaf swings past 90° on the way to -180. */}
+                  fold, and again when the leaf swings past 90° on the way to -180.
+                  Turned away once the book is open, where it would otherwise
+                  sit over the chamber and take its pointer. */}
               <div
                 className="absolute inset-0"
                 style={{
                   transform: 'rotateY(180deg)',
                   backfaceVisibility: 'hidden',
                   WebkitBackfaceVisibility: 'hidden',
+                  pointerEvents: bookOpen ? 'none' : 'auto',
                 }}
               >
                 <FrontCoverDesign active={active} edge="right" />
@@ -2115,7 +1635,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
               <div className="absolute inset-0" style={{ transformStyle: 'preserve-3d', transform: tz(leaf4OnTop ? Z_BACK_TOP : Z_LEAF4) }}>
               <motion.div
                 className="absolute inset-0"
-                style={{ transformOrigin: 'left center', transformStyle: 'preserve-3d' }}
+                style={{ transformOrigin: 'left center', transformStyle: 'preserve-3d', rotateY: leaf4Turn }}
                 initial={false}
                 animate={{ rotateY: backShown ? -180 : 0 }}
                 transition={leaf4TurnT}
@@ -2125,7 +1645,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
                   className="absolute inset-0"
                   style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: page >= 2 && !backShown ? 'auto' : 'none' }}
                 >
-                  <PageFace side="right" footer={<PageFooter left="Links" right="006" />}>{null}</PageFace>
+                  <PageFace side="right" head={['Sec. 03', 'Links']} folio="006">{null}</PageFace>
                 </div>
                 <div
                   className="absolute inset-0"
@@ -2154,13 +1674,13 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
                   className="absolute inset-0"
                   style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: page >= 2 || backShown ? 'none' : 'auto' }}
                 >
-                  <PageFace side="right" footer={<PageFooter left={<FooterDocLink label="Campaign Sequence" href={FOOTER_DOC_LINKS.campaign} />} right="004" />}>{roadmapRightContent}</PageFace>
+                  <PageFace side="right" head={['Sec. 02', 'Campaign Sequence']} folio="004">{roadmapRightContent}</PageFace>
                 </div>
                 <div
                   className="absolute inset-0"
                   style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: page >= 2 && !backShown ? 'auto' : 'none' }}
                 >
-                  <PageFace side="left" footer={<PageFooter left="005" right="Rulebook" />}>{commsLeftContent}</PageFace>
+                  <PageFace side="left" head={['Rulebook', 'Vol. I']} folio="005">{commsLeftContent}</PageFace>
                 </div>
               </motion.div>
               </div>
@@ -2179,28 +1699,23 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
                 animate={{ rotateY: page >= 1 || backShown ? -180 : 0 }}
                 transition={leaf2TurnT}
               >
-                <div
-                  className="relative h-full flex flex-col p-4 pb-9 rounded-r-md overflow-hidden"
+                <PageFace
+                  side="right"
+                  head={['Sec. 01', <HeadDocLink key="doc" label="Distribution of Power" href={DOC_LINKS.distribution} />]}
+                  folio="002"
                   style={{
-                    ...goldFrame('var(--color-card)', '3px 3px 3px 0'),
                     backfaceVisibility: 'hidden',
                     WebkitBackfaceVisibility: 'hidden',
                     pointerEvents: page >= 1 || backShown ? 'none' : 'auto',
                   }}
                 >
-                  {/* Page-edge stack on the fore-edge (outer right edge) */}
-                  <div
-                    className="absolute inset-y-1 right-0 w-[5px] pointer-events-none z-10"
-                    style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent 0px, transparent 1.5px, rgba(0,0,0,0.22) 1.5px, rgba(0,0,0,0.22) 2.5px)' }}
-                  />
-                  {rulebookCard}
-                  <PageFooter left={<FooterDocLink label="Distribution of Power" href={FOOTER_DOC_LINKS.distribution} />} right="002" />
-                </div>
+                  {distributionIndex()}
+                </PageFace>
                 <div
                   className="absolute inset-0"
                   style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: page === 1 && !backShown ? 'auto' : 'none' }}
                 >
-                  <PageFace side="left" footer={<PageFooter left="003" right="Rulebook" />}>{roadmapLeftContent}</PageFace>
+                  <PageFace side="left" head={['Rulebook', 'Vol. I']} folio="003">{roadmapLeftContent}</PageFace>
                 </div>
               </motion.div>
               </div>
@@ -2219,6 +1734,10 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
             />
           </div>
 
+          {/* Glow (BOOK_GLOW): the single page's footprint, which stays put
+              while the stack slides for the backside. */}
+          <div aria-hidden="true" className="lg:hidden absolute inset-0 rounded-md pointer-events-none" style={{ boxShadow: BOOK_GLOW }} />
+
           {/* Mobile — single-page book. page1, page2 + cover fold ~270° onto
               the back (M_FOLD_DEG). Showing the backside is different: page3
               (comms) flips 180° over its left edge to reveal its OWN back face
@@ -2234,8 +1753,9 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
             transition={mPage3TurnT}
           >
 
-            {/* page1 — wheel + clauses. Folds away with a near-full spin onto the
-                back (M_FOLD_DEG), visible throughout; drops behind once landed. */}
+            {/* page1 — the chamber + its index. Folds away with a near-full spin
+                onto the back (M_FOLD_DEG), visible throughout; drops behind
+                once landed. */}
             <motion.div
               className="relative h-full"
               style={{
@@ -2246,50 +1766,25 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
                 pointerEvents: mPage1Away ? 'none' : 'auto',
               }}
             >
-              <div className="relative flex flex-col h-full rounded-md overflow-hidden" style={goldFrame('var(--color-card)', '3px')}>
-                {/* Page-edge stack on the fore-edge (outer right edge) */}
-                <div
-                  className="absolute inset-y-1 right-0 w-[5px] pointer-events-none z-10"
-                  style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent 0px, transparent 1.5px, rgba(0,0,0,0.22) 1.5px, rgba(0,0,0,0.22) 2.5px)' }}
-                />
-                {/* Below md the clause card sizes to its own content so it never
-                    has to scroll, and the wheel takes whatever height is left —
-                    floored so a very short viewport can't collapse it (there the
-                    card scrolls again, as before). md+ keeps the fixed 3/5 · 2/5
-                    split: that range shows the roomier desktop clause layout, and
-                    letting it claim its full height shrinks the wheel far enough
-                    that the slice labels crowd their band. */}
-                <div className="min-h-[200px] flex-[1_1_0] md:min-h-0 md:flex-[3_1_0] px-4 pt-4">
-                  <div className="relative w-full h-full rounded-sm border" style={{ borderColor: 'rgba(212, 175, 55, 0.3)' }}>
-                    {cornerBrackets}
-                    <div
-                      className="w-full h-full transition-opacity duration-150"
-                      style={{ opacity: sweeping ? 1 : 0, pointerEvents: sweeping ? 'auto' : 'none', visibility: sweeping ? 'visible' : 'hidden' }}
-                      {...wheelTapProps}
-                    >
-                      {active && (
-                        <ReactECharts
-                          option={option}
-                          onEvents={onEvents}
-                          style={{ height: '100%', width: '100%' }}
-                          notMerge={false}
-                          lazyUpdate
-                        />
-                      )}
-                    </div>
-                  </div>
+              <PageFace
+                side="single"
+                head={['Sec. 01', <HeadDocLink key="doc" label="Distribution of Power" href={DOC_LINKS.distribution} />]}
+                folio="001"
+                bodyClassName="pt-3"
+              >
+                {/* The compact cuts: the chamber, cropped to the hemicycle and
+                    as wide as the page allows, takes every height the caption
+                    and the index (a fixed height) leave it. On a phone it
+                    fills the width, a tablet's page is shorter than wide, so
+                    there it fills the height. */}
+                <div className="flex-1 min-h-0 px-2">
+                  <div className="relative w-full h-full">{chamber(calling && belowLg, true)}</div>
                 </div>
-                <div className="min-h-0 flex flex-col overflow-hidden flex-[0_1_auto] md:flex-[2_1_0]">
-                  {rulebookCard}
-                </div>
-
-                {/* Running footer — inside the gold frame */}
-                <div className="flex justify-between items-center px-4 pb-2.5 text-[14px] font-mono opacity-80" style={{ color: 'var(--color-text2)' }}>
-                  
-                  <FooterDocLink label="Distribution of Power" href={FOOTER_DOC_LINKS.distribution} />
-                  <span>001</span>
-                </div>
-              </div>
+                <p className="shrink-0 px-6 pt-2 font-mono text-[10px] uppercase tracking-[0.14em] leading-none text-center text-text2 opacity-75">
+                  {SEAT_CAPTION}
+                </p>
+                <div className="shrink-0 px-6 pt-5">{distributionIndex(true)}</div>
+              </PageFace>
             </motion.div>
 
             {/* Cover — folds to the back on section entry, near-full spin onto
@@ -2320,20 +1815,9 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
                 pointerEvents: mPage2Away ? 'none' : 'auto',
               }}
             >
-              <div className="absolute inset-0 h-full flex flex-col rounded-md overflow-hidden" style={goldFrame('var(--color-card)', '3px')}>
-                <div className="relative flex-1 min-h-0 flex flex-col p-4 pb-1.5">
-                  <div className="relative flex-1 min-h-0 rounded-sm border overflow-hidden flex flex-col" style={{ borderColor: 'rgba(212, 175, 55, 0.3)' }}>
-                    {cornerBrackets}
-                    <div className="relative flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar p-5">
-                      {roadmapMobileContentA}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center px-4 pb-2.5 pt-1.5 text-[14px] font-mono opacity-80" style={{ color: 'var(--color-text2)' }}>
-                  <FooterDocLink label="Campaign Sequence" href={FOOTER_DOC_LINKS.campaign} />
-                  <span>002</span>
-                </div>
-              </div>
+              <PageFace side="single" head={['Sec. 02', 'Campaign Sequence']} folio="002">
+                {roadmapMobileContentA}
+              </PageFace>
             </motion.div>
 
             {/* page2b — Campaign Sequence, phases III–IV. The mobile-only
@@ -2350,20 +1834,9 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
                 pointerEvents: mPage2bAway ? 'none' : 'auto',
               }}
             >
-              <div className="absolute inset-0 h-full flex flex-col rounded-md overflow-hidden" style={goldFrame('var(--color-card)', '3px')}>
-                <div className="relative flex-1 min-h-0 flex flex-col p-4 pb-1.5">
-                  <div className="relative flex-1 min-h-0 rounded-sm border overflow-hidden flex flex-col" style={{ borderColor: 'rgba(212, 175, 55, 0.3)' }}>
-                    {cornerBrackets}
-                    <div className="relative flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar p-5">
-                      {roadmapMobileContentB}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center px-4 pb-2.5 pt-1.5 text-[14px] font-mono opacity-80" style={{ color: 'var(--color-text2)' }}>
-                  <FooterDocLink label="Campaign Sequence" href={FOOTER_DOC_LINKS.campaign} />
-                  <span>003</span>
-                </div>
-              </div>
+              <PageFace side="single" head={['Sec. 02', 'Campaign Sequence']} folio="003">
+                {roadmapMobileContentB}
+              </PageFace>
             </motion.div>
 
             {/* page3 — Links (front) + the book's backside (back).
@@ -2385,23 +1858,14 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
               transition={mPage3TurnT}
             >
               {/* Front face — Sec 03 links */}
-              <div
-                className="absolute inset-0 h-full flex flex-col rounded-md overflow-hidden"
-                style={{ ...goldFrame('var(--color-card)', '3px'), backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+              <PageFace
+                side="single"
+                head={['Sec. 03', 'Links']}
+                folio="004"
+                style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
               >
-                <div className="relative flex-1 min-h-0 flex flex-col p-4 pb-1.5">
-                  <div className="relative flex-1 min-h-0 rounded-sm border overflow-hidden flex flex-col" style={{ borderColor: 'rgba(212, 175, 55, 0.3)' }}>
-                    {cornerBrackets}
-                    <div className="relative flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar p-5">
-                      {commsMobileContent}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center px-4 pb-2.5 pt-1.5 text-[14px] font-mono opacity-80" style={{ color: 'var(--color-text2)' }}>
-                  <span>Links</span>
-                  <span>004</span>
-                </div>
-              </div>
+                {commsMobileContent}
+              </PageFace>
               {/* Back face — the book's backside */}
               <div
                 className="absolute inset-0"

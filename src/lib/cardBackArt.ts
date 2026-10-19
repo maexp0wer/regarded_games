@@ -15,9 +15,9 @@
    The rope and microprint are also rendered on their own as the mask for the
    holographic foil HeroCard lays over them on hover.
 
-   The canvas setup, the rope braid and the mask encoding are exported: the
-   landing's banknote buttons are edged with the same braid (see
-   noteButtonArt.ts). */
+   The canvas setup and the mask encoding are exported: the rulebook covers
+   (coverPlateArt.ts) and the theme coin's rim (noteButtonArt.ts) print with
+   them too. */
 
 const CARD_BACK_SUNSET_STOPS: ReadonlyArray<readonly [number, string]> = [
   [0, '#9D4EDD'],
@@ -91,12 +91,12 @@ function roundRectPoints(x: number, y: number, w: number, h: number, r: number, 
 /** A rope braid's geometry: its centre line runs `inset` px in from the panel
     edge with corner `radius`; each strand swings `amplitude` px either side of
     it and crosses the other every `pitch` px. */
-export type Braid = { inset: number; radius: number; amplitude: number; pitch: number; lineWidth: number };
+type Braid = { inset: number; radius: number; amplitude: number; pitch: number; lineWidth: number };
 
 const CARD_BACK_ROPE: Braid = { inset: ROPE, radius: 9, amplitude: 4.5, pitch: 12, lineWidth: 0.6 };
 
 /** Rope border: a two-strand braid along the edge of a `width` x `height` panel. */
-export function drawRope(
+function drawRope(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
@@ -124,9 +124,8 @@ export function drawRope(
 }
 
 /** Microprint rule, running clockwise so each edge reads outward-up. `rule` is
-    the rule's centre line, px in from the panel edge. Exported so a second
-    plate can carry the same legend (see coverPlateArt.ts). */
-export function drawMicroprint(
+    the rule's centre line, px in from the panel edge. */
+function drawMicroprint(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,

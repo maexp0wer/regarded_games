@@ -2,8 +2,9 @@
 import type { CSSProperties } from 'react';
 
 /* ---- Holographic foil: pointer tracking ----
-   Shared by every foil surface: the deck back's rope and microprint (HeroCard)
-   and the landing hero's stake button (BanknoteButton). Each sets its own bands, pool and glare at its own scale;
+   Shared by every foil surface: the deck back's rope and microprint (HeroCard),
+   the landing's banknote buttons (BanknoteButton) and the hero headline
+   (FoilText). Each sets its own bands, pool and glare at its own scale;
    all of them read the four position variables written here. */
 
 /** Where the pool and bands sit before the pointer has moved (and always, with

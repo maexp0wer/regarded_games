@@ -41,7 +41,7 @@ Decide it by asking: **how much of this surface varies, and how much of it is co
 | Tier | What qualifies | Ornament budget | Examples |
 | --- | --- | --- | --- |
 | **A — Plate** | Invariant across the whole set; house-owned; content is a mark and at most one link | The full vocabulary, all five families at once | Card back; a cover; a colophon |
-| **B — Note** | House-level, small, repeated, sits *on* the page rather than in it; content is one label or icon | **One** family, at reduced scale, plus foil if it is the page's primary action | `BanknoteButton`, `BanknoteGround` |
+| **B — Note** | House-level, small, repeated, sits *on* the page rather than in it; content is one label or icon | **One** family at reduced scale (the ground's waves), or none (the buttons quote the card chassis instead) | `BanknoteButton`, `BanknoteGround` |
 | **C — Face** | Content-bearing; varies per instance; the reader is here to read it | **One** family, damped, confined to a header or an edge; everything else flat stock and hairlines | Card front |
 | **D — Chrome** | Navigation, progress, affordances | **Zero.** Muted ink only | `DeckRail`, `DeckChevron` |
 
@@ -81,9 +81,9 @@ a tier at full strength.
 
 On a Plate, do not reach for a token, not even the dark-mode value of one — strike the hex
 (`BACK_STOCK #0D0B14`, `BACK_INK #9E97BD`, `BACK_EDGE #251F3D`, `BACK_WORDMARK #D6CFEA`).
-`BanknoteButton` shows the Note-tier counterpart: it rebuilds the sunset out of tokens rather than
-using `--sunset`, *"that token resolves its colours where it's declared, so it would ignore a
-`.dark` set below `<html>`."*
+Where a printed surface follows the theme (`BanknoteButton`, the rulebook's pages), rebuild the
+sunset out of tokens rather than using `--sunset`: *"that token resolves its colours where it's
+declared, so it would ignore a `.dark` set below `<html>`."*
 
 ### 0.5 Content wells are always the stock
 
@@ -105,22 +105,43 @@ Three forms, all `lineWidth 0.6`:
   `-0.9`, alpha `0.14`. Field-scale. Tier A only.
 - **Band** (`drawCardHeaderGuilloche`, `BanknoteGround`) — phase-shifted sines under a shared
   pinch envelope. 12 tight strands (λ = 44) at alpha `0.5` over 6 loose (λ = 132) at `0.24`,
-  envelope period 264, `0.72 + 0.28·sin`. Edge- and header-scale. Tier B/C.
+  envelope period 264, `0.72 + 0.28·sin`. Edge- and header-scale. Tier B/C. Woven into a **net**
+  by a mirrored 8 crossing between the two (the rulebook back's band, `BAND_FAMILIES` in
+  `coverPlateArt.ts`, at cover scale: period 288, λ = 48 / 72 / 144).
 - **Rosette** (coin engraving, the back's coin band) — a closed polar curve, `r = 116 + 7·sin(24θ)`
   in three strands at 2π/3 phases, or a ring of N circles placed by `rotate()`. Badge-scale.
 
 ### Rope braid — the border
 Two strands swinging ±`amplitude` about a rounded-rect path, crossing every `pitch`, sampled at
-12 points per cycle so small braids stay smooth. Parameterised by the exported `Braid` type, so a
-new object gets the house border by supplying five numbers:
+12 points per cycle so small braids stay smooth. Parameterised by the `Braid` type, so another
+plate gets the house border by supplying five numbers:
 
 | | inset | radius | amplitude | pitch | lineWidth |
 | --- | --- | --- | --- | --- | --- |
 | `CARD_BACK_ROPE` | 12 | 9 | 4.5 | 12 | 0.6 |
-| `NOTE_ROPE` | 3.5 | 4 | 2 | 7 | 0.8 (foil 1.1) |
 
-Keep `inset - amplitude > 0` so the strands print on the stock, not off the edge. On a Note the
-braid **is** the border — `BanknoteButton` draws no `border` of its own.
+Keep `inset - amplitude > 0` so the strands print on the stock, not off the edge. The braid does
+not scale down to a Note: at a 4px corner its crossings land wherever the pitch puts them and the
+corners come out lopsided. Small edges use the **double rule** instead.
+
+### Double rule — the small border
+Two concentric rounded-rect hairlines, the outer one the object's outline, the inner one at about
+half its strength. At Note scale (the buttons were edged with it before they took the struck
+chassis, Section 4; the theme coin's ring, `noteButtonArt.ts`, is still its outer rule drawn as a
+circle):
+
+| | inset | radius | lineWidth | alpha |
+| --- | --- | --- | --- | --- |
+| outer | 2 | 5.5 | 1.1 (foil 1.4) | 1 |
+| inner | 5 | 2.5 | 0.6 | 0.53 |
+
+At cover scale on the rulebook (`OUTER_RULE` / `INNER_RULE` in `coverPlateArt.ts`): outer at inset
+14, inner at 19, alpha `0.85` / `0.35`.
+
+Keep every corner concentric (stock radius = outer `inset + radius`, inner radius = outer radius
+minus the 3px step). Any field printed with the rules stops inside the inner rule (`FIELD` on the
+covers), so both rules sit on clean stock; ornament that runs under a rule makes the frame read
+as overflowing.
 
 ### Microprint — the legend rule
 `REGARDED GAMES · CLASS WAR: THE GAME · ` set at `600 5.5px` mono, alpha `0.55`, clipped to an 8px
@@ -135,18 +156,19 @@ counter-clockwise, so both read upright), an engraved rosette, and an obverse/re
 | | viewBox | size | reeds | rules at | rosette |
 | --- | --- | --- | --- | --- | --- |
 | Back (docs link) | 200 | 184px | 144 | r 93.5 / 71.5 | 24 circles, alpha 0.13 |
-| Front (header symbol) | 48 | 40px | 48 | r 20.2 / 16.6 | 12 circles, alpha 0.16 |
+| Front (header symbol) | 48 | 40px | none: plain ring, accent 0.7 | r 20.2 / 16.6 | 12 circles, alpha 0.16 |
 
-Halve the reed count roughly with each halving of diameter, or the dashes alias. Below ~32px, drop
-the rosette and the inner rule and keep the milled edge alone.
+Halve the reed count roughly with each halving of diameter, or the dashes alias. At badge size
+(the front's 40px) even a cut count reads as a dashed line, so the milled edge becomes a plain
+ring. Below ~32px, drop the rosette and the inner rule too and keep the ring alone.
 
 ### Holographic foil — the hover reward
-One layer, masked twice: to a **shape** (a braid bitmap, a rim ring, an icon's own markup) and to a
+One layer, masked twice: to a **shape** (a braid or rule bitmap, a rim ring, an icon's own markup) and to a
 **pool** around the cursor. Spectrum bands slide as the pointer moves — the "viewing angle" —
 with a white glare walking underneath. At rest it is plain print; foil only exists under a pointer.
 
 Scale it to the object: the card back cycles the spectrum over 24% of a 300%-sized background with
-a 50/190px pool; a 56px button cycles every 70px with a 36/120px pool. On light stock push the
+a 50/190px pool; a 48–64px button cycles every 70px with a 36/120px pool. On light stock push the
 spectrum deeper (`saturate-[1.6] brightness-[0.85]`) so the pastels still read.
 
 Foil is a **reward, not a state**: never use it to indicate selection, validity or status.
@@ -170,7 +192,8 @@ Both card faces are the same six-layer build. Use it verbatim for any new Tier A
 5. **Stock** — the inset well: `#0D0B14`, `border` in the accent at 0.25–0.30, `shadow-inner`.
 6. **Print** — the ornament drawn onto the stock, then type above it.
 
-A Tier B Note collapses this to layers 1, 5 and 6: glow, stock, braid.
+A Tier B Note collapses this: `BanknoteButton` keeps layers 1, 2, 3 and 5 (halo, chassis,
+tooth, well) and drops the bevel's brackets; `BanknoteGround` is glow-free print alone.
 
 ---
 
@@ -192,6 +215,29 @@ and carries no variable information.
   survives being turned around. Anything Tier A should read from both ends.
 - Foil on the braid and the microprint only — the frame, never the field.
 
+**The rulebook covers** (`Rulebook.tsx` + `coverPlateArt.ts`) are Plates built the dialled-down
+way: stock edge to edge with the Note's **double rule** for an edge (no chassis, no braid, no
+microprint), the vortex inside it erased in halos round the type, and the type placed at fixed
+shares of the cover's height so the halos land under it at every size. The back runs the
+Note's guilloché band across its middle with the edition cartouche on it; the vortex **fades**
+toward the band over a short, even distance that follows the band's own outline (stepped
+erasures, so no canvas filter), and the band and the cartouche's outer rule are the cover's
+foil. The back reads one way up: no inverted wordmark. The pages between the covers are
+printed on the same stock (`PAGE_STOCK === COVER_STOCK`, owned by `coverPlateArt.ts`): the
+book's own `#161322`, the dark `--color-card`, a shade lighter than the deck back's `#0D0B14`.
+The whole book glows in the sunset (`BOOK_GLOW`, the deck back's halo at twice its rest alpha)
+from **one** layer behind it that follows
+the visible footprint (closed, spread, backside), never one glow per sheet: stacked leaves would
+add up. Sec. 01's chart is the exception to print on the pages: `PowerChamber` is screen-native,
+100 seats in two coalition wings on `card2` grounds, called in by a roll-call entrance, with a
+faint holo foil (0.2) on hover; its inks (`src/config/distribution.ts`) are validated for marks on
+the stock, not the faction tokens. On the single-page book it runs `compact`: cropped to the
+hemicycle with no type of its own below 9px, the index beneath it carrying the names and shares.
+
+**Inside the book's 3D scene, never centre or place an interactive element with a transform**
+(`translate`, `-translate-1/2`): Chrome does not hit-test a transformed layer there, so it never
+sees the pointer. Centre with `inset-0 m-auto` or flex instead.
+
 **Never** put a per-instance value on a Plate. The moment it varies, it is a Face.
 
 ---
@@ -202,19 +248,38 @@ and carries no variable information.
 seals, dividers.
 
 **Anatomy** (`BanknoteButton.tsx`):
-- **Stock, then braid, then label.** No border property; the braid is the outline. The stock's
-  `border-radius` is `inset + radius` so its corner is concentric with the braid's.
-- Glow is a blurred copy of the footprint *behind* the stock (`absolute inset-1 blur-lg`),
-  never a `box-shadow` on the stock itself.
-- **Primary** = `card2` stock, sunset braid, glow at rest (`opacity-40` → `90` on hover), foil
-  under the cursor. **Secondary** = `card` stock, `text2` braid, no rest glow; hover prints the
-  braid in `text` and raises a neutral glow. One primary per view.
-- A `round` Note (48px coin of stock for an icon) swaps the braid for a plain 2px rim mask and
-  keeps the label colour on the icon.
+- **The buttons quote the card chassis, not an ornament family.** Halo, then a struck frame
+  (`rounded-[9px]`, a 135deg sheen of light and shade over the metal, and a struck edge:
+  `inset 0 0 0 1px` white highlight over a soft inner shade), then tooth, then a recessed well
+  at `inset 5px` (`rounded-[5px]`, inset shadow, and an `inset 3px` `white/5` bevel), then the
+  label. **No corner brackets and no guilloché**: on a button that much print was too much.
+  On hover a glint sweeps across the frame (the well covers its middle, so it only crosses the
+  metal); with reduced motion it is dropped.
+- Glow is a blurred copy of the footprint *behind* the frame (`absolute inset-1 blur-lg`),
+  never a `box-shadow` on the frame itself.
+- **Size is fluid over a narrow band.** Height `clamp(48px, 2.4vw + 30px, 64px)`, label
+  `clamp(13px, 0.2vw + 12px, 15px)`, padding in `em` so it follows the label. Roughly a third
+  larger on a big screen, never under 48px (tap target). The frame and the well keep their px
+  at every size. Where a pair would wrap on a phone, stack it in a column at equal width
+  instead.
+- **Primary** = the frame struck in the sunset (built from tokens) under the sheen, round a
+  well of the literal stock `#0D0B14` with a gold hairline (`rgba(255,195,0,0.25)`); the label
+  in the sunset lifted a step (`#B577F2 → #F0408A → #FFA833 → #FFD447`), literal like the well
+  it reads on. Glow at rest (`opacity-30` → `85` on hover). **Secondary** = the same build in
+  pewter (picked per theme), round a `card` well with a `text2/25` hairline; label in `text2`,
+  `text` on hover, no rest glow, a neutral one on hover. No foil on either. One primary per
+  view.
+- A `round` Note (a coin of stock for an icon, 36–44px on the same curve, icon at half size)
+  keeps the older print build: stock edged with a single thin ring (`renderNoteCoinRim`), no
+  frame, foil on the ring and the icon on hover, and the label colour on the icon. Draw rings on canvas, never as a CSS
+  `radial-gradient` with hard stops: a sub-pixel gradient ring isn't anti-aliased and reads as
+  out of round.
 - Ground (`BanknoteGround.tsx`) is the same idea at page scale: the wave field iris-printed in
   the sunset through a mask, at `opacity-10`, radially faded clear through the middle of the
   viewport where the content sits. **Ground is ground** — if you can see it as a pattern rather
-  than as texture, it is too strong.
+  than as texture, it is too strong. Its waves are foil too, at the same few percent: a wide,
+  soft pool round the pointer anywhere on the stage (`data-lit:opacity-10`), never on touch or
+  with reduced motion.
 
 ---
 
@@ -228,8 +293,9 @@ stacked `flex flex-col justify-between space-y-2`:
 
 1. **Header** — the one ornamented element. `rgba(12,12,15,0.6)` ground, `border` accent at 0.25,
    `px-4 py-2 rounded`. Carries the guilloché band (faded left→right so it gathers around the
-   coin), a mono tag over a display title, and the coin at the right. If the object leads
-   somewhere, the whole header is the control (Section 9).
+   coin), a mono tag over a display title, and the coin at the right. Hovering anywhere on the
+   header (`data-foil-host`) brings the title up in foil at 0.3 (`FoilText`, `.foil-dark-stock`).
+   If the object leads somewhere, the whole header is the control (Section 9).
 2. **Frame** — the illustration well: stock ground, `border` accent at 0.30, an `inset-1
    border-white/5` bevel, and **four 12px corner brackets** at accent `0.35`. That is the entire
    ornament budget for this region; do not add a band, a braid, or a rule.

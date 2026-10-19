@@ -630,6 +630,30 @@ html, body {
   margin-bottom: 1.5rem;
 }
 
+/* The landing hero's headline, set over .hero-title in Big Shoulders Stencil
+   (--font-headline, loaded in layout.tsx). Other .hero-title uses keep Exo 2.
+   The knobs, all on this rule:
+   --hero-opsz      optical size: 10 is the wide, open text cut, 72 the
+                    tight, condensed display cut
+   --hero-weight    100 to 900
+   --hero-tracking  space between the letters
+   --hero-size      type size (fluid between the clamp's ends)
+   --hero-leading   line height between "Class War" and "The Game" */
+.hero-title-stencil {
+  --hero-opsz:18;
+  --hero-weight: 900;
+  --hero-tracking: 0.06em;
+  --hero-size: clamp(3.5rem, 7.5vw, 8rem);
+  --hero-leading: 0.95;
+  font-family: var(--font-headline), var(--font-display);
+  font-size: var(--hero-size);
+  font-weight: var(--hero-weight);
+  letter-spacing: var(--hero-tracking);
+  line-height: var(--hero-leading);
+  font-optical-sizing: none;
+  font-variation-settings: 'opsz' var(--hero-opsz);
+}
+
 /* The high-energy gradient text wrapper */
 .hero-gradient-text {
   /* Fix 1: Ensure background rendering context is locked */
@@ -648,6 +672,63 @@ html, body {
   
   /* Optional: Protect readability in light mode */
   filter: drop-shadow(0px 2px 8px color-mix(in srgb, var(--color-purple) 20%, transparent));
+}
+
+/* Holographic foil on type (FoilText on the hero headline). The ::after prints the words again from data-text, in the foil
+   spectrum, over the element's own print: masked to a pool round the cursor
+   (--foil-glare-x/y) with its bands sliding as the pointer crosses
+   (--foil-x/y), both written by trackFoil. Invisible at rest; hovering the
+   words, or anywhere on a [data-foil-host] around them, brings it up. The
+   light page gets the deeper spectrum BanknoteButton uses on light stock, so
+   the pastels still read; type printed on dark stock in either theme (the
+   hero cards' titles) takes .foil-dark-stock to keep the bright one.
+
+   Scaled to the type with --foil-band (one band of the five-band spectrum
+   cycle), --foil-pool / --foil-fade (the pool's solid and faded radius),
+   --foil-travel-x/y (how far the bands slide end to end) and --foil-strength
+   (its opacity while lit); the defaults suit headline type. */
+.foil-text {
+  position: relative;
+  --foil-strength: 0.3;
+  --foil-band: 28px;
+  --foil-pool: 60px;
+  --foil-fade: 200px;
+  --foil-travel-x: 180px;
+  --foil-travel-y: 60px;
+}
+.foil-text::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    115deg,
+    #FF6FD8 0px,
+    #FFD36E var(--foil-band),
+    #9CFF8A calc(var(--foil-band) * 2),
+    #62E6FF calc(var(--foil-band) * 3),
+    #8F7BFF calc(var(--foil-band) * 4),
+    #FF6FD8 calc(var(--foil-band) * 5)
+  );
+  background-size: calc(100% + var(--foil-travel-x)) calc(100% + var(--foil-travel-y));
+  background-position: var(--foil-x) var(--foil-y);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  -webkit-mask-image: radial-gradient(circle at var(--foil-glare-x) var(--foil-glare-y), #000 0px, #000 var(--foil-pool), transparent var(--foil-fade));
+  mask-image: radial-gradient(circle at var(--foil-glare-x) var(--foil-glare-y), #000 0px, #000 var(--foil-pool), transparent var(--foil-fade));
+  filter: saturate(1.6) brightness(0.85);
+  opacity: 0;
+  transition: opacity 450ms;
+}
+.dark .foil-text::after,
+.foil-text.foil-dark-stock::after {
+  filter: saturate(1.15) brightness(1.08);
+}
+.foil-text:hover::after,
+[data-foil-host]:hover .foil-text::after {
+  opacity: var(--foil-strength);
 }
 
 /* Explanatory subtitle copy */

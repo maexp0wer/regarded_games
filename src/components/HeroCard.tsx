@@ -7,6 +7,7 @@ import {
   renderCardBackFoilMask,
 } from '@/lib/cardBackArt';
 import { drawCardHeaderGuilloche } from '@/lib/cardFrontArt';
+import FoilText from '@/components/FoilText';
 import { FOIL_REST, trackFoil } from '@/lib/holoFoil';
 
 /* Body copy in the class box — the quote and the ability descriptions. A shade
@@ -33,7 +34,7 @@ const BACK_CHASSIS = 'linear-gradient(135deg, #2e0854 0%, #9D4EDD 24%, #8b0054 4
 const BACK_SUNSET = 'linear-gradient(135deg, #9D4EDD 0%, #D81B60 45%, #FF8C00 75%, #FFC300 100%)';
 
 /* ---- Deck back coin ----
-   The coin is the docs link. Its rim says so in print — READ THE DOCS — so the
+   The coin is the docs link. Its rim says so in print — DOCUMENTATION — so the
    affordance does not depend on hover, which touch screens never get. Hovering
    (or keyboard focus) lifts the coin, brightens the glow behind it and lights
    that line of the rim in the coin's gold. The link itself is the fixed
@@ -81,8 +82,8 @@ const FOIL_POOL =
   'radial-gradient(circle at var(--foil-glare-x) var(--foil-glare-y), #000 0px, #000 50px, transparent 190px)';
 const FOIL_GLARE =
   'radial-gradient(circle at var(--foil-glare-x) var(--foil-glare-y), rgba(255, 255, 255, 0.95) 0px, rgba(255, 255, 255, 0.35) 60px, rgba(255, 255, 255, 0) 150px)';
-/* Pointer tracking and the rest position are shared with the landing hero's
-   stake button: see src/lib/holoFoil.ts. */
+/* Pointer tracking and the rest position are shared with the landing's
+   banknote buttons and hero headline: see src/lib/holoFoil.ts. */
 
 /* Line-art canvas and foil layer for the back panel. Draws only while the back
    is showing — the deck mounts every card at once and most backs are never
@@ -210,15 +211,16 @@ function CoinFace({ id }: { id: string }) {
 
    - The header is security-printed: a guilloché band behind it (see
      src/lib/cardFrontArt.ts), faded out under the title.
-   - The header symbol is struck as a small coin — the back's milled edge, rim
-     rules and engraved rosette at badge size — struck on FRONT_WELL, the same
-     ground as the illustration frame and the class box. No glow: at this size
-     the halo competed with the symbol. The coin is 40px so the header stays as
-     tall as it was with the old square badge, and the reeding is cut to 48 (the
-     back's 144 would alias there).
+   - The header symbol is struck as a small coin — the back's rim rules and
+     engraved rosette at badge size — struck on FRONT_WELL, the same ground as
+     the illustration frame and the class box. No glow: at this size the halo
+     competed with the symbol. The coin is 40px so the header stays as tall as
+     it was with the old square badge, and its edge is a plain ring rather than
+     the back's milled one: reeding at this size read as a dashed line.
 
    The header is also the card's destination control, and the coin its sign —
-   see headerControl and HeaderCoin. */
+   see headerControl and HeaderCoin. Hovering anywhere on it brings the title
+   up in foil (FoilText, at its headline strength). */
 const SEAL_ROSETTE_ANGLES = Array.from({ length: 12 }, (_, i) => i * 30);
 /* The front's inset ground — the illustration frame, the class box and the
    coin — is the back's stock, so both faces are printed on the same paper.
@@ -277,14 +279,13 @@ function HeaderGuilloche({ rgb, playing }: { rgb: string; playing: boolean }) {
   );
 }
 
-/* The coin's rim, shared by both faces: milled edge, the dark rim between two
-   rules, and a dot either side. */
+/* The coin's rim, shared by both faces: a plain ring for the edge, the dark rim
+   between two rules, and a dot either side. */
 function CoinRim({ rgb }: { rgb: string }) {
   const rule = `rgba(${rgb}, 0.55)`;
   return (
     <>
-      <circle cx="24" cy="24" r="22.5" fill="none" stroke={`rgba(${rgb}, 0.35)`} strokeWidth="3" />
-      <circle cx="24" cy="24" r="22.5" fill="none" stroke={`rgba(${rgb}, 0.85)`} strokeWidth="3" pathLength={96} strokeDasharray="1 1" />
+      <circle cx="24" cy="24" r="22.5" fill="none" stroke={`rgba(${rgb}, 0.7)`} strokeWidth="3" />
       <circle cx="24" cy="24" r="21" fill={FRONT_WELL} />
       <circle cx="24" cy="24" r="20.2" fill="none" stroke={rule} strokeWidth="0.45" />
       <circle cx="24" cy="24" r="16.6" fill="none" stroke={rule} strokeWidth="0.45" />
@@ -617,6 +618,7 @@ export default function HeroCard({
                 <div
                   className="relative flex justify-between items-center px-4 py-2 rounded border shadow-md transition-colors duration-300"
                   style={{ backgroundColor: 'rgba(12, 12, 15, 0.6)', borderColor: `rgba(${themeColorRgba}, 0.25)` }}
+                  data-foil-host=""
                   {...headerActivityProps}
                 >
                   <HeaderGuilloche rgb={themeColorRgba} playing={headerActive} />
@@ -625,7 +627,7 @@ export default function HeroCard({
                       {headerTag}
                     </span>
                     <h3 className={`${titleSize} font-black tracking-widest leading-tight uppercase text-white`}>
-                      {title}
+                      <FoilText text={title} className="block foil-dark-stock" />
                     </h3>
                   </div>
                   <HeaderCoin

@@ -1,58 +1,176 @@
 // src/lib/coverPlateArt.ts
-import { canvasToDataUrl, drawMicroprint, prepareCanvas } from '@/lib/cardBackArt';
+import { canvasToDataUrl, prepareCanvas } from '@/lib/cardBackArt';
 
 /* ---- Rulebook covers: the printed plate ----
-   The front and back covers of the rulebook are the deck back's plate struck
-   into gold instead of onto stock (see src/lib/cardBackArt.ts): a guilloché
-   vortex turning out of the centre, a hairline rule, and a microprint rule
-   between them.
+   The covers are printed like the deck back, in its sunset (see
+   src/lib/cardBackArt.ts) but on the book's own stock, a shade lighter than
+   the deck back's, and edged with the double rule, the sunset outside and the
+   muted ink inside, in place of the deck back's rope braid and microprint.
+   Inside the rules the deck back's guilloché vortex turns out of the centre,
+   erased in soft halos round the type so every block prints on clean stock.
 
-   The deck back's rope braid is deliberately NOT carried over. On the card it
-   is the outermost ring and reads as a woven edge; struck into gold at cover
-   scale the two crossing strands read as a chain of intersections running round
-   the sheet, which fought the metal's own raking sheen. The cover's outermost
-   ring is the hairline instead, with the heavy corner brackets set on it.
+   The back cover runs a guilloché band across its middle, the card header's
+   band woven into a net, carrying the edition cartouche. The vortex fades out
+   toward the band and reaches nothing right at its strands, the same distance
+   all the way round its waves.
+   The band and the cartouche's outer rule are what the back's holographic foil
+   lights (renderCoverFoilMask).
 
-   Three rings in from the edge, on the card back's ~8px cadence —
-   hairline 19 · microprint 27 · field 36 — so the two objects still read as one
-   house, and the legend is the deck back's own: nothing here is a second
-   vocabulary.
+   Struck in literal colours: a cover is a printed object, so it stays dark in
+   light mode. Drawn to a canvas for the deck back's reasons: the rules hug the
+   cover's real edge, and the vortex and the band fill the field, at every size
+   the book is laid out at. Rulebook only draws it while the book is on screen. */
 
-   Struck in one literal ink rather than the back's sunset gradient: the ground
-   is already a five-stop metal, and a gradient over a gradient reads as neither.
-   The ink is literal for the same reason the deck back's colours are — a cover
-   is a printed object, not a themed surface, and it must not invert in light
-   mode.
+/** The book's stock, covers and pages alike: the dark card surface
+    (--color-card under .dark), a shade lighter than the deck back's. */
+export const COVER_STOCK = '#161322';
+const INK = '#9E97BD';
+const SUNSET_STOPS: ReadonlyArray<readonly [number, string]> = [
+  [0, '#9D4EDD'],
+  [0.45, '#D81B60'],
+  [0.75, '#FF8C00'],
+  [1, '#FFC300'],
+];
 
-   Drawn to a canvas rather than shipped as an SVG for the deck back's reasons:
-   the rules and microprint hug the cover's real edge, which moves between the
-   desktop spread, the mobile page and every viewport in between. Rulebook only
-   draws it while a cover is actually showing. */
+type Rule = { inset: number; radius: number; lineWidth: number; alpha: number };
 
-/* Frame geometry, px in from the cover edge: the outer hairline, the
-   microprint's centre line, and where the field starts. FIELD is also where the
-   cover's type area begins (Rulebook's covers are p-9), so the printed blocks
-   sit inside the field and clear the microprint rule. */
-const HAIRLINE = 19;
-const MICRO = 27;
-const FIELD = 36;
+/* The double rule, px in from the cover edge, with the inner rule at about
+   half the outer's strength. FIELD is where
+   the vortex and the band stop, a clear step inside the inner rule. */
+const OUTER_RULE: Rule = { inset: 14, radius: 6, lineWidth: 1.1, alpha: 0.85 };
+const INNER_RULE: Rule = { inset: 19, radius: 1, lineWidth: 0.6, alpha: 0.35 };
+const FIELD = 27;
 
-/** A patch of the field erased so a block of type sits on clean metal. Given in
-    fractions of the cover's width and height, not px: the cover's blocks are
-    laid out with `justify-between`, so they hold their share of the face at
-    every size the book is drawn at. */
+/* The band: three strand families, the card header's tight twelve and loose
+   six with a mirrored eight crossing between them so it reads as a net
+   (amplitude in px). Every wavelength divides the envelope's period, so the
+   band repeats seamlessly. */
+const BAND_PERIOD = 288;
+const BAND_FAMILIES = [
+  { count: 12, wavelength: 48, amplitude: 36, mirrored: false, lineWidth: 0.7, alpha: 0.62 },
+  { count: 8, wavelength: 72, amplitude: 39, mirrored: true, lineWidth: 0.6, alpha: 0.4 },
+  { count: 6, wavelength: 144, amplitude: 41, mirrored: false, lineWidth: 0.6, alpha: 0.28 },
+] as const;
+/* How far beyond the band's strands the vortex takes to come back. */
+const BAND_FADE = 14;
+/* The fade is printed as this many stepped erasures, so it needs no canvas
+   filter (which Safari lacks). */
+const BAND_FADE_STEPS = 8;
+
+/** The edition cartouche on the back cover: a box this size centred on the
+    cover, with `pad` px of stock cleared round it out of the band. Rulebook sets
+    the cartouche's type in the same box. */
+export const CARTOUCHE = { width: 196, height: 40, radius: 3, pad: 6 };
+
+/** A patch of the vortex erased so a block of type sits on clean stock. Given
+    in fractions of the cover's width and height, not px: the cover's blocks are
+    placed at shares of its height, so they hold their place at every size the
+    book is drawn at. */
 export type PlateHalo = { cx: number; cy: number; rx: number; ry: number };
 
-/** Paints a cover's line-art into `canvas`, sized to a `width` x `height` cover
-    and struck in `ink`. `monoFamily` is the resolved --font-mono stack, for the
-    microprint; `halos` are erased out of the field (see PlateHalo). */
+function sunset(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number) {
+  const g = ctx.createLinearGradient(x0, y0, x1, y1);
+  SUNSET_STOPS.forEach(([offset, color]) => g.addColorStop(offset, color));
+  return g;
+}
+
+function strokeRule(ctx: CanvasRenderingContext2D, width: number, height: number, rule: Rule, style: string | CanvasGradient) {
+  ctx.globalAlpha = rule.alpha;
+  ctx.strokeStyle = style;
+  ctx.lineWidth = rule.lineWidth;
+  ctx.beginPath();
+  ctx.roundRect(rule.inset, rule.inset, width - 2 * rule.inset, height - 2 * rule.inset, rule.radius);
+  ctx.stroke();
+}
+
+function envelope(x: number, mirrored: boolean) {
+  return 0.72 + 0.28 * Math.sin((2 * Math.PI * x) / BAND_PERIOD + (mirrored ? Math.PI : 0));
+}
+
+/* The band's strands across the field, centred on `cy`. `foil` prints every
+   strand opaque at one weight, for the foil's mask. */
+function strokeBand(ctx: CanvasRenderingContext2D, width: number, cy: number, style: string | CanvasGradient, foil: boolean) {
+  const x0 = FIELD;
+  const x1 = width - FIELD;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x0, cy - 46, x1 - x0, 92);
+  ctx.clip();
+  ctx.strokeStyle = style;
+  for (const family of BAND_FAMILIES) {
+    ctx.globalAlpha = foil ? 1 : family.alpha;
+    ctx.lineWidth = foil ? 1 : family.lineWidth;
+    const flip = family.mirrored ? -1 : 1;
+    for (let k = 0; k < family.count; k++) {
+      const phase = (2 * Math.PI * k) / family.count;
+      ctx.beginPath();
+      for (let x = x0; x <= x1; x++) {
+        const y = cy + flip * family.amplitude * envelope(x, family.mirrored) * Math.sin((2 * Math.PI * x) / family.wavelength + phase);
+        if (x === x0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+/* The furthest any strand swings from the band's centre line at each x across
+   the field, sampled every 2px: the band's real outline. */
+function bandReach(width: number) {
+  const reach: [number, number][] = [];
+  for (let x = FIELD; x <= width - FIELD; x += 2) {
+    let r = 0;
+    for (const family of BAND_FAMILIES) {
+      const swing = family.amplitude * envelope(x, family.mirrored);
+      for (let k = 0; k < family.count; k++) {
+        r = Math.max(r, Math.abs(swing * Math.sin((2 * Math.PI * x) / family.wavelength + (2 * Math.PI * k) / family.count)));
+      }
+    }
+    reach.push([x, r]);
+  }
+  return reach;
+}
+
+/* Erases the vortex round the band so it fades out toward the strands: gone
+   inside the band's outline, back to full strength BAND_FADE px beyond it. Each
+   step erases the outline pushed out a little further, weighted so the layered
+   result climbs evenly. */
+function eraseAroundBand(l: CanvasRenderingContext2D, width: number, cy: number) {
+  const reach = bandReach(width);
+  const step = BAND_FADE / BAND_FADE_STEPS;
+  // What survives just outside step k's outline: 0 inside the band, rising to 1.
+  const kept = (k: number) => (k === 0 ? 0 : k > BAND_FADE_STEPS ? 1 : (k - 0.5) / BAND_FADE_STEPS);
+  l.globalCompositeOperation = 'destination-out';
+  l.fillStyle = '#000';
+  for (let k = 0; k <= BAND_FADE_STEPS; k++) {
+    const offset = k * step;
+    l.globalAlpha = 1 - kept(k) / kept(k + 1);
+    l.beginPath();
+    l.moveTo(0, cy - reach[0][1] - offset);
+    for (const [x, r] of reach) l.lineTo(x, cy - r - offset);
+    l.lineTo(width, cy - reach[reach.length - 1][1] - offset);
+    l.lineTo(width, cy + reach[reach.length - 1][1] + offset);
+    for (let i = reach.length - 1; i >= 0; i--) l.lineTo(reach[i][0], cy + reach[i][1] + offset);
+    l.lineTo(0, cy + reach[0][1] + offset);
+    l.closePath();
+    l.fill();
+  }
+}
+
+function cartoucheBox(width: number, height: number) {
+  return { x: (width - CARTOUCHE.width) / 2, y: (height - CARTOUCHE.height) / 2 };
+}
+
+/** Paints a cover's line-art into `canvas`, sized to a `width` x `height`
+    cover. `halos` are erased out of the vortex (see PlateHalo); `back` adds the
+    band and the edition cartouche across the middle. */
 export function drawCoverPlateArt(
   canvas: HTMLCanvasElement,
   width: number,
   height: number,
-  ink: string,
-  monoFamily: string,
   halos: readonly PlateHalo[],
+  back: boolean,
 ) {
   const W = width;
   const H = height;
@@ -62,40 +180,39 @@ export function drawCoverPlateArt(
   const cx = W / 2;
   const cy = H / 2;
 
-  /* 1. Vortex: two counter-turning families of log spirals, the deck back's
-        recipe at a lower count and a lower alpha — the metal beneath is already
-        working, and the back's weight would silt it up. Drawn on its own layer
-        so the type halos can be erased out of it. */
+  /* 1. Vortex: the deck back's two counter-turning families of log spirals, a
+        step stronger than the back's and running right in to the centre. Drawn
+        on its own layer so the halos and the band's fade can be erased out of it. */
   const layer = document.createElement('canvas');
   const l = prepareCanvas(layer, W, H);
   if (!l) return;
   l.save();
   l.beginPath();
-  l.roundRect(FIELD, FIELD, W - 2 * FIELD, H - 2 * FIELD, 5);
+  l.roundRect(FIELD, FIELD, W - 2 * FIELD, H - 2 * FIELD, 3);
   l.clip();
   l.lineWidth = 0.6;
-  l.strokeStyle = ink;
+  l.strokeStyle = sunset(l, 0, 0, W, H);
   const rMax = Math.hypot(cx, cy);
   const family = (count: number, twist: number, alpha: number) => {
     l.globalAlpha = alpha;
     for (let k = 0; k < count; k++) {
       l.beginPath();
-      // 40 stays the phase origin, as on the deck back; 60 skips the dense core.
-      for (let r = 60; r <= rMax; r += 2.5) {
+      // 40 stays the phase origin, as on the deck back.
+      for (let r = 6; r <= rMax; r += 2.5) {
         const th = (2 * Math.PI * k) / count + twist * Math.log(r / 40) + 0.018 * Math.sin(r / 10);
         const x = cx + r * Math.cos(th);
         const y = cy + r * Math.sin(th);
-        if (r === 60) l.moveTo(x, y);
+        if (r === 6) l.moveTo(x, y);
         else l.lineTo(x, y);
       }
       l.stroke();
     }
   };
-  family(60, 2.4, 0.22);
-  family(30, -0.9, 0.1);
+  family(60, 2.4, 0.36);
+  family(30, -0.9, 0.17);
   l.restore();
 
-  // 2. Erase the type halos, so every printed block sits on clean metal.
+  // 2. Erase the type halos, so every printed block sits on clean stock.
   l.globalCompositeOperation = 'destination-out';
   l.globalAlpha = 1;
   for (const halo of halos) {
@@ -112,29 +229,61 @@ export function drawCoverPlateArt(
     l.fill();
     l.restore();
   }
+  if (back) eraseAroundBand(l, W, cy);
   ctx.drawImage(layer, 0, 0, W, H);
 
-  // 3. The outer hairline and the microprint rule inside it.
-  ctx.globalAlpha = 0.45;
-  ctx.strokeStyle = ink;
-  ctx.lineWidth = 0.8;
-  ctx.beginPath();
-  ctx.roundRect(HAIRLINE, HAIRLINE, W - 2 * HAIRLINE, H - 2 * HAIRLINE, 4);
-  ctx.stroke();
-  drawMicroprint(ctx, W, H, MICRO, ink, 0.5, monoFamily);
+  // 3. The back's band, and the cartouche printed over its middle.
+  if (back) {
+    strokeBand(ctx, W, cy, sunset(ctx, FIELD, 0, W - FIELD, 0), false);
+    const { x, y } = cartoucheBox(W, H);
+    const { width: cw, height: ch, radius, pad } = CARTOUCHE;
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = COVER_STOCK;
+    ctx.beginPath();
+    ctx.roundRect(x - pad, y - pad, cw + 2 * pad, ch + 2 * pad, radius + pad);
+    ctx.fill();
+    ctx.strokeStyle = sunset(ctx, x, 0, x + cw, 0);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(x + 0.5, y + 0.5, cw - 1, ch - 1, radius);
+    ctx.stroke();
+    ctx.globalAlpha = 0.32;
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.roundRect(x + 3.5, y + 3.5, cw - 7, ch - 7, 1);
+    ctx.stroke();
+  }
+
+  // 4. The double rule: the outer rule is the cover's printed edge.
+  strokeRule(ctx, W, H, OUTER_RULE, sunset(ctx, 0, 0, W, H));
+  strokeRule(ctx, W, H, INNER_RULE, INK);
   ctx.globalAlpha = 1;
 }
 
-/** Renders the foil mask for a `width` x `height` cover — the microprint rule
-    alone, opaque on transparent, at print weight — as a PNG data URL. With the
-    braid gone the legend is the only foil on the cover, so the hover pool now
-    lights the microprint rather than a woven edge. Resolves null if the cover
-    has no size or the canvas can't be encoded. */
-export function renderCoverFoilMask(width: number, height: number, monoFamily: string): Promise<string | null> {
+/** Renders the back cover's foil mask for a `width` x `height` cover (the
+    band's strands and the cartouche's outer rule, opaque on transparent) as a
+    PNG data URL. Resolves null if the cover has no size or the canvas can't be
+    encoded. */
+export function renderCoverFoilMask(width: number, height: number): Promise<string | null> {
   if (width <= 0 || height <= 0) return Promise.resolve(null);
   const canvas = document.createElement('canvas');
   const ctx = prepareCanvas(canvas, width, height);
   if (!ctx) return Promise.resolve(null);
-  drawMicroprint(ctx, width, height, MICRO, '#fff', 1, monoFamily);
+  strokeBand(ctx, width, height / 2, '#fff', true);
+  // The cartouche's stock covers the band's middle, so the foil does too.
+  const { x, y } = cartoucheBox(width, height);
+  const { width: cw, height: ch, radius, pad } = CARTOUCHE;
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.roundRect(x - pad, y - pad, cw + 2 * pad, ch + 2 * pad, radius + pad);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.roundRect(x + 0.5, y + 0.5, cw - 1, ch - 1, radius);
+  ctx.stroke();
   return canvasToDataUrl(canvas);
 }
