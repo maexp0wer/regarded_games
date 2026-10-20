@@ -852,10 +852,9 @@ export const RULEBOOK_QUICK_OPEN_MS = SLIDE_IN_MS + COVER_FOLD_DELAY_S * 1000 + 
 const SCENE_PERSPECTIVE = 2200;
 
 /* Depth slots for the desktop leaf stack. Stacking is by translateZ (z-index is
-   ignored under preserve-3d). Kept SMALL: the counter-scale removes the apparent
-   magnification, but an off-center leaf also shifts radially with z (parallax),
-   and that residual shift scales with z — small z keeps it sub-pixel. The order
-   is all that matters for sorting; compositor transforms sort sub-pixel deltas. */
+   ignored under preserve-3d). With the counter-scale taken about the spine (see
+   `depth`) a slot moves nothing on screen; the order is all that matters for
+   sorting, and compositor transforms sort sub-pixel deltas. */
 const Z_LEAF4 = 0.75;     // comms/backside leaf, resting (deepest right leaf)
 const Z_LEAF3 = 1;        // campaign-index/comms-left leaf, resting (under leaf2)
 const Z_LEAF2 = 2;        // Sec01/campaign-track leaf
@@ -863,14 +862,27 @@ const Z_LEAF3_TOP = 3;    // leaf3 lifted while turned past leaf2 (comms spread)
 const Z_BACK_TOP = 4;     // backside leaf (leaf4) lifted on top of the stack
 const Z_COVER_DOWN = 0.5; // cover sunk flat under the right leaves
 const Z_COVER_UP = 6;     // cover closed / opening, above everything
+const Z_SEAM = 0.25;      // the stock backing the spine seam, under every leaf
 const Z_GLOW = 0;         // the book's glow, flat under every leaf
 
-/* Depth wrapper transform: push to depth z AND counter-scale by (P-z)/P so the
-   page's APPARENT size is constant at every depth — without this, a leaf pushed
-   toward the viewer (higher z) renders larger and visibly "grows" as it changes
-   depth during a turn. The two cancel: perspective magnifies by P/(P-z), the
-   scale shrinks by (P-z)/P. */
+/* Depth transform: push to depth z AND counter-scale by (P-z)/P so the page's
+   APPARENT size is constant at every depth — without this, a leaf pushed toward
+   the viewer (higher z) renders larger and visibly "grows" as it changes depth
+   during a turn. The two cancel: perspective magnifies by P/(P-z), the scale
+   shrinks by (P-z)/P. Alone it suits only a layer centred on the spine (the
+   spine, the seam, the glow at z 0), whose own centre is the perspective
+   origin. */
 const tz = (z: number) => `translateZ(${z}px) scale(${(SCENE_PERSPECTIVE - z) / SCENE_PERSPECTIVE})`;
+
+/* A half's depth wrapper. The magnification and the counter-scale cancel only
+   about the perspective origin — the spine — so the scale is taken about the
+   wrapper's spine edge. About its own centre, a page would slide sideways with
+   its depth (by about a quarter-spread × z/(P-z)), and two facing pages at
+   different depths would part at the spine, the canvas showing through. */
+const depth = (z: number, half: 'left' | 'right'): React.CSSProperties => ({
+  transform: tz(z),
+  transformOrigin: half === 'left' ? 'right center' : 'left center',
+});
 
 /* Where a turning leaf's free edge falls on screen, in leaf widths from the
    spine (+ right, − left), for a leaf `leafPx` wide turned `deg` about the
@@ -1507,6 +1519,20 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
               style={{ boxShadow: BOOK_GLOW, transform: tz(Z_GLOW), left: glowLeft, right: glowRight }}
             />
 
+            {/* Seam backing — a hairline of stock under the spine, beneath every
+                leaf, so the two facing pages' antialiased edges, which meet
+                there, blend into stock rather than the canvas. Only while a
+                page lies flat on both halves (the cover folded down, the back
+                leaf home): shut, or on the backside, it would sit beside the
+                lone sheet's spine edge. */}
+            {coverDown && !backShown && !leaf4OnTop && (
+              <div
+                aria-hidden="true"
+                className="absolute inset-y-0 left-1/2 -ml-px w-0.5 pointer-events-none"
+                style={{ backgroundColor: PAGE_STOCK, transform: tz(Z_SEAM) }}
+              />
+            )}
+
             {/* leaf1 — left page. Front = the chamber; back = book cover. Closed
                 (inactive) the leaf lies on the right half showing the cover;
                 on entry it folds open around the spine. It never moves for
@@ -1519,7 +1545,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
                 on its own half when its leaf turns, at its depth slot, so it
                 would sit in front of the page beneath and take its pointer (leaf
                 2's wrapper over page 004 once Sec. 01 has turned). */}
-            <div className="relative w-1/2 h-full pointer-events-none" style={{ transformStyle: 'preserve-3d', transform: tz(coverDown ? Z_COVER_DOWN : Z_COVER_UP) }}>
+            <div className="relative w-1/2 h-full pointer-events-none" style={{ transformStyle: 'preserve-3d', ...depth(coverDown ? Z_COVER_DOWN : Z_COVER_UP, 'left') }}>
             <motion.div
               className="absolute inset-0 pointer-events-none"
               style={{ transformOrigin: 'right center', transformStyle: 'preserve-3d', rotateY: coverTurn }}
@@ -1576,7 +1602,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
                   BackCoverDesign. Depth lives on the non-rotating wrapper
                   (translateZ) so culling stays correct and stacking holds
                   through the turn. */}
-              <div className="absolute inset-0 pointer-events-none" style={{ transformStyle: 'preserve-3d', transform: tz(leaf4OnTop ? Z_BACK_TOP : Z_LEAF4) }}>
+              <div className="absolute inset-0 pointer-events-none" style={{ transformStyle: 'preserve-3d', ...depth(leaf4OnTop ? Z_BACK_TOP : Z_LEAF4, 'right') }}>
               <motion.div
                 className="absolute inset-0 pointer-events-none"
                 style={{ transformOrigin: 'left center', transformStyle: 'preserve-3d', rotateY: leaf4Turn }}
@@ -1605,7 +1631,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
                   (page ≥ 2) AND on the way to the backside. Lifted to
                   Z_LEAF3_TOP while turned so its back paints over leaf2's
                   turned back (003) on the left half; dropped once fully home. */}
-              <div className="absolute inset-0 pointer-events-none" style={{ transformStyle: 'preserve-3d', transform: tz(leaf3OnTop ? Z_LEAF3_TOP : Z_LEAF3) }}>
+              <div className="absolute inset-0 pointer-events-none" style={{ transformStyle: 'preserve-3d', ...depth(leaf3OnTop ? Z_LEAF3_TOP : Z_LEAF3, 'right') }}>
               <motion.div
                 className="absolute inset-0 pointer-events-none"
                 style={{ transformOrigin: 'left center', transformStyle: 'preserve-3d' }}
@@ -1641,7 +1667,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
                   for both halves and stable through the turn. Turns for a scroll
                   page-flip (page ≥ 1) AND on the backside stop. Non-rotating
                   wrapper carries its depth slot. */}
-              <div className="absolute inset-0 pointer-events-none" style={{ transformStyle: 'preserve-3d', transform: tz(Z_LEAF2) }}>
+              <div className="absolute inset-0 pointer-events-none" style={{ transformStyle: 'preserve-3d', ...depth(Z_LEAF2, 'right') }}>
               <motion.div
                 className="absolute inset-0 pointer-events-none"
                 style={{ transformOrigin: 'left center', transformStyle: 'preserve-3d' }}
