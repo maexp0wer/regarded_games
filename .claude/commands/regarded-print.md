@@ -208,21 +208,22 @@ and carries no variable information.
 - A concentric rule ladder in from the edge: **rope 12 · hairline 20.5 · microprint 28.5 ·
   field 38**. Four rings is the house cadence; keep the ~8px steps if you build another.
 - Rosette band around the coin's well, then a plain `INK` circle at the well's lip.
-- The vortex is drawn on **its own layer** and the coin's well and both wordmark halos are erased
-  out of it with `destination-out`, so type and mark sit on clean stock rather than over line-art.
-  Do this rather than drawing a panel behind the type.
+- The vortex is drawn on **its own layer** and the coin's well is erased out of it with
+  `destination-out`, so the mark sits on clean stock rather than over line-art. Do this rather
+  than drawing a panel behind it. The wordmarks are **not** haloed: the vortex runs right up to
+  the letters.
 - **The wordmark prints twice, upright above the mark and inverted below it**, so the plate
   survives being turned around. Anything Tier A should read from both ends.
 - Foil on the braid and the microprint only — the frame, never the field.
 
 **The rulebook covers** (`Rulebook.tsx` + `coverPlateArt.ts`) are Plates built the dialled-down
 way: stock edge to edge with the Note's **double rule** for an edge (no chassis, no braid, no
-microprint), the vortex inside it erased in halos round the type, and the type placed at fixed
-shares of the cover's height so the halos land under it at every size. The back runs the
-Note's guilloché band across its middle with the edition cartouche on it; the vortex **fades**
-toward the band over a short, even distance that follows the band's own outline (stepped
-erasures, so no canvas filter), and the band and the cartouche's outer rule are the cover's
-foil. The back reads one way up: no inverted wordmark. The pages between the covers are
+microprint). On the front the vortex is erased in halos round the type, which is placed at
+fixed shares of the cover's height so the halos land under it at every size; the back's
+wordmark and title imprint print straight over the vortex, unhaloed, as on the deck back. The back runs the
+Note's guilloché band across its middle with the edition cartouche on it; the vortex fills
+the whole field and runs on under the band, and the band and the cartouche's outer rule are
+the cover's foil. The back reads one way up: no inverted wordmark. The pages between the covers are
 printed on the same stock (`PAGE_STOCK === COVER_STOCK`, owned by `coverPlateArt.ts`): the
 book's own `#161322`, the dark `--color-card`, a shade lighter than the deck back's `#0D0B14`.
 The whole book glows in the sunset (`BOOK_GLOW`, the deck back's halo at twice its rest alpha)
@@ -262,13 +263,15 @@ seals, dividers.
   larger on a big screen, never under 48px (tap target). The frame and the well keep their px
   at every size. Where a pair would wrap on a phone, stack it in a column at equal width
   instead.
-- **Primary** = the frame struck in the sunset (built from tokens) under the sheen, round a
-  well of the literal stock `#0D0B14` with a gold hairline (`rgba(255,195,0,0.25)`); the label
-  in the sunset lifted a step (`#B577F2 → #F0408A → #FFA833 → #FFD447`), literal like the well
-  it reads on. Glow at rest (`opacity-30` → `85` on hover). **Secondary** = the same build in
-  pewter (picked per theme), round a `card` well with a `text2/25` hairline; label in `text2`,
-  `text` on hover, no rest glow, a neutral one on hover. No foil on either. One primary per
-  view.
+- **Both notes share one well**: `card2` on the light page (a step under the white card),
+  `card` on the dark one, with a soft `inset 0 0 8px rgba(0,0,0,0.18)` recess. Only the
+  hairline differs.
+- **Primary** = the frame struck in the sunset (built from tokens) under the sheen, a `gold/25`
+  hairline round the well; the label in the theme's sunset on the light card, and on the dark
+  card the sunset lifted a step (`#B577F2 → #F0408A → #FFA833 → #FFD447`) so it holds. Glow at
+  rest (`opacity-30` → `85` on hover). **Secondary** = the same build in pewter (picked per
+  theme), a `text2/25` hairline; label in `text2`, `text` on hover, **no glow at all**. No foil
+  on either. One primary per view.
 - A `round` Note (a coin of stock for an icon, 36–44px on the same curve, icon at half size)
   keeps the older print build: stock edged with a single thin ring (`renderNoteCoinRim`), no
   frame, foil on the ring and the icon on hover, and the label colour on the icon. Draw rings on canvas, never as a CSS

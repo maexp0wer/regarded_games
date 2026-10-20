@@ -204,20 +204,18 @@ function CoverPlate({ active, halos, back = false }: { active: boolean; halos: r
   );
 }
 
-/* Where each cover's type sits, as a share of the cover — the vortex is erased
-   in a soft halo round these so every block prints on clean stock. The covers
-   place their blocks at the same shares of their height (top-[12%] and so on),
-   so they hold at every size the book is drawn at. The back's band clears its
-   own path through the vortex (coverPlateArt.ts). */
+/* Where the front cover's type sits, as a share of the cover — the vortex is
+   erased in a soft halo round these so every block prints on clean stock. The
+   cover places its blocks at the same shares of its height (top-[12%] and so
+   on), so they hold at every size the book is drawn at. The back has none: the
+   vortex fills its whole field, and its wordmark, title imprint and band all
+   print straight over it (coverPlateArt.ts). */
 const FRONT_COVER_HALOS: readonly PlateHalo[] = [
   { cx: 0.5, cy: 0.12, rx: 0.38, ry: 0.055 },  // wordmark
   { cx: 0.5, cy: 0.5, rx: 0.38, ry: 0.22 },    // seal + title block
   { cx: 0.5, cy: 0.87, rx: 0.42, ry: 0.06 },   // printed strip
 ];
-const BACK_COVER_HALOS: readonly PlateHalo[] = [
-  { cx: 0.5, cy: 0.13, rx: 0.38, ry: 0.055 },  // wordmark
-  { cx: 0.5, cy: 0.87, rx: 0.44, ry: 0.055 },  // title imprint
-];
+const BACK_COVER_HALOS: readonly PlateHalo[] = [];
 
 /* The house wordmark, set as on the deck back. Smaller below lg, so the back's
    longer title imprint fits a phone-width cover inside its rules. */

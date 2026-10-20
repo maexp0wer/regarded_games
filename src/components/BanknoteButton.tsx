@@ -9,13 +9,13 @@ import { renderNoteCoinRim } from '@/lib/noteButtonArt';
    A note (the default) is a frame of struck metal round a recessed well, with
    the label set in the well. No corner brackets and no field: the frame and
    the well are the whole of its ornament.
+   Both notes set their label in the same well: card2 on the light page, card
+   on the dark one.
    - primary (Secure Your Stake): the frame struck in the sunset under a
-     metallic sheen, round a well of the deck's stock, literal so it stays dark
-     in both themes. The label is inked in the sunset lifted a step so it holds
-     on that stock. It glows in the sunset at rest and brighter on hover.
-   - secondary (Docs): the same build struck in pewter round a well of the
-     page's card. The label is in the muted (text2) ink and comes up to the
-     text colour on hover, with a neutral text2 glow.
+     metallic sheen. The label is inked in the sunset — on the dark card lifted
+     a step so it holds. It glows in the sunset at rest and brighter on hover.
+   - secondary (Docs): the same build struck in pewter. The label is in the
+     muted (text2) ink and comes up to the text colour on hover. No glow.
    On hover a glint sweeps across the frame; with reduced motion it doesn't.
 
    `round` makes a coin of stock for an icon (give it an `aria-label`), edged
@@ -25,9 +25,9 @@ import { renderNoteCoinRim } from '@/lib/noteButtonArt';
    toggle) it has no glow at rest; hover brings up the stake note's sunset
    glow. Hover turns the ring and the icon to foil under the cursor.
 
-   Unlike the deck back these follow the page theme: every colour but the
-   primary's well and label is a theme token, or picked per theme. All of them
-   lift on hover, except with reduced motion. */
+   Unlike the deck back these follow the page theme: every colour is a theme
+   token, or picked per theme. All of them lift on hover, except with reduced
+   motion. */
 
 /* Built from the colour tokens rather than --sunset: that token resolves its
    colours where it's declared, so it would ignore a .dark set below <html>. */
@@ -40,7 +40,9 @@ const SUNSET = 'linear-gradient(90deg, var(--color-purple) 0%, var(--color-magen
    Links tiles (Rulebook.tsx), which are struck as secondary notes. */
 const SHEEN =
   'linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(255, 255, 255, 0.36) 28%, rgba(0, 0, 0, 0.06) 52%, rgba(255, 255, 255, 0.3) 76%, rgba(0, 0, 0, 0.32) 100%)';
-const PEWTER_LIGHT = 'linear-gradient(135deg, #B3AEC6 0%, #F4F3F8 28%, #CBC6DA 52%, #F4F3F8 76%, #B3AEC6 100%)';
+/* The light pewter is a mid-tone slate around the label's text2 ink, so the
+   frame holds on the pale page with the weight of the primary's sunset. */
+const PEWTER_LIGHT = 'linear-gradient(135deg, #5A5379 0%, #9C96B8 28%, #6A6390 52%, #9C96B8 76%, #5A5379 100%)';
 export const PEWTER_DARK = 'linear-gradient(135deg, #2A2540 0%, #6E6790 28%, #3A3452 52%, #6E6790 76%, #2A2540 100%)';
 export const STRUCK_EDGE = {
   primary: 'inset 0 0 0 1px rgba(255, 255, 255, 0.22), inset 0 0 6px rgba(0, 0, 0, 0.45)',
@@ -48,10 +50,9 @@ export const STRUCK_EDGE = {
 };
 /* The cards' paper grain, a touch heavier at this size. */
 export const TOOTH = 'repeating-linear-gradient(45deg, transparent 0px, transparent 2px, rgba(0, 0, 0, 0.1) 2px, rgba(0, 0, 0, 0.1) 4px)';
-/* The primary's well is the deck's stock and its label the sunset lifted a
-   step to read on it, both literal like the card faces' wells. */
-const WELL_STOCK = '#0D0B14';
-const WELL_LABEL = 'linear-gradient(90deg, #B577F2 0%, #F0408A 45%, #FFA833 75%, #FFD447 100%)';
+/* The primary's label on the dark card: the dark sunset lifted a step, so it
+   reads on the well. On the light card it takes the theme's own sunset. */
+const LABEL_DARK = 'linear-gradient(90deg, #B577F2 0%, #F0408A 45%, #FFA833 75%, #FFD447 100%)';
 
 /* The deck back's foil, rescaled to the 36-44px coin: a spectrum cycle every
    70px, bands that slide FOIL_TRAVEL end to end as the cursor crosses the
@@ -193,13 +194,11 @@ export default function BanknoteButton({
   const shape = round
     ? 'size-[clamp(36px,1.2vw_+_27px,44px)] rounded-full [&_svg]:size-[clamp(18px,0.6vw_+_13.5px,22px)]'
     : `h-[clamp(48px,2.4vw_+_30px,64px)] text-[length:clamp(13px,0.2vw_+_12px,15px)] rounded-[9px] ${primary ? 'px-[3.15em]' : 'px-[2.3em]'}`;
-  const halo = round
-    ? `rounded-full ${primary ? 'opacity-0 group-hover:opacity-90' : 'bg-text2 opacity-0 group-hover:opacity-40'}`
-    : `rounded-[10px] ${primary ? 'opacity-30 group-hover:opacity-85' : 'bg-text2 opacity-0 group-hover:opacity-35'}`;
+  const halo = round ? 'rounded-full opacity-0 group-hover:opacity-90' : 'rounded-[10px] opacity-30 group-hover:opacity-85';
   const labelInk = round
     ? 'text-text/85 group-hover:text-text'
     : primary
-      ? 'bg-clip-text text-transparent'
+      ? 'bg-clip-text text-transparent bg-(image:--label-ink) in-[.dark]:bg-(image:--label-ink-dark)'
       : 'text-text2 group-hover:text-text';
   return (
     <button
@@ -211,12 +210,14 @@ export default function BanknoteButton({
         transition-[translate] duration-250 hover:-translate-y-0.5 active:translate-y-px motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:translate-y-0
         focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-text2`}
     >
-      {/* Halo: a blurred copy of the button's footprint behind it */}
-      <span
-        aria-hidden="true"
-        className={`absolute inset-1 blur-lg pointer-events-none transition-opacity duration-450 ${halo}`}
-        style={primary ? { backgroundImage: SUNSET } : undefined}
-      />
+      {/* Halo: a blurred copy of the button's footprint behind it. Primary only. */}
+      {primary && (
+        <span
+          aria-hidden="true"
+          className={`absolute inset-1 blur-lg pointer-events-none transition-opacity duration-450 ${halo}`}
+          style={{ backgroundImage: SUNSET }}
+        />
+      )}
       {round ? (
         <>
           {/* Stock, edged with the ring */}
@@ -258,15 +259,15 @@ export default function BanknoteButton({
           <span aria-hidden="true" className="absolute inset-0 rounded-[9px] overflow-hidden pointer-events-none motion-reduce:hidden">
             <span className="absolute -inset-y-3 -left-22.5 w-14 skew-x-[-22deg] bg-linear-to-r from-white/0 via-white/60 to-white/0 transition-[left] duration-900 group-hover:left-[calc(100%+40px)]" />
           </span>
-          {/* Well: recessed into the frame, with a faint bevel inside its edge */}
+          {/* Well: recessed into the frame, with a faint bevel inside its edge.
+              The same on both notes — card2 on the light page, a step under
+              the white card, and card on the dark one; the primary's edge
+              takes a gold tint. */}
           <span
             aria-hidden="true"
-            className={`absolute inset-1.25 rounded-[5px] border pointer-events-none ${
-              primary
-                ? 'shadow-[inset_0_0_12px_rgba(0,0,0,0.6),inset_0_0_3px_rgba(255,255,255,0.2)]'
-                : 'bg-card border-text2/25 shadow-[inset_0_0_8px_rgba(0,0,0,0.18)]'
+            className={`absolute inset-1.25 rounded-[5px] border bg-card2 in-[.dark]:bg-card shadow-[inset_0_0_8px_rgba(0,0,0,0.18)] pointer-events-none ${
+              primary ? 'border-gold/25' : 'border-text2/25'
             }`}
-            style={primary ? { backgroundColor: WELL_STOCK, borderColor: 'rgba(255, 195, 0, 0.25)' } : undefined}
           >
             <span className="absolute inset-0.75 rounded-[3px] border border-white/5" />
           </span>
@@ -275,7 +276,7 @@ export default function BanknoteButton({
       <span
         ref={labelRef}
         className={`relative flex items-center justify-center font-display font-black leading-none uppercase tracking-[0.12em] whitespace-nowrap transition-colors duration-300 ${labelInk}`}
-        style={primary && !round ? { backgroundImage: WELL_LABEL } : undefined}
+        style={primary && !round ? ({ '--label-ink': SUNSET, '--label-ink-dark': LABEL_DARK } as React.CSSProperties) : undefined}
       >
         {children}
         {round && <Foil ref={foilRef} primary={primary} />}

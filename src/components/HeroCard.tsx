@@ -1,11 +1,7 @@
 // src/components/HeroCard.tsx
 import { motion } from 'framer-motion';
 import React, { useEffect, useId, useRef, useState } from 'react';
-import {
-  CARD_BACK_WORDMARK_Y,
-  drawCardBackArt,
-  renderCardBackFoilMask,
-} from '@/lib/cardBackArt';
+import { drawCardBackArt, renderCardBackFoilMask } from '@/lib/cardBackArt';
 import { drawCardHeaderGuilloche } from '@/lib/cardFrontArt';
 import FoilText from '@/components/FoilText';
 import { FOIL_REST, trackFoil } from '@/lib/holoFoil';
@@ -32,6 +28,7 @@ const BACK_WORDMARK = '#D6CFEA';                 // house wordmark
 const BACK_GLOW_RGB = '255, 140, 0';             // card glow, chassis border
 const BACK_CHASSIS = 'linear-gradient(135deg, #2e0854 0%, #9D4EDD 24%, #8b0054 48%, #FF8C00 74%, #6a501c 100%)';
 const BACK_SUNSET = 'linear-gradient(135deg, #9D4EDD 0%, #D81B60 45%, #FF8C00 75%, #FFC300 100%)';
+const BACK_WORDMARK_Y = 71;                      // px from the panel's top/bottom edge to each wordmark's centre
 
 /* ---- Deck back coin ----
    The coin is the docs link. Its rim says so in print — DOCUMENTATION — so the
@@ -554,9 +551,9 @@ export default function HeroCard({
   );
 
   return (
-    <div 
-      className="w-full relative group mx-auto" 
-      style={{ perspective: 1200, maxWidth, height }} 
+    <div
+      className="w-full relative group mx-auto"
+      style={{ perspective: 1200, maxWidth, height }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -759,18 +756,18 @@ export default function HeroCard({
                 <CardBackArt active={isFlipped} />
 
                 {/* House wordmark — upright above the coin, on its head below it, so
-                    it survives turning the card around. The line-art is erased in a
-                    halo around the same centre line (CARD_BACK_WORDMARK_Y). */}
+                    it survives turning the card around. Printed straight over the
+                    vortex. */}
                 <span
                   className="absolute inset-x-0 flex justify-center -translate-y-1/2 pl-[0.3em] text-[17px] leading-none font-black uppercase tracking-[0.3em] pointer-events-none"
-                  style={{ top: `${CARD_BACK_WORDMARK_Y}px`, fontFamily: 'var(--font-display)', color: BACK_WORDMARK }}
+                  style={{ top: `${BACK_WORDMARK_Y}px`, fontFamily: 'var(--font-display)', color: BACK_WORDMARK }}
                 >
                   Regarded Games
                 </span>
                 <span
                   aria-hidden="true"
                   className="absolute inset-x-0 flex justify-center translate-y-1/2 rotate-180 pl-[0.3em] text-[17px] leading-none font-black uppercase tracking-[0.3em] pointer-events-none"
-                  style={{ bottom: `${CARD_BACK_WORDMARK_Y}px`, fontFamily: 'var(--font-display)', color: BACK_WORDMARK }}
+                  style={{ bottom: `${BACK_WORDMARK_Y}px`, fontFamily: 'var(--font-display)', color: BACK_WORDMARK }}
                 >
                   Regarded Games
                 </span>

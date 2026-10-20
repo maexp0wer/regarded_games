@@ -26,11 +26,6 @@ const CARD_BACK_SUNSET_STOPS: ReadonlyArray<readonly [number, string]> = [
   [1, '#FFC300'],
 ];
 
-/* Centre of each wordmark, px in from the panel's top and bottom edge. The
-   vortex is erased in a soft halo around this point so the type sits on clean
-   stock; HeroCard positions the wordmark text from the same number. */
-export const CARD_BACK_WORDMARK_Y = 71;
-
 const INK = '#9E97BD';
 
 /* Printed at a fixed 2x: the hairlines are 0.6px, which smear on a 1x bitmap. */
@@ -170,7 +165,7 @@ export function drawCardBackArt(canvas: HTMLCanvasElement, width: number, height
   const cy = H / 2;
 
   // 1. Vortex: two counter-turning families of log spirals. Drawn on their own
-  //    layer so the coin's well and the wordmark halos can be erased out of it.
+  //    layer so the coin's well can be erased out of it.
   const layer = document.createElement('canvas');
   const l = prepareCanvas(layer, W, H);
   if (!l) return;
@@ -213,20 +208,6 @@ export function drawCardBackArt(canvas: HTMLCanvasElement, width: number, height
   l.beginPath();
   l.arc(cx, cy, 100, 0, 2 * Math.PI);
   l.fill();
-  for (const y of [CARD_BACK_WORDMARK_Y, H - CARD_BACK_WORDMARK_Y]) {
-    l.save();
-    l.translate(cx, y);
-    l.scale(1, 40 / 160);
-    const halo = l.createRadialGradient(0, 0, 0, 0, 0, 160);
-    halo.addColorStop(0, 'rgba(0,0,0,1)');
-    halo.addColorStop(0.55, 'rgba(0,0,0,1)');
-    halo.addColorStop(1, 'rgba(0,0,0,0)');
-    l.fillStyle = halo;
-    l.beginPath();
-    l.arc(0, 0, 160, 0, 2 * Math.PI);
-    l.fill();
-    l.restore();
-  }
   ctx.drawImage(layer, 0, 0, W, H);
 
   // 2. Rosette band around the coin's well: three phase-shifted strands.

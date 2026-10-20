@@ -6,13 +6,14 @@ import { canvasToDataUrl, prepareCanvas } from '@/lib/cardBackArt';
    src/lib/cardBackArt.ts) but on the book's own stock, a shade lighter than
    the deck back's, and edged with the double rule, the sunset outside and the
    muted ink inside, in place of the deck back's rope braid and microprint.
-   Inside the rules the deck back's guilloché vortex turns out of the centre,
-   erased in soft halos round the type so every block prints on clean stock.
+   Inside the rules the deck back's guilloché vortex turns out of the centre.
+   On the front it is erased in soft halos round the type so every block prints
+   on clean stock; the back's type prints straight over it, as the deck back's
+   wordmark does.
 
    The back cover runs a guilloché band across its middle, the card header's
-   band woven into a net, carrying the edition cartouche. The vortex fades out
-   toward the band and reaches nothing right at its strands, the same distance
-   all the way round its waves.
+   band woven into a net, carrying the edition cartouche. The vortex runs on
+   under the band, across the whole field.
    The band and the cartouche's outer rule are what the back's holographic foil
    lights (renderCoverFoilMask).
 
@@ -51,11 +52,6 @@ const BAND_FAMILIES = [
   { count: 8, wavelength: 72, amplitude: 39, mirrored: true, lineWidth: 0.6, alpha: 0.4 },
   { count: 6, wavelength: 144, amplitude: 41, mirrored: false, lineWidth: 0.6, alpha: 0.28 },
 ] as const;
-/* How far beyond the band's strands the vortex takes to come back. */
-const BAND_FADE = 14;
-/* The fade is printed as this many stepped erasures, so it needs no canvas
-   filter (which Safari lacks). */
-const BAND_FADE_STEPS = 8;
 
 /** The edition cartouche on the back cover: a box this size centred on the
     cover, with `pad` px of stock cleared round it out of the band. Rulebook sets
@@ -115,49 +111,6 @@ function strokeBand(ctx: CanvasRenderingContext2D, width: number, cy: number, st
   ctx.restore();
 }
 
-/* The furthest any strand swings from the band's centre line at each x across
-   the field, sampled every 2px: the band's real outline. */
-function bandReach(width: number) {
-  const reach: [number, number][] = [];
-  for (let x = FIELD; x <= width - FIELD; x += 2) {
-    let r = 0;
-    for (const family of BAND_FAMILIES) {
-      const swing = family.amplitude * envelope(x, family.mirrored);
-      for (let k = 0; k < family.count; k++) {
-        r = Math.max(r, Math.abs(swing * Math.sin((2 * Math.PI * x) / family.wavelength + (2 * Math.PI * k) / family.count)));
-      }
-    }
-    reach.push([x, r]);
-  }
-  return reach;
-}
-
-/* Erases the vortex round the band so it fades out toward the strands: gone
-   inside the band's outline, back to full strength BAND_FADE px beyond it. Each
-   step erases the outline pushed out a little further, weighted so the layered
-   result climbs evenly. */
-function eraseAroundBand(l: CanvasRenderingContext2D, width: number, cy: number) {
-  const reach = bandReach(width);
-  const step = BAND_FADE / BAND_FADE_STEPS;
-  // What survives just outside step k's outline: 0 inside the band, rising to 1.
-  const kept = (k: number) => (k === 0 ? 0 : k > BAND_FADE_STEPS ? 1 : (k - 0.5) / BAND_FADE_STEPS);
-  l.globalCompositeOperation = 'destination-out';
-  l.fillStyle = '#000';
-  for (let k = 0; k <= BAND_FADE_STEPS; k++) {
-    const offset = k * step;
-    l.globalAlpha = 1 - kept(k) / kept(k + 1);
-    l.beginPath();
-    l.moveTo(0, cy - reach[0][1] - offset);
-    for (const [x, r] of reach) l.lineTo(x, cy - r - offset);
-    l.lineTo(width, cy - reach[reach.length - 1][1] - offset);
-    l.lineTo(width, cy + reach[reach.length - 1][1] + offset);
-    for (let i = reach.length - 1; i >= 0; i--) l.lineTo(reach[i][0], cy + reach[i][1] + offset);
-    l.lineTo(0, cy + reach[0][1] + offset);
-    l.closePath();
-    l.fill();
-  }
-}
-
 function cartoucheBox(width: number, height: number) {
   return { x: (width - CARTOUCHE.width) / 2, y: (height - CARTOUCHE.height) / 2 };
 }
@@ -182,7 +135,7 @@ export function drawCoverPlateArt(
 
   /* 1. Vortex: the deck back's two counter-turning families of log spirals, a
         step stronger than the back's and running right in to the centre. Drawn
-        on its own layer so the halos and the band's fade can be erased out of it. */
+        on its own layer so the front's halos can be erased out of it. */
   const layer = document.createElement('canvas');
   const l = prepareCanvas(layer, W, H);
   if (!l) return;
@@ -229,7 +182,6 @@ export function drawCoverPlateArt(
     l.fill();
     l.restore();
   }
-  if (back) eraseAroundBand(l, W, cy);
   ctx.drawImage(layer, 0, 0, W, H);
 
   // 3. The back's band, and the cartouche printed over its middle.
