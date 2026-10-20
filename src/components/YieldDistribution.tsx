@@ -86,8 +86,9 @@ function AaveGhost({ size = 10 }: { size?: number }) {
 }
 
 interface YieldDistributionProps {
-  /** Play gate, ORed together by the card: the fly-in window, card hover, and
-      below-lg where there is no hover. False freezes the ledger in place. */
+  /** Play gate, set by the card: the fly-in window or card hover, and below lg
+      (no hover) its card being on top of the deck. False freezes the ledger in
+      place. */
   isHovered: boolean;
 }
 

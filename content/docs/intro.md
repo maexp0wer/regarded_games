@@ -232,9 +232,9 @@ every expansion follows the community's direction.
 | Phase                | When         | What happens                                                                                                  |
 | :------------------- | :----------- | :------------------------------------------------------------------------------------------------------------ |
 | **Foundation** | Complete     | Game design, dual-token economics, and the DAO LLC legal structure.                                           |
-| **Build**      | Q1–Q3 2026 | Core smart contracts on Base, the dApp (exchange, terminal, community), and pre-launch community seeding.     |
-| **Testnet**    | Q4 2026      | Public testnet on Base Sepolia, the Genesis quest campaign, the audit competition, and the Execution Council. |
-| **Mainnet**    | Q1 2027      | The RGD launch and Capital Auction, the Genesis airdrop, Season 1, the bug bounty, and live governance.       |
+| **Build**      | 2026       | Core smart contracts on Base, the dApp (exchange, terminal, community), and pre-launch community seeding.     |
+| **Testnet**    | Q1 2027      | Public testnet on Base Sepolia, the Genesis quest campaign, the audit competition, and the Execution Council. |
+| **Mainnet**    | Q2 2027      | The RGD launch and Capital Auction, the Genesis airdrop, Season 1, the bug bounty, and live governance.       |
 | **Expansion**  | Beyond       | DAO-approved new game modes and ecosystem growth.                                                             |
 
 Later seasons aren't fixed in stone: because the players own the rules, the DAO

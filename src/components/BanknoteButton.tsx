@@ -35,17 +35,19 @@ const SUNSET = 'linear-gradient(90deg, var(--color-purple) 0%, var(--color-magen
 
 /* The note's frame: light and shade struck across the metal, laid over its
    ink (the sunset on the primary). The pewter is the secondary's metal, one
-   per theme. The struck edge is a hairline highlight over a soft inner shade. */
+   per theme. The struck edge is a hairline highlight over a soft inner shade.
+   The dark pewter, its edge and the tooth are shared with the rulebook's
+   Links tiles (Rulebook.tsx), which are struck as secondary notes. */
 const SHEEN =
   'linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(255, 255, 255, 0.36) 28%, rgba(0, 0, 0, 0.06) 52%, rgba(255, 255, 255, 0.3) 76%, rgba(0, 0, 0, 0.32) 100%)';
 const PEWTER_LIGHT = 'linear-gradient(135deg, #B3AEC6 0%, #F4F3F8 28%, #CBC6DA 52%, #F4F3F8 76%, #B3AEC6 100%)';
-const PEWTER_DARK = 'linear-gradient(135deg, #2A2540 0%, #6E6790 28%, #3A3452 52%, #6E6790 76%, #2A2540 100%)';
-const STRUCK_EDGE = {
+export const PEWTER_DARK = 'linear-gradient(135deg, #2A2540 0%, #6E6790 28%, #3A3452 52%, #6E6790 76%, #2A2540 100%)';
+export const STRUCK_EDGE = {
   primary: 'inset 0 0 0 1px rgba(255, 255, 255, 0.22), inset 0 0 6px rgba(0, 0, 0, 0.45)',
   secondary: 'inset 0 0 0 1px rgba(255, 255, 255, 0.14), inset 0 0 5px rgba(0, 0, 0, 0.35)',
 };
 /* The cards' paper grain, a touch heavier at this size. */
-const TOOTH = 'repeating-linear-gradient(45deg, transparent 0px, transparent 2px, rgba(0, 0, 0, 0.1) 2px, rgba(0, 0, 0, 0.1) 4px)';
+export const TOOTH = 'repeating-linear-gradient(45deg, transparent 0px, transparent 2px, rgba(0, 0, 0, 0.1) 2px, rgba(0, 0, 0, 0.1) 4px)';
 /* The primary's well is the deck's stock and its label the sunset lifted a
    step to read on it, both literal like the card faces' wells. */
 const WELL_STOCK = '#0D0B14';

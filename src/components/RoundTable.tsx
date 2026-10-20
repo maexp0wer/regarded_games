@@ -55,11 +55,11 @@ import Carlo from '@/components/icons/Carlo.svg';
  *
  * Playback follows the Play deck's cards exactly: `isHovered` gates every
  * timer, so the graphic runs during the section's live window, freezes where
- * it stands, and resumes on hover — where it then runs on indefinitely. The
- * caller ORs in `belowLg` so touch devices, which have no hover to fall back
- * on, simply run it forever. Because the renewal clock only advances while the
- * graphic runs, a column is replaced after twenty to thirty seconds of actual
- * playback rather than of wall time.
+ * it stands, and resumes on hover — where it then runs on indefinitely. Below
+ * lg, where there is no hover to fall back on, the caller runs it for as long
+ * as its card is on top of the deck. Because the renewal clock only advances
+ * while the graphic runs, a column is replaced after twenty to thirty seconds
+ * of actual playback rather than of wall time.
  *
  * No live data and no interaction — the graphic is inert to the pointer, so a
  * click anywhere on it bubbles to the HeroCard and flips the card. Colors are

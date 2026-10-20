@@ -22,10 +22,9 @@ import { motion, AnimatePresence } from 'framer-motion';
  *
  * Playback follows the Play deck's cards: `isHovered` gates the clock, so the
  * graphic runs during the section's live window, freezes exactly where it
- * stands when that window shuts, and resumes from that point on hover. The
- * caller ORs in `belowLg` for touch devices, which have no hover to fall back
- * on and so play the auction straight through. Re-activating a finished run
- * replays it.
+ * stands when that window shuts, and resumes from that point on hover. Below
+ * lg, where there is no hover to fall back on, the caller plays it while its
+ * card is on top of the deck. Re-activating a finished run replays it.
  *
  * No live data. Only the two headline values carry figures — Capital Raised and
  * Final Price, the pair that tells the auction's story; every other value reads

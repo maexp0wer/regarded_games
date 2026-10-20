@@ -1,16 +1,19 @@
 // src/components/Rulebook.tsx
 "use client";
 
-import React, { useState, useEffect, useId, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useId, useRef } from 'react';
 import { motion, useMotionValue, useTransform, animate, type ValueAnimationTransition } from 'framer-motion';
 import { SOCIAL_CHANNELS, type SocialChannel } from '@/config/socials';
 import { DiscourseIcon, XIcon, DiscordIcon, TelegramIcon, GithubIcon } from '@/components/icons/SocialIcons';
 import { useViewportWidth } from '@/hooks/useViewportWidth';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useHoverFocus } from '@/hooks/useHoverFocus';
 import { docsOrigin } from '@/utils/appUrls';
 import { CARTOUCHE, COVER_STOCK, drawCoverPlateArt, type PlateHalo, renderCoverFoilMask } from '@/lib/coverPlateArt';
 import { FOIL_REST, trackFoil } from '@/lib/holoFoil';
 import PowerChamber from '@/components/PowerChamber';
+import CampaignTrack, { HalfStruck } from '@/components/CampaignTrack';
+import { PEWTER_DARK, STRUCK_EDGE, TOOTH } from '@/components/BanknoteButton';
 import {
   ALLOCATIONS,
   COALITIONS,
@@ -20,15 +23,24 @@ import {
   sameFocus,
   type ChamberFocus,
 } from '@/config/distribution';
+import {
+  LIVE_PHASE,
+  MILESTONES,
+  NEXT_MILESTONE,
+  PHASES,
+  focusedPhase,
+  milestonesDone,
+  phaseLit,
+  sameCampaignFocus,
+  type CampaignFocus,
+} from '@/config/campaign';
 
 /* Scroll stops the rulebook occupies inside its landing section, back cover
    included — the LAST stop IS the back cover, reached by scrolling on from the
    final content page (there is no click-to-flip). Consumed by the landing
-   SECTIONS table so the two can never drift. Below lg the single-page mobile
-   book carries one page more: the Campaign Sequence runs across two phone
-   pages. */
+   SECTIONS table so the two can never drift. The single-page phone book runs
+   the same stops as the desktop spread: each chapter takes one phone page. */
 export const RULEBOOK_PAGES = 4;
-export const RULEBOOK_PAGES_BELOW_LG = 5;
 
 /* Docs subdomain base, derived the same way LandingClient + useDocNavigation do:
    the main domain with a `docs.` prefix (e.g. http://docs.localhost:3000 locally,
@@ -44,17 +56,15 @@ const DOCS_URL = docsOrigin(MAIN_DOMAIN);
    their running head as plain titles: they link nowhere. */
 const DOC_LINKS = {
   distribution: `${DOCS_URL}/intro#how-ownership-is-distributed`,
+  campaign: `${DOCS_URL}/intro#the-roadmap`,
 };
 
 interface RulebookProps {
   /** Section is the active scroll-stop — drives the cover fold + the chamber's roll call. */
   active?: boolean;
-  /** Book page from the scroll system. Desktop spread (RULEBOOK_PAGES stops):
-      0 = Distribution, 1 = Campaign, 2 = Links, 3 = back cover. The mobile
-      single-page book runs Campaign across two pages, so below lg it gets one
-      stop more (RULEBOOK_PAGES_BELOW_LG, wired through `pagesBelowLg` in the
-      landing SECTIONS): 0 = Distribution, 1 = Campaign I–II,
-      2 = Campaign III–IV, 3 = Links, 4 = back cover. */
+  /** Book page from the scroll system (RULEBOOK_PAGES stops, the same at
+      every breakpoint): 0 = Distribution, 1 = Campaign, 2 = Links,
+      3 = back cover. */
   page?: number;
   /** Live scroll direction: 1 = scrolling down, -1 = scrolling up. Drives the
       slide-in side and the entry/exit backside flash. */
@@ -398,80 +408,6 @@ function FrontCoverDesign({ active, edge = 'right' }: { active: boolean; edge?: 
   );
 }
 
-/* Campaign Sequence roadmap — mirrors Whitepaper §19. `state` drives the rail
-   node + status pill styling (done = green, live = pulsing gold, upcoming =
-   muted). `when` is the timeframe chip; `items` are the individual milestones,
-   each ticked off (`done`) as it lands — so a live phase shows partial progress. */
-type RoadmapState = 'done' | 'live' | 'upcoming';
-interface RoadmapItem {
-  label: string;
-  done: boolean;
-}
-const ROADMAP_POINTS: {
-  clause: string;
-  phase: string;
-  title: string;
-  when: string;
-  status: string;
-  state: RoadmapState;
-  items: RoadmapItem[];
-}[] = [
-  {
-    clause: '2.1',
-    phase: 'Phase I',
-    title: 'Foundation',
-    when: '2025',
-    status: 'Complete',
-    state: 'done',
-    items: [
-      { label: 'Conceptualisation & game-theory design', done: true },
-      { label: 'Dual-token economic model', done: true },
-      { label: 'DAO LLC legal structure', done: true },
-    ],
-  },
-  {
-    clause: '2.2',
-    phase: 'Phase II',
-    title: 'Build',
-    when: 'Q1–Q3 2026',
-    status: 'In Progress',
-    state: 'live',
-    items: [
-      { label: 'Core smart contracts on Base', done: true },
-      { label: 'dApp build-out (Exchange, Terminal, Community)', done: true },
-      { label: 'Pre-launch community seeding', done: false },
-    ],
-  },
-  {
-    clause: '2.3',
-    phase: 'Phase III',
-    title: 'Testnet',
-    when: 'Q4 2026',
-    status: 'Upcoming',
-    state: 'upcoming',
-    items: [
-      { label: 'Public testnet on Base Sepolia', done: false },
-      { label: 'Community Genesis: testnet quests & Genesis Airdrop', done: false },
-      { label: 'Immunefi audit competition', done: false },
-      { label: 'Execution Council established', done: false },
-    ],
-  },
-  {
-    clause: '2.4',
-    phase: 'Phase IV',
-    title: 'Mainnet',
-    when: 'Q1 2027',
-    status: 'Upcoming',
-    state: 'upcoming',
-    items: [
-      { label: '$RGD TGE & Capital Auction', done: false },
-      { label: 'Genesis Airdrop distributed, market opens', done: false },
-      { label: 'Mainnet launch & Season 1', done: false },
-      { label: 'Hybrid governance (Snapshot + Council)', done: false },
-    ],
-  },
-];
-
 /* Section heading row, rulebook style. */
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
@@ -482,156 +418,147 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* State-driven ink for the rail node and the printed status legend. A page
-   marks state the way print does — by ink weight and by the shape of the mark,
-   not by hue: `done` is struck solid in the text ink, `upcoming` is a hollow
-   ring in the muted rule colour, and gold is spent once per page on the phase
-   actually in hand.
+/* ---- Campaign index ----
+   The track's facing page: the five phases, numbered 1 to 5, each with its
+   timeframe, status and milestones completed, lit together with the track
+   (src/components/CampaignTrack.tsx). A phase's name prints in the text ink
+   once complete, in gold while in progress and in the muted ink while still
+   ahead, so the page tells done from not done at a glance. Hovering a row (on
+   touch, tapping it) focuses it here and on the track, and the rest dims.
 
-   `mark` colours the graphic, `legend` the type. They differ for `live` because
-   gold-as-text needs the `-hover` token to clear 4.5:1 — which is the deeper
-   ochre in light mode and the brighter metallic in dark, so it works both ways
-   round. The tint fills, coloured rings and glows this used to carry are gone;
-   a content page holds no fills in the accent. */
-const ROADMAP_STATE_STYLE: Record<RoadmapState, { mark: string; legend: string }> = {
-  done: { mark: 'var(--color-text)', legend: 'var(--color-text2)' },
-  live: { mark: 'var(--color-gold)', legend: 'var(--color-gold-hover)' },
-  upcoming: { mark: 'var(--color-border2)', legend: 'var(--color-text2)' },
-};
+   Beneath the rows, a panel of fixed height lists the milestones of the
+   focused phase, or of the phase in progress at rest, so the current
+   milestones never need a tap and nothing above the panel reflows. A
+   completed milestone is ticked solid (gold in the phase in progress), the
+   one in progress is half struck (the coin's mark on the track), and an
+   upcoming one is a hollow ring with its label in the muted ink.
 
-/* A single milestone tick: a small disc struck solid in the text ink with a
-   centred check when done, an empty hollow ring when still pending. Display
-   only — reflects real progress. The check svg is `block` + viewBox-fitted so
-   it sits cleanly inside the circle (no inline-svg baseline gap, no overflow).
-
-   The green fill and its 3px tint halo are gone: green is a trading signal on
-   the terminal side, and a halo is a glow on a content surface. Done/pending
-   now reads off solid-vs-hollow, which survives both themes and greyscale. */
-function MilestoneCheck({ item }: { item: RoadmapItem }) {
-  return (
-    <li className="flex items-start gap-2.5">
-      {item.done ? (
-        <span
-          className="grid place-items-center w-3.5 h-3.5 rounded-full shrink-0 mt-1"
-          style={{ backgroundColor: 'var(--color-text)' }}
-        >
-          <svg viewBox="0 0 10 10" className="block w-2 h-2" fill="none" stroke={PAGE_STOCK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M2 5.2 L4.2 7.4 L8 3" />
-          </svg>
-        </span>
-      ) : (
-        <span
-          className="w-3.5 h-3.5 rounded-full shrink-0 mt-1 border"
-          style={{ borderColor: 'var(--color-border2)' }}
-        />
-      )}
-      <span
-        className="font-sans text-[13px] leading-snug"
-        style={{ color: item.done ? 'var(--color-text)' : 'var(--color-text2)' }}
-      >
-        {item.label}
-      </span>
-    </li>
-  );
+   `compact` is the cut for the single-page book, where the index shares the
+   page with the track above it: one line per phase over the same panel. */
+function phaseInk(phase: number) {
+  const { state } = PHASES[phase];
+  return state === 'live' ? 'text-gold-hover' : state === 'complete' ? 'text-text' : 'text-text2';
 }
 
-/* Rail node: the larger phase marker. Done is struck solid with a tick, the
-   live phase solid with a punched centre, an upcoming one a hollow ring.
-
-   Nothing here animates. A printed page is print at rest, and the ping the live
-   node used to throw — plus its 8px glow and the done node's 2px halo — were
-   terminal idioms that had wandered onto paper: they pulled the eye off the
-   prose the page exists to carry, on every view, forever. */
-function RailNode({ state }: { state: RoadmapState }) {
-  const s = ROADMAP_STATE_STYLE[state];
-  if (state === 'upcoming') {
+function MilestoneTick({ state, live }: { state: 'done' | 'current' | 'open'; live: boolean }) {
+  if (state === 'current') {
     return (
-      <span
-        className="w-4.25 h-4.25 rounded-full shrink-0 border-2"
-        style={{ backgroundColor: PAGE_STOCK, borderColor: s.mark }}
-      />
+      <svg viewBox="-7 -7 14 14" aria-hidden="true" className="block size-3.5 shrink-0 mt-0.75">
+        <HalfStruck r={6.2} />
+      </svg>
     );
   }
+  if (state === 'open') return <span className="size-3.5 rounded-full shrink-0 mt-0.75 border border-border2" />;
   return (
-    <span className="grid place-items-center w-4.25 h-4.25 rounded-full shrink-0" style={{ backgroundColor: s.mark }}>
-      {state === 'done' ? (
-        <svg viewBox="0 0 12 12" className="block w-2.5 h-2.5" fill="none" stroke={PAGE_STOCK} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 6.3 L5.2 8.4 L9 3.6" />
-        </svg>
-      ) : (
-        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: PAGE_STOCK }} />
-      )}
+    <span className={`grid place-items-center size-3.5 rounded-full shrink-0 mt-0.75 ${live ? 'bg-gold' : 'bg-text'}`}>
+      <svg viewBox="0 0 10 10" className="block size-2" fill="none" stroke={PAGE_STOCK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 5.2 L4.2 7.4 L8 3" />
+      </svg>
     </span>
   );
 }
 
-/* One milestone row on the Campaign Sequence page. */
-function RoadmapEntry({ point, isLast }: { point: (typeof ROADMAP_POINTS)[number]; isLast: boolean }) {
-  const s = ROADMAP_STATE_STYLE[point.state];
-  const live = point.state === 'live';
-  const doneCount = point.items.filter((i) => i.done).length;
-  return (
-    <div className="flex gap-3.5">
-      {/* Rail: node + connector down to the next milestone. The connector below a
-          completed phase is drawn in its accent so the finished run reads solid. */}
-      <div className="flex flex-col items-center pt-px">
-        <RailNode state={point.state} />
-        {/* The connector is a rule, not a status bar — one colour, with the run
-            already walked printed a shade heavier. */}
-        {!isLast && (
-          <span
-            className="w-px flex-1 mt-1"
-            style={{ backgroundColor: 'var(--color-border2)', opacity: point.state === 'done' ? 0.55 : 0.3 }}
-          />
-        )}
+function CampaignIndex({
+  compact = false,
+  focus,
+  onHover,
+  onLeave,
+  onSelect,
+}: {
+  compact?: boolean;
+  focus: CampaignFocus;
+  onHover: (focus: CampaignFocus) => void;
+  onLeave: () => void;
+  onSelect: (focus: CampaignFocus) => void;
+}) {
+  const row = (target: CampaignFocus) => ({
+    onMouseEnter: () => onHover(target),
+    onMouseLeave: onLeave,
+    onClick: () => onSelect(target),
+  });
+  const shown = focusedPhase(focus) ?? Math.max(0, LIVE_PHASE);
+  const phase = PHASES[shown];
+  const first = MILESTONES.findIndex((m) => m.phase === shown);
+  const count = (k: number, of = '') =>
+    PHASES[k].milestones.length ? `${milestonesDone(k)}/${PHASES[k].milestones.length}${of}` : PHASES[k].status;
+
+  const panel = (
+    <div className={`${compact ? 'h-44' : 'h-48 mt-auto'} shrink-0 flex flex-col gap-3 pt-3.5 border-t border-border2`}>
+      <div className="flex items-end gap-1.5">
+        <span className={`font-mono text-[11px] font-black tabular-nums shrink-0 ${phaseInk(shown)}`}>{phase.n}</span>
+        <span className={`font-display font-black text-[13px] uppercase tracking-widest leading-tight shrink-0 ${phaseInk(shown)}`}>{phase.title}</span>
+        <DottedLeader />
+        <span className="font-mono text-[10px] font-bold tabular-nums shrink-0 text-text2">{count(shown, ' completed')}</span>
       </div>
-      <div className="flex flex-col gap-1.5 flex-1 pb-5 min-w-0">
-        {/* Eyebrow: clause + phase tag, the leader, then the timeframe. Set as
-            plain legend type — the dotted leader already carries the eye to the
-            date, which is the whole job the capsule around it was doing. */}
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[11px] font-black tabular-nums shrink-0 tracking-wider" style={{ color: live ? s.legend : 'var(--color-text2)' }}>§ {point.clause}</span>
-          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-text2 opacity-70">{point.phase}</span>
-          <DottedLeader />
-          <span className="font-mono text-[11px] font-bold tabular-nums tracking-wider shrink-0 text-text2">{point.when}</span>
-        </div>
-        {/* Title, printed status legend, progress counter. The title stays in
-            the text ink for every phase but the live one, so the page carries a
-            single accent rather than one per row. */}
-        <div className="flex items-center gap-2">
-          <span
-            className="font-display font-black text-[15px] uppercase tracking-widest leading-tight"
-            style={{ color: live ? s.legend : 'var(--color-text)' }}
-          >
-            {point.title}
-          </span>
-          <span
-            className="font-mono text-[10px] font-black uppercase tracking-[0.2em] shrink-0"
-            style={{ color: s.legend }}
-          >
-            {point.status}
-          </span>
-          <DottedLeader />
-          <span className="font-mono text-[10px] font-bold tabular-nums shrink-0 text-text2 opacity-70">{doneCount}/{point.items.length}</span>
-        </div>
-        {/* Individual milestones, each ticked off as it lands */}
-        <ul className="flex flex-col gap-1.5 mt-0.5">
-          {point.items.map((item, i) => (
-            <MilestoneCheck key={i} item={item} />
-          ))}
+      {phase.milestones.length ? (
+        <ul className="flex flex-col gap-1.75">
+          {phase.milestones.map((m, j) => {
+            const i = first + j;
+            return (
+              <li
+                key={m.label}
+                className={`flex items-start gap-2.5 cursor-default transition-opacity duration-200 ${focus?.kind === 'milestone' && focus.index !== i ? 'opacity-35' : ''}`}
+                {...row({ kind: 'milestone', index: i })}
+              >
+                <MilestoneTick state={m.done ? 'done' : i === NEXT_MILESTONE ? 'current' : 'open'} live={phase.state === 'live'} />
+                <span className={`font-sans text-[13px] leading-snug ${m.done || i === NEXT_MILESTONE ? 'text-text' : 'text-text2'}`}>{m.label}</span>
+              </li>
+            );
+          })}
         </ul>
-      </div>
+      ) : (
+        <p className="font-sans text-[13px] leading-relaxed text-text2">{phase.note}</p>
+      )}
     </div>
   );
-}
 
-function RoadmapList({ from, to }: { from: number; to: number }) {
-  const points = ROADMAP_POINTS.slice(from, to);
+  if (compact) {
+    return (
+      <div className="flex flex-col gap-4 w-full">
+        <div className="flex flex-col gap-2.5">
+          {PHASES.map((p, k) => (
+            <div
+              key={p.title}
+              className={`flex items-end gap-1.5 py-0.5 cursor-default transition-opacity duration-200 ${phaseLit(focus, k) ? '' : 'opacity-35'}`}
+              {...row({ kind: 'phase', index: k })}
+            >
+              <span className={`font-mono text-[11px] font-black tabular-nums shrink-0 ${phaseInk(k)}`}>{p.n}</span>
+              <span className={`font-display font-black text-[13px] uppercase tracking-widest leading-tight shrink-0 ${phaseInk(k)}`}>{p.title}</span>
+              <DottedLeader />
+              <span className="font-mono text-[10px] font-bold tabular-nums shrink-0 text-text2">{p.milestones.length ? count(k) : p.when}</span>
+            </div>
+          ))}
+        </div>
+        {panel}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col">
-      {points.map((p, i) => (
-        <RoadmapEntry key={p.clause} point={p} isLast={i === points.length - 1} />
-      ))}
+    <div className="relative flex flex-col grow gap-4.5 w-full">
+      <SectionHeading>Campaign Sequence</SectionHeading>
+      <div className="flex flex-col">
+        {PHASES.map((p, k) => (
+          <div
+            key={p.title}
+            className={`flex flex-col gap-1.5 cursor-default transition-opacity duration-200 ${k ? 'py-2.75 border-t border-border' : 'pb-2.75'} ${phaseLit(focus, k) ? '' : 'opacity-35'}`}
+            {...row({ kind: 'phase', index: k })}
+          >
+            <div className="flex items-end gap-2">
+              <span className={`font-mono text-[11px] font-black uppercase tracking-wider shrink-0 ${p.state === 'live' ? 'text-gold-hover' : 'text-text2'}`}>Phase {p.n}</span>
+              <DottedLeader />
+              <span className="font-mono text-[11px] font-bold tabular-nums tracking-wider shrink-0 text-text2">{p.when}</span>
+            </div>
+            <div className="flex items-end gap-2">
+              <span className={`font-display font-black text-[15px] uppercase tracking-widest leading-tight shrink-0 ${phaseInk(k)}`}>{p.title}</span>
+              <span className={`font-mono text-[10px] font-black uppercase tracking-[0.2em] shrink-0 ${p.state === 'live' ? 'text-gold-hover' : 'text-text2'}`}>{p.status}</span>
+              <DottedLeader />
+              <span className="font-mono text-[10px] font-bold tabular-nums shrink-0 text-text2 opacity-80">{p.milestones.length ? count(k) : '—'}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      {panel}
     </div>
   );
 }
@@ -743,39 +670,7 @@ function PageFace({
   );
 }
 
-const roadmapLeftContent = (
-  <div className="flex flex-col flex-grow gap-3 w-full">
-    <SectionHeading>Sec. 02 — Campaign Sequence</SectionHeading>
-    <RoadmapList from={0} to={2} />
-  </div>
-);
-
-const roadmapRightContent = (
-  <div className="flex flex-col flex-grow gap-3 w-full">
-    <SectionHeading>Sec. 02 — Continued</SectionHeading>
-    <RoadmapList from={2} to={4} />
-  </div>
-);
-
-/* Mobile runs the same Sec. 02 split as the desktop spread — phases I–II on
-   one page, III–IV on the next — so neither page ever has to scroll. */
-const roadmapMobileContentA = (
-  <div className="flex flex-col flex-grow gap-3 w-full">
-    <SectionHeading>Sec. 02 — Campaign Sequence</SectionHeading>
-    <RoadmapList from={0} to={2} />
-  </div>
-);
-
-const roadmapMobileContentB = (
-  <div className="flex flex-col flex-grow gap-3 w-full">
-    <SectionHeading>Sec. 02 — Continued</SectionHeading>
-    <RoadmapList from={2} to={4} />
-  </div>
-);
-
-/* Brand mark per channel key — struck straight into the row in the muted ink,
-   with no badge behind it: a filled disc in the accent is an accent fill on a
-   content surface, and five of them down a page read as buttons. */
+/* Brand mark per channel key, set in the tile's label ink. */
 const CHANNEL_ICONS: Record<SocialChannel['key'], React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
   discourse: DiscourseIcon,
   x: XIcon,
@@ -784,73 +679,106 @@ const CHANNEL_ICONS: Record<SocialChannel['key'], React.ComponentType<React.SVGP
   github: GithubIcon,
 };
 
-/* One channel row on the Links pages — the brand mark, the clause line with a
-   dotted leader, and the channel's state printed at the end of it: an open
-   channel ends in a gold, underlined "Join ↗"; a pending one in a muted
-   "Coming Soon" legend. */
-function ChannelEntry({ channel, clause }: { channel: SocialChannel; clause: string }) {
-  /* A channel is live purely on whether its URL exists in socials.ts. This used
-     to also require the app to be live, which had it backwards: a forum, a repo
-     or a Discord open during the pre-launch window is exactly when a link
-     matters most. The game's launch state has nothing to do with a chat server.
+/* The landing's secondary (Docs) note's frame, from BanknoteButton. The book
+   renders dark in both themes, so it takes the dark pewter alone. */
+const CHANNEL_FRAME: React.CSSProperties = { backgroundImage: PEWTER_DARK, boxShadow: STRUCK_EDGE.secondary };
 
-     A live entry is printed live the whole way across — mark, clause and name in
-     full ink, tail in gold and underlined — and a pending one is muted end to
-     end. The tail alone used to carry it, and once the gold capsule came off
-     that tail read no louder than "Coming Soon" until you hovered it, which on
-     a touch screen is never. Right now GitHub is the only open channel in
-     socials.ts, so this is the difference between it being findable and it
-     being lost in a column of four dead ones. Gold is spent here and nowhere
-     else on the page: one accent, on the one entry that goes anywhere. */
+/* One channel tile on the Links page, struck as the Docs note is: the pewter
+   frame with the paper tooth, round a recessed card well, and the brand mark
+   over the channel name in the muted ink. No call to action is printed on it.
+
+   A channel is live purely on whether its URL exists in socials.ts: the game's
+   launch state has nothing to do with a chat server, and a forum or a repo
+   open before launch is exactly when the link matters most. A live tile
+   answers the pointer as the Docs note does: a glint sweeps the frame, a
+   neutral halo comes up behind it, the label comes up to the text ink and the
+   tile lifts. It lifts by `top`, not a translate: inside the book's 3D scene
+   Chrome stops hit-testing a transformed layer, so a translated tile would
+   lose the pointer it is lifting for.
+
+   A pending channel is not a link at all: its frame is struck at half
+   strength, its mark is faded, it prints a "Soon" legend under its name, and it
+   does nothing under the pointer. On a touch screen, where nothing hovers, the
+   legend is what tells the dead tiles from the live one. */
+function ChannelTile({ channel, wide }: { channel: SocialChannel; wide: boolean }) {
   const live = channel.href !== '';
   const Icon = CHANNEL_ICONS[channel.key];
-  const ink = live ? 'text-text' : 'text-text2';
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-      <Icon className={`size-4 shrink-0 ${live ? 'text-text' : 'text-text2 opacity-60'}`} />
-      <span className={`font-mono text-[13px] font-black tabular-nums shrink-0 ${ink}`}>§ {clause}</span>
-      <span className={`font-display font-black text-[15px] uppercase tracking-widest leading-tight shrink-0 ${ink}`}>{channel.label}</span>
-      <DottedLeader />
-      {live ? (
-        <a
-          href={channel.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="font-mono text-[11px] font-black uppercase tracking-[0.2em] shrink-0 text-gold-hover
-            underline underline-offset-[3px] decoration-1 transition-colors duration-200
-            hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-hover"
-        >
-          Join ↗
-        </a>
-      ) : (
-        <span className="font-mono text-[11px] font-black uppercase tracking-[0.2em] shrink-0 text-text2 opacity-70">
-          Coming Soon
+  const shape = `relative flex flex-col items-center justify-center gap-2.25 lg:gap-3 h-26 lg:h-[clamp(96px,14vh,140px)] rounded-[9px] ${wide ? 'col-span-2' : ''}`;
+  const labelInk = `text-text2 transition-colors duration-300 ${live ? 'group-hover:text-text' : ''}`;
+
+  const face = (
+    <>
+      {/* Halo: a blurred copy of the tile's footprint behind it */}
+      {live && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-1 rounded-[10px] bg-text2 blur-lg opacity-0 transition-opacity duration-450 group-hover:opacity-35 pointer-events-none"
+        />
+      )}
+      {/* Frame: the pewter, struck */}
+      <span
+        aria-hidden="true"
+        className={`absolute inset-0 rounded-[9px] pointer-events-none ${live ? '' : 'opacity-50'}`}
+        style={CHANNEL_FRAME}
+      />
+      <span
+        aria-hidden="true"
+        className="absolute inset-0 rounded-[9px] pointer-events-none mix-blend-overlay"
+        style={{ backgroundImage: TOOTH }}
+      />
+      {/* Glint: swept across the frame on hover; the well covers its middle */}
+      {live && (
+        <span aria-hidden="true" className="absolute inset-0 rounded-[9px] overflow-hidden pointer-events-none motion-reduce:hidden">
+          <span className="absolute -inset-y-3 -left-22.5 w-14 skew-x-[-22deg] bg-linear-to-r from-white/0 via-white/60 to-white/0 transition-[left] duration-900 group-hover:left-[calc(100%+40px)]" />
         </span>
       )}
-    </div>
+      {/* Well: recessed into the frame, with a faint bevel inside its edge */}
+      <span
+        aria-hidden="true"
+        className="absolute inset-1.25 rounded-[5px] border bg-card border-text2/25 shadow-[inset_0_0_8px_rgba(0,0,0,0.18)] pointer-events-none"
+      >
+        <span className="absolute inset-0.75 rounded-[3px] border border-white/5" />
+      </span>
+
+      <Icon aria-hidden="true" className={`relative size-6 lg:size-7.5 ${labelInk} ${live ? '' : 'opacity-35'}`} />
+      <span className={`relative font-display font-black text-[13px] lg:text-[14px] uppercase leading-none tracking-[0.12em] pl-[0.12em] whitespace-nowrap ${labelInk}`}>
+        {channel.label}
+      </span>
+      {!live && (
+        <span className="relative -mt-0.5 font-mono text-[9px] font-bold uppercase leading-none tracking-[0.2em] pl-[0.2em] text-text2">
+          Soon
+        </span>
+      )}
+    </>
+  );
+
+  if (!live) return <div className={shape}>{face}</div>;
+  return (
+    <a
+      href={channel.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className={`group ${shape} cursor-pointer top-0 transition-[top] duration-250 hover:-top-0.5 active:top-px
+        motion-reduce:transition-none motion-reduce:hover:top-0 motion-reduce:active:top-0
+        focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-text2`}
+    >
+      {face}
+    </a>
   );
 }
 
-/* All five channels, clauses 3.1–3.5, on the left page of the Links spread.
-   The facing page (006) is left blank for now. */
-const commsLeftContent = (
+/* All five channels as tiles, two to a row. Discourse, the house forum, takes
+   the top row whole (socials.ts lists it first, so the grid stays closed). The
+   desktop spread prints this on its left page (005), the facing page (006) left
+   blank for now; the phone book prints it on its own page. The lg: steps on the
+   tile size it for the spread. */
+const commsContent = (
   <div className="flex flex-col flex-grow gap-4 w-full">
     <SectionHeading>Sec. 03 — Links</SectionHeading>
-    <div className="flex flex-col gap-5">
-      {SOCIAL_CHANNELS.map((c, i) => (
-        <ChannelEntry key={c.key} channel={c} clause={`3.${i + 1}`} />
-      ))}
-    </div>
-  </div>
-);
-
-const commsMobileContent = (
-  <div className="flex flex-col flex-grow gap-4 w-full">
-    <SectionHeading>Sec. 03 — Links</SectionHeading>
-    <div className="flex flex-col gap-4">
-      {SOCIAL_CHANNELS.map((c, i) => (
-        <ChannelEntry key={c.key} channel={c} clause={`3.${i + 1}`} />
+    <div className="grid grid-cols-2 gap-2.5 lg:gap-3.5 pt-1">
+      {SOCIAL_CHANNELS.map((c) => (
+        <ChannelTile key={c.key} channel={c} wide={c.key === 'discourse'} />
       ))}
     </div>
   </div>
@@ -931,8 +859,8 @@ const SCENE_PERSPECTIVE = 2200;
    and that residual shift scales with z — small z keeps it sub-pixel. The order
    is all that matters for sorting; compositor transforms sort sub-pixel deltas. */
 const Z_LEAF4 = 0.75;     // comms/backside leaf, resting (deepest right leaf)
-const Z_LEAF3 = 1;        // roadmap-right/comms-left leaf, resting (under leaf2)
-const Z_LEAF2 = 2;        // Sec01/roadmap-left leaf
+const Z_LEAF3 = 1;        // campaign-index/comms-left leaf, resting (under leaf2)
+const Z_LEAF2 = 2;        // Sec01/campaign-track leaf
 const Z_LEAF3_TOP = 3;    // leaf3 lifted while turned past leaf2 (comms spread)
 const Z_BACK_TOP = 4;     // backside leaf (leaf4) lifted on top of the stack
 const Z_COVER_DOWN = 0.5; // cover sunk flat under the right leaves
@@ -962,10 +890,13 @@ const glowPct = (n: number) => `${Number(n.toFixed(3))}%`;
 /* Cover hold + book fold first; the chamber's roll call begins as the page
    settles flat. */
 const CALL_DELAY_MS = 1250;
-/* How long leaving a coalition or allocation waits before the chamber settles
+/* How long leaving a target waits before the chamber or the track settles
    back to rest: long enough to cross the aisle, or the gap between two index
    rows, without flashing the resting readout. */
 const FOCUS_LEAVE_MS = 180;
+
+/* A phone page's turn, which the track's coin waits out before it glides. */
+const M_TURN_MS = 900;
 
 /* Mobile fold-away pose: instead of vanishing at 90°, a turned page swings 270°
    around its left edge onto the BACK of the book, staying visible the whole spin
@@ -1026,9 +957,13 @@ function SubAllocationRow({ name, share, color }: { name: string; share: number;
    `compact` is the cut for the single-page book, where the index shares the
    page with the chamber under it: a coalition per line with its allocations
    set as one wrapped line of chips, and the focused item's explanation in a
-   panel of fixed height beneath, so neither the list nor the chamber above
-   ever reflows. A tap on the panel (or its ✕) closes a pin. At rest the panel
-   says how to read the chamber, in a phone's terms: a tap. */
+   panel beneath. A pin keeps only its own coalition on the list: the dimmed
+   one folds away and the panel takes its room, which the longest terms (an
+   allocation and its sub-allocations) need. The index's height is held by an
+   invisible copy of its resting layout, so the chamber above never reflows. A
+   tap on the panel (or its ✕) closes a pin. At rest the panel says how to
+   read the chamber, in a phone's terms: a tap. A hover never folds the list:
+   the row under the pointer would move out from under it. */
 function DistributionIndex({
   compact = false,
   focus,
@@ -1058,73 +993,86 @@ function DistributionIndex({
       : focus.kind === 'allocation'
         ? ALLOCATIONS[focus.index]
         : { ...COALITIONS[focus.index], ink: null, subs: [] };
-    return (
-      <div className="flex flex-col gap-4 w-full">
-        <div className="flex flex-col gap-2.5">
-          {COALITIONS.map((c, k) => {
-            const first = ALLOCATIONS.findIndex((a) => a.coalition === k);
-            return (
-              <div key={c.name} className={`flex flex-col gap-1.5 ${k ? 'pt-2.5 border-t border-border' : ''}`}>
-                <div className={`flex items-end gap-1.5 cursor-default transition-opacity duration-200 ${coalitionLit(focus, k) ? '' : 'opacity-35'}`} {...row({ kind: 'coalition', index: k })}>
-                  <span className="font-display font-black text-[13px] uppercase tracking-widest leading-tight text-text">{c.name}</span>
-                  <DottedLeader />
-                  <span className="font-mono font-bold text-[15px] tabular-nums shrink-0 text-text">{c.share}%</span>
-                </div>
-                <div className="flex flex-wrap gap-x-4">
-                  {c.allocations.map((a, j) => {
-                    const i = first + j;
-                    return (
-                      <span
-                        key={a.name}
-                        className={`inline-flex items-center gap-1.5 py-1 cursor-default transition-opacity duration-200 ${allocationLit(focus, i) ? '' : 'opacity-35'}`}
-                        {...row({ kind: 'allocation', index: i })}
-                      >
-                        <span className="size-1.75 rounded-full shrink-0" style={{ backgroundColor: a.ink }} />
-                        <span className="font-mono text-[11px] uppercase tracking-wider leading-none text-text">{a.short}</span>
-                        <span className="font-mono text-[11px] tabular-nums leading-none text-text2">{a.share}%</span>
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div
-          className="h-44 flex flex-col gap-2 pt-3 border-t border-border overflow-y-auto custom-scrollbar"
-          onClick={pinned ? onClear : undefined}
-        >
-          {detail ? (
-            <>
-              <div className="flex items-end gap-1.5">
-                {detail.ink && <span className="size-1.75 rounded-full shrink-0 mb-1" style={{ backgroundColor: detail.ink }} />}
-                <span className="font-display font-black text-[13px] uppercase tracking-widest leading-tight text-text">{detail.name}</span>
+    /* The coalition lines in the given order, the first without its rule. */
+    const coalitionLines = (order: number[]) => (
+      <div className="flex flex-col gap-2.5">
+        {order.map((k, n) => {
+          const c = COALITIONS[k];
+          const first = ALLOCATIONS.findIndex((a) => a.coalition === k);
+          return (
+            <div key={c.name} className={`flex flex-col gap-1.5 ${n ? 'pt-2.5 border-t border-border' : ''}`}>
+              <div className={`flex items-end gap-1.5 cursor-default transition-opacity duration-200 ${coalitionLit(focus, k) ? '' : 'opacity-35'}`} {...row({ kind: 'coalition', index: k })}>
+                <span className="font-display font-black text-[13px] uppercase tracking-widest leading-tight text-text">{c.name}</span>
                 <DottedLeader />
-                <span className="font-mono font-bold text-[15px] tabular-nums shrink-0 text-text">{detail.share}%</span>
-                {pinned && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); onClear(); }}
-                    aria-label="Close"
-                    className="font-mono text-[13px] leading-none shrink-0 mb-px px-1 text-text2 hover:text-text transition-colors"
-                  >
-                    ✕
-                  </button>
-                )}
+                <span className="font-mono font-bold text-[15px] tabular-nums shrink-0 text-text">{c.share}%</span>
               </div>
-              <p className="font-sans text-[13px] text-text2 leading-relaxed">{detail.explanation}</p>
-              {detail.subs.length > 0 && (
-                <div className="flex flex-col gap-1.25 pt-1">
-                  {detail.subs.map((sub) => <SubAllocationRow key={sub.name} {...sub} />)}
+              <div className="flex flex-wrap gap-x-4">
+                {c.allocations.map((a, j) => {
+                  const i = first + j;
+                  return (
+                    <span
+                      key={a.name}
+                      className={`inline-flex items-center gap-1.5 py-1 cursor-default transition-opacity duration-200 ${allocationLit(focus, i) ? '' : 'opacity-35'}`}
+                      {...row({ kind: 'allocation', index: i })}
+                    >
+                      <span className="size-1.75 rounded-full shrink-0" style={{ backgroundColor: a.ink }} />
+                      <span className="font-mono text-[11px] uppercase tracking-wider leading-none text-text">{a.short}</span>
+                      <span className="font-mono text-[11px] tabular-nums leading-none text-text2">{a.share}%</span>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+    const all = COALITIONS.map((_, k) => k);
+    const listed = pinned ? all.filter((k) => coalitionLit(focus, k)) : all;
+    return (
+      <div className="relative w-full">
+        <div aria-hidden="true" className="invisible flex flex-col gap-4">
+          {coalitionLines(all)}
+          <div className="h-44" />
+        </div>
+        <div className="absolute inset-0 flex flex-col gap-4">
+          {coalitionLines(listed)}
+
+          <div
+            className="flex-1 min-h-0 flex flex-col gap-2 pt-3 border-t border-border overflow-y-auto custom-scrollbar"
+            onClick={pinned ? onClear : undefined}
+          >
+            {detail ? (
+              <>
+                <div className="flex items-end gap-1.5">
+                  {detail.ink && <span className="size-1.75 rounded-full shrink-0 mb-1" style={{ backgroundColor: detail.ink }} />}
+                  <span className="font-display font-black text-[13px] uppercase tracking-widest leading-tight text-text">{detail.name}</span>
+                  <DottedLeader />
+                  <span className="font-mono font-bold text-[15px] tabular-nums shrink-0 text-text">{detail.share}%</span>
+                  {pinned && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onClear(); }}
+                      aria-label="Close"
+                      className="font-mono text-[13px] leading-none shrink-0 mb-px px-1 text-text2 hover:text-text transition-colors"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
-              )}
-            </>
-          ) : (
-            <p className="m-auto font-mono text-[10px] uppercase tracking-[0.14em] text-center text-text2 opacity-75">
-              Tap a coalition or an allocation to read its terms
-            </p>
-          )}
+                <p className="font-sans text-[13px] text-text2 leading-relaxed">{detail.explanation}</p>
+                {detail.subs.length > 0 && (
+                  <div className="flex flex-col gap-1.25 pt-1">
+                    {detail.subs.map((sub) => <SubAllocationRow key={sub.name} {...sub} />)}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="m-auto font-mono text-[10px] uppercase tracking-[0.14em] text-center text-text2 opacity-75">
+                Tap a coalition or an allocation to read its terms
+              </p>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -1176,53 +1124,15 @@ function DistributionIndex({
 }
 
 const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0, dir = 1, quick = false }) => {
-  /* Chamber focus has two input modes. A pointer that can hover focuses what
-     it is over (in the chamber or on the index), and leaving waits
-     FOCUS_LEAVE_MS before the chamber settles back to rest, a wait the next
-     hover cancels. A touch screen cannot hover, so there a TAP pins a
-     coalition or allocation, and the pin holds until the same one, the ✕, the
-     detail overlay or the empty chamber is tapped. Capability is read after
-     mount — matchMedia does not exist during SSR — defaulting to hover so the
-     desktop first paint is already right. */
-  const [hovered, setHovered] = useState<ChamberFocus>(null);
-  const [pinned, setPinned] = useState<ChamberFocus>(null);
-  const [canHover, setCanHover] = useState(true);
-  useEffect(() => {
-    const mq = window.matchMedia('(hover: hover) and (pointer: fine)');
-    const read = () => setCanHover(mq.matches);
-    read();
-    mq.addEventListener('change', read);
-    return () => mq.removeEventListener('change', read);
-  }, []);
-
-  const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  useEffect(() => () => clearTimeout(leaveTimerRef.current), []);
-  const hoverFocus = useCallback((next: ChamberFocus) => {
-    if (!canHover) return;
-    clearTimeout(leaveTimerRef.current);
-    setHovered(next);
-  }, [canHover]);
-  const leaveFocus = useCallback(() => {
-    if (!canHover) return;
-    clearTimeout(leaveTimerRef.current);
-    leaveTimerRef.current = setTimeout(() => setHovered(null), FOCUS_LEAVE_MS);
-  }, [canHover]);
-  const selectFocus = useCallback((next: ChamberFocus) => {
-    if (canHover) return;
-    setPinned((prev) => (sameFocus(prev, next) ? null : next));
-  }, [canHover]);
-  const clearSelection = useCallback(() => {
-    clearTimeout(leaveTimerRef.current);
-    setPinned(null);
-    setHovered(null);
-  }, []);
-  /* A pin outranks a hover, so a pinned clause survives the pointer wandering. */
-  const focus = pinned ?? hovered;
+  /* The chamber's focus and the track's, each shared by a figure and its
+     index: a pointer focuses what it is over, a tap pins it (useHoverFocus). */
+  const chamberFocus = useHoverFocus<NonNullable<ChamberFocus>>(sameFocus, FOCUS_LEAVE_MS);
+  const campaignFocus = useHoverFocus<NonNullable<CampaignFocus>>(sameCampaignFocus, FOCUS_LEAVE_MS);
+  const { focus, pinned, hover: hoverFocus, leave: leaveFocus, select: selectFocus, clear: clearSelection } = chamberFocus;
+  const clearCampaign = campaignFocus.clear;
 
   /* The book's backside is the section's FINAL scroll stop, not a click target:
-     the last content page turns on to it and scrolling back up turns it home.
-     Which index that is depends on the breakpoint — the single-page mobile book
-     carries one page more than the desktop spread (see RULEBOOK_PAGES*). */
+     the last content page turns on to it and scrolling back up turns it home. */
   const bp = useBreakpoint();
   const belowLg = bp === 'xs' || bp === 'sm' || bp === 'md';
 
@@ -1236,7 +1146,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
   const [parkedRight, setParkedRight] = useState(false);
   const parked = parkedRight && !active;
   const page = parked ? 0 : pageProp;
-  const backPage = (belowLg ? RULEBOOK_PAGES_BELOW_LG : RULEBOOK_PAGES) - 1;
+  const backPage = RULEBOOK_PAGES - 1;
   const pageBack = page >= backPage;
 
   /* The direction the book LEAVES in is frozen the instant it deactivates —
@@ -1357,9 +1267,9 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
   const [leaf3OnTop, setLeaf3OnTop] = useState(false);
   useEffect(() => { if (leaf3Turned) setLeaf3OnTop(true); }, [leaf3Turned]);
 
-  /* A page flip drops any focus — it belongs to the chamber's page alone, and
+  /* A page flip drops any focus — it belongs to its figure's page alone, and
      must not ride along to the next one. */
-  useEffect(() => { clearSelection(); }, [page, active, clearSelection]);
+  useEffect(() => { clearSelection(); clearCampaign(); }, [page, active, clearSelection, clearCampaign]);
 
   /* The chamber stands empty while the book opens; its roll call begins once
      the page has settled flat, and each entry calls it again. Only the book
@@ -1374,6 +1284,22 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
     return () => clearTimeout(timer);
   }, [active]);
 
+  /* The track's coin waits at the head of the track until its page lies flat:
+     the leaf turned to Sec. 02 on the spread, the page above it folded away on
+     a phone. Then it glides once, and rests there for the rest of the visit;
+     the next entry starts it at the head again. */
+  const campaignShown = active && page === 1 && !backShown;
+  const [campaignPlay, setCampaignPlay] = useState(false);
+  useEffect(() => {
+    if (!active) {
+      setCampaignPlay(false);
+      return;
+    }
+    if (!campaignShown) return;
+    const timer = setTimeout(() => setCampaignPlay(true), belowLg ? M_TURN_MS : TURN_MS);
+    return () => clearTimeout(timer);
+  }, [active, campaignShown, belowLg, TURN_MS]);
+
   /* `compact`: the single-page book's cuts (see PowerChamber, DistributionIndex). */
   const chamber = (play: boolean, compact = false) => (
     <PowerChamber play={play} compact={compact} focus={focus} onHover={hoverFocus} onLeave={leaveFocus} onSelect={selectFocus} />
@@ -1387,6 +1313,25 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
       onLeave={leaveFocus}
       onSelect={selectFocus}
       onClear={clearSelection}
+    />
+  );
+  const campaignTrack = (play: boolean, compact = false) => (
+    <CampaignTrack
+      play={play}
+      compact={compact}
+      focus={campaignFocus.focus}
+      onHover={campaignFocus.hover}
+      onLeave={campaignFocus.leave}
+      onSelect={campaignFocus.select}
+    />
+  );
+  const campaignIndex = (compact = false) => (
+    <CampaignIndex
+      compact={compact}
+      focus={campaignFocus.focus}
+      onHover={campaignFocus.hover}
+      onLeave={campaignFocus.leave}
+      onSelect={campaignFocus.select}
     />
   );
 
@@ -1506,28 +1451,24 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
       : { duration: 0.45, ease: 'easeIn' as const };
 
   /* Mobile equivalents (single-page book, 0.9s turns). page1 = Sec-01 leaf,
-     page2 = Campaign Sequence I–II, page2b = Campaign Sequence III–IV,
-     page3 = comms/back leaf. The mobile book carries that one extra leaf, so
-     its scroll stops run 0–4 against the desktop spread's 0–3 — see
-     `pagesBelowLg` in the landing SECTIONS. */
-  const mTurnDur = 0.9;
+     page2 = Campaign Sequence, page3 = comms/back leaf: the same stops as the
+     desktop spread. */
+  const mTurnDur = M_TURN_MS / 1000;
   const mInstant = enteredUp && flashBack;
   const mTurnT = mInstant || snapLeaves || parked ? { duration: 0 } : { duration: mTurnDur, ease: turnEase };
   const mPage1TurnT = mTurnT;
   const mPage2TurnT = mTurnT;
-  const mPage2bTurnT = mTurnT;
   const mPage3TurnT = mTurnT;
 
   const mCoverAway = bookOpen;
   const mPage1Away = page >= 1 || backShown;
   const mPage2Away = page >= 2 || backShown;
-  const mPage2bAway = page >= 3 || backShown;
-  /* page1 + page2 + page2b + cover fold ~270° onto the back via useFoldLeaf: an
+  /* page1 + page2 + cover fold ~270° onto the back via useFoldLeaf: an
      animated rotateY whose derived zIndex drops the leaf behind the back cover
      the exact frame it crosses M_FOLD_BEHIND_DEG (no state-flip lag). page3 does
      NOT fold — it flips in place to reveal its own backside (see the mobile
-     page3 leaf). Rest order (topZ): cover 40 > page1 30 > page2 25 > page2b 22 >
-     page3 (z-20); folded, they stack back the other way (behindZ). */
+     page3 leaf). Rest order (topZ): cover 40 > page1 30 > page2 25 > page3
+     (z-20); folded, they stack back the other way (behindZ). */
   const mCoverTurnT = mInstant || parked
     ? { duration: 0 }
     : mCoverAway
@@ -1535,7 +1476,6 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
       : { duration: 0.45, ease: 'easeIn' as const };
   const mPage1Fold = useFoldLeaf(mPage1Away, mPage1TurnT, 30, 0);
   const mPage2Fold = useFoldLeaf(mPage2Away, mPage2TurnT, 25, 0.5);
-  const mPage2bFold = useFoldLeaf(mPage2bAway, mPage2bTurnT, 22, 0.75);
   const mCoverFold = useFoldLeaf(mCoverAway, mCoverTurnT, 40, 1);
   /* Cover sinks under the stack once flat, and only pops back up when the book
      is fully closed AND gone (not merely mid-exit-flash). */
@@ -1574,10 +1514,16 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
                 on entry it folds open around the spine. It never moves for
                 the backside stop — the back lands on top of it via leaf3. The
                 non-rotating wrapper carries the cover's depth slot so its
-                stacking holds through the open/close fold. */}
-            <div className="relative w-1/2 h-full" style={{ transformStyle: 'preserve-3d', transform: tz(coverDown ? Z_COVER_DOWN : Z_COVER_UP) }}>
+                stacking holds through the open/close fold.
+
+                No leaf, and no leaf's wrapper, takes the pointer itself: only
+                its faces do, each while it is the page showing. A wrapper stays
+                on its own half when its leaf turns, at its depth slot, so it
+                would sit in front of the page beneath and take its pointer (leaf
+                2's wrapper over page 004 once Sec. 01 has turned). */}
+            <div className="relative w-1/2 h-full pointer-events-none" style={{ transformStyle: 'preserve-3d', transform: tz(coverDown ? Z_COVER_DOWN : Z_COVER_UP) }}>
             <motion.div
-              className="absolute inset-0"
+              className="absolute inset-0 pointer-events-none"
               style={{ transformOrigin: 'right center', transformStyle: 'preserve-3d', rotateY: coverTurn }}
               initial={false}
               animate={{ rotateY: bookOpen ? 0 : 180 }}
@@ -1632,9 +1578,9 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
                   BackCoverDesign. Depth lives on the non-rotating wrapper
                   (translateZ) so culling stays correct and stacking holds
                   through the turn. */}
-              <div className="absolute inset-0" style={{ transformStyle: 'preserve-3d', transform: tz(leaf4OnTop ? Z_BACK_TOP : Z_LEAF4) }}>
+              <div className="absolute inset-0 pointer-events-none" style={{ transformStyle: 'preserve-3d', transform: tz(leaf4OnTop ? Z_BACK_TOP : Z_LEAF4) }}>
               <motion.div
-                className="absolute inset-0"
+                className="absolute inset-0 pointer-events-none"
                 style={{ transformOrigin: 'left center', transformStyle: 'preserve-3d', rotateY: leaf4Turn }}
                 initial={false}
                 animate={{ rotateY: backShown ? -180 : 0 }}
@@ -1656,14 +1602,14 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
               </motion.div>
               </div>
 
-              {/* leaf3: front = roadmap right page (004); back = the Links
+              {/* leaf3: front = the campaign index (004); back = the Links
                   page (005). Turns for the scroll flip to the comms spread
                   (page ≥ 2) AND on the way to the backside. Lifted to
                   Z_LEAF3_TOP while turned so its back paints over leaf2's
                   turned back (003) on the left half; dropped once fully home. */}
-              <div className="absolute inset-0" style={{ transformStyle: 'preserve-3d', transform: tz(leaf3OnTop ? Z_LEAF3_TOP : Z_LEAF3) }}>
+              <div className="absolute inset-0 pointer-events-none" style={{ transformStyle: 'preserve-3d', transform: tz(leaf3OnTop ? Z_LEAF3_TOP : Z_LEAF3) }}>
               <motion.div
-                className="absolute inset-0"
+                className="absolute inset-0 pointer-events-none"
                 style={{ transformOrigin: 'left center', transformStyle: 'preserve-3d' }}
                 initial={false}
                 animate={{ rotateY: page >= 2 || backShown ? -180 : 0 }}
@@ -1674,26 +1620,32 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
                   className="absolute inset-0"
                   style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: page >= 2 || backShown ? 'none' : 'auto' }}
                 >
-                  <PageFace side="right" head={['Sec. 02', 'Campaign Sequence']} folio="004">{roadmapRightContent}</PageFace>
+                  <PageFace
+                    side="right"
+                    head={['Sec. 02', <HeadDocLink key="doc" label="Campaign Sequence" href={DOC_LINKS.campaign} />]}
+                    folio="004"
+                  >
+                    {campaignIndex()}
+                  </PageFace>
                 </div>
                 <div
                   className="absolute inset-0"
                   style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: page >= 2 && !backShown ? 'auto' : 'none' }}
                 >
-                  <PageFace side="left" head={['Rulebook', 'Vol. I']} folio="005">{commsLeftContent}</PageFace>
+                  <PageFace side="left" head={['Rulebook', 'Vol. I']} folio="005">{commsContent}</PageFace>
                 </div>
               </motion.div>
               </div>
 
-              {/* leaf2: front = clauses page (Sec 01), back = roadmap left page.
+              {/* leaf2: front = clauses page (Sec 01), back = the campaign track.
                   Fills the half (absolute inset-0) so it never defines height —
                   the spread height is the container's definite h-full, identical
                   for both halves and stable through the turn. Turns for a scroll
                   page-flip (page ≥ 1) AND on the backside stop. Non-rotating
                   wrapper carries its depth slot. */}
-              <div className="absolute inset-0" style={{ transformStyle: 'preserve-3d', transform: tz(Z_LEAF2) }}>
+              <div className="absolute inset-0 pointer-events-none" style={{ transformStyle: 'preserve-3d', transform: tz(Z_LEAF2) }}>
               <motion.div
-                className="absolute inset-0"
+                className="absolute inset-0 pointer-events-none"
                 style={{ transformOrigin: 'left center', transformStyle: 'preserve-3d' }}
                 initial={false}
                 animate={{ rotateY: page >= 1 || backShown ? -180 : 0 }}
@@ -1715,7 +1667,9 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
                   className="absolute inset-0"
                   style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: page === 1 && !backShown ? 'auto' : 'none' }}
                 >
-                  <PageFace side="left" head={['Rulebook', 'Vol. I']} folio="003">{roadmapLeftContent}</PageFace>
+                  <PageFace side="left" head={['Rulebook', 'Vol. I']} folio="003" bodyClassName="px-8 pt-4">
+                    <div className="relative flex-1 min-h-0">{campaignTrack(campaignPlay && !belowLg)}</div>
+                  </PageFace>
                 </div>
               </motion.div>
               </div>
@@ -1802,9 +1756,9 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
               <FrontCoverDesign active={active} edge="full" />
             </motion.div>
 
-            {/* page2 — Campaign Sequence, phases I–II. Folds away like page1
-                (~270° onto the back) once the scroll moves past it (page ≥ 2)
-                or the backside shows; rests behind the book at z 0.5. */}
+            {/* page2 — Campaign Sequence: the track over its index. Folds away
+                like page1 (~270° onto the back) once the scroll moves past it
+                (page ≥ 2) or the backside shows; rests behind the book at z 0.5. */}
             <motion.div
               className="absolute inset-0"
               style={{
@@ -1815,27 +1769,19 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
                 pointerEvents: mPage2Away ? 'none' : 'auto',
               }}
             >
-              <PageFace side="single" head={['Sec. 02', 'Campaign Sequence']} folio="002">
-                {roadmapMobileContentA}
-              </PageFace>
-            </motion.div>
-
-            {/* page2b — Campaign Sequence, phases III–IV. The mobile-only
-                second half of Sec. 02: the four phases do not fit one phone
-                page, so they turn instead of scrolling. Folds away at page ≥ 3
-                and rests behind the book at z 0.75, on top of page2. */}
-            <motion.div
-              className="absolute inset-0"
-              style={{
-                transformOrigin: 'left center',
-                transformStyle: 'preserve-3d',
-                rotateY: mPage2bFold.rotateY,
-                zIndex: mPage2bFold.zIndex,
-                pointerEvents: mPage2bAway ? 'none' : 'auto',
-              }}
-            >
-              <PageFace side="single" head={['Sec. 02', 'Campaign Sequence']} folio="003">
-                {roadmapMobileContentB}
+              <PageFace
+                side="single"
+                head={['Sec. 02', <HeadDocLink key="doc" label="Campaign Sequence" href={DOC_LINKS.campaign} />]}
+                folio="002"
+                bodyClassName="pt-3"
+              >
+                {/* The compact cuts: the track, cropped to the route and as
+                    wide as the page allows, over the one-line index and its
+                    panel (a fixed height). */}
+                <div className="flex-1 min-h-0 px-2">
+                  <div className="relative w-full h-full">{campaignTrack(campaignPlay && belowLg, true)}</div>
+                </div>
+                <div className="shrink-0 px-6 pt-5">{campaignIndex(true)}</div>
               </PageFace>
             </motion.div>
 
@@ -1851,7 +1797,7 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
               style={{
                 transformOrigin: 'right center',
                 transformStyle: 'preserve-3d',
-                pointerEvents: page >= 3 ? 'auto' : 'none',
+                pointerEvents: page >= 2 ? 'auto' : 'none',
               }}
               initial={false}
               animate={{ rotateY: backShown ? -180 : 0 }}
@@ -1861,10 +1807,10 @@ const Rulebook: React.FC<RulebookProps> = ({ active = false, page: pageProp = 0,
               <PageFace
                 side="single"
                 head={['Sec. 03', 'Links']}
-                folio="004"
+                folio="003"
                 style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
               >
-                {commsMobileContent}
+                {commsContent}
               </PageFace>
               {/* Back face — the book's backside */}
               <div

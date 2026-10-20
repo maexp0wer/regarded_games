@@ -8,7 +8,7 @@ import { MoonIcon, SunIcon } from '@/components/icons/svg';
 import Regardo from '@/components/icons/Regardo.svg';
 import Carlo from '@/components/icons/Carlo.svg';
 import { useDocNavigation } from '@/hooks/useDocNavigation';
-import Rulebook, { RULEBOOK_PAGES, RULEBOOK_PAGES_BELOW_LG, RULEBOOK_QUICK_OPEN_MS, RULEBOOK_QUICK_TURN_MS } from '@/components/Rulebook';
+import Rulebook, { RULEBOOK_PAGES, RULEBOOK_QUICK_OPEN_MS, RULEBOOK_QUICK_TURN_MS } from '@/components/Rulebook';
 import FitToViewport from '@/components/FitToViewport';
 import CyclingSubheading from '@/components/CyclingSubheading';
 import AnimatedAuctionChart from '@/components/AnimatedAuctionChart';
@@ -46,14 +46,11 @@ const RULEBOOK_CHAPTERS: Record<RulebookChapter, string> = {
   back: 'Back Cover',
 };
 
-/* Which rulebook chapter a book page belongs to. Below lg the Campaign Sequence
-   runs across TWO book pages (stops 1 and 2) so its heading holds across both
-   and Links moves to stop 3; the lg+ spread keeps the 1:1 stop→chapter mapping.
-   The final stop is always the back cover. */
-function rulebookChapter(page: number, belowLg: boolean): RulebookChapter {
-  if (page >= (belowLg ? RULEBOOK_PAGES_BELOW_LG : RULEBOOK_PAGES) - 1) return 'back';
-  if (page === 0) return 'distribution';
-  return page <= (belowLg ? 2 : 1) ? 'campaign' : 'links';
+/* Which rulebook chapter a book page belongs to: one stop per chapter at every
+   breakpoint, the final stop always the back cover. */
+function rulebookChapter(page: number): RulebookChapter {
+  if (page >= RULEBOOK_PAGES - 1) return 'back';
+  return page === 0 ? 'distribution' : page === 1 ? 'campaign' : 'links';
 }
 
 /* Rulebook page names for the deck rail. Fixed to the desktop spread: the rail
@@ -61,19 +58,16 @@ function rulebookChapter(page: number, belowLg: boolean): RulebookChapter {
    back cover gets no pip (see `railStops`), so it gets no name either. */
 const RULEBOOK_PAGE_LABELS = Array.from(
   { length: RULEBOOK_PAGES - 1 },
-  (_, page) => RULEBOOK_CHAPTERS[rulebookChapter(page, false)],
+  (_, page) => RULEBOOK_CHAPTERS[rulebookChapter(page)],
 );
 
 /* Section scroll-stops in page order. `cards` > 1 marks sections that collapse
    into a one-card-at-a-time deck below lg; the wheel/touch handler deals through
    the deck before releasing to the neighboring section. */
 /* `cards`: below-lg deck stops, dealt one per scroll tick. `pages`: rulebook
-   page flips inside the section, applied at every breakpoint. `pagesBelowLg`:
-   overrides `pages` below lg, where the single-page mobile rulebook needs one
-   stop more than the desktop spread (Campaign Sequence runs across two mobile
-   pages — see the mobile leaf stack in src/components/Rulebook.tsx). Both
-   counts come from the Rulebook itself, and their LAST stop is the book's back
-   cover — scrolled on from the final content page rather than clicked. */
+   page flips inside the section, applied at every breakpoint. The count comes
+   from the Rulebook itself, and its LAST stop is the book's back cover —
+   scrolled on from the final content page rather than clicked. */
 /* `label` names the section in the deck rail — on hover and to assistive tech.
    `pageLabels` names its individual stops there, one per `pages`. */
 const SECTIONS: {
@@ -81,7 +75,6 @@ const SECTIONS: {
   label: string;
   cards: number;
   pages?: number;
-  pagesBelowLg?: number;
   pageLabels?: string[];
 }[] = [
   { id: 'hero', label: 'Class War', cards: 0 },
@@ -94,7 +87,6 @@ const SECTIONS: {
     label: 'The Rulebook',
     cards: 0,
     pages: RULEBOOK_PAGES,
-    pagesBelowLg: RULEBOOK_PAGES_BELOW_LG,
     pageLabels: RULEBOOK_PAGE_LABELS,
   },
 ];
@@ -104,7 +96,7 @@ const SECTIONS: {
    Shared by the scroll handler (off a ref) and the rail (off render state). */
 function sectionStops(cfg: (typeof SECTIONS)[number] | undefined, belowLg: boolean) {
   if (!cfg) return 0;
-  if (cfg.pages && cfg.pages > 1) return belowLg ? (cfg.pagesBelowLg ?? cfg.pages) : cfg.pages;
+  if (cfg.pages && cfg.pages > 1) return cfg.pages;
   return belowLg ? cfg.cards : 0;
 }
 
@@ -902,18 +894,19 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
        swallowed the tick instead of flipping the page — the rulebook's Campaign
        Sequence and Links pages fit their page exactly, which left every stop
        past Distribution of Power inert. Dialogs stay exempt unconditionally.
-       `dir`: 1 = the gesture scrolls content down, -1 = up. */
+       `axis`: the axis the gesture travels along. `dir`: 1 = the gesture
+       scrolls content down (or right), -1 = up (or left). */
     const EDGE_SLACK = 1; // px tolerance for "already at the end"
-    const isExemptTarget = (target: EventTarget | null, dir: 1 | -1) => {
+    const isExemptTarget = (target: EventTarget | null, dir: 1 | -1, axis: 'x' | 'y' = 'y') => {
       let el = target as HTMLElement | null;
       if (el?.closest?.('[role="dialog"]')) return true;
       while (el && el !== document.body) {
-        const overflowY = getComputedStyle(el).overflowY;
-        if (overflowY === 'auto' || overflowY === 'scroll') {
-          const room = el.scrollHeight - el.clientHeight;
-          const canMove = dir > 0
-            ? el.scrollTop < room - EDGE_SLACK
-            : el.scrollTop > EDGE_SLACK;
+        const style = getComputedStyle(el);
+        const overflow = axis === 'y' ? style.overflowY : style.overflowX;
+        if (overflow === 'auto' || overflow === 'scroll') {
+          const room = axis === 'y' ? el.scrollHeight - el.clientHeight : el.scrollWidth - el.clientWidth;
+          const at = axis === 'y' ? el.scrollTop : el.scrollLeft;
+          const canMove = dir > 0 ? at < room - EDGE_SLACK : at > EDGE_SLACK;
           if (room > EDGE_SLACK && canMove) return true;
         }
         el = el.parentElement;
@@ -929,26 +922,34 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       step(e.deltaY > 0 ? 1 : -1);
     };
 
+    /* A swipe steps along whichever axis it mostly travels. Up or left steps
+       on, down or right steps back: left is the way a dealt card and a turned
+       page leave the screen. Finger up (dy < 0) or left (dx < 0) drags the
+       content on, hence the inverted dir. */
     let touchStartX = 0;
     let touchStartY = 0;
+    const swipe = (touch: Touch) => {
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+      const axis: 'x' | 'y' = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      const travel = axis === 'x' ? dx : dy;
+      return { axis, dir: (travel < 0 ? 1 : -1) as 1 | -1, distance: Math.abs(travel) };
+    };
     const handleTouchStart = (e: TouchEvent) => {
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
     };
     const handleTouchMove = (e: TouchEvent) => {
-      /* Finger up (dy < 0) drags the content down, hence the inverted dir. */
-      if (isExemptTarget(e.target, e.touches[0].clientY - touchStartY < 0 ? 1 : -1)) return;
-      const dy = e.touches[0].clientY - touchStartY;
-      const dx = e.touches[0].clientX - touchStartX;
-      // Suppress native scrolling for vertical gestures — the deck/section snap owns them.
-      if (Math.abs(dy) > Math.abs(dx)) e.preventDefault();
+      const { axis, dir } = swipe(e.touches[0]);
+      if (isExemptTarget(e.target, dir, axis)) return;
+      // Suppress native scrolling on either axis — the deck/section snap owns the gesture.
+      e.preventDefault();
     };
     const handleTouchEnd = (e: TouchEvent) => {
-      if (isExemptTarget(e.target, e.changedTouches[0].clientY - touchStartY < 0 ? 1 : -1)) return;
-      const dy = e.changedTouches[0].clientY - touchStartY;
-      const dx = e.changedTouches[0].clientX - touchStartX;
-      if (Math.abs(dy) < 50 || Math.abs(dx) > Math.abs(dy)) return;
-      step(dy < 0 ? 1 : -1);
+      const { axis, dir, distance } = swipe(e.changedTouches[0]);
+      if (isExemptTarget(e.target, dir, axis)) return;
+      if (distance < 50) return;
+      step(dir);
     };
 
     /* With no document scrolling, keyboard navigation must step the deck too. */
@@ -1424,9 +1425,22 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
   const distributionActive = effectiveSection === 'sectionDistribution';
   const stakeActive = effectiveSection === 'sectionSecureYourStake';
 
+  /* Whether a card's decorative graphic plays. At lg+ every card is in view at
+     once, so it runs through its section's live window (below) and then on
+     hover. Below lg there is no hover and only the top card of a deck is in
+     view, so a graphic plays while its card is on top of the active section's
+     deck — from the moment it is thrown or dealt in until it is dealt off or
+     the section is left. A window keyed on the section would run the cards
+     still waiting in the deck out of sight, and leave them frozen by the time
+     they are dealt. */
+  const cardLive = (sectionId: string, index: number, hovered: boolean, windowLive: boolean) =>
+    belowLg
+      ? effectiveSection === sectionId && (cardIndices[sectionId] ?? 0) === index
+      : hovered || windowLive;
+
   /* The Play cards' decorative animations (auction chart, trade flows, Gini
      gauge) run while the cards fly in and for 2s after the flight (~1.2s incl.
-     stagger) lands, then fall back to hover-driven. */
+     stagger) lands, then fall back to hover-driven. lg+ only — see cardLive. */
   const [playCardsLive, setPlayCardsLive] = useState(false);
   useEffect(() => {
     if (!playActive) {
@@ -1440,9 +1454,8 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
 
   /* Same fixed window for the Own deck's round table, so the REDEFINE MARKETS
      crowd chatters while the cards fly in and then freezes exactly like the
-     Play cards' graphics above. Past the window it is hover-driven; below lg,
-     where there is no hover to fall back on, the card ORs in belowLg and the
-     graphic simply runs for as long as it is mounted. */
+     Play cards' graphics above. Past the window it is hover-driven; below lg
+     cardLive plays it while its card is on top of the deck instead. */
   const [ownCardsLive, setOwnCardsLive] = useState(false);
   useEffect(() => {
     if (!ownActive) {
@@ -1457,9 +1470,8 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
   /* Same fixed window for the Secure-Your-Stake deck's capital auction, so the
      auction runs while the cards fly in and then freezes where it stands, like
      the Play cards' graphics above. Past the window it is hover-driven, and a
-     hover picks the auction up from the deposit it stopped on; below lg, where
-     there is no hover to fall back on, the card ORs in belowLg and the auction
-     simply plays through to its end. */
+     hover picks the auction up from the deposit it stopped on; below lg
+     cardLive plays it while its card is on top of the deck instead. */
   const [stakeCardsLive, setStakeCardsLive] = useState(false);
   useEffect(() => {
     if (!stakeActive) {
@@ -1860,7 +1872,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       }
       illustrationSlot={
         <div className="absolute inset-0 w-full h-full overflow-hidden rounded-xl z-20 p-3">
-          <AnimatedAuctionChart isHovered={action1Hovered || playCardsLive} />
+          <AnimatedAuctionChart isHovered={cardLive('sectionPlay', 0, action1Hovered, playCardsLive)} />
         </div>
       }
     />
@@ -1897,7 +1909,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       }
       illustrationSlot={
         <div className="absolute inset-0 w-full h-full overflow-hidden rounded-xl z-20 p-3">
-          <AnimatedTradeFlows isHovered={action2Hovered || playCardsLive} />
+          <AnimatedTradeFlows isHovered={cardLive('sectionPlay', 1, action2Hovered, playCardsLive)} />
         </div>
       }
     />
@@ -1936,7 +1948,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
         /* pointer-events-auto enables the Gini gauge's hover interactions */
         <div className="w-full h-full flex justify-center items-center pointer-events-auto drop-shadow-[0_8px_8px_rgba(22,18,36,0.35)] absolute z-20">
           <AnimatedGiniCard
-            isHovered={action3Hovered || playCardsLive}
+            isHovered={cardLive('sectionPlay', GINI_CARD_INDEX, action3Hovered, playCardsLive)}
             /* Always-mounted sizers mark the dock boxes so the cards → gini
                overlay flight can aim at them while the card is mid-throw. */
             leftIcon={
@@ -2047,7 +2059,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       }
       illustrationSlot={
         <div className="absolute inset-0 w-full h-full overflow-hidden rounded-xl z-20 p-5 pointer-events-auto">
-          <YieldDistribution isHovered={own2Hovered || ownCardsLive || belowLg} />
+          <YieldDistribution isHovered={cardLive('sectionOwnMarket', 1, own2Hovered, ownCardsLive)} />
         </div>
       }
     />
@@ -2093,7 +2105,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
               /* The crowd is off the frame and the bubbles are held while the
                  figures are still flying in — they are what raises the temple,
                  and nobody should be speaking before they arrive. */
-              isHovered={(own3Hovered || ownCardsLive || belowLg) && !crowdInFlight}
+              isHovered={cardLive('sectionOwnMarket', 2, own3Hovered, ownCardsLive) && !crowdInFlight}
               spriteId={CROWD_SPRITE_ID}
               crowdHidden={crowdInFlight}
             />
@@ -2133,7 +2145,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
       }
       illustrationSlot={
         <div className="absolute inset-0 w-full h-full overflow-hidden rounded-xl z-20 p-6 pointer-events-none">
-          <AnimatedCapitalAuction isHovered={stake1Hovered || stakeCardsLive || belowLg} />
+          <AnimatedCapitalAuction isHovered={cardLive('sectionSecureYourStake', 0, stake1Hovered, stakeCardsLive)} />
         </div>
       }
       actionButtonSlot={
@@ -2253,7 +2265,7 @@ export function LandingClient({ launch }: { launch: LaunchState }) {
 
   /* The chapter the current book page belongs to — see rulebookChapter. On the
      back cover no heading matches, so the slot fades out. */
-  const distributionChapter = rulebookChapter(cardIndices['sectionDistribution'] ?? 0, belowLg);
+  const distributionChapter = rulebookChapter(cardIndices['sectionDistribution'] ?? 0);
 
   /* Three headers stacked in the same slot — cross-fade on page flip. Identical
      classes to all other section h2s so position matches. */

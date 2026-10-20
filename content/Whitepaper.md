@@ -751,9 +751,9 @@ The protocol grows in phases, proving the core game is stable before adding comp
 | Phase | Status | Key Milestones |
 | :--- | :--- | :--- |
 | **Phase 1 — Foundation** | **Complete** | Conceptualisation, Architecture, Dual-Token Economic Design, Legal Structure  |
-| **Phase 2 — Build** | **In Progress (Q1–Q2 2026)** | Core Smart Contract Development on Base Network, dApp (Exchange, Trading Terminal, Community) Build-Out, Finalisation of the Collateral Mechanism, Pre-Launch Community Seeding. |
-| **Phase 3 — Testnet** | **Q3 2026** | Public Testnet Launch on Base Sepolia, Community Genesis Period (Testnet Quests earning the Genesis Airdrop), Immunefi Audit Competition, Establishment of the Execution Council. |
-| **Phase 4 — Mainnet** | **Q4 2026** | \$RGD Token Generation Event (TGE) & Capital Auction — `finalize()` distributes the Genesis Airdrop and opens the secondary market — Mainnet Launch on Base, Game Season 1, Guardian Programme (Immunefi Bug Bounty), Hybrid Governance (Snapshot + Council) Activated. |
+| **Phase 2 — Build** | **In Progress (2026)** | Core Smart Contract Development on Base Network, dApp (Exchange, Trading Terminal, Community) Build-Out, Finalisation of the Collateral Mechanism, Pre-Launch Community Seeding. |
+| **Phase 3 — Testnet** | **Q1 2027** | Public Testnet Launch on Base Sepolia, Community Genesis Period (Testnet Quests earning the Genesis Airdrop), Immunefi Audit Competition, Establishment of the Execution Council. |
+| **Phase 4 — Mainnet** | **Q2 2027** | \$RGD Token Generation Event (TGE) & Capital Auction — `finalize()` distributes the Genesis Airdrop and opens the secondary market — Mainnet Launch on Base, Game Season 1, Guardian Programme (Immunefi Bug Bounty), Hybrid Governance (Snapshot + Council) Activated. |
 | **Phase 5 — Expansion** | **Beyond** | Implementation of DAO-approved new game modes and ecosystem expansion. |
 
 ### 19.1. Future Vision: The Evolution of the Game
